@@ -15,11 +15,13 @@ function parseInitArgs(args: string[]): {
   help: boolean;
   root?: string;
   defaultSource?: string;
+  autoCopyFiles?: string[];
 } {
   const result: {
     help: boolean;
     root?: string;
     defaultSource?: string;
+    autoCopyFiles?: string[];
   } = {
     help: false,
   };
@@ -33,6 +35,10 @@ function parseInitArgs(args: string[]): {
       result.root = args[++i];
     } else if (arg === '--default-source' && i + 1 < args.length) {
       result.defaultSource = args[++i];
+    } else if (arg === '--auto-copy-files' && i + 1 < args.length) {
+      // Split comma-separated list
+      const filesArg = args[++i];
+      result.autoCopyFiles = filesArg.split(',').map((f) => f.trim());
     }
   }
 
@@ -52,9 +58,11 @@ root and other settings. This is useful when auto-detection fails or when
 you want to manually specify the repository root.
 
 Options:
-  --root <path>              Specify the git repository root path (required)
-  --default-source <name>    Set the default source worktree (default: "main")
-  -h, --help                 Show this help message
+  --root <path>                   Specify the git repository root path (required)
+  --default-source <name>         Set the default source worktree (default: "main")
+  --auto-copy-files <files>       Comma-separated list of files to auto-copy
+                                  when creating new worktrees with 'gw add'
+  -h, --help                      Show this help message
 
 Examples:
   # Initialize with repository root
@@ -62,6 +70,9 @@ Examples:
 
   # Initialize with custom default source
   gw init --root /Users/username/Workspace/repo.git --default-source master
+
+  # Initialize with auto-copy files
+  gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/
 
   # Show help
   gw init --help
@@ -106,6 +117,11 @@ export async function executeInit(args: string[]): Promise<void> {
     defaultSource: parsed.defaultSource || 'main',
   };
 
+  // Add autoCopyFiles if provided
+  if (parsed.autoCopyFiles && parsed.autoCopyFiles.length > 0) {
+    config.autoCopyFiles = parsed.autoCopyFiles;
+  }
+
   // Save config in current directory
   const currentDir = Deno.cwd();
 
@@ -114,6 +130,9 @@ export async function executeInit(args: string[]): Promise<void> {
     console.log(`Created config at ${currentDir}/.gw/config.json`);
     console.log(`Repository root: ${rootPath}`);
     console.log(`Default source worktree: ${config.defaultSource}`);
+    if (config.autoCopyFiles) {
+      console.log(`Auto-copy files: ${config.autoCopyFiles.join(', ')}`);
+    }
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     console.error(`Error: Failed to create config - ${message}`);

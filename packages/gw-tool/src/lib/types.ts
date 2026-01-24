@@ -10,6 +10,8 @@ export interface Config {
   root?: string;
   /** Default source worktree name (e.g., "main", "master") */
   defaultSource?: string;
+  /** Files to automatically copy when creating new worktrees */
+  autoCopyFiles?: string[];
 }
 
 /**

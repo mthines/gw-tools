@@ -5,6 +5,7 @@
  */
 
 import { parseGlobalArgs, showGlobalHelp } from "./lib/cli.ts";
+import { executeAdd } from "./commands/add.ts";
 import { executeCopy } from "./commands/copy.ts";
 import { executeInit } from "./commands/init.ts";
 import { executeRoot } from "./commands/root.ts";
@@ -13,12 +14,12 @@ import { executeRoot } from "./commands/root.ts";
  * Available commands mapped to their handler functions
  */
 const COMMANDS = {
+  add: executeAdd,
   copy: executeCopy,
   init: executeInit,
   root: executeRoot,
   // Future commands can be added here:
   // list: executeList,
-  // "add-repo": executeAddRepo,
 };
 
 if (import.meta.main) {

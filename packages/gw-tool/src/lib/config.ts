@@ -98,6 +98,16 @@ function validateConfig(data: unknown): data is Config {
     return false;
   }
 
+  if (config.autoCopyFiles !== undefined) {
+    if (!Array.isArray(config.autoCopyFiles)) {
+      return false;
+    }
+    // Validate that all items are strings
+    if (!config.autoCopyFiles.every((item) => typeof item === "string")) {
+      return false;
+    }
+  }
+
   return true;
 }
 

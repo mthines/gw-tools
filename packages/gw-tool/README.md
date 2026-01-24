@@ -14,6 +14,7 @@ A command-line tool for managing git worktrees, built with Deno.
   - [Example Configuration](#example-configuration)
   - [Configuration Options](#configuration-options)
 - [Commands](#commands)
+  - [add](#add)
   - [root](#root)
   - [init](#init)
   - [copy](#copy)
@@ -33,14 +34,22 @@ A command-line tool for managing git worktrees, built with Deno.
 # Install
 npm install -g @gw-tools/gw
 
-# Create a new worktree
-git worktree add feat-new-feature
+# Create a new worktree and copy files
+gw add feat-new-feature .env secrets/
 
-# Copy secrets from main to the new worktree
-gw copy feat-new-feature .env
-
-# Done! Your new worktree has all the secrets it needs
+# Done! Your new worktree has the files it needs
 cd feat-new-feature
+```
+
+**Or with auto-copy (one-time setup):**
+
+```bash
+# Configure auto-copy files once per repository
+gw init --root $(gw root) --auto-copy-files .env,secrets/
+
+# Now just create worktrees - files are copied automatically
+gw add feat-another-feature
+cd feat-another-feature
 ```
 
 ## Features
@@ -109,7 +118,12 @@ gw init --root /path/to/your/repo.git
 ```json
 {
   "root": "/Users/username/Workspace/my-project.git",
-  "defaultSource": "main"
+  "defaultSource": "main",
+  "autoCopyFiles": [
+    ".env",
+    "components/agents/.env",
+    "components/ui/.vercel/"
+  ]
 }
 ```
 
@@ -117,8 +131,69 @@ gw init --root /path/to/your/repo.git
 
 - **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
 - **defaultSource**: Default source worktree name (optional, defaults to "main")
+- **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw add` (optional, only set via `gw init --auto-copy-files`)
 
 ## Commands
+
+### add
+
+Create a new git worktree with optional automatic file copying.
+
+```bash
+gw add <worktree-name> [files...]
+```
+
+This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
+
+#### Arguments
+
+- `<worktree-name>`: Name or path for the new worktree
+- `[files...]`: Optional files to copy (overrides `autoCopyFiles` config)
+
+#### Options
+
+All `git worktree add` options are supported:
+- `-b <branch>`: Create a new branch
+- `-B <branch>`: Create or reset a branch
+- `--detach`: Detach HEAD in new worktree
+- `--force, -f`: Force checkout even if already checked out
+- `--track`: Track branch from remote
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Create worktree (auto-copies files if autoCopyFiles is configured)
+gw add feat/new-feature
+
+# Create worktree with new branch
+gw add feat/new-feature -b my-branch
+
+# Create worktree and copy specific files (overrides config)
+gw add feat/new-feature .env secrets/
+
+# Force create even if branch exists elsewhere
+gw add feat/bugfix -f
+```
+
+#### Auto-Copy Configuration
+
+To enable automatic file copying, configure `autoCopyFiles` using `gw init`:
+
+```bash
+gw init --root /path/to/repo.git --auto-copy-files .env,secrets/,components/ui/.vercel/
+```
+
+This creates:
+```json
+{
+  "root": "/path/to/repo.git",
+  "defaultSource": "main",
+  "autoCopyFiles": [".env", "secrets/", "components/ui/.vercel/"]
+}
+```
+
+Now every time you run `gw add`, these files will be automatically copied from your default source worktree (usually `main`) to the new worktree.
 
 ### root
 
@@ -171,6 +246,7 @@ gw init --root <path> [options]
 
 - `--root <path>`: Specify the git repository root path (required)
 - `--default-source <name>`: Set the default source worktree (default: "main")
+- `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw add`
 - `-h, --help`: Show help message
 
 #### Examples
@@ -181,6 +257,9 @@ gw init --root /Users/username/Workspace/my-project.git
 
 # Initialize with custom default source
 gw init --root /Users/username/Workspace/my-project.git --default-source master
+
+# Initialize with auto-copy files
+gw init --root /Users/username/Workspace/my-project.git --auto-copy-files .env,secrets/,components/ui/.vercel/
 
 # Show help
 gw init --help
@@ -246,16 +325,22 @@ The tool automatically detects which git repository you're working in and create
 ### Typical Workflow
 
 ```bash
+# One-time setup: Configure auto-copy files
+gw init --root $(gw root) --auto-copy-files .env,components/agents/.env,components/ui/.vercel/
+
 # From within any worktree of your repository
-# Create a new worktree
-git worktree add feat-new-feature
+# Create a new worktree with auto-copy
+gw add feat-new-feature
 
-# Copy secrets from main worktree to the new one
-# gw automatically detects your repository and uses its config
-gw copy feat-new-feature .env components/agents/.env components/ui/.vercel
-
-# Start working in the new worktree
+# Done! Files are automatically copied
 cd feat-new-feature
+
+# Alternative: Create worktree and copy specific files
+gw add feat-bugfix .env custom-config.json
+
+# Alternative: Use the manual copy command
+git worktree add feat-manual
+gw copy feat-manual .env
 ```
 
 ## Development
@@ -539,6 +624,7 @@ packages/gw-tool/
 │   ├── main.ts              # CLI entry point and command dispatcher
 │   ├── index.ts             # Public API exports
 │   ├── commands/            # Command implementations
+│   │   ├── add.ts           # Add command (create worktree with auto-copy)
 │   │   ├── copy.ts          # Copy command
 │   │   ├── init.ts          # Init command
 │   │   └── root.ts          # Root command
@@ -590,6 +676,7 @@ To add a new command, follow the pattern used by existing commands like `copy` a
    import { executeList } from "./commands/list.ts";
 
    const COMMANDS = {
+     add: executeAdd,
      copy: executeCopy,
      init: executeInit,
      root: executeRoot,
@@ -602,6 +689,7 @@ To add a new command, follow the pattern used by existing commands like `copy` a
    export function showGlobalHelp(): void {
      console.log(`
    Commands:
+     add      Create a new worktree with optional auto-copy
      copy     Copy files/directories between worktrees
      init     Initialize gw configuration for a repository
      root     Get the root directory of the current git repository

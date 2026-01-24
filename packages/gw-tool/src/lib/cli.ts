@@ -40,6 +40,7 @@ Usage:
   gw --help
 
 Commands:
+  add      Create a new worktree with optional auto-copy
   copy     Copy files/directories between worktrees
   init     Initialize gw configuration for a repository
   root     Get the root directory of the current git repository
@@ -48,11 +49,11 @@ Options:
   -h, --help    Show this help message
 
 Examples:
+  gw add feat-branch
+  gw add feat-branch -b my-branch
   gw copy feat-branch .env components/agents/.env
-  gw copy --from main feat-123 .env
-  gw init --root /path/to/repo.git
+  gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
   gw root
-  gw copy --help
 
 For command-specific help:
   gw <command> --help
