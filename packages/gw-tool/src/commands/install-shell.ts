@@ -37,7 +37,7 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
   const shellName = shell.split('/').pop() || '';
 
   if (!quiet) {
-    console.log(`\nDetected shell: ${shellName || 'unknown'}`);
+    console.log(`Detected shell: ${output.bold(shellName || 'unknown')}`);
   }
 
   // Determine config file
@@ -61,7 +61,9 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     if (!quiet) {
       output.error(`Unsupported shell: ${shellName}`);
       console.log('\nSupported shells: zsh, bash, fish');
-      console.log('\nTo manually add gw cd support, add this to your shell config:');
+      console.log(
+        '\nTo manually add gw cd support, add this to your shell config:',
+      );
       console.log(getZshFunction());
     }
     Deno.exit(1);
@@ -73,7 +75,7 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     if (content.includes('# gw-tools shell integration')) {
       if (!quiet) {
         output.success('Shell integration already installed!');
-        console.log(`\nRestart your shell or run: source ${configFile}`);
+        console.log(`Restart your shell or run: ${output.bold(`source ${configFile}`)}`);
       }
       return;
     }
@@ -82,7 +84,12 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     if (error instanceof Deno.errors.NotFound) {
       // For fish, ensure directory exists
       if (shellName === 'fish') {
-        const configDir = join(Deno.env.get('HOME') || '', '.config', 'fish', 'functions');
+        const configDir = join(
+          Deno.env.get('HOME') || '',
+          '.config',
+          'fish',
+          'functions',
+        );
         await Deno.mkdir(configDir, { recursive: true });
       }
     } else {
@@ -97,17 +104,19 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
       await Deno.writeTextFile(configFile, shellFunction);
     } else {
       // Bash/Zsh append to config file
-      await Deno.writeTextFile(configFile, '\n' + shellFunction + '\n', { append: true });
+      await Deno.writeTextFile(configFile, '\n' + shellFunction + '\n', {
+        append: true,
+      });
     }
 
     if (!quiet) {
       output.success('Shell integration installed!');
-      console.log(`\nAdded to: ${configFile}`);
+      console.log(`Added to: ${output.path(configFile)}`);
       console.log('\nTo start using it:');
-      console.log(`  source ${configFile}`);
+      console.log(`  ${output.bold(`source ${configFile}`)}`);
       console.log('\nOr restart your terminal.');
       console.log('\nUsage:');
-      console.log('  gw cd feat-branch');
+      console.log(`  ${output.bold('gw cd')} ${output.dim('feat-branch')}`);
     }
   } catch (error) {
     output.error(`Failed to write to ${configFile}: ${error.message}`);
@@ -169,13 +178,13 @@ async function removeShellIntegration(quiet: boolean): Promise<void> {
       await Deno.writeTextFile(configFile, filtered.join('\n'));
       if (!quiet) {
         output.success('Shell integration removed!');
-        console.log(`\nRemoved from: ${configFile}`);
+        console.log(`Removed from: ${output.path(configFile)}`);
       }
     }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       if (!quiet) {
-        console.log('Shell integration not found.');
+        output.info('Shell integration not found.');
       }
     } else {
       output.error(`Failed to remove integration: ${error.message}`);
