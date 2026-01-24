@@ -1,0 +1,2 @@
+# Nx will ignore these files/directories when detecting projects
+packages/gw-tool/npm
