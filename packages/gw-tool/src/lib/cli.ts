@@ -41,8 +41,10 @@ Usage:
 
 Commands:
   add              Create a new worktree with optional auto-copy
+  cd               Navigate to a worktree directory
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
+  install-shell    Install shell integration for gw cd (auto-runs on npm install)
   root             Get the root directory of the current git repository
 
 Git Worktree Proxy Commands:
@@ -60,6 +62,7 @@ Options:
 Examples:
   gw add feat-branch
   gw add feat-branch -b my-branch
+  gw cd feat-branch
   gw sync feat-branch .env components/agents/.env
   gw list
   gw remove feat-branch

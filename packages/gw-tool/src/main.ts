@@ -6,8 +6,10 @@
 
 import { parseGlobalArgs, showGlobalHelp } from "./lib/cli.ts";
 import { executeAdd } from "./commands/add.ts";
+import { executeCd } from "./commands/cd.ts";
 import { executeCopy } from "./commands/copy.ts";
 import { executeInit } from "./commands/init.ts";
+import { executeInstallShell } from "./commands/install-shell.ts";
 import { executeRoot } from "./commands/root.ts";
 import { executeList } from "./commands/list.ts";
 import { executeRemove } from "./commands/remove.ts";
@@ -23,8 +25,10 @@ import * as output from "./lib/output.ts";
  */
 const COMMANDS = {
   add: executeAdd,
+  cd: executeCd,
   sync: executeCopy,
   init: executeInit,
+  'install-shell': executeInstallShell,
   root: executeRoot,
   list: executeList,
   ls: executeList,  // Alias for list
