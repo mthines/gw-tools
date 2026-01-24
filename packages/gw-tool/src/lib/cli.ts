@@ -41,7 +41,7 @@ Usage:
 
 Commands:
   add              Create a new worktree with optional auto-copy
-  copy             Copy files/directories between worktrees
+  sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
   root             Get the root directory of the current git repository
 
@@ -60,7 +60,7 @@ Options:
 Examples:
   gw add feat-branch
   gw add feat-branch -b my-branch
-  gw copy feat-branch .env components/agents/.env
+  gw sync feat-branch .env components/agents/.env
   gw list
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
@@ -97,53 +97,53 @@ export function parseCopyArgs(args: string[]): CopyOptions {
 }
 
 /**
- * Display help text for the copy command
+ * Display help text for the sync command
  */
 export function showCopyHelp(): void {
   console.log(`
-gw copy - Copy files/directories between worktrees
+gw sync - Sync files/directories between worktrees
 
 Usage:
-  gw copy [options] <target-worktree> <files...>
+  gw sync [options] <target-worktree> <files...>
 
 Arguments:
   <target-worktree>    Name or full path of the target worktree directory
                        Can be relative (e.g., feat-branch) or absolute path
 
-  <files...>           One or more files or directories to copy
+  <files...>           One or more files or directories to sync
                        Paths are relative to the worktree root
 
 Options:
   --from <source>      Source worktree name (default: from config or "main")
-  -n, --dry-run        Show what would be copied without actually copying
+  -n, --dry-run        Show what would be synced without actually syncing
   -h, --help           Show this help message
 
 Description:
-  Copy files and directories from a source worktree to a target worktree,
-  preserving the directory structure. Useful for copying secrets and
+  Sync files and directories from a source worktree to a target worktree,
+  preserving the directory structure. Useful for syncing secrets and
   environment files when creating new git worktrees.
 
-  The source and target worktrees must exist. Parent directories for copied
+  The source and target worktrees must exist. Parent directories for synced
   files are created automatically if needed.
 
 Examples:
-  # Copy .env file from main to feat-branch
-  gw copy feat-branch .env
+  # Sync .env file from main to feat-branch
+  gw sync feat-branch .env
 
-  # Copy multiple files
-  gw copy feat-branch .env components/agents/.env components/agents/agents.yaml
+  # Sync multiple files
+  gw sync feat-branch .env components/agents/.env components/agents/agents.yaml
 
-  # Copy entire directory
-  gw copy feat-branch components/ui/.vercel
+  # Sync entire directory
+  gw sync feat-branch components/ui/.vercel
 
   # Use custom source worktree
-  gw copy --from develop feat-branch .env
+  gw sync --from develop feat-branch .env
 
   # Dry run to preview changes
-  gw copy --dry-run feat-branch .env
+  gw sync --dry-run feat-branch .env
 
   # Use absolute path as target (strips repo prefix if provided)
-  gw copy /full/path/to/repo/feat-branch .env
+  gw sync /full/path/to/repo/feat-branch .env
 
 Configuration:
   Configuration is stored at .gw/config.json (searched walking up from cwd)

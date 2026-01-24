@@ -23,7 +23,7 @@ import * as output from "./lib/output.ts";
  */
 const COMMANDS = {
   add: executeAdd,
-  copy: executeCopy,
+  sync: executeCopy,
   init: executeInit,
   root: executeRoot,
   list: executeList,

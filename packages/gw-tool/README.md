@@ -28,7 +28,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options-1)
       - [Examples](#examples-2)
       - [When to Use](#when-to-use)
-    - [copy](#copy)
+    - [sync](#sync)
       - [Arguments](#arguments-1)
       - [Options](#options-2)
       - [Examples](#examples-3)
@@ -306,45 +306,45 @@ In most cases, you won't need to run `gw init` manually because the tool auto-de
 
 The config file is created at `.gw/config.json` in your current directory, so you can run this command from wherever makes sense for your workflow (typically the repository root).
 
-### copy
+### sync
 
-Copy files and directories between worktrees, preserving directory structure.
+Sync files and directories between worktrees, preserving directory structure.
 
 ```bash
-gw copy [options] <target-worktree> <files...>
+gw sync [options] <target-worktree> <files...>
 ```
 
 #### Arguments
 
 - `<target-worktree>`: Name or full path of the target worktree
-- `<files...>`: One or more files or directories to copy (paths relative to worktree root)
+- `<files...>`: One or more files or directories to sync (paths relative to worktree root)
 
 #### Options
 
 - `--from <source>`: Source worktree name (default: from config or "main")
-- `-n, --dry-run`: Show what would be copied without actually copying
+- `-n, --dry-run`: Show what would be synced without actually syncing
 - `-h, --help`: Show help message
 
 #### Examples
 
 ```bash
-# Copy .env file from main to feat-branch
-gw copy feat-branch .env
+# Sync .env file from main to feat-branch
+gw sync feat-branch .env
 
-# Copy multiple files
-gw copy feat-branch .env components/agents/.env components/agents/agents.yaml
+# Sync multiple files
+gw sync feat-branch .env components/agents/.env components/agents/agents.yaml
 
-# Copy entire directory
-gw copy feat-branch components/ui/.vercel
+# Sync entire directory
+gw sync feat-branch components/ui/.vercel
 
 # Use custom source worktree
-gw copy --from develop feat-branch .env
+gw sync --from develop feat-branch .env
 
 # Dry run to preview changes
-gw copy --dry-run feat-branch .env
+gw sync --dry-run feat-branch .env
 
 # Use absolute path as target
-gw copy /full/path/to/repo/feat-branch .env
+gw sync /full/path/to/repo/feat-branch .env
 ```
 
 ### Git Worktree Proxy Commands
@@ -479,9 +479,9 @@ cd feat-new-feature
 # Alternative: Create worktree and copy specific files
 gw add feat-bugfix .env custom-config.json
 
-# Alternative: Use the manual copy command
+# Alternative: Use the manual sync command
 git worktree add feat-manual
-gw copy feat-manual .env
+gw sync feat-manual .env
 ```
 
 ## Development
@@ -521,7 +521,7 @@ sudo ln -sf ~/path/to/gw-tools/dist/packages/gw-tool/gw /usr/local/bin/gw
 
 # Now you can use `gw` globally
 cd ~/some-project
-gw copy feat-branch .env
+gw sync feat-branch .env
 
 # When you make changes, recompile
 nx run gw-tool:compile
@@ -547,14 +547,14 @@ EOF
 chmod +x ~/bin/gw
 
 # Use compiled version (fast)
-gw copy feat-branch .env
+gw sync feat-branch .env
 
 # Use development version with live updates
-GW_DEV=1 gw copy feat-branch .env
+GW_DEV=1 gw sync feat-branch .env
 
 # Or set it for your entire session
 export GW_DEV=1
-gw copy feat-branch .env
+gw sync feat-branch .env
 ```
 
 #### Method 4: npm link (For Testing Installation)
@@ -573,7 +573,7 @@ cd dist/packages/gw-tool/npm
 npm link
 
 # Now `gw` is available globally via npm
-gw copy feat-branch .env
+gw sync feat-branch .env
 
 # When you make changes
 cd ~/path/to/gw-tools
@@ -595,7 +595,7 @@ nx run gw-tool:dev
 
 # Terminal 2: Test in another project
 cd ~/some-project
-~/path/to/gw-tools/dist/packages/gw-tool/gw copy feat-branch .env
+~/path/to/gw-tools/dist/packages/gw-tool/gw sync feat-branch .env
 ```
 
 **Pro tip**: Combine Method 3 (wrapper script) with watch mode by setting `GW_DEV=1` in your development shell.
@@ -766,7 +766,7 @@ packages/gw-tool/
 │   ├── index.ts             # Public API exports
 │   ├── commands/            # Command implementations
 │   │   ├── add.ts           # Add command (create worktree with auto-copy)
-│   │   ├── copy.ts          # Copy command
+│   │   ├── copy.ts          # Sync command (sync files between worktrees)
 │   │   ├── init.ts          # Init command
 │   │   ├── root.ts          # Root command
 │   │   ├── list.ts          # List command (proxy)
@@ -831,7 +831,7 @@ For commands with custom logic, follow the pattern used by existing commands:
 
    const COMMANDS = {
      add: executeAdd,
-     copy: executeCopy,
+     sync: executeCopy,
      init: executeInit,
      root: executeRoot,
      list: executeList, // Add your new command
@@ -844,7 +844,7 @@ For commands with custom logic, follow the pattern used by existing commands:
      console.log(`
    Commands:
      add      Create a new worktree with optional auto-copy
-     copy     Copy files/directories between worktrees
+     sync     Sync files/directories between worktrees
      init     Initialize gw configuration for a repository
      root     Get the root directory of the current git repository
      list     List all git worktrees in the repository
