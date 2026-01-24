@@ -32,6 +32,14 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-1)
       - [Options](#options-2)
       - [Examples](#examples-3)
+    - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
+      - [list (ls)](#list-ls)
+      - [remove (rm)](#remove-rm)
+      - [move (mv)](#move-mv)
+      - [prune](#prune)
+      - [lock](#lock)
+      - [unlock](#unlock)
+      - [repair](#repair)
   - [Use Case](#use-case)
     - [Typical Workflow](#typical-workflow)
   - [Development](#development)
@@ -337,6 +345,116 @@ gw copy --dry-run feat-branch .env
 
 # Use absolute path as target
 gw copy /full/path/to/repo/feat-branch .env
+```
+
+### Git Worktree Proxy Commands
+
+These commands wrap native `git worktree` operations, providing consistent colored output and help messages. All git flags and options are passed through transparently.
+
+#### list (ls)
+
+List all worktrees in the repository.
+
+```bash
+gw list
+# or
+gw ls
+```
+
+**Examples:**
+```bash
+gw list                  # List all worktrees
+gw list --porcelain      # Machine-readable output
+gw list -v               # Verbose output
+```
+
+#### remove (rm)
+
+Remove a worktree from the repository.
+
+```bash
+gw remove <worktree>
+# or
+gw rm <worktree>
+```
+
+**Examples:**
+```bash
+gw remove feat-branch           # Remove a worktree
+gw remove --force feat-branch   # Force remove even if dirty
+gw rm feat-branch               # Using alias
+```
+
+#### move (mv)
+
+Move a worktree to a new location.
+
+```bash
+gw move <worktree> <new-path>
+# or
+gw mv <worktree> <new-path>
+```
+
+**Examples:**
+```bash
+gw move feat-branch ../new-location
+gw mv feat-branch ../new-location
+```
+
+#### prune
+
+Clean up worktree information for deleted worktrees.
+
+```bash
+gw prune
+```
+
+**Examples:**
+```bash
+gw prune                # Clean up stale worktree information
+gw prune --dry-run      # Preview what would be pruned
+gw prune --verbose      # Show detailed output
+```
+
+#### lock
+
+Lock a worktree to prevent removal.
+
+```bash
+gw lock <worktree>
+```
+
+**Examples:**
+```bash
+gw lock feat-branch
+gw lock --reason "Work in progress" feat-branch
+```
+
+#### unlock
+
+Unlock a worktree to allow removal.
+
+```bash
+gw unlock <worktree>
+```
+
+**Examples:**
+```bash
+gw unlock feat-branch
+```
+
+#### repair
+
+Repair worktree administrative files.
+
+```bash
+gw repair [<path>]
+```
+
+**Examples:**
+```bash
+gw repair                        # Repair all worktrees
+gw repair /path/to/worktree      # Repair specific worktree
 ```
 
 ## Use Case
@@ -650,13 +768,22 @@ packages/gw-tool/
 │   │   ├── add.ts           # Add command (create worktree with auto-copy)
 │   │   ├── copy.ts          # Copy command
 │   │   ├── init.ts          # Init command
-│   │   └── root.ts          # Root command
+│   │   ├── root.ts          # Root command
+│   │   ├── list.ts          # List command (proxy)
+│   │   ├── remove.ts        # Remove command (proxy)
+│   │   ├── move.ts          # Move command (proxy)
+│   │   ├── prune.ts         # Prune command (proxy)
+│   │   ├── lock.ts          # Lock command (proxy)
+│   │   ├── unlock.ts        # Unlock command (proxy)
+│   │   └── repair.ts        # Repair command (proxy)
 │   └── lib/                 # Shared utilities
 │       ├── types.ts         # TypeScript type definitions
 │       ├── config.ts        # Configuration management
-│       ├── cli.ts           # CLI argument parsing
+│       ├── cli.ts           # CLI argument parsing & help
 │       ├── file-ops.ts      # File/directory operations
-│       └── path-resolver.ts # Path resolution utilities
+│       ├── path-resolver.ts # Path resolution utilities
+│       ├── output.ts        # Colored output formatting
+│       └── git-proxy.ts     # Git command proxy utilities
 ├── npm/                     # npm package files
 │   ├── package.json         # npm package metadata
 │   ├── install.js           # Binary installation script
@@ -671,7 +798,11 @@ packages/gw-tool/
 
 ### Adding New Commands
 
-To add a new command, follow the pattern used by existing commands like `copy` and `root`:
+There are two types of commands you can add:
+
+#### Custom Commands (like `add`, `copy`)
+
+For commands with custom logic, follow the pattern used by existing commands:
 
 1. **Create a new file** in `src/commands/` (e.g., `list.ts`):
    ```typescript
@@ -721,7 +852,40 @@ To add a new command, follow the pattern used by existing commands like `copy` a
    }
    ```
 
-**Tip**: Look at [src/commands/root.ts](src/commands/root.ts) for a simple command example, or [src/commands/copy.ts](src/commands/copy.ts) for a more complex command with argument parsing.
+#### Git Proxy Commands (like `list`, `remove`)
+
+For simple pass-through commands that wrap git worktree operations, use the `git-proxy` utility:
+
+1. **Create a new file** in `src/commands/` (e.g., `list.ts`):
+   ```typescript
+   // src/commands/list.ts
+   import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+
+   export async function executeList(args: string[]): Promise<void> {
+     if (args.includes('--help') || args.includes('-h')) {
+       showProxyHelp(
+         'list',
+         'list',
+         'List all worktrees in the repository',
+         ['gw list', 'gw list --porcelain', 'gw list -v'],
+       );
+       Deno.exit(0);
+     }
+
+     await executeGitWorktree('list', args);
+   }
+   ```
+
+2. **Register** in `src/main.ts` (same as above)
+
+3. **Update global help** in `src/lib/cli.ts` (same as above)
+
+This approach requires minimal maintenance as it simply forwards all arguments to git.
+
+**Tips**:
+- Look at [src/commands/root.ts](src/commands/root.ts) for a simple custom command
+- Look at [src/commands/copy.ts](src/commands/copy.ts) for a complex command with argument parsing
+- Look at [src/commands/list.ts](src/commands/list.ts) for a simple proxy command
 
 ## License
 
