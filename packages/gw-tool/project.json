@@ -61,6 +61,36 @@
         "command": "deno compile --allow-all --output ../../dist/packages/gw-tool/gw src/main.ts",
         "cwd": "packages/gw-tool"
       }
+    },
+    "compile-all": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/packages/gw-tool/binaries"],
+      "options": {
+        "commands": [
+          "mkdir -p ../../dist/packages/gw-tool/binaries",
+          "deno compile --allow-all --target x86_64-unknown-linux-gnu --output ../../dist/packages/gw-tool/binaries/gw-linux-x64 src/main.ts",
+          "deno compile --allow-all --target aarch64-unknown-linux-gnu --output ../../dist/packages/gw-tool/binaries/gw-linux-arm64 src/main.ts",
+          "deno compile --allow-all --target x86_64-apple-darwin --output ../../dist/packages/gw-tool/binaries/gw-macos-x64 src/main.ts",
+          "deno compile --allow-all --target aarch64-apple-darwin --output ../../dist/packages/gw-tool/binaries/gw-macos-arm64 src/main.ts",
+          "deno compile --allow-all --target x86_64-pc-windows-msvc --output ../../dist/packages/gw-tool/binaries/gw-windows-x64.exe src/main.ts"
+        ],
+        "parallel": false,
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "npm-pack": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/packages/gw-tool/npm"],
+      "options": {
+        "commands": [
+          "mkdir -p ../../dist/packages/gw-tool/npm",
+          "cp -r npm/* ../../dist/packages/gw-tool/npm/",
+          "cp README.md ../../dist/packages/gw-tool/npm/"
+        ],
+        "parallel": false,
+        "cwd": "packages/gw-tool"
+      },
+      "dependsOn": ["compile-all"]
     }
   }
 }

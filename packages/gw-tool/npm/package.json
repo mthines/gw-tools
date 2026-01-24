@@ -1,0 +1,46 @@
+{
+  "name": "@gw-tools/gw",
+  "version": "1.0.0",
+  "description": "A command-line tool for managing git worktrees - copy files between worktrees with ease",
+  "keywords": [
+    "git",
+    "worktree",
+    "cli",
+    "developer-tools",
+    "secrets",
+    "env-files"
+  ],
+  "homepage": "https://github.com/mthines/gw-tools#readme",
+  "bugs": {
+    "url": "https://github.com/mthines/gw-tools/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mthines/gw-tools.git"
+  },
+  "license": "MIT",
+  "author": "Your Name",
+  "bin": {
+    "gw": "./bin/gw.js"
+  },
+  "scripts": {
+    "postinstall": "node install.js"
+  },
+  "files": [
+    "bin/",
+    "install.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "cpu": [
+    "x64",
+    "arm64"
+  ]
+}

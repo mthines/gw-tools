@@ -1,0 +1,33 @@
+# Only include necessary files in npm package
+# The bin directory will be populated by the install script
+
+# Source files
+src/
+
+# Development files
+*.test.ts
+*.spec.ts
+tsconfig.json
+deno.json
+
+# Build artifacts that aren't the final binaries
+dist/
+build/
+
+# Version control
+.git
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

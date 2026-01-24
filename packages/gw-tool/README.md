@@ -2,6 +2,22 @@
 
 A command-line tool for managing git worktrees, built with Deno.
 
+## Quick Start
+
+```bash
+# Install
+npm install -g @gw-tools/gw
+
+# Create a new worktree
+git worktree add feat-new-feature
+
+# Copy secrets from main to the new worktree
+gw copy feat-new-feature .env
+
+# Done! Your new worktree has all the secrets it needs
+cd feat-new-feature
+```
+
 ## Features
 
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
@@ -12,9 +28,30 @@ A command-line tool for managing git worktrees, built with Deno.
 
 ## Installation
 
-### Build from source
+### Via npm (Recommended)
+
+Install globally using npm:
 
 ```bash
+npm install -g @gw-tools/gw
+```
+
+This will download the appropriate binary for your platform (macOS, Linux, or Windows) and make the `gw` command available globally.
+
+**Supported Platforms:**
+- macOS (Intel & Apple Silicon)
+- Linux (x64 & ARM64)
+- Windows (x64)
+
+### Build from source
+
+If you prefer to build from source:
+
+```bash
+# Clone the repository
+git clone https://github.com/mthines/gw-tools.git
+cd gw-tools
+
 # Build the project
 nx run gw:compile
 
@@ -102,12 +139,121 @@ nx run gw:lint
 # Format code
 nx run gw:fmt
 
-# Compile to binary
+# Compile to binary (current platform only)
 nx run gw:compile
+
+# Compile binaries for all platforms
+nx run gw:compile-all
+
+# Prepare npm package
+nx run gw:npm-pack
 
 # Run tests
 nx run gw:test
 ```
+
+### Publishing
+
+This tool can be published to multiple package registries for different audiences:
+
+#### Publishing to npm
+
+The primary distribution method for end users.
+
+1. **Compile binaries for all platforms:**
+   ```bash
+   nx run gw:compile-all
+   ```
+
+2. **Create a GitHub release:**
+   - Tag the release with version (e.g., `v1.0.0`)
+   - Create a new release on GitHub with this tag
+   - Upload all binaries from `dist/packages/gw-tool/binaries/` to the release
+   - Binaries must be named exactly:
+     - `gw-macos-x64`
+     - `gw-macos-arm64`
+     - `gw-linux-x64`
+     - `gw-linux-arm64`
+     - `gw-windows-x64.exe`
+
+3. **Prepare and publish the npm package:**
+   ```bash
+   # Update version in npm/package.json to match the GitHub release
+   cd packages/gw-tool/npm
+   npm version 1.0.0  # Use exact version, not patch/minor/major
+
+   # Publish to npm
+   npm publish --access public
+   ```
+
+The npm package will automatically download the correct binary from GitHub releases when users install it.
+
+**Installation (users):**
+```bash
+npm install -g @gw-tools/gw
+```
+
+#### Publishing to JSR (JavaScript Registry)
+
+For users who prefer Deno's native package manager.
+
+1. **Add JSR configuration to `deno.json`:**
+   ```json
+   {
+     "name": "@your-scope/gw",
+     "version": "1.0.0",
+     "exports": "./src/main.ts"
+   }
+   ```
+
+2. **Publish to JSR:**
+   ```bash
+   cd packages/gw-tool
+   deno publish --allow-dirty
+   ```
+
+**Installation (users):**
+```bash
+# With Deno
+deno install -g -n gw jsr:@your-scope/gw
+
+# With npm (via JSR)
+npx jsr:@your-scope/gw copy feat-branch .env
+```
+
+#### Publishing to Deno Land
+
+For listing on deno.land/x (optional).
+
+1. **Import via GitHub:**
+   - Deno Land automatically tracks GitHub releases
+   - Tag your release on GitHub (e.g., `v1.0.0`)
+   - Register at https://deno.land/x
+
+2. **Add webhook** (done once):
+   - Go to repository settings → Webhooks
+   - Add Deno Land webhook URL
+
+**Installation (users):**
+```bash
+deno install -g -n gw https://deno.land/x/gw@v1.0.0/src/main.ts
+```
+
+#### Version Management
+
+**Important:** Keep versions synchronized across all platforms:
+- GitHub release tag: `v1.0.0`
+- npm package.json: `"version": "1.0.0"`
+- JSR deno.json: `"version": "1.0.0"`
+
+**Recommended workflow:**
+1. Decide on version number (e.g., 1.0.0)
+2. Update `packages/gw-tool/npm/package.json` version
+3. Update `packages/gw-tool/deno.json` version (if using JSR)
+4. Commit changes
+5. Create GitHub release with tag `v1.0.0` and upload binaries
+6. Publish to npm
+7. Publish to JSR (if using)
 
 ### Project Structure
 
