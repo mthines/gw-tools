@@ -226,6 +226,11 @@ function getZshFunction(): string {
   return `# gw-tools shell integration
 gw() {
   if [[ "$1" == "cd" ]]; then
+    # Pass through help flags directly
+    if [[ "$2" == "--help" || "$2" == "-h" ]]; then
+      command gw cd "$2"
+      return
+    fi
     local target=$(command gw cd "$2" 2>/dev/null)
     if [[ -n "$target" ]]; then
       cd "$target"
@@ -245,6 +250,11 @@ function getBashFunction(): string {
   return `# gw-tools shell integration
 gw() {
   if [[ "$1" == "cd" ]]; then
+    # Pass through help flags directly
+    if [[ "$2" == "--help" || "$2" == "-h" ]]; then
+      command gw cd "$2"
+      return
+    fi
     local target=$(command gw cd "$2" 2>/dev/null)
     if [[ -n "$target" ]]; then
       cd "$target"
@@ -264,6 +274,11 @@ function getFishFunction(): string {
   return `# gw-tools shell integration
 function gw
     if test "$argv[1]" = "cd"
+        # Pass through help flags directly
+        if test "$argv[2]" = "--help" -o "$argv[2]" = "-h"
+            command gw cd $argv[2]
+            return
+        end
         set -l target (command gw cd $argv[2] 2>/dev/null)
         if test -n "$target"
             cd $target
