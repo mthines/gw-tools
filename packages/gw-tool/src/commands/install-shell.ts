@@ -75,7 +75,9 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     if (content.includes('# gw-tools shell integration')) {
       if (!quiet) {
         output.success('Shell integration already installed!');
-        console.log(`Restart your shell or run: ${output.bold(`source ${configFile}`)}`);
+        console.log(
+          `Restart your shell or run: ${output.bold(`source ${configFile}`)}`,
+        );
       }
       return;
     }
@@ -119,7 +121,19 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
       console.log(`  ${output.bold('gw cd')} ${output.dim('feat-branch')}`);
     }
   } catch (error) {
-    output.error(`Failed to write to ${configFile}: ${error.message}`);
+    let message = '';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error
+    ) {
+      message = String((error as any).message);
+    } else {
+      message = String(error);
+    }
+    output.error(`Failed to write to ${configFile}: ${message}`);
     Deno.exit(1);
   }
 }
@@ -187,7 +201,19 @@ async function removeShellIntegration(quiet: boolean): Promise<void> {
         output.info('Shell integration not found.');
       }
     } else {
-      output.error(`Failed to remove integration: ${error.message}`);
+      let message = '';
+      if (error instanceof Error) {
+        message = error.message;
+      } else if (
+        typeof error === 'object' &&
+        error !== null &&
+        'message' in error
+      ) {
+        message = String((error as any).message);
+      } else {
+        message = String(error);
+      }
+      output.error(`Failed to remove integration: ${message}`);
       Deno.exit(1);
     }
   }
