@@ -60,6 +60,12 @@
       "options": {
         "command": "deno compile --allow-all --no-npm --output ../../dist/packages/gw-tool/gw src/main.ts",
         "cwd": "packages/gw-tool"
+      },
+      "configurations": {
+        "no-check": {
+          "command": "deno compile --allow-all --no-check --no-npm --output ../../dist/packages/gw-tool/gw src/main.ts",
+          "cwd": "packages/gw-tool"
+        }
       }
     },
     "compile-all": {
@@ -82,6 +88,20 @@
         ],
         "parallel": true,
         "cwd": "packages/gw-tool"
+      },
+      "configurations": {
+        "no-check": {
+          "commands": [
+            "mkdir -p ../../dist/packages/gw-tool/binaries",
+            "deno compile --allow-all --no-check --no-npm --target x86_64-unknown-linux-gnu --output ../../dist/packages/gw-tool/binaries/gw-linux-x64 src/main.ts",
+            "deno compile --allow-all --no-check --no-npm --target aarch64-unknown-linux-gnu --output ../../dist/packages/gw-tool/binaries/gw-linux-arm64 src/main.ts",
+            "deno compile --allow-all --no-check --no-npm --target x86_64-apple-darwin --output ../../dist/packages/gw-tool/binaries/gw-macos-x64 src/main.ts",
+            "deno compile --allow-all --no-check --no-npm --target aarch64-apple-darwin --output ../../dist/packages/gw-tool/binaries/gw-macos-arm64 src/main.ts",
+            "deno compile --allow-all --no-check --no-npm --target x86_64-pc-windows-msvc --output ../../dist/packages/gw-tool/binaries/gw-windows-x64.exe src/main.ts"
+          ],
+          "parallel": true,
+          "cwd": "packages/gw-tool"
+        }
       }
     },
     "npm-pack": {

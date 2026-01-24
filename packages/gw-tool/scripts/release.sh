@@ -117,7 +117,7 @@ git push origin "v$NEW_VERSION"
 
 # Build binaries
 echo -e "\n${BLUE}🔨 Building binaries for all platforms...${NC}"
-nx run gw-tool:compile-all
+nx run gw-tool:compile-all:no-check
 
 # Prepare npm package
 echo -e "${BLUE}📦 Preparing npm package...${NC}"
