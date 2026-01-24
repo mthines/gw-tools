@@ -65,6 +65,12 @@
     "compile-all": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool/binaries"],
+      "inputs": [
+        "{projectRoot}/src/**/*.ts",
+        "{projectRoot}/deno.json",
+        "{projectRoot}/deno.lock"
+      ],
+      "cache": true,
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/binaries",
@@ -74,13 +80,19 @@
           "deno compile --allow-all --target aarch64-apple-darwin --output ../../dist/packages/gw-tool/binaries/gw-macos-arm64 src/main.ts",
           "deno compile --allow-all --target x86_64-pc-windows-msvc --output ../../dist/packages/gw-tool/binaries/gw-windows-x64.exe src/main.ts"
         ],
-        "parallel": false,
+        "parallel": true,
         "cwd": "packages/gw-tool"
       }
     },
     "npm-pack": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool/npm"],
+      "inputs": [
+        "{projectRoot}/npm/**/*",
+        "{projectRoot}/README.md",
+        "^compile-all"
+      ],
+      "cache": true,
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/npm",
