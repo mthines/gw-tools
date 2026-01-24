@@ -148,42 +148,72 @@ nx run gw:compile-all
 # Prepare npm package
 nx run gw:npm-pack
 
+# Prepare release (compile + pack)
+nx run gw:prepare-release
+
+# Publish to npm
+nx run gw:publish-npm
+
+# Publish to JSR
+nx run gw:publish-jsr
+
 # Run tests
 nx run gw:test
 ```
 
 ### Publishing
 
-This tool can be published to multiple package registries for different audiences:
+This tool can be published to multiple package registries for different audiences.
 
-#### Publishing to npm
+#### Quick Start Publishing
+
+For the simplest workflow, use the provided Nx targets:
+
+```bash
+# 1. Update version in npm/package.json
+# 2. Prepare release (compiles all binaries)
+nx run gw:prepare-release
+
+# 3. Create GitHub release and upload binaries
+# (Follow instructions printed by prepare-release)
+
+# 4. Publish to npm
+nx run gw:publish-npm
+
+# 5. (Optional) Publish to JSR
+nx run gw:publish-jsr
+```
+
+#### Publishing to npm (Detailed)
 
 The primary distribution method for end users.
 
-1. **Compile binaries for all platforms:**
+1. **Update version:**
    ```bash
-   nx run gw:compile-all
+   # Edit packages/gw-tool/npm/package.json
+   # Set "version": "1.0.0"
    ```
 
-2. **Create a GitHub release:**
-   - Tag the release with version (e.g., `v1.0.0`)
-   - Create a new release on GitHub with this tag
-   - Upload all binaries from `dist/packages/gw-tool/binaries/` to the release
+2. **Prepare release (compiles all binaries):**
+   ```bash
+   nx run gw:prepare-release
+   ```
+
+3. **Create a GitHub release:**
+   - Go to GitHub → Releases → Draft a new release
+   - Tag: `v1.0.0` (must match npm version)
+   - Upload all binaries from `dist/packages/gw-tool/binaries/`
    - Binaries must be named exactly:
      - `gw-macos-x64`
      - `gw-macos-arm64`
      - `gw-linux-x64`
      - `gw-linux-arm64`
      - `gw-windows-x64.exe`
+   - Publish the release
 
-3. **Prepare and publish the npm package:**
+4. **Publish to npm:**
    ```bash
-   # Update version in npm/package.json to match the GitHub release
-   cd packages/gw-tool/npm
-   npm version 1.0.0  # Use exact version, not patch/minor/major
-
-   # Publish to npm
-   npm publish --access public
+   nx run gw:publish-npm
    ```
 
 The npm package will automatically download the correct binary from GitHub releases when users install it.
@@ -207,6 +237,11 @@ For users who prefer Deno's native package manager.
    ```
 
 2. **Publish to JSR:**
+   ```bash
+   nx run gw:publish-jsr
+   ```
+
+   Or manually:
    ```bash
    cd packages/gw-tool
    deno publish --allow-dirty
