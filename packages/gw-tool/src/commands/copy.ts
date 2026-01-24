@@ -9,6 +9,7 @@ import {
   resolveWorktreePath,
   validatePathExists,
 } from "../lib/path-resolver.ts";
+import * as output from "../lib/output.ts";
 
 /**
  * Execute the copy command
@@ -27,7 +28,7 @@ export async function executeCopy(args: string[]): Promise<void> {
 
   // 3. Validate arguments
   if (!parsed.target || parsed.files.length === 0) {
-    console.error("Error: Target worktree and files required\n");
+    output.error("Target worktree and files required");
     showCopyHelp();
     Deno.exit(1);
   }
@@ -44,25 +45,23 @@ export async function executeCopy(args: string[]): Promise<void> {
   try {
     await validatePathExists(sourcePath, "directory");
   } catch (_error) {
-    console.error(`Error: Source worktree not found: ${sourcePath}`);
-    console.error(
-      `Make sure '${sourceWorktree}' worktree exists in ${gitRoot}`,
-    );
+    output.error(`Source worktree not found: ${output.path(sourcePath)}`);
+    console.error(`Make sure '${output.bold(sourceWorktree)}' worktree exists in ${output.path(gitRoot)}\n`);
     Deno.exit(1);
   }
 
   try {
     await validatePathExists(targetPath, "directory");
   } catch (_error) {
-    console.error(`Error: Target worktree not found: ${targetPath}`);
-    console.error(`Make sure '${parsed.target}' worktree exists in ${gitRoot}`);
+    output.error(`Target worktree not found: ${output.path(targetPath)}`);
+    console.error(`Make sure '${output.bold(parsed.target)}' worktree exists in ${output.path(gitRoot)}\n`);
     Deno.exit(1);
   }
 
   // 7. Copy files
-  const dryRunNotice = parsed.dryRun ? " (DRY RUN)" : "";
+  const dryRunNotice = parsed.dryRun ? output.dim(" (DRY RUN)") : "";
   console.log(
-    `Copying from ${sourceWorktree} to ${parsed.target}${dryRunNotice}...`,
+    `Copying from ${output.bold(sourceWorktree)} to ${output.bold(parsed.target)}${dryRunNotice}...\n`,
   );
 
   const results = await copyFiles(
@@ -73,26 +72,23 @@ export async function executeCopy(args: string[]): Promise<void> {
   );
 
   // 8. Display results
-  console.log();
   for (const result of results) {
     if (result.success) {
-      console.log(`  ✓ ${result.message}`);
+      console.log(`  ${output.checkmark()} ${result.message}`);
     } else {
-      console.log(`  ⚠ ${result.message}`);
+      console.log(`  ${output.warningSymbol()} ${result.message}`);
     }
   }
 
   // 9. Summary
   const successCount = results.filter((r) => r.success).length;
   const verb = parsed.dryRun ? "Would copy" : "Copied";
-  console.log(
-    `\nDone! ${verb} ${successCount}/${results.length} ${
-      successCount === 1 ? "file" : "files"
-    }`,
-  );
+  const fileWord = successCount === 1 ? "file" : "files";
 
-  // Exit with error code if some files failed
-  if (successCount < results.length) {
+  if (successCount === results.length) {
+    output.success(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
+  } else {
+    output.warning(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
     Deno.exit(1);
   }
 }

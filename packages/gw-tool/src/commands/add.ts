@@ -7,6 +7,7 @@ import { basename } from '$std/path';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Parse add command arguments
@@ -141,7 +142,7 @@ export async function executeAdd(args: string[]): Promise<void> {
 
   // Validate arguments
   if (!parsed.worktreeName) {
-    console.error('Error: Worktree name is required\n');
+    output.error('Worktree name is required');
     showAddHelp();
     Deno.exit(1);
   }
@@ -159,7 +160,7 @@ export async function executeAdd(args: string[]): Promise<void> {
   ];
 
   // Execute git worktree add
-  console.log(`Creating worktree: ${parsed.worktreeName}`);
+  console.log(`Creating worktree: ${output.bold(parsed.worktreeName)}\n`);
 
   const gitProcess = new Deno.Command(gitCmd[0], {
     args: gitCmd.slice(1),
@@ -170,7 +171,7 @@ export async function executeAdd(args: string[]): Promise<void> {
   const { code } = await gitProcess.output();
 
   if (code !== 0) {
-    console.error(`\nFailed to create worktree`);
+    output.error('Failed to create worktree');
     Deno.exit(code);
   }
 
@@ -187,12 +188,12 @@ export async function executeAdd(args: string[]): Promise<void> {
 
   // If no files to copy, we're done
   if (filesToCopy.length === 0) {
-    console.log('\nDone!');
+    output.success('Worktree created successfully');
     return;
   }
 
   // Copy files
-  console.log(`\nCopying files to new worktree...`);
+  console.log(`Copying files to new worktree...`);
 
   const sourceWorktree = config.defaultSource || 'main';
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
@@ -213,21 +214,20 @@ export async function executeAdd(args: string[]): Promise<void> {
     console.log();
     for (const result of results) {
       if (result.success) {
-        console.log(`  ✓ ${result.message}`);
+        console.log(`  ${output.checkmark()} ${result.message}`);
       } else {
-        console.log(`  ⚠ ${result.message}`);
+        console.log(`  ${output.warningSymbol()} ${result.message}`);
       }
     }
 
     const successCount = results.filter((r) => r.success).length;
-    console.log(
-      `\nDone! Copied ${successCount}/${results.length} ${
-        successCount === 1 ? 'file' : 'files'
-      }`,
+    const fileWord = successCount === 1 ? 'file' : 'files';
+    output.success(
+      `Worktree created! Copied ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`,
     );
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`\nWarning: Failed to copy files - ${message}`);
-    console.log('Worktree was created successfully, but file copying failed.');
+    output.warning(`Failed to copy files - ${message}`);
+    console.log('Worktree was created successfully, but file copying failed.\n');
   }
 }

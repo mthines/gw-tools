@@ -9,6 +9,7 @@ import { executeAdd } from "./commands/add.ts";
 import { executeCopy } from "./commands/copy.ts";
 import { executeInit } from "./commands/init.ts";
 import { executeRoot } from "./commands/root.ts";
+import * as output from "./lib/output.ts";
 
 /**
  * Available commands mapped to their handler functions
@@ -36,8 +37,8 @@ if (import.meta.main) {
     // Get command handler
     const handler = COMMANDS[command as keyof typeof COMMANDS];
     if (!handler) {
-      console.error(`Error: Unknown command '${command}'`);
-      console.error("Run 'gw --help' for usage information");
+      output.error(`Unknown command '${command}'`);
+      console.error("Run 'gw --help' for usage information\n");
       Deno.exit(1);
     }
 
@@ -45,7 +46,7 @@ if (import.meta.main) {
     await handler(args);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Error: ${message}`);
+    output.error(message);
     Deno.exit(1);
   }
 }

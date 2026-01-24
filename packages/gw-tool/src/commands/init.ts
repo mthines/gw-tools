@@ -5,8 +5,9 @@
 
 import { resolve } from '$std/path';
 import { saveConfig } from '../lib/config.ts';
-import { validatePathExists } from '../lib/path-resolver.ts';
+import { findGitRoot, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Parse init command arguments
@@ -53,26 +54,28 @@ function showInitHelp(): void {
 
 Initialize gw configuration for a git repository.
 
-Creates a .gw/config.json file in the current directory with the repository
-root and other settings. This is useful when auto-detection fails or when
-you want to manually specify the repository root.
+Creates a .gw/config.json file with the repository root and other settings.
+If --root is not provided, attempts to auto-detect the git repository root.
 
 Options:
-  --root <path>                   Specify the git repository root path (required)
+  --root <path>                   Specify the git repository root path (optional, auto-detects if not provided)
   --default-source <name>         Set the default source worktree (default: "main")
   --auto-copy-files <files>       Comma-separated list of files to auto-copy
                                   when creating new worktrees with 'gw add'
   -h, --help                      Show this help message
 
 Examples:
-  # Initialize with repository root
+  # Initialize with auto-detected root and auto-copy files
+  gw init --auto-copy-files .env,secrets/
+
+  # Initialize with custom default source (auto-detects root)
+  gw init --default-source master
+
+  # Initialize with explicit repository root
   gw init --root /Users/username/Workspace/repo.git
 
-  # Initialize with custom default source
-  gw init --root /Users/username/Workspace/repo.git --default-source master
-
-  # Initialize with auto-copy files
-  gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/
+  # Initialize with all options
+  gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/
 
   # Show help
   gw init --help
@@ -93,22 +96,32 @@ export async function executeInit(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  // Validate arguments
-  if (!parsed.root) {
-    console.error('Error: --root option is required\n');
-    showInitHelp();
-    Deno.exit(1);
-  }
+  // Determine root path: use provided --root or try auto-detection
+  let rootPath: string;
 
-  // Resolve and validate root path
-  const rootPath = resolve(parsed.root);
+  if (parsed.root) {
+    // User provided --root, use it
+    rootPath = resolve(parsed.root);
 
-  try {
-    await validatePathExists(rootPath, 'directory');
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    console.error(`Error: ${message}`);
-    Deno.exit(1);
+    try {
+      await validatePathExists(rootPath, 'directory');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.error(message);
+      Deno.exit(1);
+    }
+  } else {
+    // Try auto-detection
+    try {
+      rootPath = await findGitRoot();
+      output.info(`Auto-detected git root: ${output.path(rootPath)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.error(`Could not auto-detect git root - ${message}`);
+      console.error('Please specify the repository root with --root option\n');
+      showInitHelp();
+      Deno.exit(1);
+    }
   }
 
   // Create config
@@ -122,20 +135,20 @@ export async function executeInit(args: string[]): Promise<void> {
     config.autoCopyFiles = parsed.autoCopyFiles;
   }
 
-  // Save config in current directory
-  const currentDir = Deno.cwd();
-
+  // Save config at the git root (so it can be found by all worktrees)
   try {
-    await saveConfig(currentDir, config);
-    console.log(`Created config at ${currentDir}/.gw/config.json`);
-    console.log(`Repository root: ${rootPath}`);
-    console.log(`Default source worktree: ${config.defaultSource}`);
+    await saveConfig(rootPath, config);
+    output.success('Configuration created successfully');
+    console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
+    console.log(`  Repository root: ${output.path(rootPath)}`);
+    console.log(`  Default source worktree: ${output.bold(config.defaultSource || 'main')}`);
     if (config.autoCopyFiles) {
-      console.log(`Auto-copy files: ${config.autoCopyFiles.join(', ')}`);
+      console.log(`  Auto-copy files: ${output.dim(config.autoCopyFiles.join(', '))}`);
     }
+    console.log();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error(`Error: Failed to create config - ${message}`);
+    output.error(`Failed to create config - ${message}`);
     Deno.exit(1);
   }
 }
