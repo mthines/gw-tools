@@ -34,6 +34,10 @@ fi
 CURRENT_VERSION=$(node -p "require('$PACKAGE_DIR/npm/package.json').version")
 echo -e "Current version: ${YELLOW}$CURRENT_VERSION${NC}"
 
+# Run tests and checks
+echo -e "\n${BLUE}🧪 Running tests and checks...${NC}"
+nx run @gw-tools/gw-tool:check
+
 # Analyze commits to determine version bump
 echo -e "\n${BLUE}📝 Analyzing commits since last release...${NC}"
 
