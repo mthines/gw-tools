@@ -2,6 +2,31 @@
 
 A command-line tool for managing git worktrees, built with Deno.
 
+## Table of Contents
+
+- [Quick Start](#quick-start)
+- [Features](#features)
+- [Installation](#installation)
+  - [Via npm (Recommended)](#via-npm-recommended)
+  - [Build from source](#build-from-source)
+- [Configuration](#configuration)
+  - [Auto-Detection](#auto-detection)
+  - [Example Configuration](#example-configuration)
+  - [Configuration Options](#configuration-options)
+- [Commands](#commands)
+  - [root](#root)
+  - [init](#init)
+  - [copy](#copy)
+- [Use Case](#use-case)
+  - [Typical Workflow](#typical-workflow)
+- [Development](#development)
+  - [Local Development & Testing](#local-development--testing)
+  - [Available Scripts](#available-scripts)
+  - [Publishing](#publishing)
+  - [Project Structure](#project-structure)
+  - [Adding New Commands](#adding-new-commands)
+- [License](#license)
+
 ## Quick Start
 
 ```bash
@@ -210,6 +235,27 @@ gw copy --dry-run feat-branch .env
 
 # Use absolute path as target
 gw copy /full/path/to/repo/feat-branch .env
+```
+
+## Use Case
+
+This tool was originally created to simplify the workflow of copying secrets and environment files when creating new git worktrees. When you create a new worktree for a feature branch, you often need to copy `.env` files, credentials, and other configuration files from your main worktree to the new one. This tool automates that process.
+
+The tool automatically detects which git repository you're working in and creates a local config file (`.gw/config.json`) on first use. The config stores the repository root and other settings, so subsequent runs are fast and don't need to re-detect the repository structure. Each repository has its own configuration, and you can customize the default source worktree per repository.
+
+### Typical Workflow
+
+```bash
+# From within any worktree of your repository
+# Create a new worktree
+git worktree add feat-new-feature
+
+# Copy secrets from main worktree to the new one
+# gw automatically detects your repository and uses its config
+gw copy feat-new-feature .env components/agents/.env components/ui/.vercel
+
+# Start working in the new worktree
+cd feat-new-feature
 ```
 
 ## Development
@@ -565,27 +611,6 @@ To add a new command, follow the pattern used by existing commands like `copy` a
    ```
 
 **Tip**: Look at [src/commands/root.ts](src/commands/root.ts) for a simple command example, or [src/commands/copy.ts](src/commands/copy.ts) for a more complex command with argument parsing.
-
-## Use Case
-
-This tool was originally created to simplify the workflow of copying secrets and environment files when creating new git worktrees. When you create a new worktree for a feature branch, you often need to copy `.env` files, credentials, and other configuration files from your main worktree to the new one. This tool automates that process.
-
-The tool automatically detects which git repository you're working in and creates a local config file (`.gw/config.json`) on first use. The config stores the repository root and other settings, so subsequent runs are fast and don't need to re-detect the repository structure. Each repository has its own configuration, and you can customize the default source worktree per repository.
-
-### Typical Workflow
-
-```bash
-# From within any worktree of your repository
-# Create a new worktree
-git worktree add feat-new-feature
-
-# Copy secrets from main worktree to the new one
-# gw automatically detects your repository and uses its config
-gw copy feat-new-feature .env components/agents/.env components/ui/.vercel
-
-# Start working in the new worktree
-cd feat-new-feature
-```
 
 ## License
 
