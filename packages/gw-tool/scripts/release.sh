@@ -122,6 +122,11 @@ nx run gw-tool:npm-pack
 # Create GitHub release with binaries
 echo -e "\n${BLUE}🚀 Creating GitHub release...${NC}"
 
+# Show what will be uploaded
+echo -e "${BLUE}Binaries to upload:${NC}"
+ls -lh dist/packages/gw-tool/binaries/ | tail -n +2 | awk '{printf "  %s (%s)\n", $9, $5}'
+echo ""
+
 # Generate changelog for this release
 CHANGELOG=""
 if [ -z "$LAST_TAG" ]; then
@@ -130,7 +135,8 @@ else
   CHANGELOG=$(git log "$LAST_TAG"..v"$NEW_VERSION" --pretty=format:"* %s (%h)" --no-merges -- packages/gw-tool/)
 fi
 
-gh release create "v$NEW_VERSION" \
+echo -e "${BLUE}Uploading binaries to GitHub... (this may take a few minutes)${NC}"
+GH_DEBUG=api gh release create "v$NEW_VERSION" \
   --title "v$NEW_VERSION" \
   --notes "$CHANGELOG" \
   dist/packages/gw-tool/binaries/*
