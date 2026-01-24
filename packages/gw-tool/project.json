@@ -121,8 +121,7 @@
         ],
         "parallel": false,
         "cwd": "packages/gw-tool"
-      },
-      "dependsOn": ["compile-all"]
+      }
     },
     "release": {
       "executor": "nx:run-commands",
