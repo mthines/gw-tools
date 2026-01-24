@@ -58,7 +58,7 @@
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool"],
       "options": {
-        "command": "deno compile --allow-all --output ../../dist/packages/gw-tool/gw-tool src/main.ts",
+        "command": "deno compile --allow-all --output ../../dist/packages/gw-tool/gw src/main.ts",
         "cwd": "packages/gw-tool"
       }
     }

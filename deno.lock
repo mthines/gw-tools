@@ -1,0 +1,67 @@
+{
+  "version": "5",
+  "specifiers": {
+    "jsr:@std/cli@1.0.9": "1.0.9",
+    "jsr:@std/path@1.0.8": "1.0.8"
+  },
+  "jsr": {
+    "@std/cli@1.0.9": {
+      "integrity": "557e5865af000efbf3f737dcfea5b8ab86453594f4a9cd8d08c9fa83d8e3f3bc"
+    },
+    "@std/path@1.0.8": {
+      "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
+    }
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/js@^9.8.0",
+        "npm:@nx/eslint-plugin@22.4.0",
+        "npm:@nx/eslint@22.4.0",
+        "npm:@nx/jest@22.4.0",
+        "npm:@nx/js@22.4.0",
+        "npm:@nx/vite@22.4.0",
+        "npm:@nx/vitest@22.4.0",
+        "npm:@nx/web@22.4.0",
+        "npm:@swc-node/register@~1.9.1",
+        "npm:@swc/core@~1.5.7",
+        "npm:@swc/helpers@~0.5.11",
+        "npm:@types/jest@30",
+        "npm:@types/node@20.19.9",
+        "npm:@vitest/coverage-v8@4.0.9",
+        "npm:@vitest/ui@4.0.9",
+        "npm:eslint@8.57",
+        "npm:jest-environment-node@^30.0.2",
+        "npm:jest-util@^30.0.2",
+        "npm:jest@^30.0.2",
+        "npm:jiti@2.4.2",
+        "npm:jsonc-eslint-parser@^2.1.0",
+        "npm:nx@22.4.0",
+        "npm:prettier@~3.6.2",
+        "npm:ts-jest@^29.4.0",
+        "npm:ts-node@10.9.1",
+        "npm:tslib@^2.3.0",
+        "npm:typescript-eslint@^8.40.0",
+        "npm:typescript@~5.9.2",
+        "npm:verdaccio@^6.0.5",
+        "npm:vite@7",
+        "npm:vitest@4.0.9"
+      ]
+    },
+    "members": {
+      "packages/gw-tool": {
+        "dependencies": [
+          "jsr:@std/cli@1.0.9",
+          "jsr:@std/path@1.0.8"
+        ]
+      },
+      "packages/utils": {
+        "packageJson": {
+          "dependencies": [
+            "npm:tslib@^2.3.0"
+          ]
+        }
+      }
+    }
+  }
+}
