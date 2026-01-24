@@ -76,7 +76,6 @@
         "{projectRoot}/deno.json",
         "{projectRoot}/deno.lock"
       ],
-      "cache": true,
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/binaries",
@@ -112,7 +111,6 @@
         "{projectRoot}/README.md",
         "{workspaceRoot}/dist/packages/gw-tool/binaries/**/*"
       ],
-      "cache": true,
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/npm",
