@@ -79,6 +79,45 @@ On first run, `gw` will automatically create a configuration file at `<git-root>
 
 ## Commands
 
+### root
+
+Get the root directory of the current git repository. For git worktrees, returns the parent directory containing all worktrees.
+
+```bash
+gw root
+```
+
+This command is useful when working with git worktrees to find the main repository directory that contains all worktrees, regardless of how deeply nested you are in the directory structure.
+
+#### Examples
+
+```bash
+# Get repository root path
+gw root
+# Output: /Users/username/Workspace/my-project.git
+
+# Navigate to repository root
+cd "$(gw root)"
+
+# List all worktrees
+ls "$(gw root)"
+
+# Use in scripts
+REPO_ROOT=$(gw root)
+echo "Repository is at: $REPO_ROOT"
+
+# Works from any depth
+cd /Users/username/Workspace/my-project.git/feat/deeply/nested/folder
+gw root
+# Output: /Users/username/Workspace/my-project.git
+```
+
+#### How It Works
+
+- **In a worktree**: Returns the parent directory containing all worktrees (e.g., `/path/to/repo.git`)
+- **In a regular repo**: Returns the directory containing the `.git` directory
+- **From nested directories**: Walks up the directory tree to find the repository root
+
 ### copy
 
 Copy files and directories between worktrees, preserving directory structure.
@@ -121,6 +160,120 @@ gw copy /full/path/to/repo/feat-branch .env
 ```
 
 ## Development
+
+### Local Development & Testing
+
+When developing the tool, you can test changes locally without publishing by creating a global symlink. This allows you to use the `gw` command with live code updates.
+
+#### Method 1: Shell Alias (Recommended for Active Development)
+
+Create a shell alias that runs the Deno version directly with watch mode:
+
+```bash
+# Add to your ~/.zshrc or ~/.bashrc
+alias gw-dev='deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts'
+
+# Reload your shell
+source ~/.zshrc  # or ~/.bashrc
+
+# Now you can use it anywhere
+cd ~/some-project
+gw-dev copy feat-branch .env
+```
+
+This gives you instant feedback - just edit the TypeScript files and run the command again.
+
+#### Method 2: Symlink to Compiled Binary (Faster Execution)
+
+Create a symlink to the compiled binary and recompile when needed:
+
+```bash
+# From the workspace root
+nx run gw-tool:compile
+
+# Create global symlink (one-time setup)
+sudo ln -sf ~/path/to/gw-tools/dist/packages/gw-tool/gw /usr/local/bin/gw
+
+# Now you can use `gw` globally
+cd ~/some-project
+gw copy feat-branch .env
+
+# When you make changes, recompile
+nx run gw-tool:compile
+# The symlink automatically points to the new binary
+```
+
+#### Method 3: Development Wrapper Script (Best of Both Worlds)
+
+Create a wrapper script that provides both speed and live updates:
+
+```bash
+# Create ~/bin/gw (make sure ~/bin is in your PATH)
+cat > ~/bin/gw << 'EOF'
+#!/bin/bash
+# Check if we're in development mode (set GW_DEV=1 to use source)
+if [ "$GW_DEV" = "1" ]; then
+  exec deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts "$@"
+else
+  exec ~/path/to/gw-tools/dist/packages/gw-tool/gw "$@"
+fi
+EOF
+
+chmod +x ~/bin/gw
+
+# Use compiled version (fast)
+gw copy feat-branch .env
+
+# Use development version with live updates
+GW_DEV=1 gw copy feat-branch .env
+
+# Or set it for your entire session
+export GW_DEV=1
+gw copy feat-branch .env
+```
+
+#### Method 4: npm link (For Testing Installation)
+
+Test the npm package installation flow locally:
+
+```bash
+# Compile binaries
+nx run gw-tool:compile-all
+
+# Prepare npm package
+nx run gw-tool:npm-pack
+
+# Link the package globally
+cd dist/packages/gw-tool/npm
+npm link
+
+# Now `gw` is available globally via npm
+gw copy feat-branch .env
+
+# When you make changes
+cd ~/path/to/gw-tools
+nx run gw-tool:compile-all
+nx run gw-tool:npm-pack
+# The link automatically uses the updated binaries
+
+# To unlink when done
+npm unlink -g @gw-tools/gw
+```
+
+#### Watch Mode for Active Development
+
+Use the watch mode to automatically restart when files change:
+
+```bash
+# Terminal 1: Run in watch mode
+nx run gw-tool:dev
+
+# Terminal 2: Test in another project
+cd ~/some-project
+~/path/to/gw-tools/dist/packages/gw-tool/gw copy feat-branch .env
+```
+
+**Pro tip**: Combine Method 3 (wrapper script) with watch mode by setting `GW_DEV=1` in your development shell.
 
 ### Available Scripts
 
@@ -287,13 +440,21 @@ packages/gw-tool/
 │   ├── main.ts              # CLI entry point and command dispatcher
 │   ├── index.ts             # Public API exports
 │   ├── commands/            # Command implementations
-│   │   └── copy.ts          # Copy command
+│   │   ├── copy.ts          # Copy command
+│   │   └── root.ts          # Root command
 │   └── lib/                 # Shared utilities
 │       ├── types.ts         # TypeScript type definitions
 │       ├── config.ts        # Configuration management
 │       ├── cli.ts           # CLI argument parsing
 │       ├── file-ops.ts      # File/directory operations
 │       └── path-resolver.ts # Path resolution utilities
+├── npm/                     # npm package files
+│   ├── package.json         # npm package metadata
+│   ├── install.js           # Binary installation script
+│   └── bin/
+│       └── gw.js            # Binary wrapper
+├── scripts/
+│   └── release.sh           # Automated release script
 ├── deno.json                # Deno configuration
 ├── project.json             # Nx project configuration
 └── README.md                # This file
@@ -301,22 +462,53 @@ packages/gw-tool/
 
 ### Adding New Commands
 
-To add a new command:
+To add a new command, follow the pattern used by existing commands like `copy` and `root`:
 
-1. Create a new file in `src/commands/` (e.g., `init.ts`)
-2. Implement your command function:
+1. **Create a new file** in `src/commands/` (e.g., `list.ts`):
    ```typescript
-   export async function executeInit(args: string[]): Promise<void> {
+   // src/commands/list.ts
+   export async function executeList(args: string[]): Promise<void> {
+     // Check for help flag
+     if (args.includes("--help") || args.includes("-h")) {
+       console.log(`Usage: gw list
+
+   List all git worktrees in the current repository.
+
+   Options:
+     -h, --help    Show this help message
+   `);
+       Deno.exit(0);
+     }
+
      // Command implementation
+     // ...
    }
    ```
-3. Add the command to the `COMMANDS` object in `src/main.ts`:
+
+2. **Import and register** the command in `src/main.ts`:
    ```typescript
+   import { executeList } from "./commands/list.ts";
+
    const COMMANDS = {
      copy: executeCopy,
-     init: executeInit, // Add your new command
+     root: executeRoot,
+     list: executeList, // Add your new command
    };
    ```
+
+3. **Update global help** in `src/lib/cli.ts`:
+   ```typescript
+   export function showGlobalHelp(): void {
+     console.log(`
+   Commands:
+     copy     Copy files/directories between worktrees
+     root     Get the root directory of the current git repository
+     list     List all git worktrees in the repository
+   `);
+   }
+   ```
+
+**Tip**: Look at [src/commands/root.ts](src/commands/root.ts) for a simple command example, or [src/commands/copy.ts](src/commands/copy.ts) for a more complex command with argument parsing.
 
 ## Use Case
 
