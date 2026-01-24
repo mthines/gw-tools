@@ -53,7 +53,7 @@ git clone https://github.com/mthines/gw-tools.git
 cd gw-tools
 
 # Build the project
-nx run gw:compile
+nx run gw-tool:compile
 
 # The binary will be created at dist/packages/gw-tool/gw
 # You can copy it to a directory in your PATH for global access
@@ -125,105 +125,110 @@ gw copy /full/path/to/repo/feat-branch .env
 
 ```bash
 # Run the tool in development mode
-nx run gw:run -- <args>
+nx run gw-tool:run -- <args>
 
 # Watch mode for development
-nx run gw:dev
+nx run gw-tool:dev
 
 # Type check
-nx run gw:check
+nx run gw-tool:check
 
 # Lint
-nx run gw:lint
+nx run gw-tool:lint
 
 # Format code
-nx run gw:fmt
+nx run gw-tool:fmt
 
 # Compile to binary (current platform only)
-nx run gw:compile
+nx run gw-tool:compile
 
 # Compile binaries for all platforms
-nx run gw:compile-all
+nx run gw-tool:compile-all
 
 # Prepare npm package
-nx run gw:npm-pack
+nx run gw-tool:npm-pack
 
-# Prepare release (compile + pack)
-nx run gw:prepare-release
+# Automated release (version, build, GitHub release, npm publish)
+nx run gw-tool:release
 
-# Publish to npm
-nx run gw:publish-npm
-
-# Publish to JSR
-nx run gw:publish-jsr
+# Publish to JSR (optional, separate ecosystem)
+nx run gw-tool:publish-jsr
 
 # Run tests
-nx run gw:test
+nx run gw-tool:test
 ```
 
 ### Publishing
 
-This tool can be published to multiple package registries for different audiences.
+This tool uses **automated semantic versioning** based on conventional commits. The version is automatically determined from your commit messages.
 
-#### Quick Start Publishing
+#### Automated Release (Recommended)
 
-For the simplest workflow, use the provided Nx targets:
+The simplest way to publish is using the automated release process:
 
 ```bash
-# 1. Update version in npm/package.json
-# 2. Prepare release (compiles all binaries)
-nx run gw:prepare-release
-
-# 3. Create GitHub release and upload binaries
-# (Follow instructions printed by prepare-release)
-
-# 4. Publish to npm
-nx run gw:publish-npm
-
-# 5. (Optional) Publish to JSR
-nx run gw:publish-jsr
+# Make sure you're on main/master branch with all changes pushed
+nx run gw-tool:release
 ```
 
-#### Publishing to npm (Detailed)
+This single command will:
+1. Analyze your commits since the last release
+2. Automatically determine version bump (major/minor/patch)
+3. Update npm/package.json with the new version
+4. Create a git commit and tag
+5. Push to GitHub
+6. Build binaries for all platforms
+7. Create a GitHub release with binaries attached
+8. Publish to npm
 
-The primary distribution method for end users.
+**Conventional Commit Format:**
 
-1. **Update version:**
-   ```bash
-   # Edit packages/gw-tool/npm/package.json
-   # Set "version": "1.0.0"
-   ```
+Use these commit prefixes to control versioning:
 
-2. **Prepare release (compiles all binaries):**
-   ```bash
-   nx run gw:prepare-release
-   ```
+- `feat:` - New feature (bumps **MINOR** version: 1.0.0 → 1.1.0)
+- `fix:` - Bug fix (bumps **PATCH** version: 1.0.0 → 1.0.1)
+- `BREAKING CHANGE:` or `feat!:` or `fix!:` - Breaking change (bumps **MAJOR** version: 1.0.0 → 2.0.0)
+- `chore:`, `docs:`, `style:`, `refactor:`, `test:` - No version bump
 
-3. **Create a GitHub release:**
-   - Go to GitHub → Releases → Draft a new release
-   - Tag: `v1.0.0` (must match npm version)
-   - Upload all binaries from `dist/packages/gw-tool/binaries/`
-   - Binaries must be named exactly:
-     - `gw-macos-x64`
-     - `gw-macos-arm64`
-     - `gw-linux-x64`
-     - `gw-linux-arm64`
-     - `gw-windows-x64.exe`
-   - Publish the release
-
-4. **Publish to npm:**
-   ```bash
-   nx run gw:publish-npm
-   ```
-
-The npm package will automatically download the correct binary from GitHub releases when users install it.
-
-**Installation (users):**
+**Examples:**
 ```bash
-npm install -g @gw-tools/gw
+git commit -m "feat: add dry-run mode"           # 1.0.0 → 1.1.0
+git commit -m "fix: correct path resolution"     # 1.0.0 → 1.0.1
+git commit -m "feat!: redesign config structure" # 1.0.0 → 2.0.0
+git commit -m "docs: update README"              # no version bump
 ```
 
-#### Publishing to JSR (JavaScript Registry)
+#### Manual Publishing
+
+If you prefer manual control or need to debug the release process:
+
+```bash
+# 1. Update version
+cd packages/gw-tool/npm
+npm version 1.0.0
+cd ../../..
+
+# 2. Commit and push
+git add packages/gw-tool/npm/package.json
+git commit -m "chore: bump version to 1.0.0"
+git push
+
+# 3. Build binaries
+nx run gw-tool:compile-all
+nx run gw-tool:npm-pack
+
+# 4. Create GitHub release
+gh release create "v1.0.0" \
+  --title "v1.0.0" \
+  --notes "Release notes" \
+  dist/packages/gw-tool/binaries/*
+
+# 5. Publish to npm
+cd dist/packages/gw-tool/npm
+npm publish --access public
+```
+
+#### Publishing to JSR (Optional)
 
 For users who prefer Deno's native package manager.
 
@@ -236,59 +241,38 @@ For users who prefer Deno's native package manager.
    }
    ```
 
-2. **Publish to JSR:**
+2. **Publish:**
    ```bash
-   nx run gw:publish-jsr
+   nx run gw-tool:publish-jsr
    ```
-
-   Or manually:
-   ```bash
-   cd packages/gw-tool
-   deno publish --allow-dirty
-   ```
-
-**Installation (users):**
-```bash
-# With Deno
-deno install -g -n gw jsr:@your-scope/gw
-
-# With npm (via JSR)
-npx jsr:@your-scope/gw copy feat-branch .env
-```
-
-#### Publishing to Deno Land
-
-For listing on deno.land/x (optional).
-
-1. **Import via GitHub:**
-   - Deno Land automatically tracks GitHub releases
-   - Tag your release on GitHub (e.g., `v1.0.0`)
-   - Register at https://deno.land/x
-
-2. **Add webhook** (done once):
-   - Go to repository settings → Webhooks
-   - Add Deno Land webhook URL
-
-**Installation (users):**
-```bash
-deno install -g -n gw https://deno.land/x/gw@v1.0.0/src/main.ts
-```
 
 #### Version Management
 
-**Important:** Keep versions synchronized across all platforms:
-- GitHub release tag: `v1.0.0`
-- npm package.json: `"version": "1.0.0"`
-- JSR deno.json: `"version": "1.0.0"`
+**Automated Approach (Recommended):**
 
-**Recommended workflow:**
-1. Decide on version number (e.g., 1.0.0)
-2. Update `packages/gw-tool/npm/package.json` version
-3. Update `packages/gw-tool/deno.json` version (if using JSR)
-4. Commit changes
-5. Create GitHub release with tag `v1.0.0` and upload binaries
-6. Publish to npm
-7. Publish to JSR (if using)
+Use conventional commits and let the system determine the version:
+
+```bash
+# Make changes
+git add .
+git commit -m "feat: add new awesome feature"
+
+# When ready to release
+nx run gw-tool:release
+```
+
+The version is automatically determined from your commits:
+- `feat:` → minor version bump (1.0.0 → 1.1.0)
+- `fix:` → patch version bump (1.0.0 → 1.0.1)
+- `feat!:` or `BREAKING CHANGE:` → major version bump (1.0.0 → 2.0.0)
+
+**Manual Approach:**
+
+If you prefer manual control:
+1. Update `packages/gw-tool/npm/package.json` version
+2. Update `packages/gw-tool/deno.json` version (if using JSR)
+3. Commit and push changes
+4. Build, create release, and publish manually
 
 ### Project Structure
 

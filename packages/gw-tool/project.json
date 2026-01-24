@@ -1,5 +1,5 @@
 {
-  "name": "@gw-tools/gw",
+  "name": "@gw-tools/gw-tool",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/gw-tool/src",
   "projectType": "library",
@@ -92,51 +92,16 @@
       },
       "dependsOn": ["compile-all"]
     },
-    "prepare-release": {
+    "release": {
       "executor": "nx:run-commands",
       "options": {
-        "commands": [
-          "echo '\\n📦 Compiling binaries for all platforms...'",
-          "nx run gw:compile-all",
-          "echo '\\n📝 Preparing npm package...'",
-          "nx run gw:npm-pack",
-          "echo '\\n✅ Release preparation complete!'",
-          "echo '\\nNext steps:'",
-          "echo '1. Create GitHub release with tag (e.g., v1.0.0)'",
-          "echo '2. Upload binaries from dist/packages/gw-tool/binaries/'",
-          "echo '3. Run: nx run gw:publish-npm'",
-          "echo '\\nBinaries ready at: dist/packages/gw-tool/binaries/'"
-        ],
-        "parallel": false
-      }
-    },
-    "publish-npm": {
-      "executor": "nx:run-commands",
-      "options": {
-        "commands": [
-          "echo '\\n📦 Publishing to npm...'",
-          "echo 'Make sure you have:'",
-          "echo '  1. Created a GitHub release with binaries'",
-          "echo '  2. Updated version in npm/package.json'",
-          "echo ''",
-          "read -p 'Continue? (y/n) ' -n 1 -r && echo && [[ $REPLY =~ ^[Yy]$ ]] || exit 1",
-          "cd npm && npm publish --access public"
-        ],
-        "parallel": false,
-        "cwd": "packages/gw-tool"
+        "command": "./packages/gw-tool/scripts/release.sh"
       }
     },
     "publish-jsr": {
       "executor": "nx:run-commands",
       "options": {
-        "commands": [
-          "echo '\\n📦 Publishing to JSR...'",
-          "echo 'Make sure deno.json has name, version, and exports configured'",
-          "echo ''",
-          "read -p 'Continue? (y/n) ' -n 1 -r && echo && [[ $REPLY =~ ^[Yy]$ ]] || exit 1",
-          "deno publish --allow-dirty"
-        ],
-        "parallel": false,
+        "command": "deno publish --allow-dirty",
         "cwd": "packages/gw-tool"
       }
     }

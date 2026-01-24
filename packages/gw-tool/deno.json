@@ -8,11 +8,13 @@
     "$std/cli": "jsr:@std/cli@1.0.9"
   },
   "lint": {
+    "exclude": ["npm/"],
     "rules": {
       "tags": ["recommended"]
     }
   },
   "fmt": {
+    "exclude": ["npm/"],
     "useTabs": false,
     "lineWidth": 80,
     "indentWidth": 2,
