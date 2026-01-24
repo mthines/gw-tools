@@ -142,7 +142,7 @@ Configuration:
   Example config:
   {
     "root": "/Users/username/Workspace/repo.git",
-    "defaultSource": "main"
+    "defaultBranch": "main"
   }
 
   If auto-detection fails, run 'gw init --root <path>' to specify manually.

@@ -73,7 +73,7 @@ async function ensureConfigDir(dir: string): Promise<void> {
  */
 function createDefaultConfig(): Config {
   return {
-    defaultSource: "main",
+    defaultBranch: "main",
   };
 }
 
@@ -92,8 +92,8 @@ function validateConfig(data: unknown): data is Config {
   }
 
   if (
-    config.defaultSource !== undefined &&
-    typeof config.defaultSource !== "string"
+    config.defaultBranch !== undefined &&
+    typeof config.defaultBranch !== "string"
   ) {
     return false;
   }
@@ -174,7 +174,7 @@ export async function loadConfig(): Promise<{
 
     console.log(`Created config at ${getConfigPath(gitRoot)}`);
     console.log(`Detected git root: ${gitRoot}`);
-    console.log(`Default source worktree: ${config.defaultSource}\n`);
+    console.log(`Default source worktree: ${config.defaultBranch}\n`);
 
     return { config, gitRoot };
   } catch {

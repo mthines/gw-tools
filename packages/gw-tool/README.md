@@ -4,29 +4,52 @@ A command-line tool for managing git worktrees, built with Deno.
 
 ## Table of Contents
 
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Installation](#installation)
-  - [Via npm (Recommended)](#via-npm-recommended)
-  - [Build from source](#build-from-source)
-- [Configuration](#configuration)
-  - [Auto-Detection](#auto-detection)
-  - [Example Configuration](#example-configuration)
-  - [Configuration Options](#configuration-options)
-- [Commands](#commands)
-  - [add](#add)
-  - [root](#root)
-  - [init](#init)
-  - [copy](#copy)
-- [Use Case](#use-case)
-  - [Typical Workflow](#typical-workflow)
-- [Development](#development)
-  - [Local Development & Testing](#local-development--testing)
-  - [Available Scripts](#available-scripts)
-  - [Publishing](#publishing)
-  - [Project Structure](#project-structure)
-  - [Adding New Commands](#adding-new-commands)
-- [License](#license)
+- [gw - Git Worktree Tools](#gw---git-worktree-tools)
+  - [Table of Contents](#table-of-contents)
+  - [Quick Start](#quick-start)
+  - [Features](#features)
+  - [Installation](#installation)
+    - [Via npm (Recommended)](#via-npm-recommended)
+    - [Build from source](#build-from-source)
+  - [Configuration](#configuration)
+    - [Auto-Detection](#auto-detection)
+    - [Example Configuration](#example-configuration)
+    - [Configuration Options](#configuration-options)
+  - [Commands](#commands)
+    - [add](#add)
+      - [Arguments](#arguments)
+      - [Options](#options)
+      - [Examples](#examples)
+      - [Auto-Copy Configuration](#auto-copy-configuration)
+    - [root](#root)
+      - [Examples](#examples-1)
+      - [How It Works](#how-it-works)
+    - [init](#init)
+      - [Options](#options-1)
+      - [Examples](#examples-2)
+      - [When to Use](#when-to-use)
+    - [copy](#copy)
+      - [Arguments](#arguments-1)
+      - [Options](#options-2)
+      - [Examples](#examples-3)
+  - [Use Case](#use-case)
+    - [Typical Workflow](#typical-workflow)
+  - [Development](#development)
+    - [Local Development \& Testing](#local-development--testing)
+      - [Method 1: Shell Alias (Recommended for Active Development)](#method-1-shell-alias-recommended-for-active-development)
+      - [Method 2: Symlink to Compiled Binary (Faster Execution)](#method-2-symlink-to-compiled-binary-faster-execution)
+      - [Method 3: Development Wrapper Script (Best of Both Worlds)](#method-3-development-wrapper-script-best-of-both-worlds)
+      - [Method 4: npm link (For Testing Installation)](#method-4-npm-link-for-testing-installation)
+      - [Watch Mode for Active Development](#watch-mode-for-active-development)
+    - [Available Scripts](#available-scripts)
+    - [Publishing](#publishing)
+      - [Automated Release (Recommended)](#automated-release-recommended)
+      - [Manual Publishing](#manual-publishing)
+      - [Publishing to JSR (Optional)](#publishing-to-jsr-optional)
+      - [Version Management](#version-management)
+    - [Project Structure](#project-structure)
+    - [Adding New Commands](#adding-new-commands)
+  - [License](#license)
 
 ## Quick Start
 
@@ -118,7 +141,7 @@ gw init --root /path/to/your/repo.git
 ```json
 {
   "root": "/Users/username/Workspace/my-project.git",
-  "defaultSource": "main",
+  "defaultBranch": "main",
   "autoCopyFiles": [
     ".env",
     "components/agents/.env",
@@ -130,7 +153,7 @@ gw init --root /path/to/your/repo.git
 ### Configuration Options
 
 - **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
-- **defaultSource**: Default source worktree name (optional, defaults to "main")
+- **defaultBranch**: Default source worktree name (optional, defaults to "main")
 - **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw add` (optional, only set via `gw init --auto-copy-files`)
 
 ## Commands
@@ -188,7 +211,7 @@ This creates:
 ```json
 {
   "root": "/path/to/repo.git",
-  "defaultSource": "main",
+  "defaultBranch": "main",
   "autoCopyFiles": [".env", "secrets/", "components/ui/.vercel/"]
 }
 ```

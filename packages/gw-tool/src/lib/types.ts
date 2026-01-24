@@ -9,7 +9,7 @@ export interface Config {
   /** Absolute path to the git repository root */
   root?: string;
   /** Default source worktree name (e.g., "main", "master") */
-  defaultSource?: string;
+  defaultBranch?: string;
   /** Files to automatically copy when creating new worktrees */
   autoCopyFiles?: string[];
 }

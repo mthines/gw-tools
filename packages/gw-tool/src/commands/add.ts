@@ -120,7 +120,7 @@ Configuration:
   This creates a config with:
   {
     "root": "/path/to/repo.git",
-    "defaultSource": "main",
+    "defaultBranch": "main",
     "autoCopyFiles": [".env", "secrets/"]
   }
 `);
@@ -195,7 +195,7 @@ export async function executeAdd(args: string[]): Promise<void> {
   // Copy files
   console.log(`Copying files to new worktree...`);
 
-  const sourceWorktree = config.defaultSource || 'main';
+  const sourceWorktree = config.defaultBranch || 'main';
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
 
   // Extract just the worktree name (last component of path)

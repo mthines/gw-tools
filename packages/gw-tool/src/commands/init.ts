@@ -15,13 +15,13 @@ import * as output from '../lib/output.ts';
 function parseInitArgs(args: string[]): {
   help: boolean;
   root?: string;
-  defaultSource?: string;
+  defaultBranch?: string;
   autoCopyFiles?: string[];
 } {
   const result: {
     help: boolean;
     root?: string;
-    defaultSource?: string;
+    defaultBranch?: string;
     autoCopyFiles?: string[];
   } = {
     help: false,
@@ -35,7 +35,7 @@ function parseInitArgs(args: string[]): {
     } else if (arg === '--root' && i + 1 < args.length) {
       result.root = args[++i];
     } else if (arg === '--default-source' && i + 1 < args.length) {
-      result.defaultSource = args[++i];
+      result.defaultBranch = args[++i];
     } else if (arg === '--auto-copy-files' && i + 1 < args.length) {
       // Split comma-separated list
       const filesArg = args[++i];
@@ -127,7 +127,7 @@ export async function executeInit(args: string[]): Promise<void> {
   // Create config
   const config: Config = {
     root: rootPath,
-    defaultSource: parsed.defaultSource || 'main',
+    defaultBranch: parsed.defaultBranch || 'main',
   };
 
   // Add autoCopyFiles if provided
@@ -141,7 +141,7 @@ export async function executeInit(args: string[]): Promise<void> {
     output.success('Configuration created successfully');
     console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
     console.log(`  Repository root: ${output.path(rootPath)}`);
-    console.log(`  Default source worktree: ${output.bold(config.defaultSource || 'main')}`);
+    console.log(`  Default source worktree: ${output.bold(config.defaultBranch || 'main')}`);
     if (config.autoCopyFiles) {
       console.log(`  Auto-copy files: ${output.dim(config.autoCopyFiles.join(', '))}`);
     }

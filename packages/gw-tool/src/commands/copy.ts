@@ -37,7 +37,7 @@ export async function executeCopy(args: string[]): Promise<void> {
   const { config, gitRoot } = await loadConfig();
 
   // 5. Resolve paths
-  const sourceWorktree = parsed.from || config.defaultSource || "main";
+  const sourceWorktree = parsed.from || config.defaultBranch || "main";
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
   const targetPath = resolveWorktreePath(gitRoot, parsed.target);
 
