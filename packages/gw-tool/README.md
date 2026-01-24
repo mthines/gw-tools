@@ -21,17 +21,24 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options)
       - [Examples](#examples)
       - [Auto-Copy Configuration](#auto-copy-configuration)
-    - [root](#root)
+    - [cd](#cd)
+      - [Arguments](#arguments-1)
       - [Examples](#examples-1)
       - [How It Works](#how-it-works)
-    - [init](#init)
+    - [install-shell](#install-shell)
       - [Options](#options-1)
       - [Examples](#examples-2)
+    - [root](#root)
+      - [Examples](#examples-3)
+      - [How It Works](#how-it-works-1)
+    - [init](#init)
+      - [Options](#options-2)
+      - [Examples](#examples-4)
       - [When to Use](#when-to-use)
     - [sync](#sync)
-      - [Arguments](#arguments-1)
-      - [Options](#options-2)
-      - [Examples](#examples-3)
+      - [Arguments](#arguments-2)
+      - [Options](#options-3)
+      - [Examples](#examples-5)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -68,8 +75,8 @@ npm install -g @gw-tools/gw
 # Create a new worktree and copy files
 gw add feat-new-feature .env secrets/
 
-# Done! Your new worktree has the files it needs
-cd feat-new-feature
+# Navigate to your new worktree
+gw cd feat-new-feature
 ```
 
 **Or with auto-copy (one-time setup):**
@@ -80,12 +87,14 @@ gw init --root $(gw root) --auto-copy-files .env,secrets/
 
 # Now just create worktrees - files are copied automatically
 gw add feat-another-feature
-cd feat-another-feature
+gw cd feat-another-feature
 ```
 
 ## Features
 
+- **Quick navigation**: Navigate to worktrees instantly with smart partial matching (`gw cd feat` finds `feat-branch`)
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
+- **Automatic shell integration**: Shell function installs automatically on npm install for seamless `gw cd` navigation
 - **Multi-command architecture**: Extensible framework for adding new worktree management commands
 - **Auto-configured per repository**: Each repository gets its own local config file, automatically created on first use
 - **Dry-run mode**: Preview what would be copied without making changes
@@ -225,6 +234,78 @@ This creates:
 ```
 
 Now every time you run `gw add`, these files will be automatically copied from your default source worktree (usually `main`) to the new worktree.
+
+### cd
+
+Navigate directly to a worktree by name or partial match. The command uses smart matching to find worktrees, searching both branch names and worktree paths.
+
+```bash
+gw cd <worktree>
+```
+
+#### Arguments
+
+- `<worktree>`: Name or partial name of the worktree (matches branch name or path)
+
+#### Examples
+
+```bash
+# Navigate to a worktree by exact name
+gw cd feat-branch
+
+# Navigate using partial match (finds "feat-new-feature")
+gw cd feat
+
+# If multiple matches found, shows list with helpful error:
+gw cd api
+# Output: Multiple worktrees match "api":
+#   api-refactor -> /path/to/repo/api-refactor
+#   graphql-api -> /path/to/repo/graphql-api
+```
+
+#### How It Works
+
+The `cd` command integrates with your shell through an automatically installed function (see [install-shell](#install-shell)). When you run `gw cd <worktree>`:
+
+1. The command finds the matching worktree path
+2. The shell function intercepts the call and navigates you there
+3. All other `gw` commands pass through normally
+
+**Note**: Shell integration is automatically installed when you install via npm. If needed, you can manually install or remove it using `gw install-shell`.
+
+### install-shell
+
+Install or remove shell integration for the `gw cd` command. This is automatically run during `npm install`, but can be run manually if needed.
+
+```bash
+gw install-shell [options]
+```
+
+#### Options
+
+- `--remove`: Remove shell integration
+- `--quiet, -q`: Suppress output messages
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Install shell integration (usually not needed - auto-installed)
+gw install-shell
+
+# Remove shell integration
+gw install-shell --remove
+
+# Install quietly (for automation)
+gw install-shell --quiet
+```
+
+**Supported Shells:**
+- **Zsh** (~/.zshrc)
+- **Bash** (~/.bashrc)
+- **Fish** (~/.config/fish/functions/gw.fish)
+
+The command is idempotent - running it multiple times won't create duplicate entries.
 
 ### root
 
@@ -473,8 +554,8 @@ gw init --root $(gw root) --auto-copy-files .env,components/agents/.env,componen
 # Create a new worktree with auto-copy
 gw add feat-new-feature
 
-# Done! Files are automatically copied
-cd feat-new-feature
+# Navigate to your new worktree
+gw cd feat-new-feature
 
 # Alternative: Create worktree and copy specific files
 gw add feat-bugfix .env custom-config.json
@@ -482,6 +563,7 @@ gw add feat-bugfix .env custom-config.json
 # Alternative: Use the manual sync command
 git worktree add feat-manual
 gw sync feat-manual .env
+gw cd feat-manual
 ```
 
 ## Development
