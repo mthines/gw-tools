@@ -4,8 +4,8 @@
  * Main entry point for the gw CLI tool
  */
 
-import { parseGlobalArgs, showGlobalHelp } from "./lib/cli.ts";
-import { executeCopy } from "./commands/copy.ts";
+import { parseGlobalArgs, showGlobalHelp } from './lib/cli.ts';
+import { executeCopy } from './commands/copy.ts';
 
 /**
  * Available commands mapped to their handler functions

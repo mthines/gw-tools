@@ -2,8 +2,8 @@
  * CLI argument parsing and help text
  */
 
-import { parseArgs as denoParseArgs } from "$std/cli/parse-args";
-import type { CopyOptions, GlobalArgs } from "./types.ts";
+import { parseArgs as denoParseArgs } from '$std/cli/parse-args';
+import type { CopyOptions, GlobalArgs } from './types.ts';
 
 /**
  * Parse global CLI arguments to extract command and help flag
@@ -13,7 +13,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   const [firstArg, ...restArgs] = args;
 
   // Check for global help flag
-  if (firstArg === "--help" || firstArg === "-h" || !firstArg) {
+  if (firstArg === '--help' || firstArg === '-h' || !firstArg) {
     return {
       command: firstArg ? undefined : undefined,
       args: restArgs,
@@ -60,13 +60,13 @@ For command-specific help:
  */
 export function parseCopyArgs(args: string[]): CopyOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ["help", "dry-run"],
-    string: ["from"],
+    boolean: ['help', 'dry-run'],
+    string: ['from'],
     alias: {
-      h: "help",
-      n: "dry-run",
+      h: 'help',
+      n: 'dry-run',
     },
-    "--": true,
+    '--': true,
   });
 
   const positionalArgs = parsed._ as string[];
@@ -77,7 +77,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
     from: parsed.from as string | undefined,
     target: target as string,
     files: files as string[],
-    dryRun: parsed["dry-run"] as boolean | undefined,
+    dryRun: parsed['dry-run'] as boolean | undefined,
   };
 }
 

@@ -2,9 +2,9 @@
  * File and directory operations for copying secrets
  */
 
-import { dirname, join } from "$std/path";
-import { isDirectory, pathExists } from "./path-resolver.ts";
-import type { CopyResult } from "./types.ts";
+import { dirname, join } from '$std/path';
+import { isDirectory, pathExists } from './path-resolver.ts';
+import type { CopyResult } from './types.ts';
 
 /**
  * Recursively copy a directory and all its contents
@@ -127,14 +127,15 @@ export async function copyFiles(
     // Attempt to copy (or simulate in dry-run mode)
     const result = await copyPath(sourcePath, targetPath, dryRun);
     // Modify message to show relative path instead of full path
-    const prefix = dryRun ? "Would copy" : "Copied";
+    const prefix = dryRun ? 'Would copy' : 'Copied';
     results.push({
       ...result,
       message: result.success
         ? `${prefix}: ${relativePath}`
-        : `Failed to copy ${relativePath}: ${
-          result.message.split(": ").slice(1).join(": ")
-        }`,
+        : `Failed to copy ${relativePath}: ${result.message
+            .split(': ')
+            .slice(1)
+            .join(': ')}`,
       path: relativePath,
     });
   }

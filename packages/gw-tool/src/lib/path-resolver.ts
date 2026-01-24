@@ -2,7 +2,7 @@
  * Path resolution and validation utilities
  */
 
-import { join, normalize, resolve } from "$std/path";
+import { join, normalize, resolve } from '$std/path';
 
 /**
  * Resolve a worktree path relative to a repository root
@@ -27,7 +27,7 @@ export function resolveWorktreePath(
 
   // If it's an absolute path but not within our repo, return it as-is
   // (user might be specifying a different location)
-  if (worktreeName.startsWith("/") || worktreeName.match(/^[A-Za-z]:\\/)) {
+  if (worktreeName.startsWith('/') || worktreeName.match(/^[A-Za-z]:\\/)) {
     return normalize(worktreeName);
   }
 
@@ -44,22 +44,22 @@ export function resolveWorktreePath(
  */
 export async function validatePathExists(
   path: string,
-  expectedType: "file" | "directory",
+  expectedType: 'file' | 'directory',
 ): Promise<void> {
   try {
     const stat = await Deno.stat(path);
 
-    if (expectedType === "file" && !stat.isFile) {
+    if (expectedType === 'file' && !stat.isFile) {
       throw new Error(`Path exists but is not a file: ${path}`);
     }
 
-    if (expectedType === "directory" && !stat.isDirectory) {
+    if (expectedType === 'directory' && !stat.isDirectory) {
       throw new Error(`Path exists but is not a directory: ${path}`);
     }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       throw new Error(
-        `${expectedType === "file" ? "File" : "Directory"} not found: ${path}`,
+        `${expectedType === 'file' ? 'File' : 'Directory'} not found: ${path}`,
       );
     }
     throw error;
@@ -121,18 +121,18 @@ export async function findGitRoot(startPath?: string): Promise<string> {
 
   // Walk up the directory tree looking for .git
   while (true) {
-    const gitPath = join(currentPath, ".git");
+    const gitPath = join(currentPath, '.git');
 
     if (await pathExists(gitPath)) {
       return currentPath;
     }
 
-    const parentPath = resolve(currentPath, "..");
+    const parentPath = resolve(currentPath, '..');
 
     // If we've reached the root without finding .git
     if (parentPath === currentPath) {
       throw new Error(
-        "Not in a git repository. Please run this command from within a git repository.",
+        'Not in a git repository. Please run this command from within a git repository.',
       );
     }
 
