@@ -3,12 +3,12 @@
  * Config is stored at <git-root>/.gw/config.json
  */
 
-import { join } from '$std/path';
-import type { Config } from './types.ts';
-import { findGitRoot } from './path-resolver.ts';
+import { join } from "$std/path";
+import type { Config } from "./types.ts";
+import { findGitRoot } from "./path-resolver.ts";
 
-const CONFIG_DIR_NAME = '.gw';
-const CONFIG_FILE_NAME = 'config.json';
+const CONFIG_DIR_NAME = ".gw";
+const CONFIG_FILE_NAME = "config.json";
 
 /**
  * Get the path to the config directory for the current git repository
@@ -47,7 +47,7 @@ async function ensureConfigDir(gitRoot: string): Promise<void> {
  */
 function createDefaultConfig(): Config {
   return {
-    defaultSource: 'main',
+    defaultSource: "main",
   };
 }
 
@@ -55,7 +55,7 @@ function createDefaultConfig(): Config {
  * Validate the config structure
  */
 function validateConfig(data: unknown): data is Config {
-  if (typeof data !== 'object' || data === null) {
+  if (typeof data !== "object" || data === null) {
     return false;
   }
 
@@ -63,7 +63,7 @@ function validateConfig(data: unknown): data is Config {
 
   if (
     config.defaultSource !== undefined &&
-    typeof config.defaultSource !== 'string'
+    typeof config.defaultSource !== "string"
   ) {
     return false;
   }
@@ -90,7 +90,7 @@ export async function loadConfig(): Promise<{
     const data = JSON.parse(content);
 
     if (!validateConfig(data)) {
-      throw new Error('Invalid configuration file format');
+      throw new Error("Invalid configuration file format");
     }
 
     return { config: data, gitRoot };

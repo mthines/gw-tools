@@ -2,7 +2,7 @@
  * Path resolution and validation utilities
  */
 
-import { join, normalize, resolve } from '$std/path';
+import { join, normalize, resolve } from "$std/path";
 
 /**
  * Resolve a worktree path relative to a repository root
@@ -27,7 +27,7 @@ export function resolveWorktreePath(
 
   // If it's an absolute path but not within our repo, return it as-is
   // (user might be specifying a different location)
-  if (worktreeName.startsWith('/') || worktreeName.match(/^[A-Za-z]:\\/)) {
+  if (worktreeName.startsWith("/") || worktreeName.match(/^[A-Za-z]:\\/)) {
     return normalize(worktreeName);
   }
 
@@ -44,22 +44,22 @@ export function resolveWorktreePath(
  */
 export async function validatePathExists(
   path: string,
-  expectedType: 'file' | 'directory',
+  expectedType: "file" | "directory",
 ): Promise<void> {
   try {
     const stat = await Deno.stat(path);
 
-    if (expectedType === 'file' && !stat.isFile) {
+    if (expectedType === "file" && !stat.isFile) {
       throw new Error(`Path exists but is not a file: ${path}`);
     }
 
-    if (expectedType === 'directory' && !stat.isDirectory) {
+    if (expectedType === "directory" && !stat.isDirectory) {
       throw new Error(`Path exists but is not a directory: ${path}`);
     }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
       throw new Error(
-        `${expectedType === 'file' ? 'File' : 'Directory'} not found: ${path}`,
+        `${expectedType === "file" ? "File" : "Directory"} not found: ${path}`,
       );
     }
     throw error;
@@ -112,6 +112,9 @@ export function normalizePath(path: string): string {
 /**
  * Find the git repository root by walking up the directory tree
  *
+ * For git worktrees, returns the parent directory containing all worktrees.
+ * For regular repos, returns the directory containing .git directory.
+ *
  * @param startPath Starting directory path (defaults to current working directory)
  * @returns Absolute path to the git repository root
  * @throws Error if no git repository is found
@@ -121,18 +124,41 @@ export async function findGitRoot(startPath?: string): Promise<string> {
 
   // Walk up the directory tree looking for .git
   while (true) {
-    const gitPath = join(currentPath, '.git');
+    const gitPath = join(currentPath, ".git");
 
     if (await pathExists(gitPath)) {
-      return currentPath;
+      // Check if .git is a file (worktree) or directory (regular repo)
+      const stat = await Deno.stat(gitPath);
+
+      if (stat.isFile) {
+        // This is a git worktree - .git is a file pointing to the actual git dir
+        // Read the file to get the gitdir path
+        const gitFileContent = await Deno.readTextFile(gitPath);
+        // Format: "gitdir: /path/to/repo/.git/worktrees/name"
+        const match = gitFileContent.match(/gitdir:\s*(.+)/);
+        if (match) {
+          const gitDir = match[1].trim();
+          // gitDir is like: /path/to/repo/.git/worktrees/name
+          // We need to go up from .git directory to get the repo root
+          // Find the .git directory (go up from worktrees/name)
+          const dotGitDir = resolve(gitDir, "../..");
+          // Go up one more level to get the repo root
+          return resolve(dotGitDir, "..");
+        }
+        // Fallback if we can't parse the file
+        return resolve(currentPath, "..");
+      } else {
+        // This is a regular git repo - .git is a directory
+        return currentPath;
+      }
     }
 
-    const parentPath = resolve(currentPath, '..');
+    const parentPath = resolve(currentPath, "..");
 
     // If we've reached the root without finding .git
     if (parentPath === currentPath) {
       throw new Error(
-        'Not in a git repository. Please run this command from within a git repository.',
+        "Not in a git repository. Please run this command from within a git repository.",
       );
     }
 

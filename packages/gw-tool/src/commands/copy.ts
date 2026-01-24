@@ -2,13 +2,13 @@
  * Copy command implementation
  */
 
-import { parseCopyArgs, showCopyHelp } from '../lib/cli.ts';
-import { loadConfig } from '../lib/config.ts';
-import { copyFiles } from '../lib/file-ops.ts';
+import { parseCopyArgs, showCopyHelp } from "../lib/cli.ts";
+import { loadConfig } from "../lib/config.ts";
+import { copyFiles } from "../lib/file-ops.ts";
 import {
   resolveWorktreePath,
   validatePathExists,
-} from '../lib/path-resolver.ts';
+} from "../lib/path-resolver.ts";
 
 /**
  * Execute the copy command
@@ -27,7 +27,7 @@ export async function executeCopy(args: string[]): Promise<void> {
 
   // 3. Validate arguments
   if (!parsed.target || parsed.files.length === 0) {
-    console.error('Error: Target worktree and files required\n');
+    console.error("Error: Target worktree and files required\n");
     showCopyHelp();
     Deno.exit(1);
   }
@@ -36,13 +36,13 @@ export async function executeCopy(args: string[]): Promise<void> {
   const { config, gitRoot } = await loadConfig();
 
   // 5. Resolve paths
-  const sourceWorktree = parsed.from || config.defaultSource || 'main';
+  const sourceWorktree = parsed.from || config.defaultSource || "main";
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
   const targetPath = resolveWorktreePath(gitRoot, parsed.target);
 
   // 6. Validate paths exist
   try {
-    await validatePathExists(sourcePath, 'directory');
+    await validatePathExists(sourcePath, "directory");
   } catch (_error) {
     console.error(`Error: Source worktree not found: ${sourcePath}`);
     console.error(
@@ -52,7 +52,7 @@ export async function executeCopy(args: string[]): Promise<void> {
   }
 
   try {
-    await validatePathExists(targetPath, 'directory');
+    await validatePathExists(targetPath, "directory");
   } catch (_error) {
     console.error(`Error: Target worktree not found: ${targetPath}`);
     console.error(`Make sure '${parsed.target}' worktree exists in ${gitRoot}`);
@@ -60,7 +60,7 @@ export async function executeCopy(args: string[]): Promise<void> {
   }
 
   // 7. Copy files
-  const dryRunNotice = parsed.dryRun ? ' (DRY RUN)' : '';
+  const dryRunNotice = parsed.dryRun ? " (DRY RUN)" : "";
   console.log(
     `Copying from ${sourceWorktree} to ${parsed.target}${dryRunNotice}...`,
   );
@@ -84,10 +84,10 @@ export async function executeCopy(args: string[]): Promise<void> {
 
   // 9. Summary
   const successCount = results.filter((r) => r.success).length;
-  const verb = parsed.dryRun ? 'Would copy' : 'Copied';
+  const verb = parsed.dryRun ? "Would copy" : "Copied";
   console.log(
     `\nDone! ${verb} ${successCount}/${results.length} ${
-      successCount === 1 ? 'file' : 'files'
+      successCount === 1 ? "file" : "files"
     }`,
   );
 

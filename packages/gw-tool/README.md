@@ -39,6 +39,7 @@ npm install -g @gw-tools/gw
 This will download the appropriate binary for your platform (macOS, Linux, or Windows) and make the `gw` command available globally.
 
 **Supported Platforms:**
+
 - macOS (Intel & Apple Silicon)
 - Linux (x64 & ARM64)
 - Windows (x64)
@@ -172,6 +173,7 @@ nx run gw-tool:release
 ```
 
 This single command will:
+
 1. Analyze your commits since the last release
 2. Automatically determine version bump (major/minor/patch)
 3. Update npm/package.json with the new version
@@ -191,6 +193,7 @@ Use these commit prefixes to control versioning:
 - `chore:`, `docs:`, `style:`, `refactor:`, `test:` - No version bump
 
 **Examples:**
+
 ```bash
 git commit -m "feat: add dry-run mode"           # 1.0.0 → 1.1.0
 git commit -m "fix: correct path resolution"     # 1.0.0 → 1.0.1
@@ -262,6 +265,7 @@ nx run gw-tool:release
 ```
 
 The version is automatically determined from your commits:
+
 - `feat:` → minor version bump (1.0.0 → 1.1.0)
 - `fix:` → patch version bump (1.0.0 → 1.0.1)
 - `feat!:` or `BREAKING CHANGE:` → major version bump (1.0.0 → 2.0.0)
@@ -269,6 +273,7 @@ The version is automatically determined from your commits:
 **Manual Approach:**
 
 If you prefer manual control:
+
 1. Update `packages/gw-tool/npm/package.json` version
 2. Update `packages/gw-tool/deno.json` version (if using JSR)
 3. Commit and push changes
