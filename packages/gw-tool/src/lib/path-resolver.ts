@@ -134,16 +134,25 @@ export async function findGitRoot(startPath?: string): Promise<string> {
         // This is a git worktree - .git is a file pointing to the actual git dir
         // Read the file to get the gitdir path
         const gitFileContent = await Deno.readTextFile(gitPath);
-        // Format: "gitdir: /path/to/repo/.git/worktrees/name"
+        // Format: "gitdir: /path/to/repo/.git/worktrees/name" (non-bare)
+        //     or: "gitdir: /path/to/repo.git/worktrees/name" (bare)
         const match = gitFileContent.match(/gitdir:\s*(.+)/);
         if (match) {
           const gitDir = match[1].trim();
-          // gitDir is like: /path/to/repo/.git/worktrees/name
-          // We need to go up from .git directory to get the repo root
-          // Find the .git directory (go up from worktrees/name)
-          const dotGitDir = resolve(gitDir, "../..");
-          // Go up one more level to get the repo root
-          return resolve(dotGitDir, "..");
+          // Check if this is a bare repository or not
+          // Bare: /path/to/repo.git/worktrees/name
+          // Non-bare: /path/to/repo/.git/worktrees/name
+
+          if (gitDir.includes("/.git/worktrees/")) {
+            // Non-bare repository
+            // Go up from .git/worktrees/name to .git, then to repo root
+            const dotGitDir = resolve(gitDir, "../..");
+            return resolve(dotGitDir, "..");
+          } else {
+            // Bare repository - gitdir is directly under repo root
+            // Go up from worktrees/name to repo root
+            return resolve(gitDir, "../..");
+          }
         }
         // Fallback if we can't parse the file
         return resolve(currentPath, "..");
