@@ -53,7 +53,7 @@ export function showVersion(): void {
  */
 export function showGlobalHelp(): void {
   console.log(`
-gw - Git Worktree Tools
+gw - Git Worktree Tools (v${VERSION})
 
 Usage:
   gw <command> [options] [arguments]
