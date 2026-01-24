@@ -54,13 +54,6 @@
           "jsr:@std/cli@1.0.9",
           "jsr:@std/path@1.0.8"
         ]
-      },
-      "packages/utils": {
-        "packageJson": {
-          "dependencies": [
-            "npm:tslib@^2.3.0"
-          ]
-        }
       }
     }
   }
