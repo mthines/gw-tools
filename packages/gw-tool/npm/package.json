@@ -25,11 +25,13 @@
     "gw": "./bin/gw.js"
   },
   "scripts": {
-    "postinstall": "node install.js"
+    "postinstall": "node install.js",
+    "preuninstall": "node uninstall.js"
   },
   "files": [
     "bin/",
     "install.js",
+    "uninstall.js",
     "README.md"
   ],
   "engines": {
