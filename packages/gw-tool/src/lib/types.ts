@@ -52,4 +52,6 @@ export interface GlobalArgs {
   args: string[];
   /** Whether help was requested */
   help: boolean;
+  /** Whether version was requested */
+  version: boolean;
 }

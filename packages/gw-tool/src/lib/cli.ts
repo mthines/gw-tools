@@ -4,6 +4,7 @@
 
 import { parseArgs as denoParseArgs } from "$std/cli/parse-args";
 import type { CopyOptions, GlobalArgs } from "./types.ts";
+import { VERSION } from "./version.ts";
 
 /**
  * Parse global CLI arguments to extract command and help flag
@@ -12,12 +13,23 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   // Simple manual parsing for command extraction
   const [firstArg, ...restArgs] = args;
 
+  // Check for global version flag
+  if (firstArg === "--version" || firstArg === "-v") {
+    return {
+      command: undefined,
+      args: restArgs,
+      help: false,
+      version: true,
+    };
+  }
+
   // Check for global help flag
   if (firstArg === "--help" || firstArg === "-h" || !firstArg) {
     return {
       command: firstArg ? undefined : undefined,
       args: restArgs,
       help: true,
+      version: false,
     };
   }
 
@@ -25,7 +37,15 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
     command: firstArg,
     args: restArgs,
     help: false,
+    version: false,
   };
+}
+
+/**
+ * Display version information
+ */
+export function showVersion(): void {
+  console.log(`gw version ${VERSION}`);
 }
 
 /**
@@ -58,6 +78,7 @@ Git Worktree Proxy Commands:
 
 Options:
   -h, --help       Show this help message
+  -v, --version    Show version information
 
 Examples:
   gw add feat-branch

@@ -4,7 +4,7 @@
  * Main entry point for the gw CLI tool
  */
 
-import { parseGlobalArgs, showGlobalHelp } from './lib/cli.ts';
+import { parseGlobalArgs, showGlobalHelp, showVersion } from './lib/cli.ts';
 import { executeAdd } from './commands/add.ts';
 import { executeCd } from './commands/cd.ts';
 import { executeCopy } from './commands/sync.ts';
@@ -45,7 +45,13 @@ const COMMANDS = {
 if (import.meta.main) {
   try {
     // Parse global arguments to extract command
-    const { command, args, help } = parseGlobalArgs(Deno.args);
+    const { command, args, help, version } = parseGlobalArgs(Deno.args);
+
+    // Show version if requested
+    if (version) {
+      showVersion();
+      Deno.exit(0);
+    }
 
     // Show help if requested or no command provided
     if (help || !command) {

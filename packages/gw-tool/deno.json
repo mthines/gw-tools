@@ -1,4 +1,7 @@
 {
+  "name": "@gw-tools/gw",
+  "version": "0.9.3",
+  "exports": "./src/main.ts",
   "compilerOptions": {
     "lib": ["deno.ns", "deno.window"],
     "strict": true
