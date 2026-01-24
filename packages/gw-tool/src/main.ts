@@ -9,6 +9,13 @@ import { executeAdd } from "./commands/add.ts";
 import { executeCopy } from "./commands/copy.ts";
 import { executeInit } from "./commands/init.ts";
 import { executeRoot } from "./commands/root.ts";
+import { executeList } from "./commands/list.ts";
+import { executeRemove } from "./commands/remove.ts";
+import { executeMove } from "./commands/move.ts";
+import { executePrune } from "./commands/prune.ts";
+import { executeLock } from "./commands/lock.ts";
+import { executeUnlock } from "./commands/unlock.ts";
+import { executeRepair } from "./commands/repair.ts";
 import * as output from "./lib/output.ts";
 
 /**
@@ -19,8 +26,16 @@ const COMMANDS = {
   copy: executeCopy,
   init: executeInit,
   root: executeRoot,
-  // Future commands can be added here:
-  // list: executeList,
+  list: executeList,
+  ls: executeList,  // Alias for list
+  remove: executeRemove,
+  rm: executeRemove,  // Alias for remove
+  move: executeMove,
+  mv: executeMove,  // Alias for move
+  prune: executePrune,
+  lock: executeLock,
+  unlock: executeUnlock,
+  repair: executeRepair,
 };
 
 if (import.meta.main) {

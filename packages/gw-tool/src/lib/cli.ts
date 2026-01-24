@@ -40,20 +40,30 @@ Usage:
   gw --help
 
 Commands:
-  add      Create a new worktree with optional auto-copy
-  copy     Copy files/directories between worktrees
-  init     Initialize gw configuration for a repository
-  root     Get the root directory of the current git repository
+  add              Create a new worktree with optional auto-copy
+  copy             Copy files/directories between worktrees
+  init             Initialize gw configuration for a repository
+  root             Get the root directory of the current git repository
+
+Git Worktree Proxy Commands:
+  list, ls         List all worktrees in the repository
+  remove, rm       Remove a worktree from the repository
+  move, mv         Move a worktree to a new location
+  prune            Clean up worktree information for deleted worktrees
+  lock             Lock a worktree to prevent removal
+  unlock           Unlock a worktree to allow removal
+  repair           Repair worktree administrative files
 
 Options:
-  -h, --help    Show this help message
+  -h, --help       Show this help message
 
 Examples:
   gw add feat-branch
   gw add feat-branch -b my-branch
   gw copy feat-branch .env components/agents/.env
+  gw list
+  gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
-  gw root
 
 For command-specific help:
   gw <command> --help
