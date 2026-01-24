@@ -1,0 +1,66 @@
+{
+  "name": "@gw-tools/gw",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/gw-tool/src",
+  "projectType": "library",
+  "tags": [],
+  "targets": {
+    "check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno check src/main.ts",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "test": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno test --allow-all",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno lint",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "fmt": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno fmt",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "fmt-check": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno fmt --check",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "run": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno run --allow-all src/main.ts",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "dev": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "deno run --allow-all --watch src/main.ts",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "compile": {
+      "executor": "nx:run-commands",
+      "outputs": ["{workspaceRoot}/dist/packages/gw-tool"],
+      "options": {
+        "command": "deno compile --allow-all --output ../../dist/packages/gw-tool/gw-tool src/main.ts",
+        "cwd": "packages/gw-tool"
+      }
+    }
+  }
+}

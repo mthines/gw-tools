@@ -1,0 +1,6 @@
+{
+  "name": "@gw-tools/gw",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module"
+}
