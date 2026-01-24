@@ -3,7 +3,7 @@
  * Returns the git repository root directory path
  */
 
-import { findGitRoot } from "../lib/path-resolver.ts";
+import { loadConfig } from "../lib/config.ts";
 
 /**
  * Execute the root command
@@ -32,8 +32,8 @@ Options:
   }
 
   try {
-    // Find and output the git root
-    const gitRoot = await findGitRoot();
+    // Load config (this will auto-detect and create config on first run)
+    const { gitRoot } = await loadConfig();
     console.log(gitRoot);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);

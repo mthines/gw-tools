@@ -3,9 +3,11 @@
  */
 
 /**
- * Per-repository configuration stored at <git-root>/.gw/config.json
+ * Per-repository configuration stored at .gw/config.json
  */
 export interface Config {
+  /** Absolute path to the git repository root */
+  root?: string;
   /** Default source worktree name (e.g., "main", "master") */
   defaultSource?: string;
 }

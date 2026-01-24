@@ -63,18 +63,34 @@ cp dist/packages/gw-tool/gw /usr/local/bin/gw
 
 ## Configuration
 
-On first run, `gw` will automatically create a configuration file at `<git-root>/.gw/config.json` in your repository. The tool finds the git repository root by walking up the directory tree from your current location.
+On first run, `gw` will automatically detect your git repository root and create a configuration file at `.gw/config.json`. The tool finds the config by walking up the directory tree from your current location, so you can run `gw` commands from anywhere within your repository.
+
+### Auto-Detection
+
+The tool automatically:
+
+1. **Searches for existing config**: Walks up from your current directory looking for `.gw/config.json`
+2. **Auto-detects git root**: If no config is found, detects the repository root automatically
+3. **Creates config**: Saves the detected root and default settings to `.gw/config.json`
+
+If auto-detection fails (rare edge cases), you can manually initialize:
+
+```bash
+gw init --root /path/to/your/repo.git
+```
 
 ### Example Configuration
 
 ```json
 {
+  "root": "/Users/username/Workspace/my-project.git",
   "defaultSource": "main"
 }
 ```
 
 ### Configuration Options
 
+- **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
 - **defaultSource**: Default source worktree name (optional, defaults to "main")
 
 ## Commands
@@ -117,6 +133,43 @@ gw root
 - **In a worktree**: Returns the parent directory containing all worktrees (e.g., `/path/to/repo.git`)
 - **In a regular repo**: Returns the directory containing the `.git` directory
 - **From nested directories**: Walks up the directory tree to find the repository root
+
+### init
+
+Initialize gw configuration for a git repository. This command is only needed if auto-detection fails or if you want to manually specify the repository root.
+
+```bash
+gw init --root <path> [options]
+```
+
+#### Options
+
+- `--root <path>`: Specify the git repository root path (required)
+- `--default-source <name>`: Set the default source worktree (default: "main")
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Initialize with repository root
+gw init --root /Users/username/Workspace/my-project.git
+
+# Initialize with custom default source
+gw init --root /Users/username/Workspace/my-project.git --default-source master
+
+# Show help
+gw init --help
+```
+
+#### When to Use
+
+In most cases, you won't need to run `gw init` manually because the tool auto-detects your repository root on first run. However, you may need it when:
+
+- Auto-detection fails (rare edge cases with non-standard repository structures)
+- You want to override the auto-detected root
+- You're setting up configuration before the repository has standard git structures
+
+The config file is created at `.gw/config.json` in your current directory, so you can run this command from wherever makes sense for your workflow (typically the repository root).
 
 ### copy
 
@@ -441,6 +494,7 @@ packages/gw-tool/
 │   ├── index.ts             # Public API exports
 │   ├── commands/            # Command implementations
 │   │   ├── copy.ts          # Copy command
+│   │   ├── init.ts          # Init command
 │   │   └── root.ts          # Root command
 │   └── lib/                 # Shared utilities
 │       ├── types.ts         # TypeScript type definitions
@@ -491,6 +545,7 @@ To add a new command, follow the pattern used by existing commands like `copy` a
 
    const COMMANDS = {
      copy: executeCopy,
+     init: executeInit,
      root: executeRoot,
      list: executeList, // Add your new command
    };
@@ -502,6 +557,7 @@ To add a new command, follow the pattern used by existing commands like `copy` a
      console.log(`
    Commands:
      copy     Copy files/directories between worktrees
+     init     Initialize gw configuration for a repository
      root     Get the root directory of the current git repository
      list     List all git worktrees in the repository
    `);
@@ -514,7 +570,7 @@ To add a new command, follow the pattern used by existing commands like `copy` a
 
 This tool was originally created to simplify the workflow of copying secrets and environment files when creating new git worktrees. When you create a new worktree for a feature branch, you often need to copy `.env` files, credentials, and other configuration files from your main worktree to the new one. This tool automates that process.
 
-The tool automatically detects which git repository you're working in by finding the `.git` directory, and creates a local config file (`.gw/config.json`) at the repository root on first use. This means each repository has its own configuration, and you can customize the default source worktree per repository.
+The tool automatically detects which git repository you're working in and creates a local config file (`.gw/config.json`) on first use. The config stores the repository root and other settings, so subsequent runs are fast and don't need to re-detect the repository structure. Each repository has its own configuration, and you can customize the default source worktree per repository.
 
 ### Typical Workflow
 

@@ -6,6 +6,7 @@
 
 import { parseGlobalArgs, showGlobalHelp } from "./lib/cli.ts";
 import { executeCopy } from "./commands/copy.ts";
+import { executeInit } from "./commands/init.ts";
 import { executeRoot } from "./commands/root.ts";
 
 /**
@@ -13,9 +14,9 @@ import { executeRoot } from "./commands/root.ts";
  */
 const COMMANDS = {
   copy: executeCopy,
+  init: executeInit,
   root: executeRoot,
   // Future commands can be added here:
-  // init: executeInit,
   // list: executeList,
   // "add-repo": executeAddRepo,
 };

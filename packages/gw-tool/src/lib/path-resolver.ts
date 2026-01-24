@@ -122,10 +122,11 @@ export function normalizePath(path: string): string {
 export async function findGitRoot(startPath?: string): Promise<string> {
   let currentPath = startPath ? resolve(startPath) : Deno.cwd();
 
-  // Walk up the directory tree looking for .git
+  // Walk up the directory tree looking for .git or bare repo markers
   while (true) {
     const gitPath = join(currentPath, ".git");
 
+    // Check for .git file/directory
     if (await pathExists(gitPath)) {
       // Check if .git is a file (worktree) or directory (regular repo)
       const stat = await Deno.stat(gitPath);
@@ -160,6 +161,34 @@ export async function findGitRoot(startPath?: string): Promise<string> {
         // This is a regular git repo - .git is a directory
         return currentPath;
       }
+    }
+
+    // Check if this is a bare repository by looking for git metadata files
+    // Bare repos have HEAD, config, refs/, and objects/ directly in the repo dir
+    const headPath = join(currentPath, "HEAD");
+    const configPath = join(currentPath, "config");
+    const refsPath = join(currentPath, "refs");
+    const objectsPath = join(currentPath, "objects");
+
+    if (
+      await pathExists(headPath) &&
+      await pathExists(configPath) &&
+      await pathExists(refsPath) &&
+      await pathExists(objectsPath)
+    ) {
+      // This is a bare repository
+      return currentPath;
+    }
+
+    // Additional heuristic: check if directory name ends with .git
+    // Many bare repos follow this convention (e.g., repo.git)
+    if (
+      currentPath.endsWith(".git") &&
+      await pathExists(headPath) &&
+      await pathExists(configPath)
+    ) {
+      // Likely a bare repository with minimal checks
+      return currentPath;
     }
 
     const parentPath = resolve(currentPath, "..");

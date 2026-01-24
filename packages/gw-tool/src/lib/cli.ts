@@ -41,6 +41,7 @@ Usage:
 
 Commands:
   copy     Copy files/directories between worktrees
+  init     Initialize gw configuration for a repository
   root     Get the root directory of the current git repository
 
 Options:
@@ -49,6 +50,7 @@ Options:
 Examples:
   gw copy feat-branch .env components/agents/.env
   gw copy --from main feat-123 .env
+  gw init --root /path/to/repo.git
   gw root
   gw copy --help
 
@@ -133,12 +135,15 @@ Examples:
   gw copy /full/path/to/repo/feat-branch .env
 
 Configuration:
-  Configuration is stored at <git-root>/.gw/config.json
-  The config file is automatically created on first use with sensible defaults.
+  Configuration is stored at .gw/config.json (searched walking up from cwd)
+  The config file is automatically created on first use with auto-detected settings.
 
   Example config:
   {
+    "root": "/Users/username/Workspace/repo.git",
     "defaultSource": "main"
   }
+
+  If auto-detection fails, run 'gw init --root <path>' to specify manually.
 `);
 }
