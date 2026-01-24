@@ -110,7 +110,7 @@
       "inputs": [
         "{projectRoot}/npm/**/*",
         "{projectRoot}/README.md",
-        "^compile-all"
+        "{workspaceRoot}/dist/packages/gw-tool/binaries/**/*"
       ],
       "cache": true,
       "options": {
