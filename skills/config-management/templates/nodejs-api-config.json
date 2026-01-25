@@ -1,0 +1,30 @@
+{
+  "// Comments": "Configuration for Node.js API/backend projects",
+
+  "root": "/path/to/your/api.git",
+
+  "defaultBranch": "main",
+
+  "autoCopyFiles": [
+    ".env",
+    "// .env": "Environment variables (DATABASE_URL, JWT_SECRET, API_KEYS)",
+
+    "ssl/",
+    "// ssl/": "SSL certificates and private keys for HTTPS",
+
+    "keys/",
+    "// keys/": "JWT signing keys, encryption keys, service account keys",
+
+    "secrets/",
+    "// secrets/": "API secrets, service credentials, third-party tokens",
+
+    "config/local.json",
+    "// config/local.json": "Local configuration overrides (ports, debug settings)"
+  ],
+
+  "// IMPORTANT": [
+    "Update 'root' to your actual path",
+    "Never auto-copy: node_modules/, dist/, build/, coverage/",
+    "Consider adding: prisma/.env, .aws/, .gcp/, docker/.env"
+  ]
+}

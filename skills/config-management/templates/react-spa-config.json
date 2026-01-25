@@ -1,0 +1,31 @@
+{
+  "// Comments": "Configuration for React SPA (Single Page Application) projects",
+
+  "root": "/path/to/your/react-app.git",
+
+  "defaultBranch": "main",
+
+  "autoCopyFiles": [
+    ".env",
+    "// .env": "Build-time environment variables (REACT_APP_API_URL, etc.)",
+
+    ".env.local",
+    "// .env.local": "Local development overrides (local API endpoints, feature flags)",
+
+    ".env.development",
+    "// .env.development": "Development-specific variables",
+
+    "public/config.json",
+    "// public/config.json": "Runtime configuration (loaded by app at startup)",
+
+    "public/uploads/",
+    "// public/uploads/": "User-uploaded assets or test data"
+  ],
+
+  "// IMPORTANT": [
+    "Update 'root' to match your path",
+    "Never auto-copy: node_modules/, build/, dist/",
+    "For Vite: use .env.local instead of REACT_APP_ prefix",
+    "Consider adding: .env.production, ssl/, cypress.env.json"
+  ]
+}
