@@ -18,8 +18,8 @@ npm install -g @gw-tools/gw-tool
 ### Quick Start
 
 ```bash
-# Create a new worktree (auto-copies configured files)
-gw add feature-auth -b feature-auth main
+# Create a new worktree (auto-creates branch if needed, auto-copies files)
+gw add feature-auth
 
 # Navigate to worktree
 gw cd feature-auth
@@ -44,7 +44,7 @@ Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.s
 
 ```bash
 # Master Git worktrees and gw workflows
-npx skills add mthines/gw-tools/git-worktree-workflows
+npx skills add mthines/gw-tools/git-worktree-workflows 
 
 # Configure gw for your project type (Next.js, monorepos, etc.)
 npx skills add mthines/gw-tools/config-management
