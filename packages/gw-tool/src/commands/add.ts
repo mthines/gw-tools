@@ -11,6 +11,36 @@ import { resolveWorktreePath } from "../lib/path-resolver.ts";
 import * as output from "../lib/output.ts";
 
 /**
+ * Check if a branch exists (locally or remotely)
+ */
+async function branchExists(branchName: string): Promise<boolean> {
+  // Check local branch
+  const localCheck = new Deno.Command("git", {
+    args: ["rev-parse", "--verify", branchName],
+    stdout: "null",
+    stderr: "null",
+  });
+  const localResult = await localCheck.output();
+  if (localResult.code === 0) return true;
+
+  // Check remote branch
+  const remoteCheck = new Deno.Command("git", {
+    args: ["rev-parse", "--verify", `origin/${branchName}`],
+    stdout: "null",
+    stderr: "null",
+  });
+  const remoteResult = await remoteCheck.output();
+  return remoteResult.code === 0;
+}
+
+/**
+ * Check if -b or -B flag is present in git args
+ */
+function hasBranchFlag(gitArgs: string[]): boolean {
+  return gitArgs.includes("-b") || gitArgs.includes("-B");
+}
+
+/**
  * Parse add command arguments
  */
 function parseAddArgs(args: string[]): {
@@ -83,6 +113,9 @@ function showAddHelp(): void {
 
 Create a new git worktree and optionally copy files.
 
+If the branch doesn't exist, it will be automatically created from the
+defaultBranch configured in .gw/config.json (defaults to "main").
+
 If autoCopyFiles is configured in .gw/config.json, those files will be
 automatically copied to the new worktree. You can override this by passing
 specific files as arguments.
@@ -93,7 +126,7 @@ Arguments:
 
 Options:
   All git worktree add options are supported:
-    -b <branch>           Create a new branch
+    -b <branch>           Create a new branch (explicit, overrides auto-create)
     -B <branch>           Create or reset a branch
     --detach              Detach HEAD in new worktree
     --force, -f           Force checkout even if already checked out
@@ -101,17 +134,14 @@ Options:
     -h, --help            Show this help message
 
 Examples:
-  # Create worktree (auto-copy files if configured)
+  # Create worktree - auto-creates branch if it doesn't exist
   gw add feat/new-feature
 
-  # Create worktree with new branch
-  gw add feat/new-feature -b my-branch
+  # Create worktree with explicit branch from specific start point
+  gw add feat/new-feature -b my-branch develop
 
   # Create worktree and copy specific files (overrides config)
   gw add feat/new-feature .env secrets/
-
-  # Create worktree without copying any files
-  gw add feat/new-feature
 
 Configuration:
   To enable auto-copy, use 'gw init' with --auto-copy-files:
@@ -203,12 +233,26 @@ export async function executeAdd(args: string[]): Promise<void> {
     }
   }
 
+  // Check if branch exists and auto-create if needed
+  const gitArgs = [...parsed.gitArgs];
+  if (!hasBranchFlag(gitArgs)) {
+    const exists = await branchExists(parsed.worktreeName);
+    if (!exists) {
+      // Auto-create branch from defaultBranch
+      const startPoint = config.defaultBranch || "main";
+      gitArgs.unshift("-b", parsed.worktreeName, startPoint);
+      console.log(
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(startPoint)}`,
+      );
+    }
+  }
+
   // Build git worktree add command
   const gitCmd = [
     "git",
     "worktree",
     "add",
-    ...parsed.gitArgs,
+    ...gitArgs,
     parsed.worktreeName,
   ];
 
