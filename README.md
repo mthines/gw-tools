@@ -1,23 +1,86 @@
-# Nx TypeScript Repository
+# gw-tools
+
+Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing.
+
+## 🛠️ gw CLI Tool
+
+**gw** simplifies Git worktree management with features like:
+- Create worktrees with automatic file copying (`.env`, secrets, configs)
+- Quick navigation with `gw cd` and smart partial matching
+- Proxy commands for `git worktree` operations with enhanced output
+
+### Installation
+
+```bash
+npm install -g @gw-tools/gw-tool
+```
+
+### Quick Start
+
+```bash
+# Create a new worktree (auto-copies configured files)
+gw add feature-auth -b feature-auth main
+
+# Navigate to worktree
+gw cd feature-auth
+
+# Sync files between worktrees
+gw sync feature-auth .env secrets/
+
+# List all worktrees
+gw list
+
+# Remove when done
+gw remove feature-auth
+```
+
+📖 **Full documentation:** [packages/gw-tool/README.md](packages/gw-tool/README.md)
+
+---
+
+## 🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)
+
+Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
+
+```bash
+# Master Git worktrees and gw workflows
+npx skills add mthines/gw-tools/git-worktree-workflows
+
+# Configure gw for your project type (Next.js, monorepos, etc.)
+npx skills add mthines/gw-tools/config-management
+
+# Advanced parallel development patterns
+npx skills add mthines/gw-tools/multi-worktree-dev
+```
+
+Once installed, your AI agent can:
+- Create worktrees for bug fixes and features automatically
+- Configure gw for your specific project type
+- Navigate between worktrees and manage files
+- Create PRs from isolated worktrees
+
+📖 **Skill documentation:** [skills/README.md](skills/README.md)
+
+---
+
+## 📦 Other Packages
+
+This monorepo also includes utility libraries:
+
+- `@gw-tools/strings` - String manipulation utilities
+- `@gw-tools/async` - Async utility functions with retry logic
+- `@gw-tools/colors` - Color conversion and manipulation utilities
+- `@gw-tools/utils` - Shared utilities (internal)
+
+---
+
+## 🏗️ Nx Monorepo
 
 <a alt="Nx logo" href="https://nx.dev" target="_blank" rel="noreferrer"><img src="https://raw.githubusercontent.com/nrwl/nx/master/images/nx-logo.png" width="45"></a>
 
-✨ A repository showcasing key [Nx](https://nx.dev) features for TypeScript monorepos ✨
+This repository uses [Nx](https://nx.dev) for monorepo management.
 
-## 📦 Project Overview
-
-This repository demonstrates a production-ready TypeScript monorepo with:
-
-- **3 Publishable Packages** - Ready for NPM publishing
-
-  - `@gw-tools/strings` - String manipulation utilities
-  - `@gw-tools/async` - Async utility functions with retry logic
-  - `@gw-tools/colors` - Color conversion and manipulation utilities
-
-- **1 Internal Library**
-  - `@gw-tools/utils` - Shared utilities (private, not published)
-
-## 🚀 Quick Start
+## 🚀 Development Quick Start
 
 ```bash
 # Clone the repository
