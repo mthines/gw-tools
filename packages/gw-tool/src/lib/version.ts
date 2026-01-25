@@ -1,5 +1,7 @@
 /**
  * Version information for the gw CLI tool
- * Keep in sync with deno.json and npm/package.json
+ * Automatically reads from npm/package.json at compile time
  */
-export const VERSION = '0.9.3';
+import packageJson from '../../npm/package.json' with { type: 'json' };
+
+export const VERSION = packageJson.version;
