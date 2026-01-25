@@ -44,18 +44,18 @@ gw remove feature-auth
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows config-management multi-worktree-dev # installs all skills
+npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows @gw-config-management @gw-multi-worktree-dev # installs all skills
 ```
 
 ```bash
 # Master Git worktrees and gw workflows
-npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows
+npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows
 
 # Configure gw for your project type (Next.js, monorepos, etc.)
-npx skills add https://github.com/mthines/gw-tools --skill config-management
+npx skills add https://github.com/mthines/gw-tools --skill @gw-config-management
 
 # Advanced parallel development patterns
-npx skills add https://github.com/mthines/gw-tools --skill multi-worktree-dev
+npx skills add https://github.com/mthines/gw-tools --skill @gw-multi-worktree-dev
 ```
 
 Once installed, your AI agent can:

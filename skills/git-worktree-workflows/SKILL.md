@@ -1,5 +1,5 @@
 ---
-name: "@gw/git-worktree-workflows"
+name: "@gw-git-worktree-workflows"
 description: Master Git worktrees and gw-tools workflows for parallel development. Use this skill when creating worktrees, managing multiple branches simultaneously, navigating between worktrees, troubleshooting worktree issues, or setting up feature branch workflows. Triggers on tasks involving git worktree commands, branch isolation, parallel development, or gw CLI usage.
 license: MIT
 metadata:

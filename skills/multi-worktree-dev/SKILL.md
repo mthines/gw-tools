@@ -1,5 +1,5 @@
 ---
-name: "@gw/multi-worktree-dev"
+name: "@gw-multi-worktree-dev"
 description: Advanced patterns for developing across multiple Git worktrees simultaneously. Use this skill when managing dependencies across worktrees, synchronizing files, handling databases for multiple branches, running parallel tests, or orchestrating services across worktrees. Triggers on tasks involving multi-branch development, dependency sharing, database isolation, or service orchestration with gw.
 license: MIT
 metadata:
