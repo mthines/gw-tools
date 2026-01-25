@@ -235,12 +235,13 @@ export async function executeAdd(args: string[]): Promise<void> {
 
   // Check if branch exists and auto-create if needed
   const gitArgs = [...parsed.gitArgs];
+  let startPoint: string | undefined;
   if (!hasBranchFlag(gitArgs)) {
     const exists = await branchExists(parsed.worktreeName);
     if (!exists) {
       // Auto-create branch from defaultBranch
-      const startPoint = config.defaultBranch || "main";
-      gitArgs.unshift("-b", parsed.worktreeName, startPoint);
+      startPoint = config.defaultBranch || "main";
+      gitArgs.unshift("-b", parsed.worktreeName);
       console.log(
         `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(startPoint)}`,
       );
@@ -248,12 +249,14 @@ export async function executeAdd(args: string[]): Promise<void> {
   }
 
   // Build git worktree add command
+  // Format: git worktree add [-b <new-branch>] <path> [<commit-ish>]
   const gitCmd = [
     "git",
     "worktree",
     "add",
     ...gitArgs,
     parsed.worktreeName,
+    ...(startPoint ? [startPoint] : []),
   ];
 
   // Execute git worktree add
