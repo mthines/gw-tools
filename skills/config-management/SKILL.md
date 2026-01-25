@@ -146,6 +146,7 @@ If no configuration exists:
 **How it's used:**
 - `gw add feature-x` copies from `defaultBranch` worktree
 - `gw sync target file.txt` syncs from `defaultBranch` unless `--from` specified
+- `gw sync target` (without files) syncs `autoCopyFiles` from `defaultBranch`
 
 ### `autoCopyFiles`: File Patterns to Auto-Copy
 
@@ -170,6 +171,10 @@ If no configuration exists:
 1. **Exact files:** `".env"` - Single file
 2. **Directories:** `"secrets/"` - Entire directory (recursive)
 3. **Nested paths:** `"config/local.json"` - Specific nested file
+
+**How it's used:**
+- `gw add feature-x` automatically copies these files when creating worktrees
+- `gw sync feature-x` (without file arguments) syncs these files to existing worktrees
 
 **Important notes:**
 - Paths are relative to repository root
@@ -685,6 +690,10 @@ gw init --auto-copy-files .env,.env.local
 **Solution B:** Manual sync:
 
 ```bash
+# Sync all autoCopyFiles from config
+gw sync feature-x
+
+# Or sync specific files
 gw sync feature-x .env
 ```
 

@@ -490,6 +490,12 @@ $ gw init --auto-copy-files .env,.env.local,secrets/
 **Solution B: Manual sync**
 
 ```bash
+# Sync all autoCopyFiles from config
+$ gw sync feature-new
+✓ Copied: .env
+✓ Copied: .env.local
+
+# Or sync specific files
 $ gw sync feature-new .env .env.local
 ✓ Copied: .env
 ✓ Copied: .env.local

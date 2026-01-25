@@ -465,13 +465,13 @@ The config file is created at `.gw/config.json` at the git root, so it's shared 
 Sync files and directories between worktrees, preserving directory structure.
 
 ```bash
-gw sync [options] <target-worktree> <files...>
+gw sync [options] <target-worktree> [files...]
 ```
 
 #### Arguments
 
 - `<target-worktree>`: Name or full path of the target worktree
-- `<files...>`: One or more files or directories to sync (paths relative to worktree root)
+- `[files...]`: One or more files or directories to sync (paths relative to worktree root). If omitted, uses `autoCopyFiles` from `.gw/config.json`
 
 #### Options
 
@@ -482,6 +482,9 @@ gw sync [options] <target-worktree> <files...>
 #### Examples
 
 ```bash
+# Sync autoCopyFiles from config (if configured)
+gw sync feat-branch
+
 # Sync .env file from main to feat-branch
 gw sync feat-branch .env
 

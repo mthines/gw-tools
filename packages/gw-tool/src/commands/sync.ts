@@ -26,22 +26,34 @@ export async function executeCopy(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  // 3. Validate arguments
-  if (!parsed.target || parsed.files.length === 0) {
-    output.error('Target worktree and files required');
+  // 3. Load config (needed for autoCopyFiles and defaultBranch)
+  const { config, gitRoot } = await loadConfig();
+
+  // 4. Determine files to copy - use autoCopyFiles from config if no files specified
+  let filesToCopy = parsed.files;
+  if (filesToCopy.length === 0 && config.autoCopyFiles?.length) {
+    filesToCopy = config.autoCopyFiles;
+  }
+
+  // 5. Validate arguments
+  if (!parsed.target) {
+    output.error('Target worktree required');
     showCopyHelp();
     Deno.exit(1);
   }
 
-  // 4. Load config
-  const { config, gitRoot } = await loadConfig();
+  if (filesToCopy.length === 0) {
+    output.error('No files to sync. Specify files or configure autoCopyFiles in .gw/config.json');
+    showCopyHelp();
+    Deno.exit(1);
+  }
 
-  // 5. Resolve paths
+  // 6. Resolve paths
   const sourceWorktree = parsed.from || config.defaultBranch || 'main';
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
   const targetPath = resolveWorktreePath(gitRoot, parsed.target);
 
-  // 6. Validate paths exist
+  // 7. Validate paths exist
   try {
     await validatePathExists(sourcePath, 'directory');
   } catch (_error) {
@@ -62,7 +74,7 @@ export async function executeCopy(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  // 7. Copy files
+  // 8. Copy files
   const dryRunNotice = parsed.dryRun ? output.dim(' (DRY RUN)') : '';
   console.log(
     `Copying from ${output.bold(sourceWorktree)} to ${output.bold(parsed.target)}${dryRunNotice}...\n`,
@@ -71,11 +83,11 @@ export async function executeCopy(args: string[]): Promise<void> {
   const results = await copyFiles(
     sourcePath,
     targetPath,
-    parsed.files,
+    filesToCopy,
     parsed.dryRun,
   );
 
-  // 8. Display results
+  // 9. Display results
   for (const result of results) {
     if (result.success) {
       console.log(`  ${output.checkmark()} ${result.message}`);
@@ -84,7 +96,7 @@ export async function executeCopy(args: string[]): Promise<void> {
     }
   }
 
-  // 9. Summary
+  // 10. Summary
   const successCount = results.filter((r) => r.success).length;
   const verb = parsed.dryRun ? 'Would copy' : 'Copied';
   const fileWord = successCount === 1 ? 'file' : 'files';

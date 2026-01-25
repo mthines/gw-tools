@@ -128,14 +128,15 @@ export function showCopyHelp(): void {
 gw sync - Sync files/directories between worktrees
 
 Usage:
-  gw sync [options] <target-worktree> <files...>
+  gw sync [options] <target-worktree> [files...]
 
 Arguments:
   <target-worktree>    Name or full path of the target worktree directory
                        Can be relative (e.g., feat-branch) or absolute path
 
-  <files...>           One or more files or directories to sync
+  [files...]           One or more files or directories to sync
                        Paths are relative to the worktree root
+                       If omitted, uses autoCopyFiles from .gw/config.json
 
 Options:
   --from <source>      Source worktree name (default: from config or "main")
@@ -151,6 +152,9 @@ Description:
   files are created automatically if needed.
 
 Examples:
+  # Sync autoCopyFiles from config (if configured)
+  gw sync feat-branch
+
   # Sync .env file from main to feat-branch
   gw sync feat-branch .env
 
@@ -176,7 +180,8 @@ Configuration:
   Example config:
   {
     "root": "/Users/username/Workspace/repo.git",
-    "defaultBranch": "main"
+    "defaultBranch": "main",
+    "autoCopyFiles": [".env", "apps/web/.env.local"]
   }
 
   If auto-detection fails, run 'gw init --root <path>' to specify manually.

@@ -186,10 +186,13 @@ gw add feature-auth-v2 -b feature-auth-v2 feature-auth
 **Solution:**
 
 ```bash
-# Manually copy
+# If autoCopyFiles is configured, sync all configured files
+gw sync hotfix-login
+
+# Or manually copy specific file
 gw sync hotfix-login .env
 
-# Or configure auto-copy (recommended)
+# Or configure auto-copy (recommended for future worktrees)
 gw init --auto-copy-files .env,.env.local
 ```
 

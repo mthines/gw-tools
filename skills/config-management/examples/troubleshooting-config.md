@@ -119,6 +119,10 @@ touch .env
 **Solution D: Manual sync as workaround**
 
 ```bash
+# Sync all autoCopyFiles from config
+gw sync feature-x
+
+# Or sync specific files
 gw sync feature-x .env .env.local
 ```
 

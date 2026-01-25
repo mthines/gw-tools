@@ -180,7 +180,10 @@ Now every `gw add` automatically installs dependencies.
 Sync files between worktrees without recreating them:
 
 ```bash
-# Sync .env from main to feature branch
+# Sync all autoCopyFiles from config
+gw sync feat/user-auth
+
+# Sync specific file from main to feature branch
 gw sync feat/user-auth .env
 
 # Sync from specific source
@@ -195,7 +198,12 @@ gw sync feat/user-auth .env secrets/ config/local.json
 **Pattern 1: Update secrets across all worktrees**
 
 ```bash
-# After updating .env in main
+# After updating .env in main - sync autoCopyFiles to all worktrees
+for worktree in $(gw list | grep -v main | awk '{print $1}' | xargs -n1 basename); do
+  gw sync "$worktree"
+done
+
+# Or sync specific file
 for worktree in $(gw list | grep -v main | awk '{print $1}' | xargs -n1 basename); do
   gw sync "$worktree" .env
 done

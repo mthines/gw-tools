@@ -161,6 +161,9 @@ Done! Navigate with: gw cd feature-new-dashboard
 If you need to copy files later or from a different source:
 
 ```bash
+# Copy all autoCopyFiles from config (if configured)
+gw sync feature-auth
+
 # Copy specific files from main to current worktree
 gw sync feature-auth .env components/agents/.env
 
