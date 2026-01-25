@@ -163,7 +163,13 @@ gw init --root /path/to/your/repo.git
     ".env",
     "components/agents/.env",
     "components/ui/.vercel/"
-  ]
+  ],
+  "hooks": {
+    "add": {
+      "pre": ["echo 'Creating worktree: {worktree}'"],
+      "post": ["pnpm install", "echo 'Setup complete!'"]
+    }
+  }
 }
 ```
 
@@ -172,6 +178,9 @@ gw init --root /path/to/your/repo.git
 - **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
 - **defaultBranch**: Default source worktree name (optional, defaults to "main")
 - **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw add` (optional, only set via `gw init --auto-copy-files`)
+- **hooks**: Command hooks configuration (optional, set via `gw init --pre-add` and `--post-add`)
+  - **hooks.add.pre**: Array of commands to run before creating a worktree
+  - **hooks.add.post**: Array of commands to run after creating a worktree
 
 ## Commands
 
@@ -221,7 +230,7 @@ gw add feat/bugfix -f
 To enable automatic file copying, configure `autoCopyFiles` using `gw init`:
 
 ```bash
-gw init --root /path/to/repo.git --auto-copy-files .env,secrets/,components/ui/.vercel/
+gw init --auto-copy-files .env,secrets/,components/ui/.vercel/
 ```
 
 This creates:
@@ -234,6 +243,45 @@ This creates:
 ```
 
 Now every time you run `gw add`, these files will be automatically copied from your default source worktree (usually `main`) to the new worktree.
+
+#### Hooks
+
+You can configure pre-add and post-add hooks to run commands before and after worktree creation. This is useful for:
+- **Pre-add hooks**: Running validation scripts, checking prerequisites
+- **Post-add hooks**: Installing dependencies, setting up the environment
+
+```bash
+# Configure a post-add hook to install dependencies
+gw init --post-add "pnpm install"
+
+# Configure multiple hooks
+gw init --pre-add "echo 'Creating: {worktree}'" --post-add "pnpm install" --post-add "echo 'Done!'"
+```
+
+**Hook Variables:**
+
+Hooks support variable substitution:
+- `{worktree}` - The worktree name (e.g., "feat/new-feature")
+- `{worktreePath}` - Full absolute path to the worktree
+- `{gitRoot}` - The git repository root path
+- `{branch}` - The branch name
+
+**Hook Behavior:**
+- **Pre-add hooks** run before the worktree is created (in the git root directory). If any pre-add hook fails, the worktree creation is aborted.
+- **Post-add hooks** run after the worktree is created and files are copied (in the new worktree directory). If a post-add hook fails, a warning is shown but the worktree creation is considered successful.
+
+**Example: Auto-install dependencies**
+
+```bash
+# One-time setup
+gw init --auto-copy-files .env --post-add "pnpm install"
+
+# Now when you create a worktree:
+gw add feat/new-feature
+# 1. Creates the worktree
+# 2. Copies .env file
+# 3. Runs pnpm install in the new worktree
+```
 
 ### cd
 
@@ -348,44 +396,69 @@ gw root
 
 ### init
 
-Initialize gw configuration for a git repository. This command is only needed if auto-detection fails or if you want to manually specify the repository root.
+Initialize gw configuration for a git repository. This command creates or updates the `.gw/config.json` file with your settings.
 
 ```bash
-gw init --root <path> [options]
+gw init [options]
 ```
 
 #### Options
 
-- `--root <path>`: Specify the git repository root path (required)
+- `--root <path>`: Specify the git repository root path (optional, auto-detects if not provided)
 - `--default-source <name>`: Set the default source worktree (default: "main")
 - `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw add`
+- `--pre-add <command>`: Command to run before `gw add` creates a worktree (can be specified multiple times)
+- `--post-add <command>`: Command to run after `gw add` creates a worktree (can be specified multiple times)
 - `-h, --help`: Show help message
 
 #### Examples
 
 ```bash
-# Initialize with repository root
-gw init --root /Users/username/Workspace/my-project.git
-
-# Initialize with custom default source
-gw init --root /Users/username/Workspace/my-project.git --default-source master
+# Initialize with auto-detected root
+gw init
 
 # Initialize with auto-copy files
-gw init --root /Users/username/Workspace/my-project.git --auto-copy-files .env,secrets/,components/ui/.vercel/
+gw init --auto-copy-files .env,secrets/
+
+# Initialize with post-add hook to install dependencies
+gw init --post-add "pnpm install"
+
+# Initialize with pre-add validation hook
+gw init --pre-add "echo 'Creating worktree: {worktree}'"
+
+# Initialize with multiple hooks
+gw init --pre-add "echo 'Starting...'" --post-add "pnpm install" --post-add "echo 'Done!'"
+
+# Initialize with custom default source
+gw init --default-source master
+
+# Initialize with explicit repository root
+gw init --root /Users/username/Workspace/my-project.git
+
+# Full configuration example
+gw init --auto-copy-files .env,secrets/ --post-add "pnpm install"
 
 # Show help
 gw init --help
 ```
 
+#### Hook Variables
+
+Hooks support variable substitution:
+- `{worktree}` - The worktree name (e.g., "feat/new-feature")
+- `{worktreePath}` - Full absolute path to the worktree
+- `{gitRoot}` - The git repository root path
+- `{branch}` - The branch name
+
 #### When to Use
 
-In most cases, you won't need to run `gw init` manually because the tool auto-detects your repository root on first run. However, you may need it when:
+Use `gw init` to:
+- Configure auto-copy files for automatic file copying on worktree creation
+- Set up pre-add and post-add hooks for automation
+- Override the auto-detected repository root (rare)
+- Change the default source worktree from "main" to something else
 
-- Auto-detection fails (rare edge cases with non-standard repository structures)
-- You want to override the auto-detected root
-- You're setting up configuration before the repository has standard git structures
-
-The config file is created at `.gw/config.json` in your current directory, so you can run this command from wherever makes sense for your workflow (typically the repository root).
+The config file is created at `.gw/config.json` at the git root, so it's shared across all worktrees.
 
 ### sync
 
