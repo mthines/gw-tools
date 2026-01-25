@@ -2,6 +2,37 @@
 
 This guide documents how to develop, test, and contribute to the `gw-tool` package, including code conventions and patterns used throughout the codebase.
 
+## Documentation Requirements
+
+**IMPORTANT:** When adding new features or making significant changes, you MUST update the documentation:
+
+1. **README.md** (user-facing documentation):
+   - Add/update command documentation with usage examples
+   - Update configuration options if config schema changes
+   - Add new sections for new commands or major features
+   - Update the Table of Contents if adding new sections
+
+2. **This file (.claude/README.md)** (developer documentation):
+   - Update Project Structure if adding new files
+   - Add new types/interfaces to the Type Definitions section
+   - Add usage patterns to Common Patterns section
+   - Document any new conventions or patterns introduced
+
+3. **In-code help text**:
+   - Update `showXxxHelp()` functions in command files
+   - Include examples and all available options
+
+### Checklist for New Features
+
+- [ ] Feature implementation complete
+- [ ] `deno check src/main.ts` passes
+- [ ] `deno lint` passes
+- [ ] `deno fmt` applied
+- [ ] README.md updated with user documentation
+- [ ] .claude/README.md updated with developer documentation
+- [ ] In-code help text updated
+- [ ] Types documented in types.ts with JSDoc comments
+
 ## Quick Reference
 
 ```bash
@@ -49,6 +80,7 @@ packages/gw-tool/
 │       ├── config.ts        # Configuration management
 │       ├── cli.ts           # CLI argument parsing & help text
 │       ├── file-ops.ts      # File/directory operations
+│       ├── hooks.ts         # Hook execution utilities
 │       ├── path-resolver.ts # Path resolution utilities
 │       ├── output.ts        # Colored output formatting
 │       ├── git-proxy.ts     # Git command proxy utilities
@@ -302,6 +334,24 @@ Define interfaces in `src/lib/types.ts`:
  */
 
 /**
+ * Hook configuration for a command
+ */
+export interface CommandHooks {
+  /** Commands to run before the main command executes */
+  pre?: string[];
+  /** Commands to run after the main command completes successfully */
+  post?: string[];
+}
+
+/**
+ * Hooks configuration for various gw commands
+ */
+export interface HooksConfig {
+  /** Hooks for the add command */
+  add?: CommandHooks;
+}
+
+/**
  * Per-repository configuration stored at .gw/config.json
  */
 export interface Config {
@@ -311,6 +361,8 @@ export interface Config {
   defaultBranch?: string;
   /** Files to automatically copy when creating new worktrees */
   autoCopyFiles?: string[];
+  /** Command hooks configuration */
+  hooks?: HooksConfig;
 }
 ```
 
@@ -515,3 +567,56 @@ if (!parsed.requiredArg) {
   Deno.exit(1);
 }
 ```
+
+### Executing Hooks
+
+Use the `hooks.ts` module for running pre/post command hooks:
+
+```typescript
+import { executeHooks, type HookVariables } from "../lib/hooks.ts";
+
+// Prepare hook variables for substitution
+const hookVariables: HookVariables = {
+  worktree: "feat/new-feature",
+  worktreePath: "/path/to/repo/feat/new-feature",
+  gitRoot: "/path/to/repo",
+  branch: "feat/new-feature",
+};
+
+// Execute pre-hooks (abort on failure)
+if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
+  const { allSuccessful } = await executeHooks(
+    config.hooks.add.pre,
+    gitRoot,           // working directory
+    hookVariables,
+    "pre-add",         // hook type for logging
+    true,              // abort on failure
+  );
+
+  if (!allSuccessful) {
+    output.error("Pre-add hook failed. Aborting.");
+    Deno.exit(1);
+  }
+}
+
+// Execute post-hooks (warn but continue on failure)
+if (config.hooks?.add?.post && config.hooks.add.post.length > 0) {
+  const { allSuccessful } = await executeHooks(
+    config.hooks.add.post,
+    worktreePath,      // working directory (new worktree)
+    hookVariables,
+    "post-add",        // hook type for logging
+    false,             // don't abort on failure
+  );
+
+  if (!allSuccessful) {
+    output.warning("One or more post-add hooks failed");
+  }
+}
+```
+
+Hook variables support substitution in commands:
+- `{worktree}` - The worktree name
+- `{worktreePath}` - Full absolute path to the worktree
+- `{gitRoot}` - The git repository root path
+- `{branch}` - The branch name
