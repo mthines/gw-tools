@@ -1,3 +1,12 @@
+---
+name: config-management
+description: Configure and optimize gw-tools for different project types and team needs. Use this skill when setting up gw for new projects, configuring auto-copy files, troubleshooting configuration issues, or customizing gw for Next.js, Node.js APIs, monorepos, or React SPAs. Triggers on tasks involving .gw/config.json, auto-copy patterns, environment files, or gw init commands.
+license: MIT
+metadata:
+  author: mthines
+  version: "1.0.0"
+---
+
 # Configuration Management - Comprehensive Guide
 
 This guide teaches you how to configure gw for optimal workflows across different project types.

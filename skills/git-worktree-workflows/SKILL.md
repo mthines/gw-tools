@@ -1,3 +1,12 @@
+---
+name: git-worktree-workflows
+description: Master Git worktrees and gw-tools workflows for parallel development. Use this skill when creating worktrees, managing multiple branches simultaneously, navigating between worktrees, troubleshooting worktree issues, or setting up feature branch workflows. Triggers on tasks involving git worktree commands, branch isolation, parallel development, or gw CLI usage.
+license: MIT
+metadata:
+  author: mthines
+  version: "1.0.0"
+---
+
 # Git Worktree Workflows - Comprehensive Guide
 
 This guide teaches you how to master Git worktrees using the `gw` CLI tool for optimized development workflows.
