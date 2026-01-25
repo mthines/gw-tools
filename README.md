@@ -5,6 +5,7 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 ## 🛠️ gw CLI Tool
 
 **gw** simplifies Git worktree management with features like:
+
 - Create worktrees with automatic file copying (`.env`, secrets, configs)
 - Quick navigation with `gw cd` and smart partial matching
 - Proxy commands for `git worktree` operations with enhanced output
@@ -43,17 +44,22 @@ gw remove feature-auth
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
 
 ```bash
+npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows config-management multi-worktree-dev # installs all skills
+```
+
+```bash
 # Master Git worktrees and gw workflows
-npx skills add mthines/gw-tools/git-worktree-workflows 
+npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows
 
 # Configure gw for your project type (Next.js, monorepos, etc.)
-npx skills add mthines/gw-tools/config-management
+npx skills add https://github.com/mthines/gw-tools --skill config-management
 
 # Advanced parallel development patterns
-npx skills add mthines/gw-tools/multi-worktree-dev
+npx skills add https://github.com/mthines/gw-tools --skill multi-worktree-dev
 ```
 
 Once installed, your AI agent can:
+
 - Create worktrees for bug fixes and features automatically
 - Configure gw for your specific project type
 - Navigate between worktrees and manage files
@@ -193,8 +199,8 @@ npx nx release publish --projects=strings,colors
 
 This repository uses tags to enforce module boundaries:
 
-| Package        | Tag             | Can Import From        |
-| -------------- | --------------- | ---------------------- |
+| Package             | Tag             | Can Import From        |
+| ------------------- | --------------- | ---------------------- |
 | `@gw-tools/utils`   | `scope:shared`  | Nothing (base library) |
 | `@gw-tools/strings` | `scope:strings` | `scope:shared`         |
 | `@gw-tools/async`   | `scope:async`   | `scope:shared`         |
