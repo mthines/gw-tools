@@ -16,7 +16,7 @@ This skill teaches you how to configure gw for optimal workflow in any project t
 ## 📦 Installation
 
 ```bash
-npx skills add your-org/gw-tools/config-management
+npx skills add mthines/gw-tools/config-management
 ```
 
 ## 📋 Prerequisites

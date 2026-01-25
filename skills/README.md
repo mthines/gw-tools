@@ -13,7 +13,7 @@ Skills are reusable capabilities for AI agents that provide procedural knowledge
 Master Git worktrees and optimize development workflows with gw-tools.
 
 ```bash
-npx skills add your-org/gw-tools/git-worktree-workflows
+npx skills add mthines/gw-tools/git-worktree-workflows
 ```
 
 **Learn:**
@@ -32,7 +32,7 @@ npx skills add your-org/gw-tools/git-worktree-workflows
 Configure and optimize gw-tools for different project types and team needs.
 
 ```bash
-npx skills add your-org/gw-tools/config-management
+npx skills add mthines/gw-tools/config-management
 ```
 
 **Learn:**
@@ -51,7 +51,7 @@ npx skills add your-org/gw-tools/config-management
 Advanced patterns for developing across multiple worktrees simultaneously.
 
 ```bash
-npx skills add your-org/gw-tools/multi-worktree-dev
+npx skills add mthines/gw-tools/multi-worktree-dev
 ```
 
 **Learn:**
@@ -79,19 +79,19 @@ Install individual skills based on your needs:
 
 ```bash
 # For beginners - start here
-npx skills add your-org/gw-tools/git-worktree-workflows
+npx skills add mthines/gw-tools/git-worktree-workflows
 
 # When setting up gw for a project
-npx skills add your-org/gw-tools/config-management
+npx skills add mthines/gw-tools/config-management
 
 # For advanced parallel development
-npx skills add your-org/gw-tools/multi-worktree-dev
+npx skills add mthines/gw-tools/multi-worktree-dev
 ```
 
 Or install all skills at once:
 
 ```bash
-npx skills add your-org/gw-tools
+npx skills add mthines/gw-tools
 ```
 
 ### Using Skills

@@ -16,7 +16,7 @@ This skill teaches you how to leverage Git worktrees effectively with the `gw` C
 ## 📦 Installation
 
 ```bash
-npx skills add your-org/gw-tools/git-worktree-workflows
+npx skills add mthines/gw-tools/git-worktree-workflows
 ```
 
 ## 📋 Prerequisites
