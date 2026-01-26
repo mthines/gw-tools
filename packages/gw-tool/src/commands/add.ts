@@ -3,7 +3,6 @@
  * Creates a new worktree and optionally copies files
  */
 
-import { basename } from "$std/path";
 import { loadConfig } from "../lib/config.ts";
 import { copyFiles } from "../lib/file-ops.ts";
 import { executeHooks, type HookVariables } from "../lib/hooks.ts";
@@ -193,12 +192,11 @@ export async function executeAdd(args: string[]): Promise<void> {
   // Load config
   const { config, gitRoot } = await loadConfig();
 
-  // Extract just the worktree name (last component of path)
-  const worktreeNameOnly = basename(parsed.worktreeName);
-  const worktreePath = resolveWorktreePath(gitRoot, worktreeNameOnly);
+  // Resolve worktree path (preserves full path including slashes like feat/foo-bar)
+  const worktreePath = resolveWorktreePath(gitRoot, parsed.worktreeName);
 
   // Determine the branch name (from -b/-B flag or worktree name)
-  let branchName = worktreeNameOnly;
+  let branchName = parsed.worktreeName;
   for (let i = 0; i < parsed.gitArgs.length; i++) {
     if (
       (parsed.gitArgs[i] === "-b" || parsed.gitArgs[i] === "-B") &&
