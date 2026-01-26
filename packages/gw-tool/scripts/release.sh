@@ -38,6 +38,14 @@ echo -e "Current version: ${YELLOW}$CURRENT_VERSION${NC}"
 echo -e "\n${BLUE}🧪 Running tests and checks...${NC}"
 nx run @gw-tools/gw-tool:check
 
+# Make sure the user is logged into NPM
+echo -e "\n${BLUE}🔐 Checking npm authentication...${NC}"
+npm whoami
+if [ $? -ne 0 ]; then
+  echo -e "${RED}❌ Error: You are not logged into npm. Please run 'npm login' and try again.${NC}"
+  exit 1
+fi
+
 # Analyze commits to determine version bump
 echo -e "\n${BLUE}📝 Analyzing commits since last release...${NC}"
 
