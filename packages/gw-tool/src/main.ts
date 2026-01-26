@@ -18,6 +18,7 @@ import { executePrune } from './commands/prune.ts';
 import { executeLock } from './commands/lock.ts';
 import { executeUnlock } from './commands/unlock.ts';
 import { executeRepair } from './commands/repair.ts';
+import { executeClean } from './commands/clean.ts';
 import * as output from './lib/output.ts';
 
 /**
@@ -40,6 +41,7 @@ const COMMANDS = {
   lock: executeLock,
   unlock: executeUnlock,
   repair: executeRepair,
+  clean: executeClean,
 };
 
 if (import.meta.main) {

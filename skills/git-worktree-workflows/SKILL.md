@@ -535,6 +535,69 @@ gw remove feature-abandoned --force
 - Worktree reference removed from Git
 - Branch remains in repository (can still be checked out elsewhere)
 
+### Cleaning Up Stale Worktrees
+
+**Automatically remove old worktrees:**
+
+```bash
+# Preview what would be removed (safe to run)
+gw clean --dry-run
+
+# Remove stale worktrees older than configured threshold
+gw clean
+
+# Force removal (skips safety checks - dangerous!)
+gw clean --force
+```
+
+**How it works:**
+- Checks for worktrees older than the configured threshold (default: 7 days)
+- By default, only removes worktrees with:
+  - NO uncommitted changes
+  - NO unpushed commits
+- Always prompts for confirmation before deletion
+- Never removes bare/main repository worktrees
+
+**Configure the threshold:**
+
+```bash
+# Set to 14 days during initialization
+gw init --clean-threshold 14
+
+# Or manually edit .gw/config.json
+{
+  "cleanThreshold": 14
+}
+```
+
+**Example workflow:**
+
+```bash
+# Check what would be cleaned
+$ gw clean --dry-run
+INFO: Checking for worktrees older than 7 days...
+
+Worktrees to remove:
+  ✗ old-feature-1 (14 days old)
+  ✗ old-feature-2 (10 days old)
+
+Skipped worktrees:
+  ⚠ recent-feature - has uncommitted changes
+
+# Review and clean
+$ gw clean
+Remove 2 worktree(s)?
+Type 'yes' to confirm: yes
+
+Removing old-feature-1...
+  ✓ Removed
+
+Removing old-feature-2...
+  ✓ Removed
+
+SUCCESS: Removed 2 worktree(s)
+```
+
 ### Pruning Stale Worktree References
 
 **Scenario:** You manually deleted a worktree directory

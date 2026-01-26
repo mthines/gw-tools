@@ -169,7 +169,8 @@ gw init --root /path/to/your/repo.git
       "pre": ["echo 'Creating worktree: {worktree}'"],
       "post": ["pnpm install", "echo 'Setup complete!'"]
     }
-  }
+  },
+  "cleanThreshold": 7
 }
 ```
 
@@ -181,6 +182,7 @@ gw init --root /path/to/your/repo.git
 - **hooks**: Command hooks configuration (optional, set via `gw init --pre-add` and `--post-add`)
   - **hooks.add.pre**: Array of commands to run before creating a worktree
   - **hooks.add.post**: Array of commands to run after creating a worktree
+- **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
 
 ## Commands
 
@@ -502,6 +504,70 @@ gw sync --dry-run feat-branch .env
 
 # Use absolute path as target
 gw sync /full/path/to/repo/feat-branch .env
+```
+
+### clean
+
+Remove stale worktrees that are older than a configured threshold. By default, only removes worktrees with no uncommitted changes and no unpushed commits.
+
+```bash
+gw clean [options]
+```
+
+#### Options
+
+- `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
+- `-n, --dry-run`: Preview what would be removed without actually removing
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Preview stale worktrees (safe to run)
+gw clean --dry-run
+
+# Remove stale worktrees with safety checks
+gw clean
+
+# Force remove without safety checks (dangerous!)
+gw clean --force
+
+# Configure threshold during init
+gw init --clean-threshold 14
+```
+
+#### How It Works
+
+The clean command:
+1. Checks for worktrees older than the configured threshold (default: 7 days)
+2. Verifies they have no uncommitted changes (unless `--force`)
+3. Verifies they have no unpushed commits (unless `--force`)
+4. Prompts for confirmation before deleting (unless `--dry-run`)
+5. Never removes bare/main repository worktrees
+
+**Safety Features:**
+- By default, only removes worktrees with NO uncommitted changes
+- By default, only removes worktrees with NO unpushed commits
+- Always prompts for confirmation before deletion
+- Main/bare repository worktrees are never removed
+- Use `--force` to bypass safety checks (use with caution)
+
+**Configuration:**
+
+The age threshold is stored in `.gw/config.json` and can be set during initialization:
+
+```bash
+# Set clean threshold to 14 days
+gw init --clean-threshold 14
+```
+
+This creates/updates the config:
+```json
+{
+  "root": "/path/to/repo.git",
+  "defaultBranch": "main",
+  "cleanThreshold": 14
+}
 ```
 
 ### Git Worktree Proxy Commands

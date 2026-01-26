@@ -19,6 +19,7 @@ function parseInitArgs(args: string[]): {
   autoCopyFiles?: string[];
   preAddHooks?: string[];
   postAddHooks?: string[];
+  cleanThreshold?: number;
 } {
   const result: {
     help: boolean;
@@ -27,6 +28,7 @@ function parseInitArgs(args: string[]): {
     autoCopyFiles?: string[];
     preAddHooks?: string[];
     postAddHooks?: string[];
+    cleanThreshold?: number;
   } = {
     help: false,
   };
@@ -52,6 +54,13 @@ function parseInitArgs(args: string[]): {
       // Add to post-add hooks array (can be specified multiple times)
       if (!result.postAddHooks) result.postAddHooks = [];
       result.postAddHooks.push(args[++i]);
+    } else if (arg === "--clean-threshold" && i + 1 < args.length) {
+      const value = parseInt(args[++i], 10);
+      if (!isNaN(value) && value >= 0) {
+        result.cleanThreshold = value;
+      } else {
+        throw new Error("--clean-threshold must be a non-negative number");
+      }
     }
   }
 
@@ -78,6 +87,8 @@ Options:
                                   (can be specified multiple times for multiple hooks)
   --post-add <command>            Command to run after 'gw add' creates a worktree
                                   (can be specified multiple times for multiple hooks)
+  --clean-threshold <days>        Number of days before worktrees are considered
+                                  stale for 'gw clean' (default: 7)
   -h, --help                      Show this help message
 
 Hook Variables:
@@ -180,6 +191,11 @@ export async function executeInit(args: string[]): Promise<void> {
     }
   }
 
+  // Add cleanThreshold if provided
+  if (parsed.cleanThreshold !== undefined) {
+    config.cleanThreshold = parsed.cleanThreshold;
+  }
+
   // Save config at the git root (so it can be found by all worktrees)
   try {
     await saveConfig(rootPath, config);
@@ -208,6 +224,11 @@ export async function executeInit(args: string[]): Promise<void> {
         `  Post-add hooks: ${
           output.dim(config.hooks.add.post.length.toString())
         } command(s)`,
+      );
+    }
+    if (config.cleanThreshold !== undefined) {
+      console.log(
+        `  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`,
       );
     }
     console.log();

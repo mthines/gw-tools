@@ -66,6 +66,7 @@ Commands:
   init             Initialize gw configuration for a repository
   install-shell    Install shell integration for gw cd (auto-runs on npm install)
   root             Get the root directory of the current git repository
+  clean            Remove stale worktrees older than configured threshold
 
 Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository
@@ -88,6 +89,7 @@ Examples:
   gw list
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
+  gw clean --dry-run
 
 For command-specific help:
   gw <command> --help

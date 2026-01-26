@@ -32,6 +32,8 @@ export interface Config {
   autoCopyFiles?: string[];
   /** Command hooks configuration */
   hooks?: HooksConfig;
+  /** Minimum age in days for worktrees to be cleaned (optional, default: 7) */
+  cleanThreshold?: number;
 }
 
 /**

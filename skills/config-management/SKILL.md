@@ -99,7 +99,8 @@ If no configuration exists:
     ".env.local",
     "secrets/",
     "config/local.json"
-  ]
+  ],
+  "cleanThreshold": 7
 }
 ```
 
@@ -181,6 +182,43 @@ If no configuration exists:
 - Directories should end with `/`
 - Files are copied, not symlinked
 - Non-existent files are skipped with warning
+
+### `cleanThreshold`: Worktree Cleanup Age
+
+**Purpose:** Number of days before worktrees are considered stale for `gw clean`.
+
+**Example:**
+
+```json
+{
+  "cleanThreshold": 7
+}
+```
+
+**Common values:**
+- `7` - Default (one week)
+- `14` - Two weeks (more lenient)
+- `3` - Three days (aggressive cleanup)
+- `30` - One month (very lenient)
+
+**How it's used:**
+- `gw clean` removes worktrees older than this threshold
+- Only removes worktrees with no uncommitted changes and no unpushed commits (unless `--force`)
+- `gw clean --dry-run` previews which worktrees would be removed
+
+**Setting the threshold:**
+
+```bash
+# Set during initialization
+gw init --clean-threshold 14
+
+# Or manually edit .gw/config.json
+```
+
+**Important notes:**
+- Age is calculated from the worktree's `.git` file modification time
+- Bare/main repository worktrees are never removed
+- Use `--force` flag to bypass safety checks (not recommended)
 
 ---
 

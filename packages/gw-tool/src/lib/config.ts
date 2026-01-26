@@ -74,6 +74,7 @@ async function ensureConfigDir(dir: string): Promise<void> {
 function createDefaultConfig(): Config {
   return {
     defaultBranch: "main",
+    cleanThreshold: 7,
   };
 }
 
@@ -104,6 +105,12 @@ function validateConfig(data: unknown): data is Config {
     }
     // Validate that all items are strings
     if (!config.autoCopyFiles.every((item) => typeof item === "string")) {
+      return false;
+    }
+  }
+
+  if (config.cleanThreshold !== undefined) {
+    if (typeof config.cleanThreshold !== "number" || config.cleanThreshold < 0) {
       return false;
     }
   }
