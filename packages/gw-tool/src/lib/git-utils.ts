@@ -168,3 +168,109 @@ export async function removeWorktree(
     throw new Error(`Failed to remove worktree: ${worktreePath}`);
   }
 }
+
+/**
+ * Fetch the latest version of a branch from remote and update local branch
+ * @param branchName Branch to fetch (e.g., "main")
+ * @param remoteName Remote name (default: "origin")
+ * @returns Object with startPoint and whether fetch succeeded
+ */
+export async function fetchAndGetStartPoint(
+  branchName: string,
+  remoteName = "origin",
+): Promise<{ startPoint: string; fetchSucceeded: boolean; message?: string }> {
+  const remoteRef = `${remoteName}/${branchName}`;
+
+  // First check if remote exists
+  const remoteCheckCmd = new Deno.Command("git", {
+    args: ["remote", "get-url", remoteName],
+    stdout: "null",
+    stderr: "null",
+  });
+
+  const remoteCheckResult = await remoteCheckCmd.output();
+  if (remoteCheckResult.code !== 0) {
+    return {
+      startPoint: branchName,
+      fetchSucceeded: false,
+      message: `No remote '${remoteName}' configured`,
+    };
+  }
+
+  // Attempt to fetch and update the local branch to match remote
+  // Using format: git fetch origin main:main
+  // This updates local main without needing to check it out
+  const fetchCmd = new Deno.Command("git", {
+    args: ["fetch", remoteName, `${branchName}:${branchName}`],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const fetchResult = await fetchCmd.output();
+
+  if (fetchResult.code === 0) {
+    // Fetch succeeded and local branch updated
+    // Verify local branch now exists and matches remote
+    const verifyCmd = new Deno.Command("git", {
+      args: ["rev-parse", "--verify", branchName],
+      stdout: "null",
+      stderr: "null",
+    });
+
+    const verifyResult = await verifyCmd.output();
+    if (verifyResult.code === 0) {
+      return {
+        startPoint: branchName,
+        fetchSucceeded: true,
+      };
+    }
+  }
+
+  // Fetch with update failed - try regular fetch and use remote-tracking branch
+  const stderr = new TextDecoder().decode(fetchResult.stderr);
+
+  // If error is about refusing to update (branch is checked out), try regular fetch
+  if (stderr.includes("refusing to update") || stderr.includes("checked out")) {
+    const simpleFetchCmd = new Deno.Command("git", {
+      args: ["fetch", remoteName, branchName],
+      stdout: "piped",
+      stderr: "piped",
+    });
+
+    const simpleFetchResult = await simpleFetchCmd.output();
+
+    if (simpleFetchResult.code === 0) {
+      // Use remote-tracking branch as fallback
+      return {
+        startPoint: remoteRef,
+        fetchSucceeded: true,
+        message: `Using ${remoteRef} (local branch is checked out elsewhere)`,
+      };
+    }
+  }
+
+  const errorMsg = stderr.includes("fatal")
+    ? stderr.split("\n")[0].replace("fatal: ", "")
+    : "Unable to fetch from remote";
+
+  // Check if local branch exists as fallback
+  const localCheckCmd = new Deno.Command("git", {
+    args: ["rev-parse", "--verify", branchName],
+    stdout: "null",
+    stderr: "null",
+  });
+
+  const localCheckResult = await localCheckCmd.output();
+  if (localCheckResult.code === 0) {
+    return {
+      startPoint: branchName,
+      fetchSucceeded: false,
+      message: `${errorMsg}, using local branch`,
+    };
+  }
+
+  // Neither remote nor local exists
+  throw new Error(
+    `Branch '${branchName}' does not exist locally or on remote '${remoteName}'`,
+  );
+}

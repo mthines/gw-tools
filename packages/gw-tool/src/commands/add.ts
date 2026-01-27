@@ -5,6 +5,7 @@
 
 import { loadConfig } from "../lib/config.ts";
 import { copyFiles } from "../lib/file-ops.ts";
+import { fetchAndGetStartPoint } from "../lib/git-utils.ts";
 import { executeHooks, type HookVariables } from "../lib/hooks.ts";
 import { resolveWorktreePath } from "../lib/path-resolver.ts";
 import * as output from "../lib/output.ts";
@@ -238,11 +239,38 @@ export async function executeAdd(args: string[]): Promise<void> {
     const exists = await branchExists(parsed.worktreeName);
     if (!exists) {
       // Auto-create branch from defaultBranch
-      startPoint = config.defaultBranch || "main";
-      gitArgs.unshift("-b", parsed.worktreeName);
+      const defaultBranch = config.defaultBranch || "main";
+
       console.log(
-        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(startPoint)}`,
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, fetching latest ${output.bold(defaultBranch)}...`,
       );
+
+      try {
+        const { startPoint: fetchedStartPoint, fetchSucceeded, message } =
+          await fetchAndGetStartPoint(defaultBranch);
+
+        startPoint = fetchedStartPoint;
+        gitArgs.unshift("-b", parsed.worktreeName);
+
+        if (fetchSucceeded) {
+          if (message) {
+            // There's a message even though fetch succeeded (e.g., using remote ref)
+            console.log(output.dim(message));
+          }
+          console.log(
+            `Creating from ${output.bold(startPoint)} (latest from remote)`,
+          );
+        } else {
+          output.warning(message || "Could not fetch from remote");
+          console.log(
+            `Creating from ${output.bold(startPoint)} (local branch)`,
+          );
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        output.error(`Failed to prepare branch: ${errorMsg}`);
+        Deno.exit(1);
+      }
     }
   }
 

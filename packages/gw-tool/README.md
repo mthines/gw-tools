@@ -202,6 +202,9 @@ gw add <worktree-name> [files...]
 
 This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
 
+**Branch Creation Behavior:**
+When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
+
 #### Arguments
 
 - `<worktree-name>`: Name or path for the new worktree
