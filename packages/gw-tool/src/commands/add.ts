@@ -313,7 +313,7 @@ export async function executeAdd(args: string[]): Promise<void> {
     "worktree",
     "add",
     ...gitArgs,
-    parsed.worktreeName,
+    worktreePath,
     ...(startPoint ? [startPoint] : []),
   ];
 
