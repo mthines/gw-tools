@@ -25,24 +25,28 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-1)
       - [Examples](#examples-1)
       - [How It Works](#how-it-works)
-    - [install-shell](#install-shell)
+    - [pull](#pull)
       - [Options](#options-1)
       - [Examples](#examples-2)
-    - [root](#root)
-      - [Examples](#examples-3)
       - [How It Works](#how-it-works-1)
-    - [init](#init)
+    - [install-shell](#install-shell)
       - [Options](#options-2)
+      - [Examples](#examples-3)
+    - [root](#root)
       - [Examples](#examples-4)
+      - [How It Works](#how-it-works-2)
+    - [init](#init)
+      - [Options](#options-3)
+      - [Examples](#examples-5)
       - [When to Use](#when-to-use)
     - [sync](#sync)
       - [Arguments](#arguments-2)
-      - [Options](#options-3)
-      - [Examples](#examples-5)
-    - [clean](#clean)
       - [Options](#options-4)
       - [Examples](#examples-6)
-      - [How It Works](#how-it-works-2)
+    - [clean](#clean)
+      - [Options](#options-5)
+      - [Examples](#examples-7)
+      - [How It Works](#how-it-works-3)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -331,6 +335,67 @@ The `cd` command integrates with your shell through an automatically installed f
 3. All other `gw` commands pass through normally
 
 **Note**: Shell integration is automatically installed when you install via npm. If needed, you can manually install or remove it using `gw install-shell`.
+
+### pull
+
+Merge the latest version of the default branch (or specified branch) into your current worktree. This is useful when you want to update your feature branch with the latest changes from main without having to switch worktrees.
+
+```bash
+gw pull [options]
+```
+
+When working in a worktree, you cannot easily checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw pull` command solves this by fetching the latest version of the default branch and merging it into your current branch.
+
+#### Options
+
+- `--from <branch>`: Merge from specified branch instead of defaultBranch (e.g., `--from develop`)
+- `--remote <name>`: Specify remote name (default: "origin")
+- `-f, --force`: Skip uncommitted changes check (not recommended)
+- `-n, --dry-run`: Preview what would happen without executing
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Merge latest default branch (typically main)
+gw pull
+
+# Merge from a specific branch
+gw pull --from develop
+
+# Preview what would happen
+gw pull --dry-run
+
+# Force pull even with uncommitted changes (not recommended)
+gw pull --force
+
+# Use a different remote
+gw pull --remote upstream
+```
+
+#### How It Works
+
+1. Fetches the latest version of the target branch from remote (e.g., `origin/main`)
+2. Merges it into your current worktree's active branch
+3. Creates merge commit if histories have diverged
+
+**Safety checks:**
+- Blocks if you have uncommitted changes (use `--force` to override)
+- Blocks if you're in a detached HEAD state
+- Handles merge conflicts gracefully with clear guidance
+
+**Merge strategy:** Allows merge commits (not fast-forward only), so it works even if you have local commits.
+
+**Configuration:**
+
+The default branch is read from `.gw/config.json`:
+```json
+{
+  "defaultBranch": "main"
+}
+```
+
+If not configured, defaults to "main".
 
 ### install-shell
 
@@ -712,6 +777,9 @@ gw add feat-new-feature
 
 # Navigate to your new worktree
 gw cd feat-new-feature
+
+# Keep your feature branch updated with latest changes from main
+gw pull
 
 # Alternative: Create worktree and copy specific files
 gw add feat-bugfix .env custom-config.json

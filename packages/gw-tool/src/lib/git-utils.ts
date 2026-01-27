@@ -274,3 +274,131 @@ export async function fetchAndGetStartPoint(
     `Branch '${branchName}' does not exist locally or on remote '${remoteName}'`,
   );
 }
+
+/**
+ * Get the current worktree path
+ * @returns Absolute path to the current worktree
+ */
+export async function getCurrentWorktreePath(): Promise<string> {
+  const cmd = new Deno.Command("git", {
+    args: ["rev-parse", "--show-toplevel"],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const errorMsg = new TextDecoder().decode(stderr);
+    throw new Error(`Failed to get current worktree path: ${errorMsg}`);
+  }
+
+  return new TextDecoder().decode(stdout).trim();
+}
+
+/**
+ * Get the current branch name
+ * @param worktreePath Path to the worktree
+ * @returns Current branch name, or empty string if in detached HEAD
+ */
+export async function getCurrentBranch(worktreePath: string): Promise<string> {
+  const cmd = new Deno.Command("git", {
+    args: ["-C", worktreePath, "branch", "--show-current"],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { code, stdout } = await cmd.output();
+
+  if (code !== 0) {
+    return ""; // Detached HEAD or error
+  }
+
+  return new TextDecoder().decode(stdout).trim();
+}
+
+/**
+ * Check if worktree is in detached HEAD state
+ * @param worktreePath Path to the worktree
+ * @returns True if in detached HEAD state
+ */
+export async function isDetachedHead(worktreePath: string): Promise<boolean> {
+  const branch = await getCurrentBranch(worktreePath);
+  return branch === "";
+}
+
+/**
+ * Merge a branch into the current branch
+ * @param worktreePath Path to the worktree
+ * @param sourceBranch Branch to merge from
+ * @returns Result of the merge operation
+ */
+export async function mergeBranch(
+  worktreePath: string,
+  sourceBranch: string,
+): Promise<{ success: boolean; message?: string; conflicted?: boolean; filesChanged?: number; fileStats?: string[] }> {
+  const cmd = new Deno.Command("git", {
+    args: ["-C", worktreePath, "merge", sourceBranch],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+  const output = new TextDecoder().decode(stdout);
+  const errorOutput = new TextDecoder().decode(stderr);
+
+  if (code === 0) {
+    // Merge succeeded
+    // Try to extract files changed count from output
+    const filesChangedMatch = output.match(/(\d+) files? changed/);
+    const filesChanged = filesChangedMatch
+      ? parseInt(filesChangedMatch[1], 10)
+      : undefined;
+
+    // Check if already up to date
+    if (output.includes("Already up to date")) {
+      return {
+        success: true,
+        message: "Already up to date",
+        filesChanged: 0,
+      };
+    }
+
+    // Parse file stats from output
+    // Git merge output shows files like: " path/to/file.ts | 10 ++++++++++""
+    const fileStats: string[] = [];
+    const lines = output.split("\n");
+    for (const line of lines) {
+      // Match lines that contain file stats (have " | " in them)
+      if (line.includes(" | ")) {
+        // Trim the line and add it to stats
+        const trimmed = line.trim();
+        if (trimmed) {
+          fileStats.push(trimmed);
+        }
+      }
+    }
+
+    return {
+      success: true,
+      filesChanged,
+      fileStats: fileStats.length > 0 ? fileStats : undefined,
+    };
+  }
+
+  // Check if it's a merge conflict
+  if (output.includes("CONFLICT") || errorOutput.includes("CONFLICT")) {
+    return {
+      success: false,
+      conflicted: true,
+      message: "Merge conflict detected",
+    };
+  }
+
+  // Other error
+  const errorMsg = errorOutput || output || "Merge failed";
+  return {
+    success: false,
+    message: errorMsg,
+  };
+}

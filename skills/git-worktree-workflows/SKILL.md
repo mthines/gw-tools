@@ -407,6 +407,64 @@ npm run dev
 
 **Benefit:** Your main branch stays clean and ready for hotfixes or other work.
 
+### Keeping Feature Branches Up to Date
+
+**Scenario:** Updating your feature branch with latest changes from main
+
+```bash
+# Working in feature worktree
+gw cd feature-user-profiles
+
+# Merge latest changes from main into your feature branch
+gw pull
+
+# Or merge from a different branch
+gw pull --from develop
+
+# Preview what would be merged
+gw pull --dry-run
+```
+
+**Why use `gw pull` instead of `git pull`?**
+
+When working in a worktree, you cannot simply checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw pull` command solves this by:
+
+1. Fetching the latest version of main (or specified branch) from remote
+2. Merging it into your current branch without needing to switch worktrees
+3. Handling conflicts and providing clear guidance
+
+**Safety features:**
+- Blocks if you have uncommitted changes (use `--force` to override)
+- Blocks if you're in a detached HEAD state
+- Provides clear guidance when merge conflicts occur
+
+**Example workflow:**
+
+```bash
+# Start working on feature
+gw cd feature-dashboard
+
+# Work for a few days...
+git add .
+git commit -m "feat: add dashboard widgets"
+
+# Meanwhile, main has new changes
+# Update your feature branch with latest main
+gw pull
+
+# If there's a conflict, you'll get clear guidance:
+# Resolve conflicts manually:
+#   1. Edit conflicted files
+#   2. git add <resolved-files>
+#   3. git commit
+
+# Continue working
+git add .
+git commit -m "feat: integrate new API endpoints from main"
+```
+
+**Benefit:** Keep your feature branch up to date without switching worktrees or manually managing fetch/merge operations.
+
 ### Hotfix Workflows While Continuing Feature Work
 
 **Scenario:** Critical bug in production while working on a feature

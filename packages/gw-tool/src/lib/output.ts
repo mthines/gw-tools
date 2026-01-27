@@ -119,3 +119,20 @@ export function bold(text: string): string {
 export function dim(text: string): string {
   return `${colors.dim}${text}${colors.reset}`;
 }
+
+/**
+ * Colorize git diff stats (green for +, red for -)
+ */
+export function colorizeFileStat(fileStat: string): string {
+  // Git merge output format: " path/to/file.ts | 10 ++++++++++""
+  // We want to colorize the + and - characters
+  let result = fileStat;
+
+  // Replace + with green +
+  result = result.replace(/\+/g, colorize('+', 'green'));
+
+  // Replace - with red -
+  result = result.replace(/-/g, colorize('-', 'red'));
+
+  return result;
+}

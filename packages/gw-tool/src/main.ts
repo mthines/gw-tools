@@ -8,6 +8,7 @@ import { parseGlobalArgs, showGlobalHelp, showVersion } from './lib/cli.ts';
 import { executeAdd } from './commands/add.ts';
 import { executeCd } from './commands/cd.ts';
 import { executeCopy } from './commands/sync.ts';
+import { executePull } from './commands/pull.ts';
 import { executeInit } from './commands/init.ts';
 import { executeInstallShell } from './commands/install-shell.ts';
 import { executeRoot } from './commands/root.ts';
@@ -27,6 +28,7 @@ import * as output from './lib/output.ts';
 const COMMANDS = {
   add: executeAdd,
   cd: executeCd,
+  pull: executePull,
   sync: executeCopy,
   init: executeInit,
   'install-shell': executeInstallShell,

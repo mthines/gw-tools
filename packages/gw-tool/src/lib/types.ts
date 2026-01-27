@@ -77,3 +77,35 @@ export interface GlobalArgs {
   /** Whether version was requested */
   version: boolean;
 }
+
+/**
+ * Options for the pull command
+ */
+export interface PullOptions {
+  /** Show help */
+  help: boolean;
+  /** Skip uncommitted changes check (dangerous) */
+  force: boolean;
+  /** Dry run mode - show what would happen without executing */
+  dryRun: boolean;
+  /** Branch to merge from (overrides defaultBranch) */
+  branch?: string;
+  /** Remote name (default: "origin") */
+  remote: string;
+}
+
+/**
+ * Result of a git merge operation
+ */
+export interface MergeResult {
+  /** Whether the merge succeeded */
+  success: boolean;
+  /** Human-readable message describing the result */
+  message?: string;
+  /** Whether there are merge conflicts */
+  conflicted?: boolean;
+  /** Number of files changed */
+  filesChanged?: number;
+  /** List of changed files with their stats */
+  fileStats?: string[];
+}

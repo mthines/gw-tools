@@ -3,7 +3,7 @@
  */
 
 import { parseArgs as denoParseArgs } from "$std/cli/parse-args";
-import type { CopyOptions, GlobalArgs } from "./types.ts";
+import type { CopyOptions, GlobalArgs, PullOptions } from "./types.ts";
 import { VERSION } from "./version.ts";
 
 /**
@@ -62,6 +62,7 @@ Usage:
 Commands:
   add              Create a new worktree with optional auto-copy
   cd               Navigate to a worktree directory
+  pull             Merge latest version of default branch into current worktree
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
   install-shell    Install shell integration for gw cd (auto-runs on npm install)
@@ -187,5 +188,87 @@ Configuration:
   }
 
   If auto-detection fails, run 'gw init --root <path>' to specify manually.
+`);
+}
+
+/**
+ * Parse arguments for the pull command
+ */
+export function parsePullArgs(args: string[]): PullOptions {
+  const parsed = denoParseArgs(args, {
+    boolean: ["help", "force", "dry-run"],
+    string: ["from", "remote"],
+    alias: {
+      h: "help",
+      f: "force",
+      n: "dry-run",
+    },
+    "--": true,
+  });
+
+  return {
+    help: parsed.help as boolean,
+    force: parsed.force as boolean,
+    dryRun: parsed["dry-run"] as boolean,
+    branch: parsed.from as string | undefined,
+    remote: (parsed.remote as string) || "origin",
+  };
+}
+
+/**
+ * Display help text for the pull command
+ */
+export function showPullHelp(): void {
+  console.log(`
+gw pull - Merge latest version of default branch into current worktree
+
+Usage:
+  gw pull [options]
+
+Options:
+  --from <branch>      Merge from specified branch instead of defaultBranch
+  --remote <name>      Specify remote name (default: "origin")
+  -f, --force          Skip uncommitted changes check (dangerous)
+  -n, --dry-run        Show what would happen without executing
+  -h, --help           Show this help message
+
+Description:
+  Fetches the latest version of the configured default branch (typically "main")
+  from the remote and merges it into your current worktree's active branch.
+
+  This is useful when working in a worktree and you want to update your branch
+  with the latest changes from main without having to switch worktrees or
+  checkout the main branch.
+
+  Safety checks:
+  - Blocks if you have uncommitted changes (use --force to override)
+  - Blocks if you're in a detached HEAD state
+  - Handles merge conflicts gracefully
+
+  Merge strategy: Creates merge commits if histories have diverged
+
+Examples:
+  # Merge latest default branch (typically main)
+  gw pull
+
+  # Merge from a specific branch
+  gw pull --from develop
+
+  # Preview what would happen without executing
+  gw pull --dry-run
+
+  # Force pull even with uncommitted changes (not recommended)
+  gw pull --force
+
+  # Use a different remote
+  gw pull --remote upstream
+
+Configuration:
+  The default branch is configured in .gw/config.json:
+  {
+    "defaultBranch": "main"
+  }
+
+  If not configured, defaults to "main".
 `);
 }
