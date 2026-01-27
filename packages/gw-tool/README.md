@@ -178,7 +178,9 @@ gw init --root /path/to/your/repo.git
       "post": ["pnpm install", "echo 'Setup complete!'"]
     }
   },
-  "cleanThreshold": 7
+  "cleanThreshold": 7,
+  "autoClean": true,
+  "lastAutoCleanTime": 1706371200000
 }
 ```
 
@@ -193,6 +195,8 @@ gw init --root /path/to/your/repo.git
   - **hooks.add.pre**: Array of commands to run before creating a worktree
   - **hooks.add.post**: Array of commands to run after creating a worktree
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
+- **autoClean**: Automatically remove stale worktrees when running `gw add` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
+- **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
 ## Commands
 
@@ -486,6 +490,7 @@ gw init [options]
 - `--pre-add <command>`: Command to run before `gw add` creates a worktree (can be specified multiple times)
 - `--post-add <command>`: Command to run after `gw add` creates a worktree (can be specified multiple times)
 - `--clean-threshold <days>`: Number of days before worktrees are considered stale for `gw clean` (default: 7)
+- `--auto-clean`: Enable automatic cleanup of stale worktrees (runs on `gw add` and `gw list` with 24-hour cooldown)
 - `-h, --help`: Show help message
 
 #### Examples
@@ -529,6 +534,33 @@ Hooks support variable substitution:
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
 - `{branch}` - The branch name
+
+#### Auto-Cleanup Configuration
+
+Enable automatic removal of stale worktrees to keep your repository clean:
+
+```bash
+# Enable auto-cleanup with default 7-day threshold
+gw init --auto-clean
+
+# Enable with custom threshold (14 days)
+gw init --auto-clean --clean-threshold 14
+
+# Enable with other options
+gw init --auto-clean --auto-copy-files .env --post-add "pnpm install"
+```
+
+**How it works:**
+- Runs automatically on `gw add` and `gw list` commands
+- Only runs once per 24 hours (cooldown)
+- Removes worktrees older than `cleanThreshold` with:
+  - No uncommitted changes
+  - No staged files
+  - No unpushed commits
+- Shows brief message only when worktrees are removed: `🧹 Auto-cleanup: Removed 2 stale worktrees`
+- Never interrupts or fails the main command
+
+This is an opt-in feature. Use `gw clean` for manual, interactive cleanup with more control.
 
 #### When to Use
 
@@ -588,6 +620,8 @@ gw sync /full/path/to/repo/feat-branch .env
 ### clean
 
 Remove stale worktrees that are older than a configured threshold. By default, only removes worktrees with no uncommitted changes and no unpushed commits.
+
+**Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 
 ```bash
 gw clean [options]

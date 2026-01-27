@@ -20,6 +20,7 @@ function parseInitArgs(args: string[]): {
   preAddHooks?: string[];
   postAddHooks?: string[];
   cleanThreshold?: number;
+  autoClean?: boolean;
 } {
   const result: {
     help: boolean;
@@ -29,6 +30,7 @@ function parseInitArgs(args: string[]): {
     preAddHooks?: string[];
     postAddHooks?: string[];
     cleanThreshold?: number;
+    autoClean?: boolean;
   } = {
     help: false,
   };
@@ -61,6 +63,8 @@ function parseInitArgs(args: string[]): {
       } else {
         throw new Error("--clean-threshold must be a non-negative number");
       }
+    } else if (arg === "--auto-clean") {
+      result.autoClean = true;
     }
   }
 
@@ -89,6 +93,8 @@ Options:
                                   (can be specified multiple times for multiple hooks)
   --clean-threshold <days>        Number of days before worktrees are considered
                                   stale for 'gw clean' (default: 7)
+  --auto-clean                    Enable automatic cleanup of stale worktrees
+                                  (runs on 'gw add' and 'gw list' with 24h cooldown)
   -h, --help                      Show this help message
 
 Hook Variables:
@@ -196,6 +202,11 @@ export async function executeInit(args: string[]): Promise<void> {
     config.cleanThreshold = parsed.cleanThreshold;
   }
 
+  // Add autoClean if provided
+  if (parsed.autoClean !== undefined) {
+    config.autoClean = parsed.autoClean;
+  }
+
   // Save config at the git root (so it can be found by all worktrees)
   try {
     await saveConfig(rootPath, config);
@@ -229,6 +240,11 @@ export async function executeInit(args: string[]): Promise<void> {
     if (config.cleanThreshold !== undefined) {
       console.log(
         `  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`,
+      );
+    }
+    if (config.autoClean) {
+      console.log(
+        `  Auto-cleanup: ${output.bold("enabled")} ${output.dim("(24h cooldown)")}`,
       );
     }
     console.log();

@@ -34,6 +34,10 @@ export interface Config {
   hooks?: HooksConfig;
   /** Minimum age in days for worktrees to be cleaned (optional, default: 7) */
   cleanThreshold?: number;
+  /** Enable automatic cleanup of stale worktrees (optional, default: false) */
+  autoClean?: boolean;
+  /** Unix timestamp in milliseconds of last auto-cleanup run (managed automatically) */
+  lastAutoCleanTime?: number;
 }
 
 /**

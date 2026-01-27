@@ -115,6 +115,21 @@ function validateConfig(data: unknown): data is Config {
     }
   }
 
+  if (config.autoClean !== undefined) {
+    if (typeof config.autoClean !== "boolean") {
+      return false;
+    }
+  }
+
+  if (config.lastAutoCleanTime !== undefined) {
+    if (
+      typeof config.lastAutoCleanTime !== "number" ||
+      config.lastAutoCleanTime < 0
+    ) {
+      return false;
+    }
+  }
+
   return true;
 }
 
