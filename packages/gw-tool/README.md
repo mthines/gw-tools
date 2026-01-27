@@ -39,6 +39,10 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-2)
       - [Options](#options-3)
       - [Examples](#examples-5)
+    - [clean](#clean)
+      - [Options](#options-4)
+      - [Examples](#examples-6)
+      - [How It Works](#how-it-works-2)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -173,6 +177,8 @@ gw init --root /path/to/your/repo.git
   "cleanThreshold": 7
 }
 ```
+
+**More Examples**: See the [examples/](./examples/) directory for configuration templates for various project types (Next.js, Node.js API, monorepos, CI/CD, etc.).
 
 ### Configuration Options
 
@@ -411,6 +417,7 @@ gw init [options]
 - `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw add`
 - `--pre-add <command>`: Command to run before `gw add` creates a worktree (can be specified multiple times)
 - `--post-add <command>`: Command to run after `gw add` creates a worktree (can be specified multiple times)
+- `--clean-threshold <days>`: Number of days before worktrees are considered stale for `gw clean` (default: 7)
 - `-h, --help`: Show help message
 
 #### Examples
@@ -437,8 +444,11 @@ gw init --default-source master
 # Initialize with explicit repository root
 gw init --root /Users/username/Workspace/my-project.git
 
+# Initialize with custom clean threshold (14 days instead of default 7)
+gw init --clean-threshold 14
+
 # Full configuration example
-gw init --auto-copy-files .env,secrets/ --post-add "pnpm install"
+gw init --auto-copy-files .env,secrets/ --post-add "pnpm install" --clean-threshold 14
 
 # Show help
 gw init --help
@@ -457,6 +467,7 @@ Hooks support variable substitution:
 Use `gw init` to:
 - Configure auto-copy files for automatic file copying on worktree creation
 - Set up pre-add and post-add hooks for automation
+- Configure the clean threshold for worktree age management
 - Override the auto-detected repository root (rare)
 - Change the default source worktree from "main" to something else
 
