@@ -1,0 +1,14 @@
+{
+  "_comment": "Basic configuration with auto-copy files",
+  "_description": "Automatically copies environment files when creating new worktrees",
+  "_usage": "Good for projects that need .env files in every worktree",
+
+  "root": "/absolute/path/to/your/repo",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local"
+  ]
+}

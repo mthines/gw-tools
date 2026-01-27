@@ -1,0 +1,37 @@
+{
+  "_comment": "CI/CD integration configuration",
+  "_description": "For teams with automated testing and deployment workflows",
+  "_features": [
+    "Runs linting and tests on worktree creation",
+    "Sets up test database",
+    "Validates code quality before work begins",
+    "Ensures worktree is ready for development"
+  ],
+
+  "root": "/absolute/path/to/your/repo",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.test",
+    "config/test-database.json",
+    "cypress.env.json"
+  ],
+
+  "hooks": {
+    "add": {
+      "pre": [
+        "echo 'Validating repository state...'",
+        "git fetch origin"
+      ],
+      "post": [
+        "cd {worktreePath} && npm install",
+        "cd {worktreePath} && npm run db:test:setup",
+        "cd {worktreePath} && npm run lint",
+        "cd {worktreePath} && npm run type-check",
+        "echo '✓ Worktree {worktree} passed all checks'"
+      ]
+    }
+  }
+}

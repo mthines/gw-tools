@@ -1,0 +1,30 @@
+{
+  "_comment": "Next.js application configuration",
+  "_description": "Optimized for Next.js apps with Vercel deployment",
+  "_features": [
+    "Copies environment files (.env, .env.local, .env.development)",
+    "Copies Vercel configuration (.vercel/)",
+    "Copies public uploads directory",
+    "Installs dependencies after worktree creation"
+  ],
+
+  "root": "/absolute/path/to/your/nextjs-app",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".vercel/",
+    "public/uploads/"
+  ],
+
+  "hooks": {
+    "add": {
+      "post": [
+        "cd {worktreePath} && pnpm install"
+      ]
+    }
+  }
+}

@@ -1,0 +1,7 @@
+{
+  "_comment": "Minimal gw configuration - bare essentials only",
+  "_usage": "Copy this to your repo root as .gw/config.json and update the root path",
+
+  "root": "/absolute/path/to/your/repo",
+  "defaultBranch": "main"
+}

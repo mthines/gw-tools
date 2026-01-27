@@ -1,0 +1,29 @@
+{
+  "_comment": "React single-page application configuration",
+  "_description": "For React apps built with Create React App, Vite, or similar",
+  "_features": [
+    "Copies environment files",
+    "Copies public assets and uploaded files",
+    "Installs dependencies after creation"
+  ],
+
+  "root": "/absolute/path/to/your/react-app",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    ".env.development",
+    "public/uploads/",
+    "public/images/"
+  ],
+
+  "hooks": {
+    "add": {
+      "post": [
+        "cd {worktreePath} && npm install"
+      ]
+    }
+  }
+}

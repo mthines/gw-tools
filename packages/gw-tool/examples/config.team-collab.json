@@ -1,0 +1,44 @@
+{
+  "_comment": "Team collaboration configuration",
+  "_description": "Ensures consistent setup across all team members",
+  "_features": [
+    "Shared environment and configuration files",
+    "Automated dependency installation",
+    "Code quality checks on creation",
+    "Documentation generation",
+    "Helpful onboarding messages"
+  ],
+
+  "root": "/absolute/path/to/your/repo",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    ".vscode/",
+    "config/",
+    "docs/development.md"
+  ],
+
+  "hooks": {
+    "add": {
+      "pre": [
+        "echo '👋 Creating worktree for {branch}'",
+        "echo 'This will take a moment while we set everything up...'"
+      ],
+      "post": [
+        "cd {worktreePath} && pnpm install",
+        "cd {worktreePath} && pnpm run setup:local",
+        "cd {worktreePath} && pnpm run generate:docs",
+        "echo ''",
+        "echo '✅ Worktree ready at: {worktreePath}'",
+        "echo '📝 Next steps:'",
+        "echo '   1. cd {worktreePath}'",
+        "echo '   2. Review docs/development.md for guidelines'",
+        "echo '   3. Start developing!'",
+        "echo ''"
+      ]
+    }
+  }
+}

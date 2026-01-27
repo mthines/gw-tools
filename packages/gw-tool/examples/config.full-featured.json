@@ -1,0 +1,40 @@
+{
+  "_comment": "Full-featured configuration demonstrating all available options",
+  "_description": "Shows every possible configuration option with examples",
+  "_features": [
+    "All configuration options demonstrated",
+    "Pre-add and post-add hooks",
+    "Multiple auto-copy patterns",
+    "Custom clean threshold"
+  ],
+
+  "root": "/absolute/path/to/your/repo",
+  "defaultBranch": "main",
+  "cleanThreshold": 14,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    ".env.development",
+    ".env.test",
+    "config/",
+    "secrets/",
+    ".vercel/",
+    "public/uploads/"
+  ],
+
+  "hooks": {
+    "add": {
+      "pre": [
+        "echo 'Creating worktree: {worktree} at {worktreePath}'",
+        "echo 'Branch: {branch}'"
+      ],
+      "post": [
+        "cd {worktreePath} && pnpm install",
+        "cd {worktreePath} && pnpm run db:migrate",
+        "cd {worktreePath} && pnpm run build",
+        "echo 'Worktree {worktree} is ready! Run: cd {worktreePath}'"
+      ]
+    }
+  }
+}

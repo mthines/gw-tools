@@ -1,0 +1,30 @@
+{
+  "_comment": "Node.js REST API configuration",
+  "_description": "Optimized for Node.js backend services (Express, Fastify, etc.)",
+  "_features": [
+    "Copies environment files and database configuration",
+    "Runs database migrations after worktree creation",
+    "Installs dependencies automatically"
+  ],
+
+  "root": "/absolute/path/to/your/api",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    ".env.test",
+    "config/database.json",
+    "prisma/.env"
+  ],
+
+  "hooks": {
+    "add": {
+      "post": [
+        "cd {worktreePath} && npm install",
+        "cd {worktreePath} && npm run db:migrate"
+      ]
+    }
+  }
+}

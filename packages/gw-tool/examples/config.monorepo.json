@@ -1,0 +1,31 @@
+{
+  "_comment": "Monorepo configuration",
+  "_description": "For monorepos with multiple packages (pnpm, npm, yarn workspaces, Nx, Turborepo)",
+  "_features": [
+    "Copies workspace configuration files",
+    "Copies shared environment files",
+    "Copies package-specific env files for each app",
+    "Installs dependencies at workspace root"
+  ],
+
+  "root": "/absolute/path/to/your/monorepo",
+  "defaultBranch": "main",
+  "cleanThreshold": 7,
+
+  "autoCopyFiles": [
+    ".env",
+    "pnpm-workspace.yaml",
+    ".npmrc",
+    "apps/web/.env.local",
+    "apps/api/.env.local",
+    "packages/shared/.env"
+  ],
+
+  "hooks": {
+    "add": {
+      "post": [
+        "cd {worktreePath} && pnpm install"
+      ]
+    }
+  }
+}
