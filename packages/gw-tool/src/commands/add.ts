@@ -5,7 +5,7 @@
 
 import { loadConfig } from "../lib/config.ts";
 import { copyFiles } from "../lib/file-ops.ts";
-import { fetchAndGetStartPoint } from "../lib/git-utils.ts";
+import { fetchAndGetStartPoint, listWorktrees } from "../lib/git-utils.ts";
 import { executeHooks, type HookVariables } from "../lib/hooks.ts";
 import { resolveWorktreePath } from "../lib/path-resolver.ts";
 import * as output from "../lib/output.ts";
@@ -229,6 +229,38 @@ export async function executeAdd(args: string[]): Promise<void> {
     if (!allSuccessful) {
       output.error("Pre-add hook failed. Aborting worktree creation.");
       Deno.exit(1);
+    }
+  }
+
+  // Check for leftover directory that isn't a valid worktree
+  try {
+    const stat = await Deno.stat(worktreePath);
+    if (stat.isDirectory || stat.isFile) {
+      // Path exists - check if it's a valid worktree
+      const worktrees = await listWorktrees();
+      const isValidWorktree = worktrees.some((wt) => wt.path === worktreePath);
+
+      if (!isValidWorktree) {
+        // Path exists but isn't a valid worktree - automatically clean up
+        console.log("");
+        output.warning(
+          `Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`,
+        );
+        console.log(
+          `This can happen if a previous worktree creation was interrupted.`,
+        );
+        console.log(`Automatically removing and continuing...`);
+
+        await Deno.remove(worktreePath, { recursive: true });
+        console.log(output.success("Removed successfully."));
+        console.log("");
+      }
+    }
+  } catch (error) {
+    // Path doesn't exist - this is fine, we'll create it
+    if (!(error instanceof Deno.errors.NotFound)) {
+      // Some other error occurred
+      throw error;
     }
   }
 
