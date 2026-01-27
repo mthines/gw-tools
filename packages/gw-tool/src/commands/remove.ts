@@ -105,38 +105,26 @@ For full git worktree remove documentation:
     }
   }
 
-  // Check if confirmation should be skipped
-  const skipConfirmation = args.includes('--yes') || args.includes('-y');
-
-  // Prompt for confirmation unless --yes/-y flag is present
-  if (!skipConfirmation && worktreeName) {
+  // Check if the worktree/directory doesn't exist at all
+  if (!isValidWorktree && !isLeftoverDirectory && worktreeName) {
     console.log("");
-
-    let message: string;
-    if (isLeftoverDirectory) {
-      message = `${output.bold(worktreeName)} is not a valid worktree, but a leftover directory exists.\nRemove the directory manually?`;
-    } else if (isRemovingCurrentWorktree) {
-      message = `You are about to remove the worktree you're currently in: ${output.bold(worktreeName)}`;
-    } else {
-      message = `Remove worktree ${output.bold(worktreeName)}?`;
-    }
-
-    console.log(message);
-    const response = prompt(`Are you sure? (yes/no) [no]:`);
-
-    if (response?.toLowerCase() !== "yes" && response?.toLowerCase() !== "y") {
-      console.log("");
-      output.error("Removal cancelled.");
-      Deno.exit(1);
-    }
+    output.error(
+      `Worktree ${output.bold(worktreeName)} does not exist.`,
+    );
     console.log("");
+    Deno.exit(1);
   }
 
-  // Handle leftover directory removal
-  if (isLeftoverDirectory && worktreePath) {
+  // Handle leftover directory removal automatically (no confirmation)
+  if (isLeftoverDirectory && worktreePath && worktreeName) {
+    console.log("");
+    output.warning(
+      `${output.bold(worktreeName)} is not a valid worktree, but a leftover directory exists.`,
+    );
+    console.log(`Automatically removing...`);
+
     try {
       await Deno.remove(worktreePath, { recursive: true });
-      console.log("");
       output.success(`Leftover directory ${output.bold(`"${worktreeName}"`)} removed successfully`);
       console.log("");
 
@@ -154,6 +142,28 @@ For full git worktree remove documentation:
       output.error(`Failed to remove directory: ${errorMsg}`);
       Deno.exit(1);
     }
+  }
+
+  // Check if confirmation should be skipped
+  const skipConfirmation = args.includes('--yes') || args.includes('-y');
+
+  // Prompt for confirmation unless --yes/-y flag is present (only for valid worktrees)
+  if (!skipConfirmation && worktreeName && !isLeftoverDirectory) {
+    console.log("");
+
+    const message = isRemovingCurrentWorktree
+      ? `You are about to remove the worktree you're currently in: ${output.bold(worktreeName)}`
+      : `Remove worktree ${output.bold(worktreeName)}?`;
+
+    console.log(message);
+    const response = prompt(`Are you sure? (yes/no) [no]:`);
+
+    if (response?.toLowerCase() !== "yes" && response?.toLowerCase() !== "y") {
+      console.log("");
+      output.error("Removal cancelled.");
+      Deno.exit(1);
+    }
+    console.log("");
   }
 
   // Filter out --yes/-y flags before passing to git (git doesn't recognize them)
