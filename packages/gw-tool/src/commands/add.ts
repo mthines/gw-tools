@@ -341,5 +341,5 @@ export async function executeAdd(args: string[]): Promise<void> {
     }
   }
 
-  output.success("Worktree created successfully");
+  output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 }

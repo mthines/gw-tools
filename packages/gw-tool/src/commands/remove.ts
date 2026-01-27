@@ -4,6 +4,7 @@
  */
 
 import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Execute the remove command
@@ -26,5 +27,18 @@ export async function executeRemove(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  await executeGitWorktree('remove', args, 'Worktree removed successfully');
+  // Extract worktree name from args (first non-flag argument)
+  let worktreeName: string | undefined;
+  for (const arg of args) {
+    if (!arg.startsWith('-')) {
+      worktreeName = arg;
+      break;
+    }
+  }
+
+  const successMessage = worktreeName
+    ? `Worktree ${output.bold(`"${worktreeName}"`)} removed successfully`
+    : 'Worktree removed successfully';
+
+  await executeGitWorktree('remove', args, successMessage);
 }
