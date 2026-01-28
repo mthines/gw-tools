@@ -213,6 +213,9 @@ This command wraps `git worktree add` and optionally copies files to the new wor
 **Branch Creation Behavior:**
 When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
 
+**Upstream Tracking:**
+When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
+
 #### Arguments
 
 - `<worktree-name>`: Name or path for the new worktree

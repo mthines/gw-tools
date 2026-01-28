@@ -144,7 +144,7 @@ Example creating a worktree with auto-copy:
 $ gw add feature-new-dashboard
 
 Creating worktree feature-new-dashboard...
-✓ Branch 'feature-new-dashboard' set up to track 'origin/main'
+✓ Branch 'feature-new-dashboard' set up to track 'origin/feature-new-dashboard'
 ✓ Worktree created: /projects/myapp.git/feature-new-dashboard
 
 Copying files from main...
@@ -155,6 +155,8 @@ Copying files from main...
 
 Done! Navigate with: gw cd feature-new-dashboard
 ```
+
+**Note:** The branch is configured to track its own remote branch (`origin/feature-new-dashboard`), not `origin/main`. This means `git push` will push to the correct branch without needing `-u origin <branch>`.
 
 ### Manual File Copying with `gw sync`
 
@@ -175,14 +177,19 @@ gw sync --from staging feature-auth .env
 
 **Tracking branches** (recommended):
 ```bash
-# Creates branch that tracks remote
-gw add feature-x -b feature-x origin/main
+# Creates branch from origin/main, tracking its own remote branch
+gw add feature-x
 
 # Shows branch relationship
 $ git status
 On branch feature-x
-Your branch is up to date with 'origin/main'.
+Your branch is up to date with 'origin/feature-x'.
+
+# Push works without specifying remote/branch
+git push  # Pushes to origin/feature-x
 ```
+
+**Note:** When `gw add` creates a new branch, it automatically configures upstream tracking to `origin/<branch-name>`, not to the branch it was created from. This ensures `git push` works correctly.
 
 **Detached HEAD** (for temporary work):
 ```bash

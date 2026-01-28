@@ -35,8 +35,10 @@ Usage:
 This command wraps 'git worktree remove' and forwards all arguments.
 Before removing, it prompts for confirmation to prevent accidental deletions.
 
-If you remove the worktree you're currently in, the command will show a
-helpful message with instructions to navigate back to the git root.
+If you remove the worktree you're currently in:
+  - The CLI automatically changes to the git root before removal
+  - With shell integration installed, your shell will also navigate to the root
+  - Without shell integration, you'll need to manually run: cd "$(gw root)"
 
 Options:
   All 'git worktree remove' options are supported
@@ -164,6 +166,18 @@ For full git worktree remove documentation:
       Deno.exit(1);
     }
     console.log("");
+  }
+
+  // If we're removing the current worktree, change to the git root first
+  // This ensures git operations run from a safe location
+  if (isRemovingCurrentWorktree) {
+    try {
+      const { gitRoot } = await loadConfig();
+      Deno.chdir(gitRoot);
+    } catch (error) {
+      // If we can't get git root, continue anyway
+      // The git command might still work
+    }
   }
 
   // Filter out --yes/-y flags before passing to git (git doesn't recognize them)

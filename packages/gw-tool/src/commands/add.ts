@@ -115,7 +115,9 @@ function showAddHelp(): void {
 Create a new git worktree and optionally copy files.
 
 If the branch doesn't exist, it will be automatically created from the
-defaultBranch configured in .gw/config.json (defaults to "main").
+defaultBranch configured in .gw/config.json (defaults to "main"). The new
+branch will be configured to track origin/<branch-name>, so git push works
+without needing to specify -u origin <branch>.
 
 If autoCopyFiles is configured in .gw/config.json, those files will be
 automatically copied to the new worktree. You can override this by passing
@@ -332,6 +334,39 @@ export async function executeAdd(args: string[]): Promise<void> {
   if (code !== 0) {
     output.error("Failed to create worktree");
     Deno.exit(code);
+  }
+
+  // Set up correct upstream tracking if we auto-created a new branch
+  // When creating a branch from a remote-tracking branch (e.g., origin/main),
+  // git automatically sets tracking to that branch. We need to change it to
+  // track the new branch name instead (e.g., origin/feat/new-feature).
+  if (startPoint) {
+    const configRemoteCmd = new Deno.Command("git", {
+      args: [
+        "-C",
+        worktreePath,
+        "config",
+        `branch.${branchName}.remote`,
+        "origin",
+      ],
+      stdout: "null",
+      stderr: "null",
+    });
+
+    const configMergeCmd = new Deno.Command("git", {
+      args: [
+        "-C",
+        worktreePath,
+        "config",
+        `branch.${branchName}.merge`,
+        `refs/heads/${branchName}`,
+      ],
+      stdout: "null",
+      stderr: "null",
+    });
+
+    await configRemoteCmd.output();
+    await configMergeCmd.output();
   }
 
   // Determine which files to copy

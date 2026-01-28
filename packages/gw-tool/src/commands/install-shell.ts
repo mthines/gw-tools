@@ -237,6 +237,17 @@ gw() {
     else
       command gw cd "$2"
     fi
+  elif [[ "$1" == "rm" || "$1" == "remove" ]]; then
+    # Get git root before removing (in case we're removing current worktree)
+    local git_root=$(command gw root 2>/dev/null)
+    # Execute the remove command
+    command gw "$@"
+    local exit_code=$?
+    # If removal succeeded and we have a git root, cd to it
+    if [[ $exit_code -eq 0 && -n "$git_root" && ! -d "$PWD" ]]; then
+      cd "$git_root"
+    fi
+    return $exit_code
   else
     command gw "$@"
   fi
@@ -261,6 +272,17 @@ gw() {
     else
       command gw cd "$2"
     fi
+  elif [[ "$1" == "rm" || "$1" == "remove" ]]; then
+    # Get git root before removing (in case we're removing current worktree)
+    local git_root=$(command gw root 2>/dev/null)
+    # Execute the remove command
+    command gw "$@"
+    local exit_code=$?
+    # If removal succeeded and we have a git root, cd to it
+    if [[ $exit_code -eq 0 && -n "$git_root" && ! -d "$PWD" ]]; then
+      cd "$git_root"
+    fi
+    return $exit_code
   else
     command gw "$@"
   fi
@@ -285,6 +307,17 @@ function gw
         else
             command gw cd $argv[2]
         end
+    else if test "$argv[1]" = "rm" -o "$argv[1]" = "remove"
+        # Get git root before removing (in case we're removing current worktree)
+        set -l git_root (command gw root 2>/dev/null)
+        # Execute the remove command
+        command gw $argv
+        set -l exit_code $status
+        # If removal succeeded and we have a git root, cd to it
+        if test $exit_code -eq 0 -a -n "$git_root" -a ! -d "$PWD"
+            cd $git_root
+        end
+        return $exit_code
     else
         command gw $argv
     end
