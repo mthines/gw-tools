@@ -146,3 +146,85 @@ Deno.test("remove command - handles worktree with slash in name", async () => {
     await repo.cleanup();
   }
 });
+
+Deno.test("remove command - removes clean worktree without prompting", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree("feat-branch", "feat-branch");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Remove without --yes flag
+      // Should succeed without prompting because worktree is clean (no uncommitted changes, no unpushed commits)
+      await executeRemove(["feat-branch"]);
+
+      // Verify worktree was removed
+      await assertWorktreeNotExists(repo.path, "feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("remove command - removes worktree with --force flag without prompting", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree("feat-branch", "feat-branch");
+
+    // Add uncommitted changes to make worktree "dirty"
+    const worktreePath = join(repo.path, "feat-branch");
+    await Deno.writeTextFile(join(worktreePath, "test.txt"), "uncommitted change");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Remove with --force flag
+      // Should succeed without prompting even though worktree is dirty
+      await executeRemove(["--force", "feat-branch"]);
+
+      // Verify worktree was removed
+      await assertWorktreeNotExists(repo.path, "feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("remove command - suggests similar matches when exact match not found", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create worktrees with paths that contain "tmp" but aren't exact matches
+    await repo.createWorktree("tmp-1", "tmp-1");
+    await repo.createWorktree("tmp-2", "tmp-2");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Try to remove "tmp" which doesn't exist, but tmp-1 and tmp-2 do
+      // Should suggest similar matches
+      const { exitCode } = await withMockedExit(() => executeRemove(["tmp"]));
+
+      // Should exit with error code 1 (no exact match)
+      assertEquals(exitCode, 1, "Should exit with error when no exact match found");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
