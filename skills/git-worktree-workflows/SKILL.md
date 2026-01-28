@@ -764,6 +764,35 @@ gw remove feature-auth
 gw add feature-auth-v2
 ```
 
+### Git Ref Conflicts (Branch Name Hierarchy)
+
+**Problem:**
+
+```bash
+$ gw add test
+Cannot create branch test because it conflicts with existing branch test/foo
+
+Git doesn't allow both refs/heads/test and refs/heads/test/foo
+```
+
+Git prevents creating branches with hierarchical naming conflicts (e.g., both `test` and `test/foo`) because they would require the same path to be both a file and a directory in `.git/refs/heads/`.
+
+**Solution:**
+
+```bash
+# Option 1: Use a different name
+gw add test-new -b test-new
+
+# Option 2: Delete the conflicting branch
+git branch -d test/foo
+gw add test
+
+# Option 3: Use the existing conflicting branch
+gw add test/foo
+```
+
+**Prevention:** Use consistent naming conventions. Good: `feature/auth`, `feature/checkout`. Bad: mixing `feature` and `feature/new`.
+
 ### Locked Worktree Recovery
 
 **Problem:**

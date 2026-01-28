@@ -216,6 +216,9 @@ When creating a new worktree without specifying an existing branch, `gw add` aut
 **Upstream Tracking:**
 When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
 
+**Git Ref Conflict Detection:**
+The command automatically detects and prevents Git ref naming conflicts. For example, you cannot have both a branch named `test` and `test/foo` because Git stores branches as files in `.git/refs/heads/`, and `test` cannot be both a file and a directory. If a conflict is detected, you'll receive a helpful error message with suggestions for resolving it.
+
 #### Arguments
 
 - `<worktree-name>`: Name or path for the new worktree

@@ -6,14 +6,15 @@ Common problems and their solutions when working with Git worktrees and gw.
 
 1. [Worktree Already Exists](#1-worktree-already-exists)
 2. [Branch Already Checked Out](#2-branch-already-checked-out)
-3. [Locked Worktree](#3-locked-worktree)
-4. [Corrupted Worktree State](#4-corrupted-worktree-state)
-5. [Permission Denied Errors](#5-permission-denied-errors)
-6. [Cannot Remove Worktree](#6-cannot-remove-worktree)
-7. [Stale Worktree References](#7-stale-worktree-references)
-8. [Git Index Corruption](#8-git-index-corruption)
-9. [Worktree Not Found](#9-worktree-not-found)
-10. [Auto-Copy Files Not Working](#10-auto-copy-files-not-working)
+3. [Git Ref Conflicts (Hierarchical Branch Names)](#3-git-ref-conflicts-hierarchical-branch-names)
+4. [Locked Worktree](#4-locked-worktree)
+5. [Corrupted Worktree State](#5-corrupted-worktree-state)
+6. [Permission Denied Errors](#6-permission-denied-errors)
+7. [Cannot Remove Worktree](#7-cannot-remove-worktree)
+8. [Stale Worktree References](#8-stale-worktree-references)
+9. [Git Index Corruption](#9-git-index-corruption)
+10. [Worktree Not Found](#10-worktree-not-found)
+11. [Auto-Copy Files Not Working](#11-auto-copy-files-not-working)
 
 ---
 
@@ -112,7 +113,119 @@ $ gw add feature-x-copy --force -b feature-x-copy feature-x
 
 ---
 
-## 3. Locked Worktree
+## 3. Git Ref Conflicts (Hierarchical Branch Names)
+
+### Problem
+
+```bash
+$ gw add test
+Cannot create branch test because it conflicts with existing branch test/foo
+
+Git doesn't allow both refs/heads/test and refs/heads/test/foo
+```
+
+Or the reverse:
+
+```bash
+$ gw add test/bar
+Cannot create branch test/bar because it conflicts with existing branch test
+
+Git doesn't allow both refs/heads/test and refs/heads/test/bar
+```
+
+### Why It Happens
+
+Git stores branches as files in the `.git/refs/heads/` directory. Since you can't have both a file named `test` and a directory named `test/` in the same location, Git prevents creating branches with hierarchical naming conflicts.
+
+This limitation exists because:
+- Branch `test` would be stored as `.git/refs/heads/test` (a file)
+- Branch `test/foo` would be stored as `.git/refs/heads/test/foo` (requiring `test` to be a directory)
+
+These two structures are mutually exclusive in the filesystem.
+
+### Diagnostic Commands
+
+```bash
+# List all local branches to see conflicts
+$ git branch
+  main
+  test
+  test/foo
+
+# Check for hierarchical conflicts
+$ git for-each-ref --format='%(refname:short)' refs/heads/ | grep "^test"
+test
+test/foo
+```
+
+### Solutions
+
+The `gw add` command detects these conflicts automatically and provides helpful suggestions:
+
+**Solution A: Use a different branch name**
+
+```bash
+# Instead of creating "test" when "test/foo" exists:
+$ gw add test-new -b test-new
+
+# Or use a different naming pattern:
+$ gw add testing -b testing
+```
+
+**Solution B: Delete the conflicting branch**
+
+If the conflicting branch is no longer needed:
+
+```bash
+# Delete local branch
+$ git branch -d test/foo
+
+# If branch has unmerged changes, force delete:
+$ git branch -D test/foo
+
+# Now you can create the desired branch:
+$ gw add test
+```
+
+**Solution C: Use the existing conflicting branch**
+
+If the conflicting branch is what you actually want:
+
+```bash
+# Instead of creating "test", use the existing "test/foo":
+$ gw add test/foo
+```
+
+### Prevention
+
+**Use consistent branch naming conventions:**
+
+Good naming patterns that avoid conflicts:
+- `feature/user-auth`, `feature/user-profile` ✅
+- `fix/bug-123`, `fix/bug-456` ✅
+- `test-migration`, `test-performance` ✅
+
+Problematic naming patterns:
+- Having both `test` and `test/integration` ❌
+- Having both `feature` and `feature/new` ❌
+- Having both `api` and `api/v2` ❌
+
+**Team guidelines:**
+```bash
+# Good: All features use the same level
+feature/auth
+feature/checkout
+feature/search
+
+# Bad: Mixing levels creates conflicts
+feature
+feature/auth
+feature/checkout
+```
+
+---
+
+## 4. Locked Worktree
 
 ### Problem
 
@@ -153,7 +266,7 @@ $ gw lock production-deploy
 
 ---
 
-## 4. Corrupted Worktree State
+## 5. Corrupted Worktree State
 
 ### Problem
 
@@ -207,7 +320,7 @@ $ gw prune
 
 ---
 
-## 5. Permission Denied Errors
+## 6. Permission Denied Errors
 
 ### Problem
 
@@ -254,7 +367,7 @@ $ sudo gw add feature-y
 
 ---
 
-## 6. Cannot Remove Worktree
+## 7. Cannot Remove Worktree
 
 ### Problem
 
@@ -313,7 +426,7 @@ $ git stash pop
 
 ---
 
-## 7. Stale Worktree References
+## 8. Stale Worktree References
 
 ### Problem
 
@@ -348,7 +461,7 @@ $ gw list
 
 ---
 
-## 8. Git Index Corruption
+## 9. Git Index Corruption
 
 ### Problem
 
@@ -396,7 +509,7 @@ $ git reset --hard HEAD
 
 ---
 
-## 9. Worktree Not Found
+## 10. Worktree Not Found
 
 ### Problem
 
@@ -437,7 +550,7 @@ $ gw cd feature-x
 
 ---
 
-## 10. Auto-Copy Files Not Working
+## 11. Auto-Copy Files Not Working
 
 ### Problem
 
