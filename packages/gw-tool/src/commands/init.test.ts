@@ -9,6 +9,7 @@ import { GitTestRepo } from "../test-utils/git-test-repo.ts";
 import { TempCwd } from "../test-utils/temp-env.ts";
 import { readTestConfig } from "../test-utils/fixtures.ts";
 import { assertFileExists } from "../test-utils/assertions.ts";
+import { withMockedExit } from "../test-utils/mock-exit.ts";
 
 Deno.test("init command - creates config with auto-detected root", async () => {
   const repo = new GitTestRepo();
@@ -263,38 +264,38 @@ Deno.test("init command - fails with invalid clean threshold", async () => {
   }
 });
 
-Deno.test({
-  name: "init command - fails when not in a git repo and no root specified",
-  ignore: true, // Skip - Deno.exit() cannot be easily tested
-  fn: async () => {
-    const tempDir = Deno.makeTempDirSync({ prefix: "gw-test-notgit-" });
+Deno.test("init command - fails when not in a git repo and no root specified", async () => {
+  const tempDir = Deno.makeTempDirSync({ prefix: "gw-test-notgit-" });
+  try {
+    const cwd = new TempCwd(tempDir);
     try {
-      const cwd = new TempCwd(tempDir);
-      try {
-        await executeInit([]);
-      } finally {
-        cwd.restore();
-      }
+      const { exitCode } = await withMockedExit(() => executeInit([]));
+
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 when not in git repo");
     } finally {
-      await Deno.remove(tempDir, { recursive: true });
+      cwd.restore();
     }
-  },
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
 });
 
-Deno.test({
-  name: "init command - fails when specified root doesn't exist",
-  ignore: true, // Skip - Deno.exit() cannot be easily tested
-  fn: async () => {
-    const tempDir = Deno.makeTempDirSync();
+Deno.test("init command - fails when specified root doesn't exist", async () => {
+  const tempDir = Deno.makeTempDirSync();
+  try {
+    const cwd = new TempCwd(tempDir);
     try {
-      const cwd = new TempCwd(tempDir);
-      try {
-        await executeInit(["--root", "/nonexistent/path"]);
-      } finally {
-        cwd.restore();
-      }
+      const { exitCode } = await withMockedExit(() =>
+        executeInit(["--root", "/nonexistent/path"])
+      );
+
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 for non-existent root");
     } finally {
-      await Deno.remove(tempDir, { recursive: true });
+      cwd.restore();
     }
-  },
+  } finally {
+    await Deno.remove(tempDir, { recursive: true });
+  }
 });

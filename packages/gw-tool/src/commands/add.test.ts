@@ -8,17 +8,18 @@ import { executeAdd } from "./add.ts";
 import { GitTestRepo } from "../test-utils/git-test-repo.ts";
 import { TempCwd } from "../test-utils/temp-env.ts";
 import {
-  createMinimalConfig,
   createConfigWithAutoCopy,
   createConfigWithHooks,
+  createMinimalConfig,
   writeTestConfig,
 } from "../test-utils/fixtures.ts";
 import {
-  assertWorktreeExists,
-  assertFileExists,
-  assertFileContent,
   assertBranchExists,
+  assertFileContent,
+  assertFileExists,
+  assertWorktreeExists,
 } from "../test-utils/assertions.ts";
+import { withMockedExit } from "../test-utils/mock-exit.ts";
 
 Deno.test("add command - creates worktree with auto-branch creation", async () => {
   const repo = new GitTestRepo();
@@ -125,7 +126,10 @@ Deno.test("add command - explicit files override auto-copy config", async () => 
 
       // custom.txt should be copied
       await assertFileExists(join(worktreePath, "custom.txt"));
-      await assertFileContent(join(worktreePath, "custom.txt"), "custom content");
+      await assertFileContent(
+        join(worktreePath, "custom.txt"),
+        "custom content",
+      );
 
       // .env should NOT be copied (overridden by explicit file list)
       try {
@@ -196,58 +200,56 @@ Deno.test("add command - creates worktree with explicit -b flag", async () => {
   }
 });
 
-Deno.test({
-  name: "add command - detects ref conflicts (branch vs branch/foo)",
-  ignore: true, // Skip - Deno.exit() cannot be easily tested
-  fn: async () => {
-    const repo = new GitTestRepo();
+Deno.test("add command - detects ref conflicts (branch vs branch/foo)", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a branch that will conflict
+    await repo.createBranch("test/foo");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
     try {
-      await repo.init();
+      // Try to create "test" branch - should fail due to conflict with "test/foo"
+      const { exitCode } = await withMockedExit(() => executeAdd(["test"]));
 
-      // Create a branch that will conflict
-      await repo.createBranch("test/foo");
-
-      const config = createMinimalConfig(repo.path);
-      await writeTestConfig(repo.path, config);
-
-      const cwd = new TempCwd(repo.path);
-      try {
-        // Try to create "test" branch - should fail due to conflict with "test/foo"
-        await executeAdd(["test"]);
-      } finally {
-        cwd.restore();
-      }
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 on ref conflict");
     } finally {
-      await repo.cleanup();
+      cwd.restore();
     }
-  },
+  } finally {
+    await repo.cleanup();
+  }
 });
 
-Deno.test({
-  name: "add command - detects ref conflicts (branch/foo vs branch)",
-  ignore: true, // Skip - Deno.exit() cannot be easily tested
-  fn: async () => {
-    const repo = new GitTestRepo();
+Deno.test("add command - detects ref conflicts (branch/foo vs branch)", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a branch that will conflict
+    await repo.createBranch("test");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
     try {
-      await repo.init();
+      // Try to create "test/foo" branch - should fail due to conflict with "test"
+      const { exitCode } = await withMockedExit(() => executeAdd(["test/foo"]));
 
-      // Create a branch that will conflict
-      await repo.createBranch("test");
-
-      const config = createMinimalConfig(repo.path);
-      await writeTestConfig(repo.path, config);
-
-      const cwd = new TempCwd(repo.path);
-      try {
-        // Try to create "test/foo" branch - should fail due to conflict with "test"
-        await executeAdd(["test/foo"]);
-      } finally {
-        cwd.restore();
-      }
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 on ref conflict");
     } finally {
-      await repo.cleanup();
+      cwd.restore();
     }
-  },
+  } finally {
+    await repo.cleanup();
+  }
 });
 
 Deno.test("add command - executes pre-add hooks successfully", async () => {
@@ -279,35 +281,36 @@ Deno.test("add command - executes pre-add hooks successfully", async () => {
   }
 });
 
-Deno.test({
-  name: "add command - aborts on pre-add hook failure",
-  ignore: true, // Skip - Deno.exit() cannot be easily tested
-  fn: async () => {
-    const repo = new GitTestRepo();
+Deno.test("add command - aborts on pre-add hook failure", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a hook that fails
+    const hook = "exit 1";
+
+    const config = createConfigWithHooks(repo.path, [hook]);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
     try {
-      await repo.init();
+      // Should abort due to hook failure
+      const { exitCode } = await withMockedExit(() =>
+        executeAdd(["feat-branch"])
+      );
 
-      // Create a hook that fails
-      const hook = "exit 1";
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 on hook failure");
 
-      const config = createConfigWithHooks(repo.path, [hook]);
-      await writeTestConfig(repo.path, config);
-
-      const cwd = new TempCwd(repo.path);
-      try {
-        // Should abort due to hook failure
-        await executeAdd(["feat-branch"]);
-
-        // Verify worktree was NOT created
-        const worktrees = await repo.listWorktrees();
-        assertEquals(worktrees.some((wt) => wt.includes("feat-branch")), false);
-      } finally {
-        cwd.restore();
-      }
+      // Verify worktree was NOT created
+      const worktrees = await repo.listWorktrees();
+      assertEquals(worktrees.some((wt) => wt.includes("feat-branch")), false);
     } finally {
-      await repo.cleanup();
+      cwd.restore();
     }
-  },
+  } finally {
+    await repo.cleanup();
+  }
 });
 
 Deno.test("add command - executes post-add hooks successfully", async () => {
