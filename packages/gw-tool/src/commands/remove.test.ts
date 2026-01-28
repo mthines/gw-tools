@@ -7,8 +7,14 @@ import { join } from "$std/path";
 import { executeRemove } from "./remove.ts";
 import { GitTestRepo } from "../test-utils/git-test-repo.ts";
 import { TempCwd } from "../test-utils/temp-env.ts";
-import { createMinimalConfig, writeTestConfig } from "../test-utils/fixtures.ts";
-import { assertWorktreeNotExists, assertPathNotExists } from "../test-utils/assertions.ts";
+import {
+  createMinimalConfig,
+  writeTestConfig,
+} from "../test-utils/fixtures.ts";
+import {
+  assertPathNotExists,
+  assertWorktreeNotExists,
+} from "../test-utils/assertions.ts";
 import { withMockedExit } from "../test-utils/mock-exit.ts";
 
 Deno.test("remove command - removes worktree with --yes flag", async () => {
@@ -75,7 +81,9 @@ Deno.test("remove command - automatically removes leftover directory", async () 
     const cwd = new TempCwd(repo.path);
     try {
       // Should automatically remove leftover directory without prompting
-      const { exitCode } = await withMockedExit(() => executeRemove(["leftover"]));
+      const { exitCode } = await withMockedExit(() =>
+        executeRemove(["leftover"])
+      );
 
       // Should have exited (either 0 for success or 1 if git worktree not found)
       // The important thing is that it attempts to remove the directory
@@ -113,7 +121,11 @@ Deno.test("remove command - exits with error for non-existent worktree", async (
       );
 
       // Should have exited with error code
-      assertEquals(exitCode, 1, "Should exit with code 1 for non-existent worktree");
+      assertEquals(
+        exitCode,
+        1,
+        "Should exit with code 1 for non-existent worktree",
+      );
     } finally {
       cwd.restore();
     }
@@ -180,7 +192,10 @@ Deno.test("remove command - removes worktree with --force flag without prompting
 
     // Add uncommitted changes to make worktree "dirty"
     const worktreePath = join(repo.path, "feat-branch");
-    await Deno.writeTextFile(join(worktreePath, "test.txt"), "uncommitted change");
+    await Deno.writeTextFile(
+      join(worktreePath, "test.txt"),
+      "uncommitted change",
+    );
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -220,7 +235,60 @@ Deno.test("remove command - suggests similar matches when exact match not found"
       const { exitCode } = await withMockedExit(() => executeRemove(["tmp"]));
 
       // Should exit with error code 1 (no exact match)
-      assertEquals(exitCode, 1, "Should exit with error when no exact match found");
+      assertEquals(
+        exitCode,
+        1,
+        "Should exit with error when no exact match found",
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("remove command - does not delete parent directory containing worktrees", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create worktrees in a subdirectory structure: tmp/1 and tmp/2
+    const tmpDir = join(repo.path, "tmp");
+    await Deno.mkdir(tmpDir);
+
+    await repo.createWorktree("tmp/1", "tmp-1");
+    await repo.createWorktree("tmp/2", "tmp-2");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Try to remove "tmp" which is a directory containing worktrees
+      // Should NOT delete the directory, should suggest the worktrees instead
+      const { exitCode } = await withMockedExit(() => executeRemove(["tmp"]));
+
+      // Should exit with error code 1
+      assertEquals(
+        exitCode,
+        1,
+        "Should exit with error when trying to remove parent directory",
+      );
+
+      // Verify the tmp directory still exists
+      const tmpExists = await Deno.stat(tmpDir).then(() => true).catch(() =>
+        false
+      );
+      assertEquals(tmpExists, true, "Parent directory should still exist");
+
+      // Verify the worktrees still exist
+      const tmp1Exists = await Deno.stat(join(tmpDir, "1")).then(() => true)
+        .catch(() => false);
+      const tmp2Exists = await Deno.stat(join(tmpDir, "2")).then(() => true)
+        .catch(() => false);
+      assertEquals(tmp1Exists, true, "Worktree tmp/1 should still exist");
+      assertEquals(tmp2Exists, true, "Worktree tmp/2 should still exist");
     } finally {
       cwd.restore();
     }

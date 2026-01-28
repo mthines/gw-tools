@@ -43,7 +43,9 @@ export async function listWorktrees(): Promise<WorktreeInfo[]> {
     } else if (line.startsWith("HEAD ")) {
       current.head = line.substring("HEAD ".length);
     } else if (line.startsWith("branch ")) {
-      current.branch = line.substring("branch ".length).split("/").pop() || "";
+      // Keep the full branch name, just remove the refs/heads/ prefix
+      const fullRef = line.substring("branch ".length);
+      current.branch = fullRef.replace(/^refs\/heads\//, "");
     } else if (line === "bare") {
       current.bare = true;
     } else if (line === "") {

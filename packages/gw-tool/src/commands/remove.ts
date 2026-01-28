@@ -118,10 +118,34 @@ For full git worktree remove documentation:
       try {
         const stat = await Deno.stat(resolvedPath);
         if (stat.isDirectory || stat.isFile) {
-          // It's a leftover directory at the exact resolved path
-          worktreePath = resolvedPath;
-          isLeftoverDirectory = true;
-          isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);
+          // Check if this directory is a parent directory of any worktrees
+          const isParentOfWorktrees = worktrees.some((wt) =>
+            wt.path.startsWith(resolvedPath + "/")
+          );
+
+          if (isParentOfWorktrees) {
+            // This is a parent directory containing worktrees, suggest the child worktrees
+            const childWorktrees = worktrees.filter((wt) =>
+              wt.path.startsWith(resolvedPath + "/")
+            );
+
+            console.log("");
+            output.error(`${output.bold(worktreeName)} is not a worktree. It's a directory containing worktrees.`);
+            console.log("");
+            console.log("Did you mean one of these?");
+            for (const wt of childWorktrees) {
+              const wtName = wt.path.split('/').pop() || '';
+              const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
+              console.log(`  ${output.bold(wtName)} -> ${wt.path}${branchInfo}`);
+            }
+            console.log("");
+            Deno.exit(1);
+          } else {
+            // It's a leftover directory at the exact resolved path
+            worktreePath = resolvedPath;
+            isLeftoverDirectory = true;
+            isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);
+          }
         }
       } catch {
         // Path doesn't exist - look for similar matches to suggest
@@ -137,7 +161,8 @@ For full git worktree remove documentation:
           console.log("Did you mean one of these?");
           for (const wt of similarMatches) {
             const wtName = wt.path.split('/').pop() || '';
-            console.log(`  ${output.bold(wtName)} -> ${wt.path}`);
+            const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
+            console.log(`  ${output.bold(wtName)} -> ${wt.path}${branchInfo}`);
           }
           console.log("");
           Deno.exit(1);
