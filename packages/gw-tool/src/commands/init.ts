@@ -177,6 +177,7 @@ export async function executeInit(args: string[]): Promise<void> {
   const config: Config = {
     root: rootPath,
     defaultBranch: parsed.defaultBranch || "main",
+    cleanThreshold: 7, // Default value
   };
 
   // Add autoCopyFiles if provided

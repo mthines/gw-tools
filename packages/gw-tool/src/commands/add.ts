@@ -35,6 +35,43 @@ async function branchExists(branchName: string): Promise<boolean> {
 }
 
 /**
+ * Check if creating a branch would conflict with existing Git refs
+ * Git doesn't allow both "refs/heads/foo" and "refs/heads/foo/bar"
+ */
+async function hasRefConflict(branchName: string): Promise<{ hasConflict: boolean; conflictingBranch?: string }> {
+  // List all branches to check for conflicts
+  const cmd = new Deno.Command("git", {
+    args: ["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { code, stdout } = await cmd.output();
+  if (code !== 0) {
+    return { hasConflict: false };
+  }
+
+  const output = new TextDecoder().decode(stdout);
+  const branches = output.trim().split("\n").filter(b => b.length > 0);
+
+  // Check if any existing branch would conflict with the new branch name
+  for (const branch of branches) {
+    // Conflict if existing branch is a "subdirectory" of our branch
+    // e.g., creating "test" when "test/foo" exists
+    if (branch.startsWith(branchName + "/")) {
+      return { hasConflict: true, conflictingBranch: branch };
+    }
+    // Conflict if our branch is a "subdirectory" of an existing branch
+    // e.g., creating "test/foo" when "test" exists
+    if (branchName.startsWith(branch + "/")) {
+      return { hasConflict: true, conflictingBranch: branch };
+    }
+  }
+
+  return { hasConflict: false };
+}
+
+/**
  * Check if -b or -B flag is present in git args
  */
 function hasBranchFlag(gitArgs: string[]): boolean {
@@ -255,7 +292,7 @@ export async function executeAdd(args: string[]): Promise<void> {
         console.log(`Automatically removing and continuing...`);
 
         await Deno.remove(worktreePath, { recursive: true });
-        console.log(output.success("Removed successfully."));
+        output.success("Removed successfully.");
         console.log("");
       }
     }
@@ -270,9 +307,51 @@ export async function executeAdd(args: string[]): Promise<void> {
   // Check if branch exists and auto-create if needed
   const gitArgs = [...parsed.gitArgs];
   let startPoint: string | undefined;
-  if (!hasBranchFlag(gitArgs)) {
+
+  // If user specified -b or -B, check for ref conflicts since they're creating a new branch
+  if (hasBranchFlag(gitArgs)) {
+    const { hasConflict, conflictingBranch } = await hasRefConflict(branchName);
+    if (hasConflict) {
+      console.log("");
+      output.error(
+        `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
+      );
+      console.log("");
+      console.log(
+        `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
+      );
+      console.log("");
+      console.log("Options:");
+      console.log(`  1. Use a different name: ${output.bold(`gw add ${parsed.worktreeName} -b ${branchName}-new`)}`);
+      console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
+      console.log(`  3. Use the existing branch: ${output.bold(`gw add ${conflictingBranch}`)}`);
+      console.log("");
+      Deno.exit(1);
+    }
+  } else {
+    // No -b flag, check if branch exists
     const exists = await branchExists(parsed.worktreeName);
     if (!exists) {
+      // Branch doesn't exist, we'll auto-create it - check for ref conflicts
+      const { hasConflict, conflictingBranch } = await hasRefConflict(parsed.worktreeName);
+      if (hasConflict) {
+        console.log("");
+        output.error(
+          `Cannot create branch ${output.bold(parsed.worktreeName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
+        );
+        console.log("");
+        console.log(
+          `Git doesn't allow both ${output.dim(`refs/heads/${parsed.worktreeName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
+        );
+        console.log("");
+        console.log("Options:");
+        console.log(`  1. Use a different name: ${output.bold(`gw add ${parsed.worktreeName}-new`)}`);
+        console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
+        console.log(`  3. Use the existing branch: ${output.bold(`gw add ${conflictingBranch}`)}`);
+        console.log("");
+        Deno.exit(1);
+      }
+
       // Auto-create branch from defaultBranch
       const defaultBranch = config.defaultBranch || "main";
 
@@ -306,6 +385,10 @@ export async function executeAdd(args: string[]): Promise<void> {
         output.error(`Failed to prepare branch: ${errorMsg}`);
         Deno.exit(1);
       }
+    } else {
+      // Branch exists - explicitly pass it to git to avoid git inferring from path basename
+      // Without this, "gw add test/foo" would make git use basename "foo" as branch name
+      startPoint = parsed.worktreeName;
     }
   }
 
@@ -385,7 +468,14 @@ export async function executeAdd(args: string[]): Promise<void> {
     console.log(`Copying files to new worktree...`);
 
     const sourceWorktree = config.defaultBranch || "main";
-    const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
+    let sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
+
+    // If the resolved source path doesn't exist, use git root (main worktree is at repo root)
+    try {
+      await Deno.stat(sourcePath);
+    } catch {
+      sourcePath = gitRoot;
+    }
 
     try {
       const results = await copyFiles(

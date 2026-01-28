@@ -1,0 +1,18 @@
+{
+  "deno.enable": true,
+  "deno.enablePaths": ["./packages/gw-tool"],
+  "deno.lint": true,
+  "deno.config": "./packages/gw-tool/deno.json",
+  "deno.importMap": "./packages/gw-tool/deno.json",
+  "deno.testing.args": ["--allow-all"],
+  "[typescript]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true
+  },
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.formatOnSave": true
+  },
+  "deno.codeLens.test": true,
+  "deno.codeLens.testArgs": ["--allow-all"]
+}

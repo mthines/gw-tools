@@ -1,12 +1,23 @@
 {
   "version": "5",
   "specifiers": {
+    "jsr:@std/assert@1.0.10": "1.0.10",
     "jsr:@std/cli@1.0.9": "1.0.9",
+    "jsr:@std/internal@^1.0.5": "1.0.9",
     "jsr:@std/path@1.0.8": "1.0.8"
   },
   "jsr": {
+    "@std/assert@1.0.10": {
+      "integrity": "59b5cbac5bd55459a19045d95cc7c2ff787b4f8527c0dd195078ff6f9481fbb3",
+      "dependencies": [
+        "jsr:@std/internal"
+      ]
+    },
     "@std/cli@1.0.9": {
       "integrity": "557e5865af000efbf3f737dcfea5b8ab86453594f4a9cd8d08c9fa83d8e3f3bc"
+    },
+    "@std/internal@1.0.9": {
+      "integrity": "bdfb97f83e4db7a13e8faab26fb1958d1b80cc64366501af78a0aee151696eb8"
     },
     "@std/path@1.0.8": {
       "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
@@ -51,6 +62,7 @@
     "members": {
       "packages/gw-tool": {
         "dependencies": [
+          "jsr:@std/assert@1.0.10",
           "jsr:@std/cli@1.0.9",
           "jsr:@std/path@1.0.8"
         ]
