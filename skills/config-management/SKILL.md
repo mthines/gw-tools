@@ -588,6 +588,48 @@ gw add feature-name -b feature-name main
 Files will be automatically copied from the main worktree.
 ```
 
+### Generating Documentation from Config
+
+Use `gw show-init` to automatically generate a setup command from your current configuration:
+
+```bash
+# Generate the init command from current config
+gw show-init
+# Output: gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+
+# Add to documentation automatically
+echo "## Setup\n\n\`\`\`bash\n$(gw show-init)\n\`\`\`" >> README.md
+
+# Copy to clipboard for sharing (macOS)
+gw show-init | pbcopy
+
+# Copy to clipboard for sharing (Linux)
+gw show-init | xclip -selection clipboard
+```
+
+**Benefits:**
+- Always accurate - generated from actual config
+- Easy to share with team members
+- Simple to document in README files
+- Shows exact command to replicate your setup
+
+**Example documentation update:**
+
+```markdown
+## Quick Setup
+
+To configure gw for this project, run:
+
+\`\`\`bash
+gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install' --clean-threshold 14
+\`\`\`
+
+This will:
+- Auto-copy `.env` and `secrets/` directory when creating worktrees
+- Run `pnpm install` after each worktree creation
+- Clean up worktrees older than 14 days
+```
+
 ### Onboarding New Developers
 
 **Onboarding checklist:**

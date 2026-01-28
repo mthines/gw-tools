@@ -65,6 +65,7 @@ Commands:
   pull             Merge latest version of default branch into current worktree
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
+  show-init        Generate a 'gw init' command from current configuration
   install-shell    Install shell integration for gw cd (auto-runs on npm install)
   root             Get the root directory of the current git repository
   clean            Remove stale worktrees older than configured threshold

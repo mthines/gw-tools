@@ -39,6 +39,10 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options-3)
       - [Examples](#examples-5)
       - [When to Use](#when-to-use)
+    - [show-init](#show-init)
+      - [Options](#options-6)
+      - [Examples](#examples-8)
+      - [When to Use](#when-to-use-1)
     - [sync](#sync)
       - [Arguments](#arguments-2)
       - [Options](#options-4)
@@ -578,6 +582,67 @@ Use `gw init` to:
 - Change the default source worktree from "main" to something else
 
 The config file is created at `.gw/config.json` at the git root, so it's shared across all worktrees.
+
+### show-init
+
+Generate a `gw init` command that matches your current configuration. This is useful for documentation or recreating the same configuration in another repository.
+
+```bash
+gw show-init [options]
+```
+
+#### Options
+
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Show the init command for current config
+gw show-init
+
+# Copy the command to clipboard (macOS)
+gw show-init | pbcopy
+
+# Copy the command to clipboard (Linux with xclip)
+gw show-init | xclip -selection clipboard
+
+# Save to a file
+gw show-init > init-command.txt
+
+# Add to your documentation
+echo "## Setup\n\n\`\`\`bash\n$(gw show-init)\n\`\`\`" >> README.md
+```
+
+#### Output Example
+
+If your `.gw/config.json` contains:
+```json
+{
+  "root": "/Users/username/Workspace/repo.git",
+  "defaultBranch": "main",
+  "autoCopyFiles": [".env", "secrets/"],
+  "hooks": {
+    "add": {
+      "post": ["pnpm install"]
+    }
+  },
+  "cleanThreshold": 7
+}
+```
+
+Then `gw show-init` will output:
+```bash
+gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+```
+
+#### When to Use
+
+Use `gw show-init` to:
+- Document your setup in README files or team wikis
+- Share configuration commands with team members
+- Recreate the same configuration in another repository
+- Verify your current configuration settings as a single command
 
 ### sync
 

@@ -20,6 +20,7 @@ import { executeLock } from './commands/lock.ts';
 import { executeUnlock } from './commands/unlock.ts';
 import { executeRepair } from './commands/repair.ts';
 import { executeClean } from './commands/clean.ts';
+import { executeShowInit } from './commands/show-init.ts';
 import * as output from './lib/output.ts';
 
 /**
@@ -44,6 +45,7 @@ const COMMANDS = {
   unlock: executeUnlock,
   repair: executeRepair,
   clean: executeClean,
+  'show-init': executeShowInit,
 };
 
 if (import.meta.main) {
