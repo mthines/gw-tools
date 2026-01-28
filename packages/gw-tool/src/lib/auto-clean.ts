@@ -137,7 +137,7 @@ export async function executeAutoClean(): Promise<number> {
 
 /**
  * Run auto-clean and optionally show a brief summary message
- * This is the main entry point for commands to call
+ * This is the main entry point for commands to call (synchronous version)
  */
 export async function runAutoClean(): Promise<void> {
   const removedCount = await executeAutoClean();
@@ -148,4 +148,15 @@ export async function runAutoClean(): Promise<void> {
       `\n🧹 Auto-cleanup: Removed ${removedCount} stale ${worktreeWord}\n`,
     );
   }
+}
+
+/**
+ * Run auto-clean in the background without blocking the main command
+ * Fire-and-forget: errors are silently ignored, output is suppressed
+ */
+export function runAutoCleanBackground(): void {
+  // Fire and forget - don't await, let it run in background
+  executeAutoClean().catch(() => {
+    // Silently ignore errors - auto-clean should never affect main command
+  });
 }
