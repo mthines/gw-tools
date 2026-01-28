@@ -494,6 +494,7 @@ gw init [options]
 
 #### Options
 
+- `-i, --interactive`: Interactively prompt for configuration options
 - `--root <path>`: Specify the git repository root path (optional, auto-detects if not provided)
 - `--default-source <name>`: Set the default source worktree (default: "main")
 - `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw add`
@@ -506,6 +507,9 @@ gw init [options]
 #### Examples
 
 ```bash
+# Interactive mode - prompts for all configuration options
+gw init --interactive
+
 # Initialize with auto-detected root
 gw init
 

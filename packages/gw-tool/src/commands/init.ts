@@ -14,6 +14,7 @@ import * as output from "../lib/output.ts";
  */
 function parseInitArgs(args: string[]): {
   help: boolean;
+  interactive: boolean;
   root?: string;
   defaultBranch?: string;
   autoCopyFiles?: string[];
@@ -24,6 +25,7 @@ function parseInitArgs(args: string[]): {
 } {
   const result: {
     help: boolean;
+    interactive: boolean;
     root?: string;
     defaultBranch?: string;
     autoCopyFiles?: string[];
@@ -33,6 +35,7 @@ function parseInitArgs(args: string[]): {
     autoClean?: boolean;
   } = {
     help: false,
+    interactive: false,
   };
 
   for (let i = 0; i < args.length; i++) {
@@ -40,6 +43,8 @@ function parseInitArgs(args: string[]): {
 
     if (arg === "--help" || arg === "-h") {
       result.help = true;
+    } else if (arg === "--interactive" || arg === "-i") {
+      result.interactive = true;
     } else if (arg === "--root" && i + 1 < args.length) {
       result.root = args[++i];
     } else if (arg === "--default-source" && i + 1 < args.length) {
@@ -72,6 +77,141 @@ function parseInitArgs(args: string[]): {
 }
 
 /**
+ * Prompt for configuration in interactive mode
+ */
+function promptForConfig(): {
+  defaultBranch?: string;
+  autoCopyFiles?: string[];
+  preAddHooks?: string[];
+  postAddHooks?: string[];
+  cleanThreshold?: number;
+  autoClean?: boolean;
+} {
+  console.log("\n" + output.bold("Interactive Configuration") + "\n");
+  console.log(
+    output.dim(
+      "Press Enter to accept defaults. Leave blank to skip optional settings.\n",
+    ),
+  );
+
+  const config: {
+    defaultBranch?: string;
+    autoCopyFiles?: string[];
+    preAddHooks?: string[];
+    postAddHooks?: string[];
+    cleanThreshold?: number;
+    autoClean?: boolean;
+  } = {};
+
+  // Default branch
+  const defaultBranchInput = prompt(
+    `Default source worktree name [${output.dim("main")}]:`,
+  );
+  if (defaultBranchInput && defaultBranchInput.trim()) {
+    config.defaultBranch = defaultBranchInput.trim();
+  }
+
+  // Auto-copy files
+  console.log();
+  const wantAutoCopy = prompt(
+    `Do you want to auto-copy files when creating worktrees? (y/n) [${
+      output.dim("n")
+    }]:`,
+  );
+  if (wantAutoCopy?.toLowerCase() === "y" || wantAutoCopy?.toLowerCase() === "yes") {
+    console.log(
+      output.dim("  Enter comma-separated file/directory paths (e.g., .env,secrets/)"),
+    );
+    const autoCopyInput = prompt("  Files to auto-copy:");
+    if (autoCopyInput && autoCopyInput.trim()) {
+      config.autoCopyFiles = autoCopyInput.split(",").map((f) => f.trim()).filter((f) => f);
+    }
+  }
+
+  // Pre-add hooks
+  console.log();
+  const wantPreHooks = prompt(
+    `Do you want to add pre-add hooks? (y/n) [${output.dim("n")}]:`,
+  );
+  if (wantPreHooks?.toLowerCase() === "y" || wantPreHooks?.toLowerCase() === "yes") {
+    console.log(
+      output.dim("  Enter commands to run before creating worktrees"),
+    );
+    console.log(
+      output.dim(
+        "  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}",
+      ),
+    );
+    const preHooks: string[] = [];
+    let hookNum = 1;
+    while (true) {
+      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish):`);
+      if (!hookInput || !hookInput.trim()) break;
+      preHooks.push(hookInput.trim());
+      hookNum++;
+    }
+    if (preHooks.length > 0) {
+      config.preAddHooks = preHooks;
+    }
+  }
+
+  // Post-add hooks
+  console.log();
+  const wantPostHooks = prompt(
+    `Do you want to add post-add hooks? (y/n) [${output.dim("n")}]:`,
+  );
+  if (wantPostHooks?.toLowerCase() === "y" || wantPostHooks?.toLowerCase() === "yes") {
+    console.log(
+      output.dim("  Enter commands to run after creating worktrees"),
+    );
+    console.log(
+      output.dim(
+        "  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}",
+      ),
+    );
+    const postHooks: string[] = [];
+    let hookNum = 1;
+    while (true) {
+      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish):`);
+      if (!hookInput || !hookInput.trim()) break;
+      postHooks.push(hookInput.trim());
+      hookNum++;
+    }
+    if (postHooks.length > 0) {
+      config.postAddHooks = postHooks;
+    }
+  }
+
+  // Clean threshold
+  console.log();
+  const cleanThresholdInput = prompt(
+    `Days before worktrees are considered stale [${output.dim("7")}]:`,
+  );
+  if (cleanThresholdInput && cleanThresholdInput.trim()) {
+    const value = parseInt(cleanThresholdInput.trim(), 10);
+    if (!isNaN(value) && value >= 0) {
+      config.cleanThreshold = value;
+    } else {
+      console.log(
+        output.warning("  Invalid value, using default (7 days)"),
+      );
+    }
+  }
+
+  // Auto-clean
+  console.log();
+  const autoCleanInput = prompt(
+    `Enable automatic cleanup of stale worktrees? (y/n) [${output.dim("n")}]:`,
+  );
+  if (autoCleanInput?.toLowerCase() === "y" || autoCleanInput?.toLowerCase() === "yes") {
+    config.autoClean = true;
+  }
+
+  console.log();
+  return config;
+}
+
+/**
  * Show help for the init command
  */
 function showInitHelp(): void {
@@ -83,6 +223,7 @@ Creates a .gw/config.json file with the repository root and other settings.
 If --root is not provided, attempts to auto-detect the git repository root.
 
 Options:
+  -i, --interactive               Interactively prompt for configuration options
   --root <path>                   Specify the git repository root path (optional, auto-detects if not provided)
   --default-source <name>         Set the default source worktree (default: "main")
   --auto-copy-files <files>       Comma-separated list of files to auto-copy
@@ -105,6 +246,9 @@ Hook Variables:
     {branch}        - The branch name
 
 Examples:
+  # Interactive mode - prompts for all configuration options
+  gw init --interactive
+
   # Initialize with auto-detected root and auto-copy files
   gw init --auto-copy-files .env,secrets/
 
@@ -125,6 +269,9 @@ Examples:
 
   # Initialize with all options
   gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/ --post-add "cd {worktreePath} && pnpm install"
+
+  # Interactive mode with explicit root
+  gw init --interactive --root /Users/username/Workspace/repo.git
 
   # Show help
   gw init --help
@@ -170,6 +317,31 @@ export async function executeInit(args: string[]): Promise<void> {
       console.error("Please specify the repository root with --root option\n");
       showInitHelp();
       Deno.exit(1);
+    }
+  }
+
+  // If interactive mode, prompt for configuration
+  if (parsed.interactive) {
+    const interactiveConfig = promptForConfig();
+
+    // Merge interactive config with parsed args (parsed args take precedence)
+    if (interactiveConfig.defaultBranch && !parsed.defaultBranch) {
+      parsed.defaultBranch = interactiveConfig.defaultBranch;
+    }
+    if (interactiveConfig.autoCopyFiles && !parsed.autoCopyFiles) {
+      parsed.autoCopyFiles = interactiveConfig.autoCopyFiles;
+    }
+    if (interactiveConfig.preAddHooks && !parsed.preAddHooks) {
+      parsed.preAddHooks = interactiveConfig.preAddHooks;
+    }
+    if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
+      parsed.postAddHooks = interactiveConfig.postAddHooks;
+    }
+    if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
+      parsed.cleanThreshold = interactiveConfig.cleanThreshold;
+    }
+    if (interactiveConfig.autoClean !== undefined && parsed.autoClean === undefined) {
+      parsed.autoClean = interactiveConfig.autoClean;
     }
   }
 

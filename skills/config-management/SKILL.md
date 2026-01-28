@@ -65,6 +65,36 @@ $ gw init --root /projects/myapp.git \
           --auto-copy-files .env,.env.local,secrets/
 ```
 
+**Interactive configuration (for guided setup):**
+
+```bash
+$ gw init --interactive
+
+Interactive Configuration
+
+Press Enter to accept defaults. Leave blank to skip optional settings.
+
+Default source worktree name [main]: main
+Do you want to auto-copy files when creating worktrees? (y/n) [n]: y
+  Enter comma-separated file/directory paths (e.g., .env,secrets/)
+  Files to auto-copy: .env,.env.local,secrets/
+Do you want to add post-add hooks? (y/n) [n]: y
+  Enter commands to run after creating worktrees
+  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}
+  Post-add hook 1 (leave blank to finish): pnpm install
+  Post-add hook 2 (leave blank to finish):
+Days before worktrees are considered stale [7]: 14
+Enable automatic cleanup of stale worktrees? (y/n) [n]: n
+
+✓ Configuration created successfully
+```
+
+Interactive mode is useful when:
+- Setting up gw for the first time
+- You're unsure about configuration options
+- You want to explore all available settings
+- Onboarding new team members who need guidance
+
 ### Configuration Scope
 
 Configuration is **per-repository**, not global:
