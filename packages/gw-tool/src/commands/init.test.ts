@@ -10,6 +10,7 @@ import { TempCwd } from "../test-utils/temp-env.ts";
 import { readTestConfig } from "../test-utils/fixtures.ts";
 import { assertFileExists } from "../test-utils/assertions.ts";
 import { withMockedExit } from "../test-utils/mock-exit.ts";
+import { withMockedPrompt } from "../test-utils/mock-prompt.ts";
 
 Deno.test("init command - creates config with auto-detected root", async () => {
   const repo = new GitTestRepo();
@@ -297,5 +298,302 @@ Deno.test("init command - fails when specified root doesn't exist", async () => 
     }
   } finally {
     await Deno.remove(tempDir, { recursive: true });
+  }
+});
+
+// Interactive mode tests
+
+Deno.test("init command - interactive mode with all defaults", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Press Enter for all prompts to accept defaults
+      const responses = [
+        "", // default branch (accept default "main")
+        "n", // want auto-copy files
+        "n", // want pre-add hooks
+        "n", // want post-add hooks
+        "", // clean threshold (accept default 7)
+        "n", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      // Verify config was created with defaults
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.defaultBranch, "main");
+      assertEquals(config.autoCopyFiles, undefined);
+      assertEquals(config.hooks, undefined);
+      assertEquals(config.cleanThreshold, 7);
+      assertEquals(config.autoClean, undefined);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode with custom values", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "develop", // default branch
+        "y", // want auto-copy files
+        ".env,.env.local,secrets/", // auto-copy files list
+        "n", // want pre-add hooks
+        "y", // want post-add hooks
+        "pnpm install", // post-add hook 1
+        "", // post-add hook 2 (blank to finish)
+        "14", // clean threshold
+        "y", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.defaultBranch, "develop");
+      assertEquals(config.autoCopyFiles, [".env", ".env.local", "secrets/"]);
+      assertEquals(config.hooks?.add?.pre, undefined);
+      assertEquals(config.hooks?.add?.post, ["pnpm install"]);
+      assertEquals(config.cleanThreshold, 14);
+      assertEquals(config.autoClean, true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode with multiple hooks", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "", // default branch (default)
+        "n", // want auto-copy files
+        "y", // want pre-add hooks
+        "echo 'Pre-hook 1'", // pre-add hook 1
+        "echo 'Pre-hook 2'", // pre-add hook 2
+        "", // blank to finish pre-add hooks
+        "y", // want post-add hooks
+        "cd {worktreePath} && pnpm install", // post-add hook 1
+        "echo 'Done!'", // post-add hook 2
+        "", // blank to finish post-add hooks
+        "", // clean threshold (default)
+        "n", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.hooks?.add?.pre, [
+        "echo 'Pre-hook 1'",
+        "echo 'Pre-hook 2'",
+      ]);
+      assertEquals(config.hooks?.add?.post, [
+        "cd {worktreePath} && pnpm install",
+        "echo 'Done!'",
+      ]);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode with CLI flags takes precedence", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Try to set different values interactively, but CLI flags should win
+      const responses = [
+        "develop", // default branch (should be ignored, CLI has "staging")
+        "y", // want auto-copy files
+        ".env.test", // auto-copy files (should be ignored, CLI has ".env")
+        "n", // want pre-add hooks
+        "n", // want post-add hooks
+        "21", // clean threshold (should be ignored, CLI has "10")
+        "y", // enable auto-clean (should be ignored, no CLI flag)
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit([
+          "--interactive",
+          "--default-source",
+          "staging",
+          "--auto-copy-files",
+          ".env",
+          "--clean-threshold",
+          "10",
+        ])
+      );
+
+      const config = await readTestConfig(repo.path);
+      // CLI flags should take precedence
+      assertEquals(config.defaultBranch, "staging");
+      assertEquals(config.autoCopyFiles, [".env"]);
+      assertEquals(config.cleanThreshold, 10);
+      // autoClean not set via CLI, so interactive value should be used
+      assertEquals(config.autoClean, true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode with invalid clean threshold", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "", // default branch (default)
+        "n", // want auto-copy files
+        "n", // want pre-add hooks
+        "n", // want post-add hooks
+        "invalid", // clean threshold (invalid, should use default)
+        "n", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      // Should fall back to default value of 7
+      assertEquals(config.cleanThreshold, 7);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "", // default branch (default)
+        "yes", // want auto-copy files (using "yes")
+        ".env", // auto-copy files
+        "n", // want pre-add hooks
+        "y", // want post-add hooks (using "y")
+        "pnpm install", // post-add hook
+        "", // blank to finish
+        "", // clean threshold (default)
+        "yes", // enable auto-clean (using "yes")
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.autoCopyFiles, [".env"]);
+      assertEquals(config.hooks?.add?.post, ["pnpm install"]);
+      assertEquals(config.autoClean, true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode declining all optional features", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "main", // default branch
+        "n", // want auto-copy files
+        "n", // want pre-add hooks
+        "n", // want post-add hooks
+        "7", // clean threshold
+        "n", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.defaultBranch, "main");
+      assertEquals(config.autoCopyFiles, undefined);
+      assertEquals(config.hooks, undefined);
+      assertEquals(config.cleanThreshold, 7);
+      assertEquals(config.autoClean, undefined);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("init command - interactive mode with whitespace in responses", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const responses = [
+        "  staging  ", // default branch with whitespace (should be trimmed)
+        "y", // want auto-copy files
+        " .env , .env.local ", // auto-copy files with spaces (should be trimmed)
+        "n", // want pre-add hooks
+        "n", // want post-add hooks
+        " 10 ", // clean threshold with whitespace (should be parsed)
+        "n", // enable auto-clean
+      ];
+
+      await withMockedPrompt(responses, () =>
+        executeInit(["--interactive"])
+      );
+
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.defaultBranch, "staging");
+      assertEquals(config.autoCopyFiles, [".env", ".env.local"]);
+      assertEquals(config.cleanThreshold, 10);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
   }
 });
