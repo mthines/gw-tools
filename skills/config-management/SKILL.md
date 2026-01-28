@@ -15,11 +15,12 @@ This guide teaches you how to configure gw for optimal workflows across differen
 
 1. [Understanding gw Configuration](#1-understanding-gw-configuration)
 2. [Configuration Options Reference](#2-configuration-options-reference)
-3. [Auto-Copy Strategies](#3-auto-copy-strategies)
-4. [Project-Type Configuration Patterns](#4-project-type-configuration-patterns)
-5. [Team Configuration Management](#5-team-configuration-management)
-6. [Advanced Configuration Techniques](#6-advanced-configuration-techniques)
-7. [Troubleshooting Configuration](#7-troubleshooting-configuration)
+3. [Initial Setup: Secrets in the Default Branch](#3-initial-setup-secrets-in-the-default-branch)
+4. [Auto-Copy Strategies](#4-auto-copy-strategies)
+5. [Project-Type Configuration Patterns](#5-project-type-configuration-patterns)
+6. [Team Configuration Management](#6-team-configuration-management)
+7. [Advanced Configuration Techniques](#7-advanced-configuration-techniques)
+8. [Troubleshooting Configuration](#8-troubleshooting-configuration)
 
 ---
 
@@ -178,6 +179,9 @@ If no configuration exists:
 - `gw add feature-x` copies from `defaultBranch` worktree
 - `gw sync target file.txt` syncs from `defaultBranch` unless `--from` specified
 - `gw sync target` (without files) syncs `autoCopyFiles` from `defaultBranch`
+- **Auto-clean never removes this worktree** - it's protected as the source for file syncing
+
+**Important:** Ensure your secrets and environment files exist in the `defaultBranch` worktree **before** using `gw add` or `gw sync`. This worktree is the source from which files are copied.
 
 ### `autoCopyFiles`: File Patterns to Auto-Copy
 
@@ -252,7 +256,57 @@ gw init --clean-threshold 14
 
 ---
 
-## 3. Auto-Copy Strategies
+## 3. Initial Setup: Secrets in the Default Branch
+
+Before using `gw add` with auto-copy, your secrets and environment files **must exist** in your `defaultBranch` worktree. This worktree is the **source** from which files are copied.
+
+### First-Time Setup Flow
+
+```bash
+# 1. Set up your bare repository structure
+git clone --bare https://github.com/user/repo.git repo.git
+cd repo.git
+
+# 2. Create the main worktree (your defaultBranch)
+git worktree add main main
+
+# 3. Set up secrets in the main worktree FIRST
+cd main
+cp .env.example .env           # Create your environment file
+# Edit .env with your actual secrets, API keys, etc.
+mkdir -p secrets/
+# Add any other secret files your project needs
+
+# 4. Initialize gw with auto-copy configuration
+gw init --auto-copy-files .env,secrets/
+
+# 5. Now create feature worktrees - files are copied automatically
+cd ..
+gw add feat-new-feature
+# .env and secrets/ are automatically copied from main
+```
+
+### Why This Order Matters
+
+1. **Source must exist first** - `gw add` copies from `defaultBranch`, so files must be there
+2. **Auto-clean protection** - The `defaultBranch` worktree is never auto-cleaned, ensuring your source files are always available
+3. **Sync depends on source** - `gw sync` also uses `defaultBranch` as the source
+
+### Keeping Secrets Updated
+
+When you update secrets in your `defaultBranch` worktree:
+
+```bash
+# Sync all autoCopyFiles to an existing worktree
+gw sync feat-existing-branch
+
+# Or sync specific files
+gw sync feat-existing-branch .env
+```
+
+---
+
+## 4. Auto-Copy Strategies
 
 ### Files That Should Be Copied
 
@@ -355,7 +409,7 @@ Currently, gw doesn't support glob patterns like:
 
 ---
 
-## 4. Project-Type Configuration Patterns
+## 5. Project-Type Configuration Patterns
 
 ### Next.js Projects
 
@@ -541,7 +595,7 @@ fullstack/
 
 ---
 
-## 5. Team Configuration Management
+## 6. Team Configuration Management
 
 ### Committing Configuration to Version Control
 
@@ -679,7 +733,7 @@ This will:
 
 ---
 
-## 6. Advanced Configuration Techniques
+## 7. Advanced Configuration Techniques
 
 ### Multiple Source Worktrees
 
@@ -748,7 +802,7 @@ vault kv get -field=.env secret/myapp > feature-x/.env
 
 ---
 
-## 7. Troubleshooting Configuration
+## 8. Troubleshooting Configuration
 
 ### Config Not Being Detected
 

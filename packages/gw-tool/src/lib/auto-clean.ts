@@ -41,9 +41,13 @@ function shouldRunAutoClean(lastRunTime: number | undefined): boolean {
 /**
  * Analyze worktrees and determine which are safe to clean
  * Reuses safety check logic from clean.ts
+ *
+ * @param threshold Minimum age in days for a worktree to be considered stale
+ * @param defaultBranch Branch name that should never be cleaned (e.g., "main")
  */
 async function getCleanableWorktrees(
   threshold: number,
+  defaultBranch: string,
 ): Promise<CleanableWorktree[]> {
   const worktrees = await listWorktrees();
 
@@ -53,6 +57,11 @@ async function getCleanableWorktrees(
   const cleanable: CleanableWorktree[] = [];
 
   for (const wt of nonBareWorktrees) {
+    // Never clean the defaultBranch worktree - it's the source for file syncing
+    if (wt.branch === defaultBranch) {
+      continue;
+    }
+
     const ageDays = await getWorktreeAgeDays(wt.path);
 
     // Skip if not old enough
@@ -98,11 +107,12 @@ export async function executeAutoClean(): Promise<number> {
       return 0;
     }
 
-    // Get threshold (default 7 days)
+    // Get threshold (default 7 days) and defaultBranch
     const threshold = config.cleanThreshold ?? 7;
+    const defaultBranch = config.defaultBranch ?? "main";
 
-    // Find cleanable worktrees
-    const cleanableWorktrees = await getCleanableWorktrees(threshold);
+    // Find cleanable worktrees (excludes defaultBranch)
+    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
 
     if (cleanableWorktrees.length === 0) {
       // Update timestamp even if nothing to clean

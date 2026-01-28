@@ -102,6 +102,55 @@ gw add feat-another-feature
 gw cd feat-another-feature
 ```
 
+## Initial Setup: Secrets in the Default Branch
+
+**Important:** Before using `gw add` with auto-copy, ensure your secrets and environment files exist in your `defaultBranch` worktree (typically `main`). This worktree is the **source** from which files are copied to new worktrees.
+
+### First-Time Setup Flow
+
+```bash
+# 1. Set up your bare repository structure
+git clone --bare https://github.com/user/repo.git repo.git
+cd repo.git
+
+# 2. Create the main worktree (your defaultBranch)
+git worktree add main main
+
+# 3. Set up secrets in the main worktree FIRST
+cd main
+cp .env.example .env           # Create your environment file
+# Edit .env with your actual secrets, API keys, etc.
+mkdir -p secrets/
+# Add any other secret files your project needs
+
+# 4. Initialize gw with auto-copy configuration
+gw init --auto-copy-files .env,secrets/
+
+# 5. Now create feature worktrees - files are copied automatically from main
+cd ..
+gw add feat-new-feature
+# .env and secrets/ are automatically copied from main to feat-new-feature
+```
+
+### Why This Matters
+
+- **`gw add`** copies files **from** your `defaultBranch` worktree **to** the new worktree
+- **`gw sync`** also uses `defaultBranch` as the source (unless `--from` is specified)
+- **Auto-clean** will **never** remove the `defaultBranch` worktree, ensuring your source files are always available
+- If secrets don't exist in `defaultBranch`, they won't be copied to new worktrees
+
+### Keeping Secrets Updated
+
+When you update secrets in your `defaultBranch` worktree, sync them to existing worktrees:
+
+```bash
+# Sync all autoCopyFiles to an existing worktree
+gw sync feat-existing-branch
+
+# Or sync specific files
+gw sync feat-existing-branch .env
+```
+
 ## Features
 
 - **Quick navigation**: Navigate to worktrees instantly with smart partial matching (`gw cd feat` finds `feat-branch`)
@@ -565,8 +614,9 @@ gw init --auto-clean --auto-copy-files .env --post-add "pnpm install"
 ```
 
 **How it works:**
-- Runs automatically on `gw add` and `gw list` commands
+- Runs automatically on `gw add` and `gw list` commands (in the background, non-blocking)
 - Only runs once per 24 hours (cooldown)
+- **Never removes the `defaultBranch` worktree** - it's protected as the source for file syncing
 - Removes worktrees older than `cleanThreshold` with:
   - No uncommitted changes
   - No staged files
