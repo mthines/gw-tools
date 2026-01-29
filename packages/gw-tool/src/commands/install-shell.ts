@@ -248,6 +248,22 @@ gw() {
       cd "$git_root"
     fi
     return $exit_code
+  elif [[ "$1" == "add" ]]; then
+    # Capture output to check for navigation marker
+    local output
+    output=$(command gw "$@" 2>&1)
+    local exit_code=$?
+    # Check if output contains navigation marker
+    if [[ "$output" == *"__GW_NAVIGATE__:"* ]]; then
+      local nav_path=\${output##*__GW_NAVIGATE__:}
+      nav_path=\${nav_path%%$'\\n'*}
+      # Print everything except the navigation marker line
+      echo "$output" | grep -v "__GW_NAVIGATE__:"
+      cd "$nav_path"
+    else
+      echo "$output"
+    fi
+    return $exit_code
   else
     command gw "$@"
   fi
@@ -283,6 +299,22 @@ gw() {
       cd "$git_root"
     fi
     return $exit_code
+  elif [[ "$1" == "add" ]]; then
+    # Capture output to check for navigation marker
+    local output
+    output=$(command gw "$@" 2>&1)
+    local exit_code=$?
+    # Check if output contains navigation marker
+    if [[ "$output" == *"__GW_NAVIGATE__:"* ]]; then
+      local nav_path=\${output##*__GW_NAVIGATE__:}
+      nav_path=\${nav_path%%$'\\n'*}
+      # Print everything except the navigation marker line
+      echo "$output" | grep -v "__GW_NAVIGATE__:"
+      cd "$nav_path"
+    else
+      echo "$output"
+    fi
+    return $exit_code
   else
     command gw "$@"
   fi
@@ -316,6 +348,24 @@ function gw
         # If removal succeeded and we have a git root, cd to it
         if test $exit_code -eq 0 -a -n "$git_root" -a ! -d "$PWD"
             cd $git_root
+        end
+        return $exit_code
+    else if test "$argv[1]" = "add"
+        # Capture output to check for navigation marker
+        set -l output (command gw $argv 2>&1)
+        set -l exit_code $status
+        # Check if output contains navigation marker
+        if string match -q "*__GW_NAVIGATE__:*" "$output"
+            set -l nav_path (string replace -r '.*__GW_NAVIGATE__:' '' "$output" | string split -n '\\n')[1]
+            # Print everything except the navigation marker line
+            for line in $output
+                if not string match -q "*__GW_NAVIGATE__:*" "$line"
+                    echo $line
+                end
+            end
+            cd $nav_path
+        else
+            printf '%s\\n' $output
         end
         return $exit_code
     else

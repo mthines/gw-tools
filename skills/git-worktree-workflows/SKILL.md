@@ -109,6 +109,22 @@ gw add hotfix-security -b hotfix-security main
 gw add feature-test --force
 ```
 
+### Navigating to Existing Worktrees
+
+If you try to add a worktree that already exists, `gw add` will prompt you to navigate to it:
+
+```bash
+$ gw add feature-auth
+
+ℹ Worktree feature-auth already exists at:
+  /projects/myapp.git/feature-auth
+
+Navigate to it? [Y/n]:
+# Press Enter to navigate (default: Yes), or 'n' to cancel
+```
+
+This is convenient when you're not sure if you've already created a worktree for a branch. Requires shell integration to be installed (`gw install-shell`).
+
 ### Auto-Copying Files
 
 When creating worktrees with `gw add`, files configured in `.gw/config.json` are automatically copied:

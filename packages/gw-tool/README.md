@@ -272,6 +272,9 @@ When `gw add` creates a new branch, it automatically configures the branch to tr
 **Git Ref Conflict Detection:**
 The command automatically detects and prevents Git ref naming conflicts. For example, you cannot have both a branch named `test` and `test/foo` because Git stores branches as files in `.git/refs/heads/`, and `test` cannot be both a file and a directory. If a conflict is detected, you'll receive a helpful error message with suggestions for resolving it.
 
+**Existing Worktree Navigation:**
+If you try to add a worktree that already exists, the command will prompt you to navigate to it instead. Press Enter (default: Yes) to navigate, or type 'n' to cancel. This requires shell integration to be installed (see [install-shell](#install-shell)).
+
 #### Arguments
 
 - `<worktree-name>`: Name or path for the new worktree
@@ -301,6 +304,14 @@ gw add feat/new-feature .env secrets/
 
 # Force create even if branch exists elsewhere
 gw add feat/bugfix -f
+
+# If worktree already exists, prompts to navigate to it
+gw add feat/existing-branch
+# Output: Worktree feat/existing-branch already exists at:
+#   /path/to/repo/feat/existing-branch
+#
+# Navigate to it? [Y/n]:
+# (Press Enter to navigate, or 'n' to cancel)
 ```
 
 #### Auto-Copy Configuration

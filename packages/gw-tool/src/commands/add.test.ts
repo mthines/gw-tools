@@ -20,6 +20,7 @@ import {
   assertWorktreeExists,
 } from "../test-utils/assertions.ts";
 import { withMockedExit } from "../test-utils/mock-exit.ts";
+import { withMockedPrompt } from "../test-utils/mock-prompt.ts";
 
 Deno.test("add command - creates worktree with auto-branch creation", async () => {
   const repo = new GitTestRepo();
@@ -447,6 +448,144 @@ Deno.test("add command - respects custom defaultBranch in config", async () => {
 
       // Verify worktree was created
       await assertWorktreeExists(repo.path, "feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - prompts to navigate when worktree already exists (yes)", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First create the worktree
+      await executeAdd(["feat-branch"]);
+      await assertWorktreeExists(repo.path, "feat-branch");
+
+      // Capture stdout to check for navigation marker
+      const originalLog = console.log;
+      const logs: string[] = [];
+      console.log = (...args: unknown[]) => {
+        logs.push(args.map(String).join(" "));
+      };
+
+      // Try to add again - should prompt and output navigation marker
+      const { exitCode } = await withMockedPrompt(["y"], () =>
+        withMockedExit(() => executeAdd(["feat-branch"]))
+      );
+
+      console.log = originalLog;
+
+      // Should exit with code 0 (success - navigating)
+      assertEquals(exitCode, 0, "Should exit with code 0 when navigating");
+
+      // Verify navigation marker was output
+      const hasNavigateMarker = logs.some((log) =>
+        log.includes("__GW_NAVIGATE__:")
+      );
+      assertEquals(hasNavigateMarker, true, "Should output navigation marker");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - prompts to navigate when worktree already exists (default yes - empty)", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First create the worktree
+      await executeAdd(["feat-branch"]);
+      await assertWorktreeExists(repo.path, "feat-branch");
+
+      // Capture stdout to check for navigation marker
+      const originalLog = console.log;
+      const logs: string[] = [];
+      console.log = (...args: unknown[]) => {
+        logs.push(args.map(String).join(" "));
+      };
+
+      // Try to add again - should prompt and accept empty as yes (default)
+      const { exitCode } = await withMockedPrompt([""], () =>
+        withMockedExit(() => executeAdd(["feat-branch"]))
+      );
+
+      console.log = originalLog;
+
+      // Should exit with code 0 (success - navigating)
+      assertEquals(exitCode, 0, "Should exit with code 0 when navigating");
+
+      // Verify navigation marker was output
+      const hasNavigateMarker = logs.some((log) =>
+        log.includes("__GW_NAVIGATE__:")
+      );
+      assertEquals(hasNavigateMarker, true, "Should output navigation marker for default yes");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - prompts to navigate when worktree already exists (no)", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First create the worktree
+      await executeAdd(["feat-branch"]);
+      await assertWorktreeExists(repo.path, "feat-branch");
+
+      // Capture stdout to check for navigation marker
+      const originalLog = console.log;
+      const logs: string[] = [];
+      console.log = (...args: unknown[]) => {
+        logs.push(args.map(String).join(" "));
+      };
+
+      // Try to add again - decline navigation
+      const { exitCode } = await withMockedPrompt(["n"], () =>
+        withMockedExit(() => executeAdd(["feat-branch"]))
+      );
+
+      console.log = originalLog;
+
+      // Should exit with code 0 (cancelled, not an error)
+      assertEquals(exitCode, 0, "Should exit with code 0 when cancelled");
+
+      // Verify NO navigation marker was output
+      const hasNavigateMarker = logs.some((log) =>
+        log.includes("__GW_NAVIGATE__:")
+      );
+      assertEquals(hasNavigateMarker, false, "Should NOT output navigation marker when declined");
+
+      // Verify cancellation message was shown
+      const hasCancelledMessage = logs.some((log) =>
+        log.includes("cancelled")
+      );
+      assertEquals(hasCancelledMessage, true, "Should show cancelled message");
     } finally {
       cwd.restore();
     }

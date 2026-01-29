@@ -280,7 +280,28 @@ export async function executeAdd(args: string[]): Promise<void> {
       const worktrees = await listWorktrees();
       const isValidWorktree = worktrees.some((wt) => wt.path === worktreePath);
 
-      if (!isValidWorktree) {
+      if (isValidWorktree) {
+        // Worktree already exists - prompt user to navigate to it
+        console.log("");
+        output.info(
+          `Worktree ${output.bold(parsed.worktreeName)} already exists at:`,
+        );
+        console.log(`  ${output.path(worktreePath)}`);
+        console.log("");
+
+        const response = prompt(`Navigate to it? [Y/n]:`);
+
+        if (response === null || response === "" || response.toLowerCase() === "y" || response.toLowerCase() === "yes") {
+          // Output the path on stdout for shell integration to pick up
+          // Use a special marker that shell integration can detect
+          console.log(`__GW_NAVIGATE__:${worktreePath}`);
+          Deno.exit(0);
+        } else {
+          console.log("");
+          output.info("Worktree creation cancelled.");
+          Deno.exit(0);
+        }
+      } else {
         // Path exists but isn't a valid worktree - automatically clean up
         console.log("");
         output.warning(
