@@ -63,11 +63,7 @@ A command-line tool for managing git worktrees, built with Deno.
     - [Typical Workflow](#typical-workflow)
   - [Development](#development)
     - [Local Development \& Testing](#local-development--testing)
-      - [Method 1: Shell Alias (Recommended for Active Development)](#method-1-shell-alias-recommended-for-active-development)
-      - [Method 2: Symlink to Compiled Binary (Faster Execution)](#method-2-symlink-to-compiled-binary-faster-execution)
-      - [Method 3: Development Wrapper Script (Best of Both Worlds)](#method-3-development-wrapper-script-best-of-both-worlds)
-      - [Method 4: npm link (For Testing Installation)](#method-4-npm-link-for-testing-installation)
-      - [Watch Mode for Active Development](#watch-mode-for-active-development)
+      - [Shell Alias Method (Recommended)](#shell-alias-method-recommended)
     - [Available Scripts](#available-scripts)
     - [Publishing](#publishing)
       - [Automated Release (Recommended)](#automated-release-recommended)
@@ -473,9 +469,15 @@ If not configured, defaults to "main".
 
 ### install-shell
 
-Install or remove shell integration for the `gw cd` command. This is automatically run during `npm install`, but can be run manually if needed.
+Install or remove shell integration for the `gw cd` command and enable real-time streaming output. This is automatically run during `npm install`, but can be run manually if needed.
 
 The installation creates an integration script in `~/.gw/shell/` and adds a single line to your shell configuration to source it, keeping your shell config clean and minimal.
+
+Shell integration provides:
+- **Navigation support**: `gw cd <worktree>` navigates directly to worktrees
+- **Real-time streaming**: Command output streams as it's generated (no buffering)
+- **Auto-navigation**: Automatically navigate after `gw add` and `gw remove` operations
+- **Multi-alias support**: Install for different command names (e.g., `gw-dev` for development)
 
 ```bash
 gw install-shell [options]
@@ -483,6 +485,7 @@ gw install-shell [options]
 
 #### Options
 
+- `--name, -n NAME`: Install under a different command name (default: `gw`)
 - `--remove`: Remove shell integration
 - `--quiet, -q`: Suppress output messages
 - `-h, --help`: Show help message
@@ -493,17 +496,20 @@ gw install-shell [options]
 # Install shell integration (usually not needed - auto-installed)
 gw install-shell
 
-# Remove shell integration
-gw install-shell --remove
+# Install for development alias 'gw-dev'
+gw install-shell --name gw-dev
+
+# Remove shell integration for 'gw-dev'
+gw install-shell --name gw-dev --remove
 
 # Install quietly (for automation)
 gw install-shell --quiet
 ```
 
 **Supported Shells:**
-- **Zsh** (~/.zshrc sources ~/.gw/shell/integration.zsh)
-- **Bash** (~/.bashrc sources ~/.gw/shell/integration.bash)
-- **Fish** (~/.config/fish/functions/gw.fish)
+- **Zsh** (~/.zshrc sources ~/.gw/shell/integration[-NAME].zsh)
+- **Bash** (~/.bashrc sources ~/.gw/shell/integration[-NAME].bash)
+- **Fish** (~/.config/fish/functions/[NAME].fish)
 
 The command is idempotent - running it multiple times won't create duplicate entries. It will also automatically migrate old inline installations to the new format.
 
@@ -1000,117 +1006,35 @@ gw cd feat-manual
 
 ### Local Development & Testing
 
-When developing the tool, you can test changes locally without publishing by creating a global symlink. This allows you to use the `gw` command with live code updates.
+When developing the tool, you can test changes locally without publishing by using a shell alias. This allows you to use the `gw-dev` command with live code updates and full shell integration.
 
-#### Method 1: Shell Alias (Recommended for Active Development)
+#### Shell Alias Method (Recommended)
 
-Create a shell alias that runs the Deno version directly with watch mode:
+Create a shell alias that runs the Deno version directly for instant feedback:
 
 ```bash
 # Add to your ~/.zshrc or ~/.bashrc
 alias gw-dev='deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts'
 
+# Install shell integration for gw-dev
+# This enables features like 'gw-dev cd' navigation and streaming output
+deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts install-shell --name gw-dev
+
 # Reload your shell
 source ~/.zshrc  # or ~/.bashrc
 
-# Now you can use it anywhere
+# Now you can use it anywhere with full shell integration
 cd ~/some-project
+gw-dev add feat-branch  # Output streams in real-time!
+gw-dev cd feat-branch   # Navigates to the worktree
 gw-dev copy feat-branch .env
 ```
 
-This gives you instant feedback - just edit the TypeScript files and run the command again.
-
-#### Method 2: Symlink to Compiled Binary (Faster Execution)
-
-Create a symlink to the compiled binary and recompile when needed:
-
-```bash
-# From the workspace root
-nx run gw-tool:compile
-
-# Create global symlink (one-time setup)
-sudo ln -sf ~/path/to/gw-tools/dist/packages/gw-tool/gw /usr/local/bin/gw
-
-# Now you can use `gw` globally
-cd ~/some-project
-gw sync feat-branch .env
-
-# When you make changes, recompile
-nx run gw-tool:compile
-# The symlink automatically points to the new binary
-```
-
-#### Method 3: Development Wrapper Script (Best of Both Worlds)
-
-Create a wrapper script that provides both speed and live updates:
-
-```bash
-# Create ~/bin/gw (make sure ~/bin is in your PATH)
-cat > ~/bin/gw << 'EOF'
-#!/bin/bash
-# Check if we're in development mode (set GW_DEV=1 to use source)
-if [ "$GW_DEV" = "1" ]; then
-  exec deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts "$@"
-else
-  exec ~/path/to/gw-tools/dist/packages/gw-tool/gw "$@"
-fi
-EOF
-
-chmod +x ~/bin/gw
-
-# Use compiled version (fast)
-gw sync feat-branch .env
-
-# Use development version with live updates
-GW_DEV=1 gw sync feat-branch .env
-
-# Or set it for your entire session
-export GW_DEV=1
-gw sync feat-branch .env
-```
-
-#### Method 4: npm link (For Testing Installation)
-
-Test the npm package installation flow locally:
-
-```bash
-# Compile binaries
-nx run gw-tool:compile-all
-
-# Prepare npm package
-nx run gw-tool:npm-pack
-
-# Link the package globally
-cd dist/packages/gw-tool/npm
-npm link
-
-# Now `gw` is available globally via npm
-gw sync feat-branch .env
-
-# When you make changes
-cd ~/path/to/gw-tools
-nx run gw-tool:compile-all
-nx run gw-tool:npm-pack
-# The link automatically uses the updated binaries
-
-# To unlink when done
-npm unlink -g @gw-tools/gw
-```
-
-#### Watch Mode for Active Development
-
-Use the watch mode to automatically restart when files change:
-
-```bash
-# Terminal 1: Run in watch mode
-nx run gw-tool:dev
-
-# Terminal 2: Test in another project
-cd ~/some-project
-~/path/to/gw-tools/dist/packages/gw-tool/gw sync feat-branch .env
-```
-
-**Pro tip**: Combine Method 3 (wrapper script) with watch mode by setting `GW_DEV=1` in your development shell.
+This gives you instant feedback - just edit the TypeScript files and run the command again. The shell integration provides the same experience as the installed version:
+- Real-time streaming output (no buffering)
+- `gw-dev cd` navigation support
+- Auto-navigation after `gw-dev add`
+- Auto-navigation to repo root after `gw-dev remove`
 
 ### Available Scripts
 
