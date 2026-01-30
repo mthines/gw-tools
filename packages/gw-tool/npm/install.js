@@ -5,7 +5,14 @@
  * Downloads the appropriate binary for the current platform
  */
 
-const { existsSync, mkdirSync, chmodSync } = require('fs');
+const {
+  existsSync,
+  mkdirSync,
+  chmodSync,
+  openSync,
+  fsyncSync,
+  closeSync,
+} = require('fs');
 const { join } = require('path');
 const { arch, platform } = require('os');
 const https = require('https');
@@ -39,7 +46,7 @@ function getBinaryName() {
   if (!os || !cpu) {
     console.error(
       `Unsupported platform: ${platform()}-${arch()}\n` +
-        'Supported platforms: macOS (x64, arm64), Linux (x64, arm64), Windows (x64, arm64)'
+        'Supported platforms: macOS (x64, arm64), Linux (x64, arm64), Windows (x64, arm64)',
     );
     process.exit(1);
   }
@@ -55,26 +62,43 @@ function download(url, dest) {
   return new Promise((resolve, reject) => {
     const file = createWriteStream(dest);
 
-    https.get(url, { headers: { 'User-Agent': 'gw-npm-installer' } }, (response) => {
-      // Handle redirects
-      if (response.statusCode === 302 || response.statusCode === 301) {
-        return download(response.headers.location, dest).then(resolve).catch(reject);
-      }
+    https
+      .get(
+        url,
+        { headers: { 'User-Agent': 'gw-npm-installer' } },
+        (response) => {
+          // Handle redirects
+          if (response.statusCode === 302 || response.statusCode === 301) {
+            return download(response.headers.location, dest)
+              .then(resolve)
+              .catch(reject);
+          }
 
-      if (response.statusCode !== 200) {
-        reject(new Error(`Failed to download: ${response.statusCode} ${response.statusMessage}`));
-        return;
-      }
+          if (response.statusCode !== 200) {
+            reject(
+              new Error(
+                `Failed to download: ${response.statusCode} ${response.statusMessage}`,
+              ),
+            );
+            return;
+          }
 
-      response.pipe(file);
+          response.pipe(file);
 
-      file.on('finish', () => {
-        file.close();
-        resolve();
+          file.on('finish', () => {
+            file.close((err) => {
+              if (err) {
+                reject(err);
+              } else {
+                resolve();
+              }
+            });
+          });
+        },
+      )
+      .on('error', (err) => {
+        reject(err);
       });
-    }).on('error', (err) => {
-      reject(err);
-    });
 
     file.on('error', (err) => {
       reject(err);
@@ -106,12 +130,20 @@ async function install() {
     console.log(`Downloading from: ${downloadUrl}`);
     await download(downloadUrl, binaryPath);
 
-    // Make binary executable on Unix-like systems
+    // Ensure file is fully written to disk before chmod
+    // This prevents ETXTBSY errors on Linux systems
     if (platform() !== 'win32') {
+      const fd = openSync(binaryPath, 'r+');
+      fsyncSync(fd);
+      closeSync(fd);
+
+      // Small delay after fsync before chmod
+      await new Promise((resolve) => setTimeout(resolve, 100));
+
       chmodSync(binaryPath, 0o755);
-      // Small delay to prevent ETXTBSY race condition on Linux
-      // The file can be "text busy" immediately after chmod
-      await new Promise(resolve => setTimeout(resolve, 100));
+
+      // Additional delay after chmod to prevent ETXTBSY
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
 
     console.log('✓ Installation complete!');
@@ -121,7 +153,9 @@ async function install() {
     await installShellIntegration(binaryPath);
 
     console.log('\nRun "gw --help" to get started.');
-    console.log('Tip: Restart your terminal or run "source ~/.zshrc" (or ~/.bashrc) to use "gw cd"');
+    console.log(
+      'Tip: Restart your terminal or run "source ~/.zshrc" (or ~/.bashrc) to use "gw cd"',
+    );
   } catch (error) {
     console.error('\n✗ Installation failed:', error.message);
     console.error('\nYou can manually download the binary from:');
@@ -142,14 +176,16 @@ async function installShellIntegration(binaryPath, retries = 3) {
 
   return new Promise((resolve) => {
     const child = spawn(binaryPath, ['install-shell', '--quiet'], {
-      stdio: 'inherit'
+      stdio: 'inherit',
     });
 
     child.on('close', (code) => {
       if (code === 0) {
         console.log('✓ Shell integration installed!');
       } else {
-        console.log('  (Shell integration can be installed later with: gw install-shell)');
+        console.log(
+          '  (Shell integration can be installed later with: gw install-shell)',
+        );
       }
       resolve();
     });
@@ -157,10 +193,12 @@ async function installShellIntegration(binaryPath, retries = 3) {
     child.on('error', async (err) => {
       // Retry on ETXTBSY (text file busy) error
       if (err.code === 'ETXTBSY' && retries > 0) {
-        await new Promise(r => setTimeout(r, 200));
+        await new Promise((r) => setTimeout(r, 200));
         return installShellIntegration(binaryPath, retries - 1).then(resolve);
       }
-      console.log('  (Shell integration can be installed later with: gw install-shell)');
+      console.log(
+        '  (Shell integration can be installed later with: gw install-shell)',
+      );
       resolve();
     });
   });
