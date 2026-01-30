@@ -512,23 +512,36 @@ du -sh /path/to/repo.git/*/node_modules/ | sort -h
 
 ### Cleanup Strategies
 
-**Remove old worktrees:**
+**Quick cleanup:**
+
+If you need to quickly remove all temporary worktrees:
 
 ```bash
-# List worktrees older than 2 weeks (by branch last commit)
-gw list | while read path commit branch; do
-  age=$(git log -1 --format=%cr "$branch" 2>/dev/null)
-  echo "$branch: $age"
-done
+# Preview what would be removed
+gw prune --clean --dry-run
 
-# Remove stale worktrees
-gw remove feat/old-feature-1
-gw remove feat/old-feature-2
+# Remove all worktrees that are clean (no uncommitted/unpushed changes)
+gw prune --clean
+```
+
+This is useful when:
+- Switching between projects
+- Low on disk space
+- Want to start fresh with minimal worktrees
+- Before archiving a project
+
+**Age-based cleanup (regular maintenance):**
+
+```bash
+# Remove worktrees older than configured threshold (default: 7 days)
+gw clean --dry-run  # Preview
+gw clean            # Remove
 ```
 
 **Prune stale references:**
 
 ```bash
+# Clean up administrative data for deleted worktrees
 gw prune
 ```
 

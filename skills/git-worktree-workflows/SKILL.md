@@ -679,6 +679,67 @@ Removing old-feature-2...
 SUCCESS: Removed 2 worktree(s)
 ```
 
+### Cleanup Strategies: `gw clean` vs `gw prune --clean`
+
+The gw tool provides two complementary cleanup commands for different scenarios:
+
+**Age-based Cleanup: `gw clean`**
+- Removes worktrees **older than configured threshold** (default: 7 days)
+- Good for regular maintenance
+- Respects safety checks (no uncommitted changes, no unpushed commits)
+- Configurable via `.gw/config.json`
+
+```bash
+# Regular maintenance (weekly)
+gw clean --dry-run  # Preview
+gw clean            # Remove old worktrees
+```
+
+**Complete Cleanup: `gw prune --clean`**
+- Removes **ALL clean worktrees** (regardless of age)
+- First runs `git worktree prune` to clean up administrative data
+- Protects default branch and current worktree
+- Good for aggressive cleanup before archiving or when disk space is critical
+
+```bash
+# Aggressive cleanup (before vacation, archiving)
+gw prune --clean --dry-run  # Preview
+gw prune --clean            # Remove all clean worktrees
+```
+
+**Comparison:**
+| Feature | `gw clean` | `gw prune --clean` |
+|---------|-----------|-------------------|
+| Age-based | Yes (configurable) | No (removes all clean) |
+| Safety checks | Yes | Yes |
+| Protects default branch | No | Yes |
+| Runs `git worktree prune` | No | Yes |
+| Use case | Regular maintenance | Aggressive cleanup |
+
+**When to use which:**
+
+Use `gw clean`:
+- Weekly/monthly maintenance to remove stale worktrees
+- When you want to keep recent worktrees but clean up old ones
+- As part of automated cleanup routines
+
+Use `gw prune --clean`:
+- Before archiving a project or taking a break
+- When you need to free up disk space quickly
+- To reset to a minimal worktree setup (just main branch + current work)
+- After completing a major milestone or release
+
+**Example workflow:**
+```bash
+# Regular maintenance (weekly)
+gw clean --dry-run  # Preview old worktrees
+gw clean            # Remove if ok
+
+# Major cleanup (quarterly or before breaks)
+gw prune --clean --dry-run  # Preview all clean worktrees
+gw prune --clean            # Remove all clean worktrees
+```
+
 ### Pruning Stale Worktree References
 
 **Scenario:** You manually deleted a worktree directory

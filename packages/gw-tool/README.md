@@ -877,18 +877,52 @@ gw mv feat-branch ../new-location
 
 #### prune
 
-Clean up worktree information for deleted worktrees.
+Clean up worktree administrative data and optionally remove clean worktrees.
+
+**Standard Mode** (without `--clean`):
+Wraps `git worktree prune` to clean up administrative files for deleted worktrees.
+
+**Clean Mode** (with `--clean`):
+First runs `git worktree prune`, then removes ALL worktrees that have no uncommitted changes, no staged files, and no unpushed commits. Unlike `gw clean` (which is age-based), `gw prune --clean` removes worktrees regardless of age.
 
 ```bash
-gw prune
+gw prune [options]
 ```
+
+**Options:**
+- `--clean` - Enable clean mode (remove clean worktrees)
+- `-n, --dry-run` - Preview what would be removed
+- `-f, --force` - Skip confirmation prompt
+- `-v, --verbose` - Show detailed output
+- `-h, --help` - Show help
+
+**Safety Features** (in clean mode):
+- Default branch is protected (configured in `.gw/config.json`)
+- Current worktree cannot be removed
+- Bare repository is never removed
+- Confirmation prompt before removal (defaults to yes, just press Enter to confirm)
 
 **Examples:**
 ```bash
-gw prune                # Clean up stale worktree information
-gw prune --dry-run      # Preview what would be pruned
-gw prune --verbose      # Show detailed output
+# Standard prune (cleanup administrative data)
+gw prune
+gw prune --verbose
+
+# Clean mode (remove clean worktrees)
+gw prune --clean              # Remove all clean worktrees (with prompt)
+gw prune --clean --dry-run    # Preview what would be removed
+gw prune --clean --force      # Remove without confirmation
+gw prune --clean --verbose    # Show detailed output
 ```
+
+**Comparison with `gw clean`:**
+| Feature | `gw clean` | `gw prune --clean` |
+|---------|-----------|-------------------|
+| Age-based | Yes (configurable threshold) | No (removes all clean) |
+| Safety checks | Yes | Yes |
+| Protects default branch | No | Yes |
+| Runs `git worktree prune` | No | Yes |
+| Use case | Regular maintenance | Aggressive cleanup |
 
 #### lock
 

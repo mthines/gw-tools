@@ -261,7 +261,11 @@ For full git worktree remove documentation:
 
     console.log(message);
     console.log("Removing it will result in data loss.");
-    const response = prompt(`Are you sure you want to force removal? (yes/no) [no]:`);
+
+    // Ensure output is flushed before prompting
+    await Deno.stdout.write(new TextEncoder().encode(""));
+
+    const response = prompt(`Are you sure you want to force removal? (yes/no) [no]: `);
 
     if (response?.toLowerCase() !== "yes" && response?.toLowerCase() !== "y") {
       console.log("");

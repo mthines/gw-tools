@@ -105,7 +105,7 @@ function promptForConfig(): {
 
   // Default branch
   const defaultBranchInput = prompt(
-    `Default source worktree name [${output.dim("main")}]:`,
+    `Default source worktree name [${output.dim("main")}]: `,
   );
   if (defaultBranchInput && defaultBranchInput.trim()) {
     config.defaultBranch = defaultBranchInput.trim();
@@ -116,13 +116,13 @@ function promptForConfig(): {
   const wantAutoCopy = prompt(
     `Do you want to auto-copy files when creating worktrees? (y/n) [${
       output.dim("n")
-    }]:`,
+    }]: `,
   );
   if (wantAutoCopy?.toLowerCase() === "y" || wantAutoCopy?.toLowerCase() === "yes") {
     console.log(
       output.dim("  Enter comma-separated file/directory paths (e.g., .env,secrets/)"),
     );
-    const autoCopyInput = prompt("  Files to auto-copy:");
+    const autoCopyInput = prompt("  Files to auto-copy: ");
     if (autoCopyInput && autoCopyInput.trim()) {
       config.autoCopyFiles = autoCopyInput.split(",").map((f) => f.trim()).filter((f) => f);
     }
@@ -131,7 +131,7 @@ function promptForConfig(): {
   // Pre-add hooks
   console.log();
   const wantPreHooks = prompt(
-    `Do you want to add pre-add hooks? (y/n) [${output.dim("n")}]:`,
+    `Do you want to add pre-add hooks? (y/n) [${output.dim("n")}]: `,
   );
   if (wantPreHooks?.toLowerCase() === "y" || wantPreHooks?.toLowerCase() === "yes") {
     console.log(
@@ -145,7 +145,7 @@ function promptForConfig(): {
     const preHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish):`);
+      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       preHooks.push(hookInput.trim());
       hookNum++;
@@ -158,7 +158,7 @@ function promptForConfig(): {
   // Post-add hooks
   console.log();
   const wantPostHooks = prompt(
-    `Do you want to add post-add hooks? (y/n) [${output.dim("n")}]:`,
+    `Do you want to add post-add hooks? (y/n) [${output.dim("n")}]: `,
   );
   if (wantPostHooks?.toLowerCase() === "y" || wantPostHooks?.toLowerCase() === "yes") {
     console.log(
@@ -172,7 +172,7 @@ function promptForConfig(): {
     const postHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish):`);
+      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       postHooks.push(hookInput.trim());
       hookNum++;
