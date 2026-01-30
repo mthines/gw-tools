@@ -9,6 +9,7 @@ import { copyFiles } from "../lib/file-ops.ts";
 import { fetchAndGetStartPoint, listWorktrees } from "../lib/git-utils.ts";
 import { executeHooks, type HookVariables } from "../lib/hooks.ts";
 import { resolveWorktreePath } from "../lib/path-resolver.ts";
+import { signalNavigation } from "../lib/shell-navigation.ts";
 import * as output from "../lib/output.ts";
 
 /**
@@ -292,9 +293,9 @@ export async function executeAdd(args: string[]): Promise<void> {
         const response = prompt(`Navigate to it? [Y/n]:`);
 
         if (response === null || response === "" || response.toLowerCase() === "y" || response.toLowerCase() === "yes") {
-          // Output the path on stdout for shell integration to pick up
-          // Use a special marker that shell integration can detect
-          console.log(`__GW_NAVIGATE__:${worktreePath}`);
+          // Signal navigation to shell integration via temp file
+          // This avoids buffering output
+          await signalNavigation(worktreePath);
           Deno.exit(0);
         } else {
           console.log("");

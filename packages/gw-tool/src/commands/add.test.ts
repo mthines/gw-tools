@@ -470,28 +470,34 @@ Deno.test("add command - prompts to navigate when worktree already exists (yes)"
       await executeAdd(["feat-branch"]);
       await assertWorktreeExists(repo.path, "feat-branch");
 
-      // Capture stdout to check for navigation marker
-      const originalLog = console.log;
-      const logs: string[] = [];
-      console.log = (...args: unknown[]) => {
-        logs.push(args.map(String).join(" "));
-      };
+      const home = Deno.env.get("HOME") || "";
+      const navFile = join(home, ".gw", "tmp", "last-nav");
 
-      // Try to add again - should prompt and output navigation marker
+      // Clean up any existing nav file
+      try {
+        await Deno.remove(navFile);
+      } catch {
+        // File might not exist
+      }
+
+      // Try to add again - should prompt and write navigation file
       const { exitCode } = await withMockedPrompt(["y"], () =>
         withMockedExit(() => executeAdd(["feat-branch"]))
       );
 
-      console.log = originalLog;
-
       // Should exit with code 0 (success - navigating)
       assertEquals(exitCode, 0, "Should exit with code 0 when navigating");
 
-      // Verify navigation marker was output
-      const hasNavigateMarker = logs.some((log) =>
-        log.includes("__GW_NAVIGATE__:")
-      );
-      assertEquals(hasNavigateMarker, true, "Should output navigation marker");
+      // Verify navigation file was created
+      const navFileExists = await Deno.stat(navFile).then(() => true).catch(() => false);
+      assertEquals(navFileExists, true, "Should create navigation marker file");
+
+      // Clean up
+      try {
+        await Deno.remove(navFile);
+      } catch {
+        // Ignore cleanup errors
+      }
     } finally {
       cwd.restore();
     }
@@ -514,28 +520,34 @@ Deno.test("add command - prompts to navigate when worktree already exists (defau
       await executeAdd(["feat-branch"]);
       await assertWorktreeExists(repo.path, "feat-branch");
 
-      // Capture stdout to check for navigation marker
-      const originalLog = console.log;
-      const logs: string[] = [];
-      console.log = (...args: unknown[]) => {
-        logs.push(args.map(String).join(" "));
-      };
+      const home = Deno.env.get("HOME") || "";
+      const navFile = join(home, ".gw", "tmp", "last-nav");
+
+      // Clean up any existing nav file
+      try {
+        await Deno.remove(navFile);
+      } catch {
+        // File might not exist
+      }
 
       // Try to add again - should prompt and accept empty as yes (default)
       const { exitCode } = await withMockedPrompt([""], () =>
         withMockedExit(() => executeAdd(["feat-branch"]))
       );
 
-      console.log = originalLog;
-
       // Should exit with code 0 (success - navigating)
       assertEquals(exitCode, 0, "Should exit with code 0 when navigating");
 
-      // Verify navigation marker was output
-      const hasNavigateMarker = logs.some((log) =>
-        log.includes("__GW_NAVIGATE__:")
-      );
-      assertEquals(hasNavigateMarker, true, "Should output navigation marker for default yes");
+      // Verify navigation file was created
+      const navFileExists = await Deno.stat(navFile).then(() => true).catch(() => false);
+      assertEquals(navFileExists, true, "Should create navigation marker file for default yes");
+
+      // Clean up
+      try {
+        await Deno.remove(navFile);
+      } catch {
+        // Ignore cleanup errors
+      }
     } finally {
       cwd.restore();
     }
