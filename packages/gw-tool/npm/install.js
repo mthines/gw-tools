@@ -176,12 +176,28 @@ async function install() {
 async function installShellIntegration(binaryPath, retries = 3) {
   const { spawn } = require('child_process');
 
+  // Check environment before attempting shell integration
+  const hasRequiredEnv = process.env.HOME || process.env.USERPROFILE;
+  const hasShell = process.env.SHELL;
+
+  if (!hasRequiredEnv) {
+    console.log('  Skipping shell integration: HOME environment variable not set');
+    console.log('  Run "gw install-shell" manually after installation');
+    return;
+  }
+
+  if (!hasShell) {
+    console.log('  Skipping shell integration: SHELL environment variable not set');
+    console.log('  Run "gw install-shell" manually after installation');
+    return;
+  }
+
   return new Promise((resolve) => {
     let child;
 
     try {
-      child = spawn(binaryPath, ['install-shell', '--quiet'], {
-        stdio: 'inherit',
+      child = spawn(binaryPath, ['install-shell'], {
+        stdio: ['inherit', 'inherit', 'pipe'],  // stdin, stdout, stderr
       });
     } catch (err) {
       // Catch synchronous spawn errors (e.g., ETXTBSY thrown immediately)
@@ -191,20 +207,28 @@ async function installShellIntegration(binaryPath, retries = 3) {
         }, 200);
         return;
       }
-      console.log(
-        '  (Shell integration can be installed later with: gw install-shell)',
-      );
+      console.log('  Shell integration setup encountered an issue.');
+      console.log('  You can install it manually later with: gw install-shell');
       resolve();
       return;
     }
+
+    let stderrOutput = '';
+    child.stderr.on('data', (data) => {
+      stderrOutput += data.toString();
+      // Also display it immediately
+      process.stderr.write(data);
+    });
 
     child.on('close', (code) => {
       if (code === 0) {
         console.log('✓ Shell integration installed!');
       } else {
-        console.log(
-          '  (Shell integration can be installed later with: gw install-shell)',
-        );
+        console.log('  Shell integration failed with exit code:', code);
+        if (stderrOutput) {
+          console.log('  Error:', stderrOutput.trim());
+        }
+        console.log('  You can install it manually later with: gw install-shell');
       }
       resolve();
     });
@@ -215,9 +239,8 @@ async function installShellIntegration(binaryPath, retries = 3) {
         await new Promise((r) => setTimeout(r, 200));
         return installShellIntegration(binaryPath, retries - 1).then(resolve);
       }
-      console.log(
-        '  (Shell integration can be installed later with: gw install-shell)',
-      );
+      console.log('  Shell integration setup encountered an issue.');
+      console.log('  You can install it manually later with: gw install-shell');
       resolve();
     });
   });

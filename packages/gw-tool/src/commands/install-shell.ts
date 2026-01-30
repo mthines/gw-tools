@@ -50,11 +50,13 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
   const shell = Deno.env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
 
-  if (!quiet) {
-    console.log(`Detected shell: ${output.bold(shellName || 'unknown')}`);
-  }
-
   const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+  if (!home) {
+    output.error('HOME environment variable is not set');
+    console.log('\nShell integration requires HOME to be set.');
+    console.log('Please set HOME and try again.');
+    Deno.exit(1);
+  }
 
   // Determine config file and script file
   let configFile: string;
@@ -82,15 +84,18 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
     shellFunction = getFishFunction(commandName, actualCommand);
     sourceLine = ''; // Fish doesn't need a source line
   } else {
-    if (!quiet) {
-      output.error(`Unsupported shell: ${shellName}`);
-      console.log('\nSupported shells: zsh, bash, fish');
-      console.log(
-        '\nTo manually add gw cd support, add this to your shell config:',
-      );
-      console.log(getZshFunction());
-    }
+    // Always show this error, even in quiet mode
+    output.error(`Unsupported shell: ${shellName || 'unknown'}`);
+    console.log('\nSupported shells: zsh, bash, fish');
+    console.log('Set SHELL environment variable to your shell path.');
+    console.log('\nYou can still use gw without shell integration,');
+    console.log('but "gw cd" will not be available.');
     Deno.exit(1);
+  }
+
+  // Show what we're doing (after validation)
+  if (!quiet) {
+    console.log(`Installing shell integration for ${output.bold(shellName)}...`);
   }
 
   // Check if already installed and migrate old format if needed

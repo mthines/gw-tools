@@ -2,6 +2,8 @@
  * Utilities for temporarily modifying environment during tests
  */
 
+import { join } from "$std/path";
+
 /**
  * Save and restore environment variables for tests
  */
@@ -66,5 +68,52 @@ export class TempCwd {
    */
   getOriginal(): string {
     return this.originalCwd;
+  }
+}
+
+/**
+ * Create a temporary HOME directory for testing shell integration
+ */
+export class TempHome {
+  public path: string;
+  private originalHome: string | undefined;
+
+  constructor() {
+    // Create temp directory for HOME
+    this.path = Deno.makeTempDirSync({ prefix: "gw-test-home-" });
+
+    // Save and set HOME
+    this.originalHome = Deno.env.get("HOME");
+    Deno.env.set("HOME", this.path);
+  }
+
+  /**
+   * Restore original HOME and clean up temp directory
+   */
+  async cleanup(): Promise<void> {
+    // Restore original HOME
+    if (this.originalHome) {
+      Deno.env.set("HOME", this.originalHome);
+    } else {
+      Deno.env.delete("HOME");
+    }
+
+    // Clean up temp directory
+    try {
+      await Deno.remove(this.path, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  }
+
+  /**
+   * Restore original HOME without cleanup (synchronous)
+   */
+  restore(): void {
+    if (this.originalHome) {
+      Deno.env.set("HOME", this.originalHome);
+    } else {
+      Deno.env.delete("HOME");
+    }
   }
 }

@@ -32,22 +32,84 @@ export function mockExit(): () => void {
 }
 
 /**
+ * Options for withMockedExit
+ */
+export interface MockedExitOptions {
+  captureOutput?: boolean;
+}
+
+/**
  * Run a function with Deno.exit() mocked
  * Returns the exit code if exit was called, or undefined if it wasn't
  */
 export async function withMockedExit<T>(
   fn: () => Promise<T>,
-): Promise<{ result?: T; exitCode?: number }> {
+  options?: MockedExitOptions
+): Promise<{ result?: T; exitCode?: number; stdout?: string; stderr?: string }> {
   const restore = mockExit();
+
+  let stdout = '';
+  let stderr = '';
+  let originalStdoutWrite: typeof Deno.stdout.write | undefined;
+  let originalStderrWrite: typeof Deno.stderr.write | undefined;
+  let originalConsoleLog: typeof console.log | undefined;
+  let originalConsoleError: typeof console.error | undefined;
+
+  if (options?.captureOutput) {
+    // Capture stdout
+    originalStdoutWrite = Deno.stdout.write;
+    // @ts-ignore - Intentionally replacing for testing
+    Deno.stdout.write = (p: Uint8Array): Promise<number> => {
+      stdout += new TextDecoder().decode(p);
+      return Promise.resolve(p.length);
+    };
+
+    // Capture stderr
+    originalStderrWrite = Deno.stderr.write;
+    // @ts-ignore - Intentionally replacing for testing
+    Deno.stderr.write = (p: Uint8Array): Promise<number> => {
+      stderr += new TextDecoder().decode(p);
+      return Promise.resolve(p.length);
+    };
+
+    // Capture console.log
+    originalConsoleLog = console.log;
+    console.log = (...args: unknown[]) => {
+      stdout += args.map(a => String(a)).join(' ') + '\n';
+    };
+
+    // Capture console.error
+    originalConsoleError = console.error;
+    console.error = (...args: unknown[]) => {
+      stderr += args.map(a => String(a)).join(' ') + '\n';
+    };
+  }
+
+  const restoreOutput = () => {
+    if (originalStdoutWrite) {
+      Deno.stdout.write = originalStdoutWrite;
+    }
+    if (originalStderrWrite) {
+      Deno.stderr.write = originalStderrWrite;
+    }
+    if (originalConsoleLog) {
+      console.log = originalConsoleLog;
+    }
+    if (originalConsoleError) {
+      console.error = originalConsoleError;
+    }
+  };
 
   try {
     const result = await fn();
     restore();
-    return { result };
+    restoreOutput();
+    return { result, stdout, stderr };
   } catch (error) {
     restore();
+    restoreOutput();
     if (error instanceof MockExitError) {
-      return { exitCode: error.exitCode };
+      return { exitCode: error.exitCode, stdout, stderr };
     }
     throw error;
   }
