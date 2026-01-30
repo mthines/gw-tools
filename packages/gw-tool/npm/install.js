@@ -148,14 +148,16 @@ async function install() {
 
     console.log('✓ Installation complete!');
 
-    // Install shell integration
+    // Try to install shell integration, but don't fail if it errors
     console.log('\n⚙️  Setting up shell integration...');
-    await installShellIntegration(binaryPath);
+    try {
+      await installShellIntegration(binaryPath);
+    } catch (error) {
+      console.log('  Shell integration setup encountered an issue.');
+      console.log('  You can install it manually later with: gw install-shell');
+    }
 
     console.log('\nRun "gw --help" to get started.');
-    console.log(
-      'Tip: Restart your terminal or run "source ~/.zshrc" (or ~/.bashrc) to use "gw cd"',
-    );
   } catch (error) {
     console.error('\n✗ Installation failed:', error.message);
     console.error('\nYou can manually download the binary from:');
@@ -175,9 +177,26 @@ async function installShellIntegration(binaryPath, retries = 3) {
   const { spawn } = require('child_process');
 
   return new Promise((resolve) => {
-    const child = spawn(binaryPath, ['install-shell', '--quiet'], {
-      stdio: 'inherit',
-    });
+    let child;
+
+    try {
+      child = spawn(binaryPath, ['install-shell', '--quiet'], {
+        stdio: 'inherit',
+      });
+    } catch (err) {
+      // Catch synchronous spawn errors (e.g., ETXTBSY thrown immediately)
+      if (err.code === 'ETXTBSY' && retries > 0) {
+        setTimeout(() => {
+          installShellIntegration(binaryPath, retries - 1).then(resolve);
+        }, 200);
+        return;
+      }
+      console.log(
+        '  (Shell integration can be installed later with: gw install-shell)',
+      );
+      resolve();
+      return;
+    }
 
     child.on('close', (code) => {
       if (code === 0) {
