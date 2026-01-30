@@ -28,17 +28,24 @@ export async function executeInstallShell(args: string[]): Promise<void> {
     commandName = args[nameIndex + 1];
   }
 
+  // Parse --command flag (actual command to run, e.g., for aliases)
+  let actualCommand: string | undefined;
+  const commandIndex = args.findIndex(arg => arg === '--command' || arg === '-c');
+  if (commandIndex !== -1 && commandIndex + 1 < args.length) {
+    actualCommand = args[commandIndex + 1];
+  }
+
   if (removeFlag) {
     await removeShellIntegration(quietFlag, commandName);
   } else {
-    await installShellIntegration(quietFlag, commandName);
+    await installShellIntegration(quietFlag, commandName, actualCommand);
   }
 }
 
 /**
  * Install shell integration function
  */
-async function installShellIntegration(quiet: boolean, commandName = 'gw'): Promise<void> {
+async function installShellIntegration(quiet: boolean, commandName = 'gw', actualCommand?: string): Promise<void> {
   // Detect shell
   const shell = Deno.env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
@@ -61,18 +68,18 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw'): Prom
   if (shellName === 'zsh') {
     configFile = join(home, '.zshrc');
     scriptFile = join(home, '.gw', 'shell', `integration${fileSuffix}.zsh`);
-    shellFunction = getZshFunction(commandName);
+    shellFunction = getZshFunction(commandName, actualCommand);
     sourceLine = `# gw-tools shell integration (${commandName})\n[ -f ~/.gw/shell/integration${fileSuffix}.zsh ] && source ~/.gw/shell/integration${fileSuffix}.zsh`;
   } else if (shellName === 'bash') {
     configFile = join(home, '.bashrc');
     scriptFile = join(home, '.gw', 'shell', `integration${fileSuffix}.bash`);
-    shellFunction = getBashFunction(commandName);
+    shellFunction = getBashFunction(commandName, actualCommand);
     sourceLine = `# gw-tools shell integration (${commandName})\n[ -f ~/.gw/shell/integration${fileSuffix}.bash ] && source ~/.gw/shell/integration${fileSuffix}.bash`;
   } else if (shellName === 'fish') {
     const configDir = join(home, '.config', 'fish', 'functions');
     configFile = join(configDir, `${commandName}.fish`);
     scriptFile = configFile; // Fish uses function files directly
-    shellFunction = getFishFunction(commandName);
+    shellFunction = getFishFunction(commandName, actualCommand);
     sourceLine = ''; // Fish doesn't need a source line
   } else {
     if (!quiet) {
@@ -344,26 +351,29 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 /**
  * Get zsh shell function
  */
-function getZshFunction(commandName = 'gw'): string {
+function getZshFunction(commandName = 'gw', actualCommand?: string): string {
+  // Use provided command or default to 'command <name>'
+  const cmdPrefix = actualCommand || `command ${commandName}`;
+
   return `# gw-tools shell integration
 ${commandName}() {
   if [[ "$1" == "cd" ]]; then
     # Pass through help flags directly
     if [[ "$2" == "--help" || "$2" == "-h" ]]; then
-      command ${commandName} cd "$2"
+      ${cmdPrefix} cd "$2"
       return
     fi
-    local target=$(command ${commandName} cd "$2" 2>/dev/null)
+    local target=$(${cmdPrefix} cd "$2" 2>/dev/null)
     if [[ -n "$target" ]]; then
       cd "$target"
     else
-      command ${commandName} cd "$2"
+      ${cmdPrefix} cd "$2"
     fi
   elif [[ "$1" == "rm" || "$1" == "remove" ]]; then
     # Get git root before removing (in case we're removing current worktree)
-    local git_root=$(command ${commandName} root 2>/dev/null)
+    local git_root=$(${cmdPrefix} root 2>/dev/null)
     # Execute the remove command
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
     local exit_code=$?
     # If removal succeeded and we have a git root, cd to it
     if [[ $exit_code -eq 0 && -n "$git_root" && ! -d "$PWD" ]]; then
@@ -372,7 +382,7 @@ ${commandName}() {
     return $exit_code
   elif [[ "$1" == "add" ]]; then
     # Execute the command (output streams in real-time)
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
     local exit_code=$?
     # Check for navigation marker file
     local nav_file="$HOME/.gw/tmp/last-nav"
@@ -383,7 +393,7 @@ ${commandName}() {
     fi
     return $exit_code
   else
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
   fi
 }`;
 }
@@ -391,26 +401,29 @@ ${commandName}() {
 /**
  * Get bash shell function
  */
-function getBashFunction(commandName = 'gw'): string {
+function getBashFunction(commandName = 'gw', actualCommand?: string): string {
+  // Use provided command or default to 'command <name>'
+  const cmdPrefix = actualCommand || `command ${commandName}`;
+
   return `# gw-tools shell integration
 ${commandName}() {
   if [[ "$1" == "cd" ]]; then
     # Pass through help flags directly
     if [[ "$2" == "--help" || "$2" == "-h" ]]; then
-      command ${commandName} cd "$2"
+      ${cmdPrefix} cd "$2"
       return
     fi
-    local target=$(command ${commandName} cd "$2" 2>/dev/null)
+    local target=$(${cmdPrefix} cd "$2" 2>/dev/null)
     if [[ -n "$target" ]]; then
       cd "$target"
     else
-      command ${commandName} cd "$2"
+      ${cmdPrefix} cd "$2"
     fi
   elif [[ "$1" == "rm" || "$1" == "remove" ]]; then
     # Get git root before removing (in case we're removing current worktree)
-    local git_root=$(command ${commandName} root 2>/dev/null)
+    local git_root=$(${cmdPrefix} root 2>/dev/null)
     # Execute the remove command
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
     local exit_code=$?
     # If removal succeeded and we have a git root, cd to it
     if [[ $exit_code -eq 0 && -n "$git_root" && ! -d "$PWD" ]]; then
@@ -419,7 +432,7 @@ ${commandName}() {
     return $exit_code
   elif [[ "$1" == "add" ]]; then
     # Execute the command (output streams in real-time)
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
     local exit_code=$?
     # Check for navigation marker file
     local nav_file="$HOME/.gw/tmp/last-nav"
@@ -430,7 +443,7 @@ ${commandName}() {
     fi
     return $exit_code
   else
-    command ${commandName} "$@"
+    ${cmdPrefix} "$@"
   fi
 }`;
 }
@@ -438,26 +451,29 @@ ${commandName}() {
 /**
  * Get fish shell function
  */
-function getFishFunction(commandName = 'gw'): string {
+function getFishFunction(commandName = 'gw', actualCommand?: string): string {
+  // Use provided command or default to 'command <name>'
+  const cmdPrefix = actualCommand || `command ${commandName}`;
+
   return `# gw-tools shell integration
 function ${commandName}
     if test "$argv[1]" = "cd"
         # Pass through help flags directly
         if test "$argv[2]" = "--help" -o "$argv[2]" = "-h"
-            command ${commandName} cd $argv[2]
+            ${cmdPrefix} cd $argv[2]
             return
         end
-        set -l target (command ${commandName} cd $argv[2] 2>/dev/null)
+        set -l target (${cmdPrefix} cd $argv[2] 2>/dev/null)
         if test -n "$target"
             cd $target
         else
-            command ${commandName} cd $argv[2]
+            ${cmdPrefix} cd $argv[2]
         end
     else if test "$argv[1]" = "rm" -o "$argv[1]" = "remove"
         # Get git root before removing (in case we're removing current worktree)
-        set -l git_root (command ${commandName} root 2>/dev/null)
+        set -l git_root (${cmdPrefix} root 2>/dev/null)
         # Execute the remove command
-        command ${commandName} $argv
+        ${cmdPrefix} $argv
         set -l exit_code $status
         # If removal succeeded and we have a git root, cd to it
         if test $exit_code -eq 0 -a -n "$git_root" -a ! -d "$PWD"
@@ -466,7 +482,7 @@ function ${commandName}
         return $exit_code
     else if test "$argv[1]" = "add"
         # Execute the command (output streams in real-time)
-        command ${commandName} $argv
+        ${cmdPrefix} $argv
         set -l exit_code $status
         # Check for navigation marker file
         set -l nav_file "$HOME/.gw/tmp/last-nav"
@@ -477,7 +493,7 @@ function ${commandName}
         end
         return $exit_code
     else
-        command ${commandName} $argv
+        ${cmdPrefix} $argv
     end
 end`;
 }
@@ -493,10 +509,11 @@ Usage:
   gw install-shell [options]
 
 Options:
-  --name, -n NAME  Install under a different command name (default: gw)
-  --remove, -r     Remove shell integration
-  --quiet, -q      Suppress output messages
-  -h, --help       Show this help message
+  --name, -n NAME     Install under a different command name (default: gw)
+  --command, -c CMD   Actual command to run (use with --name for aliases/dev)
+  --remove, -r        Remove shell integration
+  --quiet, -q         Suppress output messages
+  -h, --help          Show this help message
 
 Description:
   Installs a shell function that enables 'gw cd <worktree>' to actually
@@ -507,9 +524,9 @@ Description:
   integration script in ~/.gw/shell/, then adds a single line to your
   shell configuration to source it.
 
-  Use --name to install for aliases or different command names. For example,
-  if you have 'alias gw-dev="deno run ..."', you can install integration
-  for that alias using '--name gw-dev'.
+  Use --name with --command to install for development aliases. The --command
+  flag specifies the actual command to execute. This is required when using
+  --name for aliases that aren't actual binaries.
 
   Supported shells:
     - Zsh (~/.zshrc sources ~/.gw/shell/integration[-NAME].zsh)
@@ -524,8 +541,9 @@ Examples:
   # Install shell integration for 'gw'
   gw install-shell
 
-  # Install for development alias 'gw-dev'
-  gw install-shell --name gw-dev
+  # Install for development (with Deno)
+  # Remove any existing 'alias gw-dev=...' from .zshrc first!
+  gw install-shell --name gw-dev --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
 
   # Remove shell integration for 'gw-dev'
   gw install-shell --name gw-dev --remove

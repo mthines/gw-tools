@@ -7,6 +7,10 @@ A command-line tool for managing git worktrees, built with Deno.
 - [gw - Git Worktree Tools](#gw---git-worktree-tools)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
+  - [Initial Setup: Secrets in the Default Branch](#initial-setup-secrets-in-the-default-branch)
+    - [First-Time Setup Flow](#first-time-setup-flow)
+    - [Why This Matters](#why-this-matters)
+    - [Keeping Secrets Updated](#keeping-secrets-updated)
   - [Features](#features)
   - [Installation](#installation)
     - [Via npm (Recommended)](#via-npm-recommended)
@@ -21,6 +25,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options)
       - [Examples](#examples)
       - [Auto-Copy Configuration](#auto-copy-configuration)
+      - [Hooks](#hooks)
     - [cd](#cd)
       - [Arguments](#arguments-1)
       - [Examples](#examples-1)
@@ -38,18 +43,21 @@ A command-line tool for managing git worktrees, built with Deno.
     - [init](#init)
       - [Options](#options-3)
       - [Examples](#examples-5)
+      - [Hook Variables](#hook-variables)
+      - [Auto-Cleanup Configuration](#auto-cleanup-configuration)
       - [When to Use](#when-to-use)
     - [show-init](#show-init)
-      - [Options](#options-6)
-      - [Examples](#examples-8)
+      - [Options](#options-4)
+      - [Examples](#examples-6)
+      - [Output Example](#output-example)
       - [When to Use](#when-to-use-1)
     - [sync](#sync)
       - [Arguments](#arguments-2)
-      - [Options](#options-4)
-      - [Examples](#examples-6)
-    - [clean](#clean)
       - [Options](#options-5)
       - [Examples](#examples-7)
+    - [clean](#clean)
+      - [Options](#options-6)
+      - [Examples](#examples-8)
       - [How It Works](#how-it-works-3)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
@@ -72,6 +80,8 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Version Management](#version-management)
     - [Project Structure](#project-structure)
     - [Adding New Commands](#adding-new-commands)
+      - [Custom Commands (like `add`, `copy`)](#custom-commands-like-add-copy)
+      - [Git Proxy Commands (like `list`, `remove`)](#git-proxy-commands-like-list-remove)
   - [License](#license)
 
 ## Quick Start
@@ -216,11 +226,7 @@ gw init --root /path/to/your/repo.git
 {
   "root": "/Users/username/Workspace/my-project.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    "components/agents/.env",
-    "components/ui/.vercel/"
-  ],
+  "autoCopyFiles": [".env", "components/agents/.env", "components/ui/.vercel/"],
   "hooks": {
     "add": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
@@ -279,6 +285,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 #### Options
 
 All `git worktree add` options are supported:
+
 - `-b <branch>`: Create a new branch
 - `-B <branch>`: Create or reset a branch
 - `--detach`: Detach HEAD in new worktree
@@ -319,6 +326,7 @@ gw init --auto-copy-files .env,secrets/,components/ui/.vercel/
 ```
 
 This creates:
+
 ```json
 {
   "root": "/path/to/repo.git",
@@ -332,6 +340,7 @@ Now every time you run `gw add`, these files will be automatically copied from y
 #### Hooks
 
 You can configure pre-add and post-add hooks to run commands before and after worktree creation. This is useful for:
+
 - **Pre-add hooks**: Running validation scripts, checking prerequisites
 - **Post-add hooks**: Installing dependencies, setting up the environment
 
@@ -346,12 +355,14 @@ gw init --pre-add "echo 'Creating: {worktree}'" --post-add "pnpm install" --post
 **Hook Variables:**
 
 Hooks support variable substitution:
+
 - `{worktree}` - The worktree name (e.g., "feat/new-feature")
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
 - `{branch}` - The branch name
 
 **Hook Behavior:**
+
 - **Pre-add hooks** run before the worktree is created (in the git root directory). If any pre-add hook fails, the worktree creation is aborted.
 - **Post-add hooks** run after the worktree is created and files are copied (in the new worktree directory). If a post-add hook fails, a warning is shown but the worktree creation is considered successful.
 
@@ -450,6 +461,7 @@ gw pull --remote upstream
 3. Creates merge commit if histories have diverged
 
 **Safety checks:**
+
 - Blocks if you have uncommitted changes (use `--force` to override)
 - Blocks if you're in a detached HEAD state
 - Handles merge conflicts gracefully with clear guidance
@@ -459,6 +471,7 @@ gw pull --remote upstream
 **Configuration:**
 
 The default branch is read from `.gw/config.json`:
+
 ```json
 {
   "defaultBranch": "main"
@@ -474,6 +487,7 @@ Install or remove shell integration for the `gw cd` command and enable real-time
 The installation creates an integration script in `~/.gw/shell/` and adds a single line to your shell configuration to source it, keeping your shell config clean and minimal.
 
 Shell integration provides:
+
 - **Navigation support**: `gw cd <worktree>` navigates directly to worktrees
 - **Real-time streaming**: Command output streams as it's generated (no buffering)
 - **Auto-navigation**: Automatically navigate after `gw add` and `gw remove` operations
@@ -486,6 +500,7 @@ gw install-shell [options]
 #### Options
 
 - `--name, -n NAME`: Install under a different command name (default: `gw`)
+- `--command, -c CMD`: Actual command to run (use with `--name` for aliases/dev)
 - `--remove`: Remove shell integration
 - `--quiet, -q`: Suppress output messages
 - `-h, --help`: Show help message
@@ -496,8 +511,10 @@ gw install-shell [options]
 # Install shell integration (usually not needed - auto-installed)
 gw install-shell
 
-# Install for development alias 'gw-dev'
-gw install-shell --name gw-dev
+# Install for development (with Deno)
+# Note: Remove any 'alias gw-dev=...' from .zshrc first!
+gw install-shell --name gw-dev \
+  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
 
 # Remove shell integration for 'gw-dev'
 gw install-shell --name gw-dev --remove
@@ -507,6 +524,7 @@ gw install-shell --quiet
 ```
 
 **Supported Shells:**
+
 - **Zsh** (~/.zshrc sources ~/.gw/shell/integration[-NAME].zsh)
 - **Bash** (~/.bashrc sources ~/.gw/shell/integration[-NAME].bash)
 - **Fish** (~/.config/fish/functions/[NAME].fish)
@@ -612,6 +630,7 @@ gw init --help
 #### Hook Variables
 
 Hooks support variable substitution:
+
 - `{worktree}` - The worktree name (e.g., "feat/new-feature")
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
@@ -633,6 +652,7 @@ gw init --auto-clean --auto-copy-files .env --post-add "pnpm install"
 ```
 
 **How it works:**
+
 - Runs automatically on `gw add` and `gw list` commands (in the background, non-blocking)
 - Only runs once per 24 hours (cooldown)
 - **Never removes the `defaultBranch` worktree** - it's protected as the source for file syncing
@@ -648,6 +668,7 @@ This is an opt-in feature. Use `gw clean` for manual, interactive cleanup with m
 #### When to Use
 
 Use `gw init` to:
+
 - Configure auto-copy files for automatic file copying on worktree creation
 - Set up pre-add and post-add hooks for automation
 - Configure the clean threshold for worktree age management
@@ -690,6 +711,7 @@ echo "## Setup\n\n\`\`\`bash\n$(gw show-init)\n\`\`\`" >> README.md
 #### Output Example
 
 If your `.gw/config.json` contains:
+
 ```json
 {
   "root": "/Users/username/Workspace/repo.git",
@@ -705,6 +727,7 @@ If your `.gw/config.json` contains:
 ```
 
 Then `gw show-init` will output:
+
 ```bash
 gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-add 'pnpm install'
 ```
@@ -712,6 +735,7 @@ gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets
 #### When to Use
 
 Use `gw show-init` to:
+
 - Document your setup in README files or team wikis
 - Share configuration commands with team members
 - Recreate the same configuration in another repository
@@ -796,6 +820,7 @@ gw init --clean-threshold 14
 #### How It Works
 
 The clean command:
+
 1. Checks for worktrees older than the configured threshold (default: 7 days)
 2. Verifies they have no uncommitted changes (unless `--force`)
 3. Verifies they have no unpushed commits (unless `--force`)
@@ -803,6 +828,7 @@ The clean command:
 5. Never removes bare/main repository worktrees
 
 **Safety Features:**
+
 - By default, only removes worktrees with NO uncommitted changes
 - By default, only removes worktrees with NO unpushed commits
 - Always prompts for confirmation before deletion
@@ -819,6 +845,7 @@ gw init --clean-threshold 14
 ```
 
 This creates/updates the config:
+
 ```json
 {
   "root": "/path/to/repo.git",
@@ -842,6 +869,7 @@ gw ls
 ```
 
 **Examples:**
+
 ```bash
 gw list                  # List all worktrees
 gw list --porcelain      # Machine-readable output
@@ -859,6 +887,7 @@ gw rm <worktree>
 ```
 
 **Examples:**
+
 ```bash
 gw remove feat-branch           # Remove a worktree
 gw remove --force feat-branch   # Force remove even if dirty
@@ -876,6 +905,7 @@ gw mv <worktree> <new-path>
 ```
 
 **Examples:**
+
 ```bash
 gw move feat-branch ../new-location
 gw mv feat-branch ../new-location
@@ -896,6 +926,7 @@ gw prune [options]
 ```
 
 **Options:**
+
 - `--clean` - Enable clean mode (remove clean worktrees)
 - `-n, --dry-run` - Preview what would be removed
 - `-f, --force` - Skip confirmation prompt
@@ -903,12 +934,14 @@ gw prune [options]
 - `-h, --help` - Show help
 
 **Safety Features** (in clean mode):
+
 - Default branch is protected (configured in `.gw/config.json`)
 - Current worktree cannot be removed
 - Bare repository is never removed
 - Confirmation prompt before removal (defaults to yes, just press Enter to confirm)
 
 **Examples:**
+
 ```bash
 # Standard prune (cleanup administrative data)
 gw prune
@@ -939,6 +972,7 @@ gw lock <worktree>
 ```
 
 **Examples:**
+
 ```bash
 gw lock feat-branch
 gw lock --reason "Work in progress" feat-branch
@@ -953,6 +987,7 @@ gw unlock <worktree>
 ```
 
 **Examples:**
+
 ```bash
 gw unlock feat-branch
 ```
@@ -966,6 +1001,7 @@ gw repair [<path>]
 ```
 
 **Examples:**
+
 ```bash
 gw repair                        # Repair all worktrees
 gw repair /path/to/worktree      # Repair specific worktree
@@ -1013,12 +1049,12 @@ When developing the tool, you can test changes locally without publishing by usi
 Create a shell alias that runs the Deno version directly for instant feedback:
 
 ```bash
-# Add to your ~/.zshrc or ~/.bashrc
-alias gw-dev='deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts'
-
 # Install shell integration for gw-dev
-# This enables features like 'gw-dev cd' navigation and streaming output
-deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts install-shell --name gw-dev
+# IMPORTANT: Don't create an alias yourself - the install-shell command creates a function for you
+# Make sure to use your actual path to gw-tools
+deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts install-shell \
+  --name gw-dev \
+  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
 
 # Reload your shell
 source ~/.zshrc  # or ~/.bashrc
@@ -1031,6 +1067,7 @@ gw-dev copy feat-branch .env
 ```
 
 This gives you instant feedback - just edit the TypeScript files and run the command again. The shell integration provides the same experience as the installed version:
+
 - Real-time streaming output (no buffering)
 - `gw-dev cd` navigation support
 - Auto-navigation after `gw-dev add`
@@ -1150,6 +1187,7 @@ npm publish --access public
 For users who prefer Deno's native package manager.
 
 1. **Add JSR configuration to `deno.json`:**
+
    ```json
    {
      "name": "@your-scope/gw",
@@ -1241,15 +1279,16 @@ There are two types of commands you can add:
 For commands with custom logic, follow the pattern used by existing commands:
 
 1. **Create a new file** in `src/commands/` (e.g., `list.ts`):
+
    ```typescript
    // src/commands/list.ts
    export async function executeList(args: string[]): Promise<void> {
      // Check for help flag
-     if (args.includes("--help") || args.includes("-h")) {
+     if (args.includes('--help') || args.includes('-h')) {
        console.log(`Usage: gw list
-
+   
    List all git worktrees in the current repository.
-
+   
    Options:
      -h, --help    Show this help message
    `);
@@ -1262,8 +1301,9 @@ For commands with custom logic, follow the pattern used by existing commands:
    ```
 
 2. **Import and register** the command in `src/main.ts`:
+
    ```typescript
-   import { executeList } from "./commands/list.ts";
+   import { executeList } from './commands/list.ts';
 
    const COMMANDS = {
      add: executeAdd,
@@ -1293,18 +1333,18 @@ For commands with custom logic, follow the pattern used by existing commands:
 For simple pass-through commands that wrap git worktree operations, use the `git-proxy` utility:
 
 1. **Create a new file** in `src/commands/` (e.g., `list.ts`):
+
    ```typescript
    // src/commands/list.ts
    import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
    export async function executeList(args: string[]): Promise<void> {
      if (args.includes('--help') || args.includes('-h')) {
-       showProxyHelp(
-         'list',
-         'list',
-         'List all worktrees in the repository',
-         ['gw list', 'gw list --porcelain', 'gw list -v'],
-       );
+       showProxyHelp('list', 'list', 'List all worktrees in the repository', [
+         'gw list',
+         'gw list --porcelain',
+         'gw list -v',
+       ]);
        Deno.exit(0);
      }
 
@@ -1319,6 +1359,7 @@ For simple pass-through commands that wrap git worktree operations, use the `git
 This approach requires minimal maintenance as it simply forwards all arguments to git.
 
 **Tips**:
+
 - Look at [src/commands/root.ts](src/commands/root.ts) for a simple custom command
 - Look at [src/commands/copy.ts](src/commands/copy.ts) for a complex command with argument parsing
 - Look at [src/commands/list.ts](src/commands/list.ts) for a simple proxy command
