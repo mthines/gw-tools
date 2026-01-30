@@ -289,6 +289,25 @@ pwd  # Should show path to main worktree
 gw install-shell
 ```
 
+**Shell integration features:**
+- **Real-time streaming output** - Commands like `gw add` now stream output as it's generated (no buffering)
+- **Auto-navigation** - Automatically navigate to new worktrees after `gw add` completes
+- **Smart cleanup** - Auto-navigate to repo root when removing the current worktree with `gw remove`
+
+**For development aliases:**
+
+If you're developing gw-tools locally, you can install shell integration for a development command:
+
+```bash
+# Install for development (replace with your actual path)
+gw install-shell --name gw-dev \
+  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
+
+# Then use it with full integration
+gw-dev add feat-branch  # Output streams in real-time!
+gw-dev cd feat-branch   # Navigation works!
+```
+
 ### IDE Workspace Management
 
 **VS Code:**
@@ -976,6 +995,36 @@ gw add feature-x-new -b feature-x-new feature-x
 # Option 3: Force checkout (only if you know what you're doing)
 gw add feature-x-copy -b feature-x-copy --force
 ```
+
+### Shell Integration Issues
+
+**Problem:** `gw cd` doesn't navigate or shows parse errors
+
+```bash
+# Zsh example error:
+/Users/name/.gw/shell/integration-gw-dev.zsh:2: defining function based on alias `gw-dev'
+/Users/name/.gw/shell/integration-gw-dev.zsh:2: parse error near `()'
+```
+
+**Solution:**
+
+```bash
+# For regular gw installation
+gw install-shell
+
+# For development aliases, remove any existing alias first
+# Then install with --command flag
+gw install-shell --name gw-dev \
+  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
+
+# Reload your shell
+source ~/.zshrc  # or ~/.bashrc
+```
+
+**Common causes:**
+- Conflicting alias and function with same name (remove alias from .zshrc)
+- Old integration script format (reinstall fixes this)
+- Shell not supported (only zsh, bash, fish)
 
 ### Cleaning Up After Errors
 
