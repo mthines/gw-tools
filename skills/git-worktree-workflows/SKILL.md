@@ -93,11 +93,15 @@ Worktrees are ideal for:
 
 ### The `gw add` Command
 
-The `gw add` command is an enhanced version of `git worktree add` with automatic file copying:
+The `gw add` command is an enhanced version of `git worktree add` with automatic file copying and navigation:
 
 ```bash
 # Basic usage - create worktree for existing branch
+# Automatically navigates to the new worktree
 gw add feature-auth
+
+# Create worktree without automatic navigation
+gw add feature-auth --no-cd
 
 # Create worktree with new branch
 gw add feature-payments -b feature-payments

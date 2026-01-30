@@ -274,6 +274,9 @@ When `gw add` creates a new branch, it automatically configures the branch to tr
 **Git Ref Conflict Detection:**
 The command automatically detects and prevents Git ref naming conflicts. For example, you cannot have both a branch named `test` and `test/foo` because Git stores branches as files in `.git/refs/heads/`, and `test` cannot be both a file and a directory. If a conflict is detected, you'll receive a helpful error message with suggestions for resolving it.
 
+**Automatic Navigation:**
+After successfully creating a new worktree, the command automatically navigates to the new worktree directory. This requires shell integration to be installed (see [install-shell](#install-shell)). Use the `--no-cd` flag to skip automatic navigation.
+
 **Existing Worktree Navigation:**
 If you try to add a worktree that already exists, the command will prompt you to navigate to it instead. Press Enter (default: Yes) to navigate, or type 'n' to cancel. This requires shell integration to be installed (see [install-shell](#install-shell)).
 
@@ -283,6 +286,8 @@ If you try to add a worktree that already exists, the command will prompt you to
 - `[files...]`: Optional files to copy (overrides `autoCopyFiles` config)
 
 #### Options
+
+- `--no-cd`: Don't navigate to the new worktree after creation
 
 All `git worktree add` options are supported:
 
@@ -297,7 +302,11 @@ All `git worktree add` options are supported:
 
 ```bash
 # Create worktree (auto-copies files if autoCopyFiles is configured)
+# Automatically navigates to new worktree
 gw add feat/new-feature
+
+# Create worktree without navigating to it
+gw add feat/new-feature --no-cd
 
 # Create worktree with new branch
 gw add feat/new-feature -b my-branch

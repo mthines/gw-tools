@@ -87,18 +87,27 @@ function parseAddArgs(args: string[]): {
   worktreeName?: string;
   files: string[];
   gitArgs: string[];
+  noNavigate: boolean;
 } {
   const result = {
     help: false,
     worktreeName: undefined as string | undefined,
     files: [] as string[],
     gitArgs: [] as string[],
+    noNavigate: false,
   };
 
   // Check for help flag
   if (args.includes("--help") || args.includes("-h")) {
     result.help = true;
     return result;
+  }
+
+  // Check for no-navigate flag
+  if (args.includes("--no-cd")) {
+    result.noNavigate = true;
+    // Remove it from args so it doesn't interfere with other parsing
+    args = args.filter(a => a !== "--no-cd");
   }
 
   // First positional arg is the worktree name (required)
@@ -166,6 +175,8 @@ Arguments:
   [files...]              Optional files to copy (overrides config)
 
 Options:
+  --no-cd                 Don't navigate to the new worktree after creation
+
   All git worktree add options are supported:
     -b <branch>           Create a new branch (explicit, overrides auto-create)
     -B <branch>           Create or reset a branch
@@ -176,7 +187,11 @@ Options:
 
 Examples:
   # Create worktree - auto-creates branch if it doesn't exist
+  # (automatically navigates to new worktree)
   gw add feat/new-feature
+
+  # Create worktree without navigating to it
+  gw add feat/new-feature --no-cd
 
   # Create worktree with explicit branch from specific start point
   gw add feat/new-feature -b my-branch develop
@@ -553,4 +568,9 @@ export async function executeAdd(args: string[]): Promise<void> {
   runAutoCleanBackground();
 
   output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
+
+  // Navigate to new worktree unless --no-cd flag is set
+  if (!parsed.noNavigate) {
+    await signalNavigation(worktreePath);
+  }
 }
