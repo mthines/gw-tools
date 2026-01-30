@@ -475,6 +475,8 @@ If not configured, defaults to "main".
 
 Install or remove shell integration for the `gw cd` command. This is automatically run during `npm install`, but can be run manually if needed.
 
+The installation creates an integration script in `~/.gw/shell/` and adds a single line to your shell configuration to source it, keeping your shell config clean and minimal.
+
 ```bash
 gw install-shell [options]
 ```
@@ -499,11 +501,11 @@ gw install-shell --quiet
 ```
 
 **Supported Shells:**
-- **Zsh** (~/.zshrc)
-- **Bash** (~/.bashrc)
+- **Zsh** (~/.zshrc sources ~/.gw/shell/integration.zsh)
+- **Bash** (~/.bashrc sources ~/.gw/shell/integration.bash)
 - **Fish** (~/.config/fish/functions/gw.fish)
 
-The command is idempotent - running it multiple times won't create duplicate entries.
+The command is idempotent - running it multiple times won't create duplicate entries. It will also automatically migrate old inline installations to the new format.
 
 ### root
 

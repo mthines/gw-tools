@@ -40,23 +40,30 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     console.log(`Detected shell: ${output.bold(shellName || 'unknown')}`);
   }
 
-  // Determine config file
+  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+
+  // Determine config file and script file
   let configFile: string;
+  let scriptFile: string;
   let shellFunction: string;
+  let sourceLine: string;
 
   if (shellName === 'zsh') {
-    const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
     configFile = join(home, '.zshrc');
+    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
     shellFunction = getZshFunction();
+    sourceLine = '# gw-tools shell integration\n[ -f ~/.gw/shell/integration.zsh ] && source ~/.gw/shell/integration.zsh';
   } else if (shellName === 'bash') {
-    const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
     configFile = join(home, '.bashrc');
+    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
     shellFunction = getBashFunction();
+    sourceLine = '# gw-tools shell integration\n[ -f ~/.gw/shell/integration.bash ] && source ~/.gw/shell/integration.bash';
   } else if (shellName === 'fish') {
-    const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
     const configDir = join(home, '.config', 'fish', 'functions');
     configFile = join(configDir, 'gw.fish');
+    scriptFile = configFile; // Fish uses function files directly
     shellFunction = getFishFunction();
+    sourceLine = ''; // Fish doesn't need a source line
   } else {
     if (!quiet) {
       output.error(`Unsupported shell: ${shellName}`);
@@ -69,56 +76,138 @@ async function installShellIntegration(quiet: boolean): Promise<void> {
     Deno.exit(1);
   }
 
-  // Check if already installed
+  // Check if already installed and migrate old format if needed
+  let needsMigration = false;
   try {
     const content = await Deno.readTextFile(configFile);
-    if (content.includes('# gw-tools shell integration')) {
-      if (!quiet) {
-        output.success('Shell integration already installed!');
-        console.log(
-          `Restart your shell or run: ${output.bold(`source ${configFile}`)}`,
-        );
+
+    if (shellName !== 'fish') {
+      // Check for old inline format (multi-line function in config file)
+      const hasOldFormat = content.includes('# gw-tools shell integration') &&
+                           content.includes('gw() {');
+
+      // Check for new format (just source line)
+      const hasNewFormat = content.includes('# gw-tools shell integration') &&
+                           content.includes('source ~/.gw/shell/integration');
+
+      if (hasOldFormat && !hasNewFormat) {
+        needsMigration = true;
+        if (!quiet) {
+          console.log('Migrating old installation format...');
+        }
+
+        // Remove old format from config file
+        const lines = content.split('\n');
+        const filtered: string[] = [];
+        let skipMode = false;
+
+        for (const line of lines) {
+          if (line.includes('# gw-tools shell integration')) {
+            skipMode = true;
+            continue;
+          }
+          if (skipMode && line.trim() === '}') {
+            skipMode = false;
+            continue;
+          }
+          if (!skipMode) {
+            filtered.push(line);
+          }
+        }
+
+        await Deno.writeTextFile(configFile, filtered.join('\n'));
+      } else if (hasNewFormat) {
+        // New format already installed, just ensure script file exists
+        try {
+          await Deno.stat(scriptFile);
+          if (!quiet) {
+            output.success('Shell integration already installed!');
+            console.log(
+              `Restart your shell or run: ${output.bold(`source ${configFile}`)}`,
+            );
+          }
+          return;
+        } catch {
+          // Script file missing, continue with installation
+          if (!quiet) {
+            console.log('Recreating missing integration script...');
+          }
+        }
       }
-      return;
+    } else {
+      // Fish - check if function file exists
+      if (content.includes('# gw-tools shell integration')) {
+        if (!quiet) {
+          output.success('Shell integration already installed!');
+        }
+        return;
+      }
     }
   } catch (error) {
     // File doesn't exist, will be created
     if (error instanceof Deno.errors.NotFound) {
-      // For fish, ensure directory exists
-      if (shellName === 'fish') {
-        const configDir = join(
-          Deno.env.get('HOME') || '',
-          '.config',
-          'fish',
-          'functions',
-        );
-        await Deno.mkdir(configDir, { recursive: true });
-      }
+      // File will be created when we append
     } else {
       throw error;
     }
   }
 
-  // Add to config file
+  // Create script file
   try {
-    if (shellName === 'fish') {
-      // Fish uses separate function files
-      await Deno.writeTextFile(configFile, shellFunction);
-    } else {
-      // Bash/Zsh append to config file
-      await Deno.writeTextFile(configFile, '\n' + shellFunction + '\n', {
-        append: true,
-      });
-    }
+    // Ensure directory exists
+    const scriptDir = scriptFile.substring(0, scriptFile.lastIndexOf('/'));
+    await Deno.mkdir(scriptDir, { recursive: true });
+
+    // Write shell function to script file
+    await Deno.writeTextFile(scriptFile, shellFunction);
 
     if (!quiet) {
-      output.success('Shell integration installed!');
-      console.log(`Added to: ${output.path(configFile)}`);
-      console.log('\nTo start using it:');
-      console.log(`  ${output.bold(`source ${configFile}`)}`);
-      console.log('\nOr restart your terminal.');
-      console.log('\nUsage:');
-      console.log(`  ${output.bold('gw cd')} ${output.dim('feat-branch')}`);
+      console.log(`Created integration script: ${output.path(scriptFile)}`);
+    }
+  } catch (error) {
+    let message = '';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (
+      typeof error === 'object' &&
+      error !== null &&
+      'message' in error
+    ) {
+      message = String((error as any).message);
+    } else {
+      message = String(error);
+    }
+    output.error(`Failed to write integration script to ${scriptFile}: ${message}`);
+    Deno.exit(1);
+  }
+
+  // Add source line to config file (except for fish)
+  try {
+    if (shellName === 'fish') {
+      // Fish doesn't need to source the file, it auto-loads from functions directory
+      if (!quiet) {
+        output.success('Shell integration installed!');
+        console.log(`Added function: ${output.path(configFile)}`);
+        console.log('\nFish will automatically load the function.');
+        console.log('\nUsage:');
+        console.log(`  ${output.bold('gw cd')} ${output.dim('feat-branch')}`);
+      }
+    } else {
+      // Bash/Zsh append source line to config file
+      await Deno.writeTextFile(configFile, '\n' + sourceLine + '\n', {
+        append: true,
+      });
+
+      if (!quiet) {
+        output.success('Shell integration installed!');
+        console.log(`Added source line to: ${output.path(configFile)}`);
+        console.log(`Integration script: ${output.path(scriptFile)}`);
+        console.log('\nTo start using it:');
+        console.log(`  ${output.bold(`source ${configFile}`)}`);
+        console.log('\nOr restart your terminal.');
+        console.log('\nUsage:');
+        console.log(`  ${output.bold('gw cd')} ${output.dim('feat-branch')}`);
+      }
     }
   } catch (error) {
     let message = '';
@@ -147,13 +236,17 @@ async function removeShellIntegration(quiet: boolean): Promise<void> {
   const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
 
   let configFile: string;
+  let scriptFile: string;
 
   if (shellName === 'zsh') {
     configFile = join(home, '.zshrc');
+    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
   } else if (shellName === 'bash') {
     configFile = join(home, '.bashrc');
+    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
   } else if (shellName === 'fish') {
     configFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
+    scriptFile = configFile; // Fish uses function files directly
   } else {
     if (!quiet) {
       output.error(`Unsupported shell: ${shellName}`);
@@ -161,60 +254,74 @@ async function removeShellIntegration(quiet: boolean): Promise<void> {
     Deno.exit(1);
   }
 
+  let foundIntegration = false;
+
+  // Remove the integration script file
   try {
-    if (shellName === 'fish') {
-      // Remove the fish function file
-      await Deno.remove(configFile);
-      if (!quiet) {
-        output.success('Shell integration removed!');
-      }
-    } else {
-      // Remove from bash/zsh config
+    await Deno.remove(scriptFile);
+    foundIntegration = true;
+    if (!quiet) {
+      console.log(`Removed integration script: ${output.path(scriptFile)}`);
+    }
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
+    }
+  }
+
+  // Remove source line from config file (for bash/zsh)
+  if (shellName !== 'fish') {
+    try {
       const content = await Deno.readTextFile(configFile);
       const lines = content.split('\n');
       const filtered: string[] = [];
-      let skipMode = false;
+      let skipNext = false;
 
       for (const line of lines) {
         if (line.includes('# gw-tools shell integration')) {
-          skipMode = true;
+          foundIntegration = true;
+          skipNext = true;
           continue;
         }
-        if (skipMode && line.trim() === '}') {
-          skipMode = false;
+        if (skipNext && line.includes('source ~/.gw/shell/integration')) {
+          skipNext = false;
           continue;
         }
-        if (!skipMode) {
-          filtered.push(line);
-        }
+        skipNext = false;
+        filtered.push(line);
       }
 
       await Deno.writeTextFile(configFile, filtered.join('\n'));
       if (!quiet) {
-        output.success('Shell integration removed!');
-        console.log(`Removed from: ${output.path(configFile)}`);
+        console.log(`Removed source line from: ${output.path(configFile)}`);
+      }
+    } catch (error) {
+      if (!(error instanceof Deno.errors.NotFound)) {
+        let message = '';
+        if (error instanceof Error) {
+          message = error.message;
+        } else if (
+          typeof error === 'object' &&
+          error !== null &&
+          'message' in error
+        ) {
+          message = String((error as any).message);
+        } else {
+          message = String(error);
+        }
+        output.error(`Failed to remove integration: ${message}`);
+        Deno.exit(1);
       }
     }
-  } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
-      if (!quiet) {
-        output.info('Shell integration not found.');
-      }
-    } else {
-      let message = '';
-      if (error instanceof Error) {
-        message = error.message;
-      } else if (
-        typeof error === 'object' &&
-        error !== null &&
-        'message' in error
-      ) {
-        message = String((error as any).message);
-      } else {
-        message = String(error);
-      }
-      output.error(`Failed to remove integration: ${message}`);
-      Deno.exit(1);
+  }
+
+  if (foundIntegration) {
+    if (!quiet) {
+      output.success('Shell integration removed!');
+    }
+  } else {
+    if (!quiet) {
+      output.info('Shell integration not found.');
     }
   }
 }
@@ -394,16 +501,18 @@ Description:
   navigate to the worktree directory. Without this integration, 'gw cd'
   only outputs the path and requires using 'cd $(gw cd <worktree>)'.
 
-  The command detects your shell (zsh, bash, or fish) and adds the
-  appropriate function to your shell configuration file.
+  The command detects your shell (zsh, bash, or fish) and creates an
+  integration script in ~/.gw/shell/, then adds a single line to your
+  shell configuration to source it.
 
   Supported shells:
-    - Zsh (~/.zshrc)
-    - Bash (~/.bashrc)
+    - Zsh (~/.zshrc sources ~/.gw/shell/integration.zsh)
+    - Bash (~/.bashrc sources ~/.gw/shell/integration.bash)
     - Fish (~/.config/fish/functions/gw.fish)
 
   The installation is idempotent - running it multiple times won't
-  create duplicate entries.
+  create duplicate entries. It will also automatically migrate old
+  inline installations to the new format.
 
 Examples:
   # Install shell integration
