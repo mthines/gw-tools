@@ -242,12 +242,55 @@ export async function fetchAndGetStartPoint(
     const simpleFetchResult = await simpleFetchCmd.output();
 
     if (simpleFetchResult.code === 0) {
-      // Use remote-tracking branch as fallback
-      return {
-        startPoint: remoteRef,
-        fetchSucceeded: true,
-        message: `Using ${remoteRef} (local branch is checked out elsewhere)`,
-      };
+      // Verify that remote-tracking branch exists
+      const verifyRemoteCmd = new Deno.Command("git", {
+        args: ["rev-parse", "--verify", remoteRef],
+        stdout: "null",
+        stderr: "null",
+      });
+
+      const verifyRemoteResult = await verifyRemoteCmd.output();
+      if (verifyRemoteResult.code === 0) {
+        // Remote-tracking branch exists, use it
+        return {
+          startPoint: remoteRef,
+          fetchSucceeded: true,
+          message: `Using ${remoteRef} (local branch is checked out elsewhere)`,
+        };
+      }
+
+      // Remote-tracking branch doesn't exist, but fetch succeeded
+      // This can happen in bare repos - try local branch first, then FETCH_HEAD
+      const verifyLocalCmd = new Deno.Command("git", {
+        args: ["rev-parse", "--verify", branchName],
+        stdout: "null",
+        stderr: "null",
+      });
+
+      const verifyLocalResult = await verifyLocalCmd.output();
+      if (verifyLocalResult.code === 0) {
+        return {
+          startPoint: branchName,
+          fetchSucceeded: true,
+          message: `Using local ${branchName} (updated from remote)`,
+        };
+      }
+
+      // Local branch doesn't exist either - use FETCH_HEAD as last resort
+      const verifyFetchHeadCmd = new Deno.Command("git", {
+        args: ["rev-parse", "--verify", "FETCH_HEAD"],
+        stdout: "null",
+        stderr: "null",
+      });
+
+      const verifyFetchHeadResult = await verifyFetchHeadCmd.output();
+      if (verifyFetchHeadResult.code === 0) {
+        return {
+          startPoint: "FETCH_HEAD",
+          fetchSucceeded: true,
+          message: `Using FETCH_HEAD from latest fetch`,
+        };
+      }
     }
   }
 
