@@ -181,7 +181,8 @@ async function analyzeWorktrees(
       continue;
     }
 
-    const isCurrent = wt.path === options.currentPath;
+    // Only check if current when we have a currentPath (i.e., we're in a worktree)
+    const isCurrent = options.currentPath && wt.path === options.currentPath;
     const isDefaultBranch = wt.branch === options.defaultBranch;
     const hasUncommitted = await hasUncommittedChanges(wt.path);
     const hasUnpushed = await hasUnpushedCommits(wt.path);

@@ -322,7 +322,7 @@ export async function fetchAndGetStartPoint(
 
 /**
  * Get the current worktree path
- * @returns Absolute path to the current worktree
+ * @returns Absolute path to the current worktree, or empty string if not in a worktree
  */
 export async function getCurrentWorktreePath(): Promise<string> {
   const cmd = new Deno.Command("git", {
@@ -334,7 +334,17 @@ export async function getCurrentWorktreePath(): Promise<string> {
   const { code, stdout, stderr } = await cmd.output();
 
   if (code !== 0) {
-    const errorMsg = new TextDecoder().decode(stderr);
+    const errorMsg = new TextDecoder().decode(stderr).trim();
+    // If we're not in a work tree (e.g., in bare repo root) or not in a git repo at all,
+    // return empty string
+    if (
+      errorMsg.includes("not a work tree") ||
+      errorMsg.includes("must be run in a work tree") ||
+      errorMsg.includes("not a git repository")
+    ) {
+      return "";
+    }
+    // For other errors, still throw
     throw new Error(`Failed to get current worktree path: ${errorMsg}`);
   }
 
