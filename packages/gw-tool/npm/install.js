@@ -109,6 +109,9 @@ async function install() {
     // Make binary executable on Unix-like systems
     if (platform() !== 'win32') {
       chmodSync(binaryPath, 0o755);
+      // Small delay to prevent ETXTBSY race condition on Linux
+      // The file can be "text busy" immediately after chmod
+      await new Promise(resolve => setTimeout(resolve, 100));
     }
 
     console.log('✓ Installation complete!');
@@ -134,7 +137,7 @@ async function install() {
 /**
  * Install shell integration
  */
-async function installShellIntegration(binaryPath) {
+async function installShellIntegration(binaryPath, retries = 3) {
   const { spawn } = require('child_process');
 
   return new Promise((resolve) => {
@@ -151,7 +154,12 @@ async function installShellIntegration(binaryPath) {
       resolve();
     });
 
-    child.on('error', (err) => {
+    child.on('error', async (err) => {
+      // Retry on ETXTBSY (text file busy) error
+      if (err.code === 'ETXTBSY' && retries > 0) {
+        await new Promise(r => setTimeout(r, 200));
+        return installShellIntegration(binaryPath, retries - 1).then(resolve);
+      }
       console.log('  (Shell integration can be installed later with: gw install-shell)');
       resolve();
     });
