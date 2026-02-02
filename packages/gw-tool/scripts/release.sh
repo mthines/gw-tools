@@ -220,15 +220,15 @@ echo -e "  arm64 SHA256: ${GREEN}$ARM64_SHA256${NC}"
 
 # Determine which formula file to update
 if [ "$IS_PRERELEASE" = true ]; then
-  FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw@beta.rb"
-  echo -e "${BLUE}Updating beta formula (gw@beta.rb)...${NC}"
+  FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw-beta.rb"
+  echo -e "${BLUE}Updating beta formula (gw-beta.rb)...${NC}"
 
   # Create beta formula if it doesn't exist
   if [ ! -f "$FORMULA_FILE" ]; then
     echo -e "${YELLOW}Creating new beta formula...${NC}"
     cp "$HOMEBREW_TAP_DIR/Formula/gw.rb" "$FORMULA_FILE"
-    # Update class name for versioned formula (Homebrew convention: gw@beta -> GwATBeta)
-    sed -i '' 's/class Gw < Formula/class GwATBeta < Formula/' "$FORMULA_FILE"
+    # Update class name for beta formula (Homebrew convention: gw-beta -> GwBeta)
+    sed -i '' 's/class Gw < Formula/class GwBeta < Formula/' "$FORMULA_FILE"
   fi
 else
   FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw.rb"
