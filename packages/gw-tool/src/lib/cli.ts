@@ -62,6 +62,7 @@ Usage:
 Commands:
   add              Create a new worktree with optional auto-copy
   cd               Navigate to a worktree directory
+  checkout, co     Smart git checkout for worktree workflows
   pull             Merge latest version of default branch into current worktree
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
@@ -87,6 +88,8 @@ Examples:
   gw add feat-branch
   gw add feat-branch -b my-branch
   gw cd feat-branch
+  gw checkout main
+  gw co feature-x
   gw sync feat-branch .env components/agents/.env
   gw list
   gw remove feat-branch

@@ -7,6 +7,7 @@
 import { parseGlobalArgs, showGlobalHelp, showVersion } from './lib/cli.ts';
 import { executeAdd } from './commands/add.ts';
 import { executeCd } from './commands/cd.ts';
+import { executeCheckout } from './commands/checkout.ts';
 import { executeCopy } from './commands/sync.ts';
 import { executePull } from './commands/pull.ts';
 import { executeInit } from './commands/init.ts';
@@ -29,6 +30,8 @@ import * as output from './lib/output.ts';
 const COMMANDS = {
   add: executeAdd,
   cd: executeCd,
+  checkout: executeCheckout,
+  co: executeCheckout, // Alias for checkout
   pull: executePull,
   sync: executeCopy,
   init: executeInit,

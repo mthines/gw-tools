@@ -30,35 +30,39 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-1)
       - [Examples](#examples-1)
       - [How It Works](#how-it-works)
-    - [pull](#pull)
-      - [Options](#options-1)
+    - [checkout](#checkout)
+      - [Arguments](#arguments-2)
       - [Examples](#examples-2)
       - [How It Works](#how-it-works-1)
+    - [pull](#pull)
+      - [Options](#options-1)
+      - [Examples](#examples-3)
+      - [How It Works](#how-it-works-2)
     - [install-shell](#install-shell)
       - [Options](#options-2)
-      - [Examples](#examples-3)
-    - [root](#root)
       - [Examples](#examples-4)
-      - [How It Works](#how-it-works-2)
+    - [root](#root)
+      - [Examples](#examples-5)
+      - [How It Works](#how-it-works-3)
     - [init](#init)
       - [Options](#options-3)
-      - [Examples](#examples-5)
+      - [Examples](#examples-6)
       - [Hook Variables](#hook-variables)
       - [Auto-Cleanup Configuration](#auto-cleanup-configuration)
       - [When to Use](#when-to-use)
     - [show-init](#show-init)
       - [Options](#options-4)
-      - [Examples](#examples-6)
+      - [Examples](#examples-7)
       - [Output Example](#output-example)
       - [When to Use](#when-to-use-1)
     - [sync](#sync)
-      - [Arguments](#arguments-2)
+      - [Arguments](#arguments-3)
       - [Options](#options-5)
-      - [Examples](#examples-7)
+      - [Examples](#examples-8)
     - [clean](#clean)
       - [Options](#options-6)
-      - [Examples](#examples-8)
-      - [How It Works](#how-it-works-3)
+      - [Examples](#examples-9)
+      - [How It Works](#how-it-works-4)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -95,6 +99,9 @@ gw add feat-new-feature .env secrets/
 
 # Navigate to your new worktree
 gw cd feat-new-feature
+
+# Or checkout an existing branch (navigates if already checked out elsewhere)
+gw checkout main
 ```
 
 **Or with auto-copy (one-time setup):**
@@ -160,6 +167,7 @@ gw sync feat-existing-branch .env
 ## Features
 
 - **Quick navigation**: Navigate to worktrees instantly with smart partial matching (`gw cd feat` finds `feat-branch`)
+- **Smart checkout**: `gw checkout` handles worktree-specific scenarios, navigating to branches checked out elsewhere instead of showing errors
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
 - **Automatic shell integration**: Shell function installs automatically on npm install for seamless `gw cd` navigation
 - **Multi-command architecture**: Extensible framework for adding new worktree management commands
@@ -426,6 +434,79 @@ The `cd` command integrates with your shell through an automatically installed f
 
 **Note**: Shell integration is automatically installed when you install via npm. If needed, you can manually install or remove it using `gw install-shell`.
 
+### checkout
+
+Smart git checkout wrapper that provides an intuitive experience for working with worktrees. The command automatically handles scenarios that would normally cause errors with standard `git checkout`.
+
+```bash
+gw checkout <branch>
+# or use the alias
+gw co <branch>
+```
+
+When you're working with worktrees, you cannot checkout the same branch in multiple worktrees. The `gw checkout` command solves this by detecting when a branch is already checked out elsewhere and navigating you to that worktree instead of showing an error.
+
+#### Arguments
+
+- `<branch>`: Branch name to checkout
+
+#### Examples
+
+```bash
+# Checkout a local branch (if not checked out elsewhere)
+gw checkout feature-x
+gw co feature-x  # Using alias
+
+# Navigate to worktree where main is already checked out
+gw checkout main
+# Output: Branch main is checked out in another worktree:
+#   /path/to/repo/main
+#
+# Navigating there...
+
+# Create worktree for remote branch (prompts)
+gw checkout remote-feature
+# Output: Branch remote-feature exists on remote but not locally.
+#
+# Create a new worktree for it? [Y/n]:
+# (If yes, runs: gw add remote-feature)
+
+# Already on the branch
+gw checkout current-branch
+# Output: Already on 'current-branch'
+```
+
+#### How It Works
+
+The `checkout` command intelligently handles four scenarios:
+
+1. **Branch exists locally and isn't checked out anywhere:**
+   - Performs standard `git checkout <branch>` in the current worktree
+
+2. **Branch is already checked out in another worktree:**
+   - Automatically navigates to that worktree (like `gw cd`)
+   - Shows you where the branch is located
+
+3. **Branch exists on remote but not locally:**
+   - Prompts you to create a new worktree for it
+   - If you confirm, runs `gw add <branch>` which:
+     - Creates the worktree
+     - Copies auto-copy files
+     - Navigates to the new worktree
+
+4. **Branch doesn't exist anywhere:**
+   - Shows a helpful error message
+   - Suggests using `gw add <branch>` to create a new branch
+
+**Why use this instead of `git checkout`?**
+
+- **No more confusing errors:** Instead of "fatal: 'main' is already checked out at '/path/to/main'", it just takes you there
+- **Reduces mental overhead:** You don't need to remember which branches are where
+- **Teaches worktree workflows:** The messages guide you toward the right action
+- **Educational:** Prompts explain what's happening and suggest alternatives
+
+**Use case:** When updating your feature branch with latest changes, you might instinctively try `git checkout main && git pull`. With worktrees, this fails because main is checked out elsewhere. Instead, use `gw pull` to merge main into your current branch, or use `gw checkout main` to navigate to the main worktree.
+
 ### pull
 
 Merge the latest version of the default branch (or specified branch) into your current worktree. This is useful when you want to update your feature branch with the latest changes from main without having to switch worktrees.
@@ -435,6 +516,8 @@ gw pull [options]
 ```
 
 When working in a worktree, you cannot easily checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw pull` command solves this by fetching the latest version of the default branch and merging it into your current branch.
+
+**Alternative:** If you need to work on the main branch directly, use `gw checkout main` to navigate to the main worktree instead of trying to check it out in your current worktree.
 
 #### Options
 
@@ -1037,6 +1120,9 @@ gw cd feat-new-feature
 
 # Keep your feature branch updated with latest changes from main
 gw pull
+
+# Navigate to main worktree (if you need to work on it)
+gw checkout main  # or gw co main
 
 # Alternative: Create worktree and copy specific files
 gw add feat-bugfix .env custom-config.json

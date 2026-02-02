@@ -268,6 +268,43 @@ gw cd feat    # Matches feature-authentication if it's first
 gw cd auth    # Finds worktree with 'auth' in name
 ```
 
+### Using `gw checkout` (or `gw co`) for Smart Branch Checkout
+
+The `gw checkout` command is a smart wrapper around `git checkout` that understands worktrees:
+
+```bash
+# Checkout a branch - navigates if already checked out elsewhere
+gw checkout main
+# or use the alias
+gw co main
+
+# If branch is checked out in another worktree:
+# Output: Branch main is checked out in another worktree:
+#   /projects/myapp.git/main
+# Navigating there...
+
+# If branch exists on remote but not locally, prompts to create worktree:
+gw checkout feature-new
+# Output: Branch feature-new exists on remote but not locally.
+# Create a new worktree for it? [Y/n]:
+```
+
+**When to use `gw checkout` vs `gw cd`:**
+- Use `gw checkout <branch>` when you think of branches (like `git checkout`)
+- Use `gw cd <worktree>` when you think of directory names
+- Both support partial matching and navigate to existing worktrees
+- `gw checkout` additionally handles remote branches and provides worktree-aware error messages
+
+**Why not just use `git checkout`?**
+
+With worktrees, `git checkout main` will fail if main is checked out in another worktree:
+```bash
+$ git checkout main
+fatal: 'main' is already checked out at '/projects/myapp.git/main'
+```
+
+With `gw checkout`, this just takes you there instead of showing an error. It reduces friction when transitioning from traditional Git workflows to worktree-based workflows.
+
 ### Shell Integration
 
 After installing `gw` via npm, a shell function is automatically installed:
