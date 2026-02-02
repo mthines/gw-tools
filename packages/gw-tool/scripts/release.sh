@@ -204,19 +204,23 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Calculate SHA256 hashes for macOS binaries
+# Calculate SHA256 hashes for all binaries
 echo -e "${BLUE}Calculating SHA256 hashes...${NC}"
-X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-x64" | awk '{print $1}')
-ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-arm64" | awk '{print $1}')
+MACOS_X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-x64" | awk '{print $1}')
+MACOS_ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-arm64" | awk '{print $1}')
+LINUX_X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-x64" | awk '{print $1}')
+LINUX_ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-arm64" | awk '{print $1}')
 
-if [ -z "$X64_SHA256" ] || [ -z "$ARM64_SHA256" ]; then
+if [ -z "$MACOS_X64_SHA256" ] || [ -z "$MACOS_ARM64_SHA256" ] || [ -z "$LINUX_X64_SHA256" ] || [ -z "$LINUX_ARM64_SHA256" ]; then
   echo -e "${RED}❌ Error: Failed to calculate SHA256 hashes${NC}"
   rm -rf "$HOMEBREW_TAP_DIR"
   exit 1
 fi
 
-echo -e "  x64 SHA256:   ${GREEN}$X64_SHA256${NC}"
-echo -e "  arm64 SHA256: ${GREEN}$ARM64_SHA256${NC}"
+echo -e "  macOS x64 SHA256:   ${GREEN}$MACOS_X64_SHA256${NC}"
+echo -e "  macOS arm64 SHA256: ${GREEN}$MACOS_ARM64_SHA256${NC}"
+echo -e "  Linux x64 SHA256:   ${GREEN}$LINUX_X64_SHA256${NC}"
+echo -e "  Linux arm64 SHA256: ${GREEN}$LINUX_ARM64_SHA256${NC}"
 
 # Determine which formula file to update
 if [ "$IS_PRERELEASE" = true ]; then
@@ -241,16 +245,22 @@ sed -i '' "s|version \"[^\"]*\"|version \"$NEW_VERSION\"|g" "$FORMULA_FILE"
 # Update download URLs (handle both version formats)
 sed -i '' "s|/v[^/]*/gw-macos-arm64|/v$NEW_VERSION/gw-macos-arm64|g" "$FORMULA_FILE"
 sed -i '' "s|/v[^/]*/gw-macos-x64|/v$NEW_VERSION/gw-macos-x64|g" "$FORMULA_FILE"
+sed -i '' "s|/v[^/]*/gw-linux-arm64|/v$NEW_VERSION/gw-linux-arm64|g" "$FORMULA_FILE"
+sed -i '' "s|/v[^/]*/gw-linux-x64|/v$NEW_VERSION/gw-linux-x64|g" "$FORMULA_FILE"
 
-# Update SHA256 hashes (arm64 first, x64 second)
+# Update SHA256 hashes (macOS arm64, macOS x64, Linux arm64, Linux x64)
 perl -i -pe '
   BEGIN { $count = 0; }
   if (/sha256 "([^"]*)"/) {
     $count++;
     if ($count == 1) {
-      s/sha256 "[^"]*"/sha256 "'"$ARM64_SHA256"'"/;
+      s/sha256 "[^"]*"/sha256 "'"$MACOS_ARM64_SHA256"'"/;
     } elsif ($count == 2) {
-      s/sha256 "[^"]*"/sha256 "'"$X64_SHA256"'"/;
+      s/sha256 "[^"]*"/sha256 "'"$MACOS_X64_SHA256"'"/;
+    } elsif ($count == 3) {
+      s/sha256 "[^"]*"/sha256 "'"$LINUX_ARM64_SHA256"'"/;
+    } elsif ($count == 4) {
+      s/sha256 "[^"]*"/sha256 "'"$LINUX_X64_SHA256"'"/;
     }
   }
 ' "$FORMULA_FILE"
