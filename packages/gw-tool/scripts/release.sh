@@ -17,11 +17,15 @@ cd "$WORKSPACE_ROOT"
 
 echo -e "${BLUE}📦 Automated Release Process for @gw-tools/gw${NC}\n"
 
-# Check if we're on main/master branch
+# Detect release type based on branch
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
+IS_PRERELEASE=false
+PRERELEASE_TAG=""
+
 if [[ "$BRANCH" != "main" && "$BRANCH" != "master" ]]; then
-  echo -e "${RED}❌ Error: You must be on main or master branch${NC}"
-  exit 1
+  IS_PRERELEASE=true
+  PRERELEASE_TAG="beta"
+  echo -e "${YELLOW}⚠️  Pre-release mode: Branch '$BRANCH' will create a beta release${NC}"
 fi
 
 # Check for uncommitted changes
@@ -75,7 +79,9 @@ fi
 echo -e "Bump type: ${GREEN}$BUMP_TYPE${NC}"
 
 # Calculate new version
-IFS='.' read -ra VERSION_PARTS <<< "$CURRENT_VERSION"
+# Strip any existing pre-release suffix from current version
+BASE_CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed -E 's/-.*$//')
+IFS='.' read -ra VERSION_PARTS <<< "$BASE_CURRENT_VERSION"
 MAJOR="${VERSION_PARTS[0]}"
 MINOR="${VERSION_PARTS[1]}"
 PATCH="${VERSION_PARTS[2]}"
@@ -95,7 +101,25 @@ case "$BUMP_TYPE" in
     ;;
 esac
 
-NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+if [ "$IS_PRERELEASE" = true ]; then
+  # Find the latest beta tag for this base version
+  BASE_VERSION="$MAJOR.$MINOR.$PATCH"
+  LATEST_BETA=$(git tag -l "v$BASE_VERSION-$PRERELEASE_TAG.*" --sort=-version:refname | head -n 1)
+
+  if [ -z "$LATEST_BETA" ]; then
+    # First beta for this version
+    PRERELEASE_NUMBER=1
+  else
+    # Extract and increment the beta number
+    PRERELEASE_NUMBER=$(echo "$LATEST_BETA" | sed -E "s/.*-$PRERELEASE_TAG\.([0-9]+)/\1/")
+    PRERELEASE_NUMBER=$((PRERELEASE_NUMBER + 1))
+  fi
+
+  NEW_VERSION="$BASE_VERSION-$PRERELEASE_TAG.$PRERELEASE_NUMBER"
+else
+  NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+fi
+
 echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
 
 # Confirm release
@@ -152,17 +176,133 @@ else
 fi
 
 echo -e "${BLUE}Uploading binaries to GitHub... (this may take a few minutes)${NC}"
+PRERELEASE_FLAG=""
+if [ "$IS_PRERELEASE" = true ]; then
+  PRERELEASE_FLAG="--prerelease"
+fi
+
 GH_DEBUG=api gh release create "v$NEW_VERSION" \
+  $PRERELEASE_FLAG \
   --title "v$NEW_VERSION" \
   --notes "$CHANGELOG" \
   dist/packages/gw-tool/binaries/*
 
+# Update Homebrew formula
+echo -e "\n${BLUE}🍺 Updating Homebrew formula...${NC}"
+
+HOMEBREW_TAP_DIR="/tmp/homebrew-gw-tools-$NEW_VERSION"
+
+# Clone the Homebrew tap repository
+echo -e "${BLUE}Cloning Homebrew tap repository...${NC}"
+if [ -d "$HOMEBREW_TAP_DIR" ]; then
+  rm -rf "$HOMEBREW_TAP_DIR"
+fi
+
+git clone https://github.com/mthines/homebrew-gw-tools.git "$HOMEBREW_TAP_DIR"
+if [ $? -ne 0 ]; then
+  echo -e "${RED}❌ Error: Failed to clone Homebrew tap repository${NC}"
+  exit 1
+fi
+
+# Calculate SHA256 hashes for macOS binaries
+echo -e "${BLUE}Calculating SHA256 hashes...${NC}"
+X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-x64" | awk '{print $1}')
+ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-arm64" | awk '{print $1}')
+
+if [ -z "$X64_SHA256" ] || [ -z "$ARM64_SHA256" ]; then
+  echo -e "${RED}❌ Error: Failed to calculate SHA256 hashes${NC}"
+  rm -rf "$HOMEBREW_TAP_DIR"
+  exit 1
+fi
+
+echo -e "  x64 SHA256:   ${GREEN}$X64_SHA256${NC}"
+echo -e "  arm64 SHA256: ${GREEN}$ARM64_SHA256${NC}"
+
+# Determine which formula file to update
+if [ "$IS_PRERELEASE" = true ]; then
+  FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw@beta.rb"
+  echo -e "${BLUE}Updating beta formula (gw@beta.rb)...${NC}"
+
+  # Create beta formula if it doesn't exist
+  if [ ! -f "$FORMULA_FILE" ]; then
+    echo -e "${YELLOW}Creating new beta formula...${NC}"
+    cp "$HOMEBREW_TAP_DIR/Formula/gw.rb" "$FORMULA_FILE"
+    # Update class name for versioned formula (Homebrew convention)
+    sed -i '' 's/class Gw < Formula/class GwAT < Formula/' "$FORMULA_FILE"
+  fi
+else
+  FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw.rb"
+  echo -e "${BLUE}Updating stable formula (gw.rb)...${NC}"
+fi
+
+# Update version (handle both X.Y.Z and X.Y.Z-beta.N formats)
+sed -i '' "s|version \"[^\"]*\"|version \"$NEW_VERSION\"|g" "$FORMULA_FILE"
+
+# Update download URLs (handle both version formats)
+sed -i '' "s|/v[^/]*/gw-macos-arm64|/v$NEW_VERSION/gw-macos-arm64|g" "$FORMULA_FILE"
+sed -i '' "s|/v[^/]*/gw-macos-x64|/v$NEW_VERSION/gw-macos-x64|g" "$FORMULA_FILE"
+
+# Update SHA256 hashes (arm64 first, x64 second)
+perl -i -pe '
+  BEGIN { $count = 0; }
+  if (/sha256 "([^"]*)"/) {
+    $count++;
+    if ($count == 1) {
+      s/sha256 "[^"]*"/sha256 "'"$ARM64_SHA256"'"/;
+    } elsif ($count == 2) {
+      s/sha256 "[^"]*"/sha256 "'"$X64_SHA256"'"/;
+    }
+  }
+' "$FORMULA_FILE"
+
+# Commit and push changes
+echo -e "${BLUE}Committing and pushing formula changes...${NC}"
+cd "$HOMEBREW_TAP_DIR"
+
+if [ "$IS_PRERELEASE" = true ]; then
+  git add Formula/gw@beta.rb
+  git commit -m "gw@beta: update to v$NEW_VERSION"
+else
+  git add Formula/gw.rb
+  git commit -m "gw: update to v$NEW_VERSION"
+fi
+
+git push origin main
+
+if [ $? -ne 0 ]; then
+  echo -e "${RED}❌ Error: Failed to push Homebrew formula changes${NC}"
+  cd "$WORKSPACE_ROOT"
+  rm -rf "$HOMEBREW_TAP_DIR"
+  exit 1
+fi
+
+cd "$WORKSPACE_ROOT"
+
+# Cleanup
+rm -rf "$HOMEBREW_TAP_DIR"
+echo -e "${GREEN}✅ Homebrew formula updated successfully${NC}"
+
 # Publish to npm
 echo -e "\n${BLUE}📤 Publishing to npm...${NC}"
 cd dist/packages/gw-tool/npm
-npm publish --access public
+
+if [ "$IS_PRERELEASE" = true ]; then
+  echo -e "${BLUE}Publishing to npm with tag: $PRERELEASE_TAG...${NC}"
+  npm publish --access public --tag "$PRERELEASE_TAG"
+else
+  echo -e "${BLUE}Publishing to npm as latest...${NC}"
+  npm publish --access public
+fi
+
 cd "$WORKSPACE_ROOT"
 
 echo -e "\n${GREEN}✅ Successfully released @gw-tools/gw v$NEW_VERSION${NC}"
 echo -e "\nRelease URL: https://github.com/mthines/gw-tools/releases/tag/v$NEW_VERSION"
-echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
+
+if [ "$IS_PRERELEASE" = true ]; then
+  echo -e "npm package: npm install @gw-tools/gw@$PRERELEASE_TAG"
+  echo -e "Homebrew:    brew install mthines/gw-tools/gw@beta"
+else
+  echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
+  echo -e "Homebrew:    brew install mthines/gw-tools/gw"
+fi

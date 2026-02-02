@@ -91,7 +91,10 @@ A command-line tool for managing git worktrees, built with Deno.
 ## Quick Start
 
 ```bash
-# Install
+# Install (Homebrew on macOS)
+brew install mthines/gw-tools/gw
+
+# Or install via npm
 npm install -g @gw-tools/gw
 
 # Create a new worktree and copy files
@@ -177,7 +180,15 @@ gw sync feat-existing-branch .env
 
 ## Installation
 
-### Via npm (Recommended)
+### Via Homebrew (macOS)
+
+For macOS users, the easiest way to install is via Homebrew:
+
+```bash
+brew install mthines/gw-tools/gw
+```
+
+### Via npm
 
 Install globally using npm:
 

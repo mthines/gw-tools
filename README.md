@@ -13,7 +13,11 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 ### Installation
 
 ```bash
-npm install -g @gw-tools/gw-tool
+# Homebrew (macOS)
+brew install mthines/gw-tools/gw
+
+# npm
+npm install -g @gw-tools/gw
 ```
 
 ### Quick Start
