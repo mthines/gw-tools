@@ -227,8 +227,8 @@ if [ "$IS_PRERELEASE" = true ]; then
   if [ ! -f "$FORMULA_FILE" ]; then
     echo -e "${YELLOW}Creating new beta formula...${NC}"
     cp "$HOMEBREW_TAP_DIR/Formula/gw.rb" "$FORMULA_FILE"
-    # Update class name for versioned formula (Homebrew convention: gw@beta -> GwATBeta)
-    sed -i '' 's/class Gw < Formula/class GwATBeta < Formula/' "$FORMULA_FILE"
+    # Update class name for versioned formula (Homebrew convention: gw@beta -> Gw@beta)
+    sed -i '' 's/class Gw < Formula/class Gw@beta < Formula/' "$FORMULA_FILE"
   fi
 else
   FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw.rb"
