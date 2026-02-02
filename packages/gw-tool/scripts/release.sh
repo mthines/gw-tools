@@ -260,8 +260,8 @@ echo -e "${BLUE}Committing and pushing formula changes...${NC}"
 cd "$HOMEBREW_TAP_DIR"
 
 if [ "$IS_PRERELEASE" = true ]; then
-  git add Formula/gw@beta.rb
-  git commit -m "gw@beta: update to v$NEW_VERSION"
+  git add Formula/gw-beta.rb
+  git commit -m "gw-beta: update to v$NEW_VERSION"
 else
   git add Formula/gw.rb
   git commit -m "gw: update to v$NEW_VERSION"
@@ -301,7 +301,7 @@ echo -e "\nRelease URL: https://github.com/mthines/gw-tools/releases/tag/v$NEW_V
 
 if [ "$IS_PRERELEASE" = true ]; then
   echo -e "npm package: npm install @gw-tools/gw@$PRERELEASE_TAG"
-  echo -e "Homebrew:    brew install mthines/gw-tools/gw@beta"
+  echo -e "Homebrew:    brew install mthines/gw-tools/gw-beta"
 else
   echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
   echo -e "Homebrew:    brew install mthines/gw-tools/gw"
