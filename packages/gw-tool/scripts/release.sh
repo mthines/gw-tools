@@ -9,6 +9,23 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Detect OS for cross-platform compatibility
+OS="$(uname -s)"
+case "$OS" in
+  Darwin*)
+    SED_INPLACE=(sed -i '')
+    SHASUM_CMD="shasum -a 256"
+    ;;
+  Linux*)
+    SED_INPLACE=(sed -i)
+    SHASUM_CMD="sha256sum"
+    ;;
+  *)
+    echo -e "${RED}❌ Error: Unsupported operating system: $OS${NC}"
+    exit 1
+    ;;
+esac
+
 # Find workspace root
 WORKSPACE_ROOT="$(git rev-parse --show-toplevel)"
 PACKAGE_DIR="$WORKSPACE_ROOT/packages/gw-tool"
@@ -206,10 +223,10 @@ fi
 
 # Calculate SHA256 hashes for all binaries
 echo -e "${BLUE}Calculating SHA256 hashes...${NC}"
-MACOS_X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-x64" | awk '{print $1}')
-MACOS_ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-arm64" | awk '{print $1}')
-LINUX_X64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-x64" | awk '{print $1}')
-LINUX_ARM64_SHA256=$(shasum -a 256 "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-arm64" | awk '{print $1}')
+MACOS_X64_SHA256=$($SHASUM_CMD "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-x64" | awk '{print $1}')
+MACOS_ARM64_SHA256=$($SHASUM_CMD "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-macos-arm64" | awk '{print $1}')
+LINUX_X64_SHA256=$($SHASUM_CMD "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-x64" | awk '{print $1}')
+LINUX_ARM64_SHA256=$($SHASUM_CMD "$WORKSPACE_ROOT/dist/packages/gw-tool/binaries/gw-linux-arm64" | awk '{print $1}')
 
 if [ -z "$MACOS_X64_SHA256" ] || [ -z "$MACOS_ARM64_SHA256" ] || [ -z "$LINUX_X64_SHA256" ] || [ -z "$LINUX_ARM64_SHA256" ]; then
   echo -e "${RED}❌ Error: Failed to calculate SHA256 hashes${NC}"
@@ -232,7 +249,7 @@ if [ "$IS_PRERELEASE" = true ]; then
     echo -e "${YELLOW}Creating new beta formula...${NC}"
     cp "$HOMEBREW_TAP_DIR/Formula/gw.rb" "$FORMULA_FILE"
     # Update class name for beta formula (Homebrew convention: gw-beta -> GwBeta)
-    sed -i '' 's/class Gw < Formula/class GwBeta < Formula/' "$FORMULA_FILE"
+    "${SED_INPLACE[@]}" 's/class Gw < Formula/class GwBeta < Formula/' "$FORMULA_FILE"
   fi
 else
   FORMULA_FILE="$HOMEBREW_TAP_DIR/Formula/gw.rb"
@@ -240,13 +257,13 @@ else
 fi
 
 # Update version (handle both X.Y.Z and X.Y.Z-beta.N formats)
-sed -i '' "s|version \"[^\"]*\"|version \"$NEW_VERSION\"|g" "$FORMULA_FILE"
+"${SED_INPLACE[@]}" "s|version \"[^\"]*\"|version \"$NEW_VERSION\"|g" "$FORMULA_FILE"
 
 # Update download URLs (handle both version formats)
-sed -i '' "s|/v[^/]*/gw-macos-arm64|/v$NEW_VERSION/gw-macos-arm64|g" "$FORMULA_FILE"
-sed -i '' "s|/v[^/]*/gw-macos-x64|/v$NEW_VERSION/gw-macos-x64|g" "$FORMULA_FILE"
-sed -i '' "s|/v[^/]*/gw-linux-arm64|/v$NEW_VERSION/gw-linux-arm64|g" "$FORMULA_FILE"
-sed -i '' "s|/v[^/]*/gw-linux-x64|/v$NEW_VERSION/gw-linux-x64|g" "$FORMULA_FILE"
+"${SED_INPLACE[@]}" "s|/v[^/]*/gw-macos-arm64|/v$NEW_VERSION/gw-macos-arm64|g" "$FORMULA_FILE"
+"${SED_INPLACE[@]}" "s|/v[^/]*/gw-macos-x64|/v$NEW_VERSION/gw-macos-x64|g" "$FORMULA_FILE"
+"${SED_INPLACE[@]}" "s|/v[^/]*/gw-linux-arm64|/v$NEW_VERSION/gw-linux-arm64|g" "$FORMULA_FILE"
+"${SED_INPLACE[@]}" "s|/v[^/]*/gw-linux-x64|/v$NEW_VERSION/gw-linux-x64|g" "$FORMULA_FILE"
 
 # Update SHA256 hashes (macOS arm64, macOS x64, Linux arm64, Linux x64)
 perl -i -pe '
@@ -315,23 +332,36 @@ if [ "$IS_PRERELEASE" = false ]; then
         sed "s/X64_SHA256_PLACEHOLDER/$LINUX_X64_SHA256/g" | \
         sed "s/ARM64_SHA256_PLACEHOLDER/$LINUX_ARM64_SHA256/g" > PKGBUILD
 
-      # Generate .SRCINFO
-      if command -v makepkg &> /dev/null; then
-        makepkg --printsrcinfo > .SRCINFO
+      # Generate .SRCINFO (works on any platform, no makepkg needed)
+      echo -e "${BLUE}Generating .SRCINFO...${NC}"
+      cat > .SRCINFO << EOF
+pkgbase = gw-tools
+	pkgdesc = Git worktree manager - Streamline your multi-branch development workflow
+	pkgver = $NEW_VERSION
+	pkgrel = 1
+	url = https://github.com/mthines/gw-tools
+	arch = x86_64
+	arch = aarch64
+	license = MIT
+	provides = gw
+	conflicts = gw
+	source_x86_64 = gw-tools-$NEW_VERSION-x64::https://github.com/mthines/gw-tools/releases/download/v$NEW_VERSION/gw-linux-x64
+	sha256sums_x86_64 = $LINUX_X64_SHA256
+	source_aarch64 = gw-tools-$NEW_VERSION-arm64::https://github.com/mthines/gw-tools/releases/download/v$NEW_VERSION/gw-linux-arm64
+	sha256sums_aarch64 = $LINUX_ARM64_SHA256
 
-        # Commit and push
-        git add PKGBUILD .SRCINFO
-        git commit -m "Update to v$NEW_VERSION"
-        git push
+pkgname = gw-tools
+EOF
 
-        if [ $? -eq 0 ]; then
-          echo -e "${GREEN}✅ AUR package updated successfully${NC}"
-        else
-          echo -e "${YELLOW}⚠️  Warning: Failed to push AUR package${NC}"
-        fi
+      # Commit and push
+      git add PKGBUILD .SRCINFO
+      git commit -m "Update to v$NEW_VERSION"
+      git push
+
+      if [ $? -eq 0 ]; then
+        echo -e "${GREEN}✅ AUR package updated successfully${NC}"
       else
-        echo -e "${YELLOW}⚠️  Warning: makepkg not found. Skipping AUR update.${NC}"
-        echo -e "${YELLOW}   Install 'pacman' package to enable AUR updates.${NC}"
+        echo -e "${YELLOW}⚠️  Warning: Failed to push AUR package${NC}"
       fi
 
       cd "$WORKSPACE_ROOT"
