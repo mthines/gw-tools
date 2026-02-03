@@ -292,6 +292,59 @@ cd "$WORKSPACE_ROOT"
 rm -rf "$HOMEBREW_TAP_DIR"
 echo -e "${GREEN}✅ Homebrew formula updated successfully${NC}"
 
+# Update AUR package (skip for prereleases)
+if [ "$IS_PRERELEASE" = false ]; then
+  echo -e "\n${BLUE}📦 Updating AUR package...${NC}"
+
+  AUR_DIR="/tmp/gw-tools-aur-$NEW_VERSION"
+
+  # Check if SSH key is configured for AUR
+  if ssh -T aur@aur.archlinux.org 2>&1 | grep -q "successfully authenticated"; then
+    echo -e "${BLUE}Cloning AUR repository...${NC}"
+
+    # Clone or update AUR repo
+    if ! git clone ssh://aur@aur.archlinux.org/gw-tools.git "$AUR_DIR" 2>/dev/null; then
+      echo -e "${YELLOW}⚠️  Warning: Failed to clone AUR repository${NC}"
+      echo -e "${YELLOW}   Skipping AUR update. Set up AUR SSH access to enable automatic updates.${NC}"
+    else
+      cd "$AUR_DIR"
+
+      # Generate PKGBUILD from template
+      echo -e "${BLUE}Generating PKGBUILD...${NC}"
+      sed "s/VERSION_PLACEHOLDER/$NEW_VERSION/g" "$WORKSPACE_ROOT/packages/gw-tool/PKGBUILD.template" | \
+        sed "s/X64_SHA256_PLACEHOLDER/$LINUX_X64_SHA256/g" | \
+        sed "s/ARM64_SHA256_PLACEHOLDER/$LINUX_ARM64_SHA256/g" > PKGBUILD
+
+      # Generate .SRCINFO
+      if command -v makepkg &> /dev/null; then
+        makepkg --printsrcinfo > .SRCINFO
+
+        # Commit and push
+        git add PKGBUILD .SRCINFO
+        git commit -m "Update to v$NEW_VERSION"
+        git push
+
+        if [ $? -eq 0 ]; then
+          echo -e "${GREEN}✅ AUR package updated successfully${NC}"
+        else
+          echo -e "${YELLOW}⚠️  Warning: Failed to push AUR package${NC}"
+        fi
+      else
+        echo -e "${YELLOW}⚠️  Warning: makepkg not found. Skipping AUR update.${NC}"
+        echo -e "${YELLOW}   Install 'pacman' package to enable AUR updates.${NC}"
+      fi
+
+      cd "$WORKSPACE_ROOT"
+      rm -rf "$AUR_DIR"
+    fi
+  else
+    echo -e "${YELLOW}⚠️  AUR SSH authentication not configured. Skipping AUR update.${NC}"
+    echo -e "${YELLOW}   See: https://wiki.archlinux.org/title/AUR_submission_guidelines${NC}"
+  fi
+else
+  echo -e "\n${BLUE}Skipping AUR update for prerelease version${NC}"
+fi
+
 # Publish to npm
 echo -e "\n${BLUE}📤 Publishing to npm...${NC}"
 cd dist/packages/gw-tool/npm
@@ -315,4 +368,5 @@ if [ "$IS_PRERELEASE" = true ]; then
 else
   echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
   echo -e "Homebrew:    brew install mthines/gw-tools/gw"
+  echo -e "AUR:         yay -S gw-tools"
 fi
