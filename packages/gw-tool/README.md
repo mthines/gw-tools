@@ -35,7 +35,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-2)
       - [Examples](#examples-2)
       - [How It Works](#how-it-works-1)
-    - [pull](#pull)
+    - [update](#update)
       - [Options](#options-1)
       - [Examples](#examples-3)
       - [How It Works](#how-it-works-2)
@@ -258,6 +258,7 @@ gw init --root /path/to/your/repo.git
   },
   "cleanThreshold": 7,
   "autoClean": true,
+  "updateStrategy": "merge",
   "lastAutoCleanTime": 1706371200000
 }
 ```
@@ -274,6 +275,7 @@ gw init --root /path/to/your/repo.git
   - **hooks.add.post**: Array of commands to run after creating a worktree
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
 - **autoClean**: Automatically remove stale worktrees when running `gw add` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
+- **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
 - **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
 ## Commands
@@ -520,24 +522,26 @@ The `checkout` command intelligently handles four scenarios:
 - **Teaches worktree workflows:** The messages guide you toward the right action
 - **Educational:** Prompts explain what's happening and suggest alternatives
 
-**Use case:** When updating your feature branch with latest changes, you might instinctively try `git checkout main && git pull`. With worktrees, this fails because main is checked out elsewhere. Instead, use `gw pull` to merge main into your current branch, or use `gw checkout main` to navigate to the main worktree.
+**Use case:** When updating your feature branch with latest changes, you might instinctively try `git checkout main && git pull`. With worktrees, this fails because main is checked out elsewhere. Instead, use `gw update` to update your current branch with main, or use `gw checkout main` to navigate to the main worktree.
 
-### pull
+### update
 
-Merge the latest version of the default branch (or specified branch) into your current worktree. This is useful when you want to update your feature branch with the latest changes from main without having to switch worktrees.
+Update your current worktree with the latest changes from the default branch (or specified branch) using either merge or rebase strategy. This is useful when you want to update your feature branch with the latest changes from main without having to switch worktrees.
 
 ```bash
-gw pull [options]
+gw update [options]
 ```
 
-When working in a worktree, you cannot easily checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw pull` command solves this by fetching the latest version of the default branch and merging it into your current branch.
+When working in a worktree, you cannot easily checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw update` command solves this by fetching the latest version of the default branch and updating your current branch using your configured strategy (merge or rebase).
 
 **Alternative:** If you need to work on the main branch directly, use `gw checkout main` to navigate to the main worktree instead of trying to check it out in your current worktree.
 
 #### Options
 
-- `--from <branch>`: Merge from specified branch instead of defaultBranch (e.g., `--from develop`)
+- `--from <branch>`: Update from specified branch instead of defaultBranch (e.g., `--from develop`)
 - `--remote <name>`: Specify remote name (default: "origin")
+- `-m, --merge`: Force merge strategy (overrides configured strategy)
+- `-r, --rebase`: Force rebase strategy (overrides configured strategy)
 - `-f, --force`: Skip uncommitted changes check (not recommended)
 - `-n, --dry-run`: Preview what would happen without executing
 - `-h, --help`: Show help message
@@ -545,47 +549,62 @@ When working in a worktree, you cannot easily checkout main to pull the latest c
 #### Examples
 
 ```bash
-# Merge latest default branch (typically main)
-gw pull
+# Update with configured strategy (or merge if not configured)
+gw update
 
-# Merge from a specific branch
-gw pull --from develop
+# Force merge even if rebase is configured
+gw update --merge
+
+# Force rebase even if merge is configured
+gw update --rebase
+
+# Update from a specific branch
+gw update --from develop
 
 # Preview what would happen
-gw pull --dry-run
+gw update --dry-run
 
-# Force pull even with uncommitted changes (not recommended)
-gw pull --force
+# Force update even with uncommitted changes (not recommended)
+gw update --force
 
 # Use a different remote
-gw pull --remote upstream
+gw update --remote upstream
 ```
 
 #### How It Works
 
 1. Fetches the latest version of the target branch from remote (e.g., `origin/main`)
-2. Merges it into your current worktree's active branch
-3. Creates merge commit if histories have diverged
+2. Updates your current worktree's active branch using the configured strategy
+3. With **merge**: Creates merge commit if histories have diverged
+4. With **rebase**: Replays your commits on top of the latest changes
 
 **Safety checks:**
 
 - Blocks if you have uncommitted changes (use `--force` to override)
 - Blocks if you're in a detached HEAD state
-- Handles merge conflicts gracefully with clear guidance
+- Handles merge/rebase conflicts gracefully with clear guidance
 
-**Merge strategy:** Allows merge commits (not fast-forward only), so it works even if you have local commits.
+**Update strategy:**
+
+The strategy can be configured in `.gw/config.json` or overridden per-command:
+
+- **merge** (default): Creates merge commits, preserves complete history
+- **rebase**: Replays commits for linear history, cleaner but rewrites history
+
+Strategy precedence: CLI flags (`--merge`/`--rebase`) > config (`updateStrategy`) > default (merge)
 
 **Configuration:**
 
-The default branch is read from `.gw/config.json`:
+The default branch and update strategy are read from `.gw/config.json`:
 
 ```json
 {
-  "defaultBranch": "main"
+  "defaultBranch": "main",
+  "updateStrategy": "merge"
 }
 ```
 
-If not configured, defaults to "main".
+If not configured, defaults to "main" branch and "merge" strategy.
 
 ### install-shell
 
@@ -695,6 +714,7 @@ gw init [options]
 - `--post-add <command>`: Command to run after `gw add` creates a worktree (can be specified multiple times)
 - `--clean-threshold <days>`: Number of days before worktrees are considered stale for `gw clean` (default: 7)
 - `--auto-clean`: Enable automatic cleanup of stale worktrees (runs on `gw add` and `gw list` with 24-hour cooldown)
+- `--update-strategy <strategy>`: Set default update strategy: 'merge' or 'rebase' (default: merge)
 - `-h, --help`: Show help message
 
 #### Examples
@@ -727,8 +747,11 @@ gw init --root /Users/username/Workspace/my-project.git
 # Initialize with custom clean threshold (14 days instead of default 7)
 gw init --clean-threshold 14
 
+# Initialize with update strategy
+gw init --update-strategy rebase
+
 # Full configuration example
-gw init --auto-copy-files .env,secrets/ --post-add "pnpm install" --clean-threshold 14
+gw init --auto-copy-files .env,secrets/ --post-add "pnpm install" --clean-threshold 14 --update-strategy merge
 
 # Show help
 gw init --help
@@ -829,14 +852,15 @@ If your `.gw/config.json` contains:
       "post": ["pnpm install"]
     }
   },
-  "cleanThreshold": 7
+  "cleanThreshold": 7,
+  "updateStrategy": "rebase"
 }
 ```
 
 Then `gw show-init` will output:
 
 ```bash
-gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-add 'pnpm install' --update-strategy rebase
 ```
 
 #### When to Use
@@ -1134,7 +1158,7 @@ gw add feat-new-feature
 gw cd feat-new-feature
 
 # Keep your feature branch updated with latest changes from main
-gw pull
+gw update
 
 # Navigate to main worktree (if you need to work on it)
 gw checkout main  # or gw co main

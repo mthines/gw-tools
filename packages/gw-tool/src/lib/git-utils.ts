@@ -199,11 +199,12 @@ export async function fetchAndGetStartPoint(
     };
   }
 
-  // Attempt to fetch and update the local branch to match remote
-  // Using format: git fetch origin main:main
-  // This updates local main without needing to check it out
+  // Fetch explicitly into the remote-tracking branch reference.
+  // This is the most reliable strategy across bare and non-bare repos:
+  // - Does not require the local branch to exist or be unchecked-out
+  // - Always updates origin/<branch> so the merge/rebase target is fresh
   const fetchCmd = new Deno.Command("git", {
-    args: ["fetch", remoteName, `${branchName}:${branchName}`],
+    args: ["fetch", remoteName, `refs/heads/${branchName}:refs/remotes/${remoteName}/${branchName}`],
     stdout: "piped",
     stderr: "piped",
   });
@@ -211,94 +212,73 @@ export async function fetchAndGetStartPoint(
   const fetchResult = await fetchCmd.output();
 
   if (fetchResult.code === 0) {
-    // Fetch succeeded and local branch updated
-    // Verify local branch now exists and matches remote
-    const verifyCmd = new Deno.Command("git", {
-      args: ["rev-parse", "--verify", branchName],
+    // Verify the remote-tracking branch is now resolvable
+    const verifyRemoteCmd = new Deno.Command("git", {
+      args: ["rev-parse", "--verify", remoteRef],
       stdout: "null",
       stderr: "null",
     });
 
-    const verifyResult = await verifyCmd.output();
-    if (verifyResult.code === 0) {
+    const verifyRemoteResult = await verifyRemoteCmd.output();
+    if (verifyRemoteResult.code === 0) {
       return {
-        startPoint: branchName,
+        startPoint: remoteRef,
         fetchSucceeded: true,
       };
     }
   }
 
-  // Fetch with update failed - try regular fetch and use remote-tracking branch
-  const stderr = new TextDecoder().decode(fetchResult.stderr);
+  // Explicit remote-tracking fetch failed — fall back to a plain fetch
+  // and use FETCH_HEAD (guaranteed to point at what was just fetched)
+  const simpleFetchCmd = new Deno.Command("git", {
+    args: ["fetch", remoteName, branchName],
+    stdout: "piped",
+    stderr: "piped",
+  });
 
-  // If error is about refusing to update (branch is checked out), try regular fetch
-  if (stderr.includes("refusing to update") || stderr.includes("checked out")) {
-    const simpleFetchCmd = new Deno.Command("git", {
-      args: ["fetch", remoteName, branchName],
-      stdout: "piped",
-      stderr: "piped",
+  const simpleFetchResult = await simpleFetchCmd.output();
+
+  if (simpleFetchResult.code === 0) {
+    // Check if remote-tracking branch became available after plain fetch
+    const verifyRemoteCmd = new Deno.Command("git", {
+      args: ["rev-parse", "--verify", remoteRef],
+      stdout: "null",
+      stderr: "null",
     });
 
-    const simpleFetchResult = await simpleFetchCmd.output();
+    const verifyRemoteResult = await verifyRemoteCmd.output();
+    if (verifyRemoteResult.code === 0) {
+      return {
+        startPoint: remoteRef,
+        fetchSucceeded: true,
+      };
+    }
 
-    if (simpleFetchResult.code === 0) {
-      // Verify that remote-tracking branch exists
-      const verifyRemoteCmd = new Deno.Command("git", {
-        args: ["rev-parse", "--verify", remoteRef],
-        stdout: "null",
-        stderr: "null",
-      });
+    // Use FETCH_HEAD as last resort
+    const verifyFetchHeadCmd = new Deno.Command("git", {
+      args: ["rev-parse", "--verify", "FETCH_HEAD"],
+      stdout: "null",
+      stderr: "null",
+    });
 
-      const verifyRemoteResult = await verifyRemoteCmd.output();
-      if (verifyRemoteResult.code === 0) {
-        // Remote-tracking branch exists, use it
-        return {
-          startPoint: remoteRef,
-          fetchSucceeded: true,
-          message: `Using ${remoteRef} (local branch is checked out elsewhere)`,
-        };
-      }
-
-      // Remote-tracking branch doesn't exist, but fetch succeeded
-      // This can happen in bare repos - try local branch first, then FETCH_HEAD
-      const verifyLocalCmd = new Deno.Command("git", {
-        args: ["rev-parse", "--verify", branchName],
-        stdout: "null",
-        stderr: "null",
-      });
-
-      const verifyLocalResult = await verifyLocalCmd.output();
-      if (verifyLocalResult.code === 0) {
-        return {
-          startPoint: branchName,
-          fetchSucceeded: true,
-          message: `Using local ${branchName} (updated from remote)`,
-        };
-      }
-
-      // Local branch doesn't exist either - use FETCH_HEAD as last resort
-      const verifyFetchHeadCmd = new Deno.Command("git", {
-        args: ["rev-parse", "--verify", "FETCH_HEAD"],
-        stdout: "null",
-        stderr: "null",
-      });
-
-      const verifyFetchHeadResult = await verifyFetchHeadCmd.output();
-      if (verifyFetchHeadResult.code === 0) {
-        return {
-          startPoint: "FETCH_HEAD",
-          fetchSucceeded: true,
-          message: `Using FETCH_HEAD from latest fetch`,
-        };
-      }
+    const verifyFetchHeadResult = await verifyFetchHeadCmd.output();
+    if (verifyFetchHeadResult.code === 0) {
+      return {
+        startPoint: "FETCH_HEAD",
+        fetchSucceeded: true,
+        message: `Using FETCH_HEAD (remote-tracking branch not available)`,
+      };
     }
   }
 
+  // Both fetch attempts failed — collect error info for diagnostics
+  const stderr = new TextDecoder().decode(fetchResult.stderr) ||
+    new TextDecoder().decode(simpleFetchResult.stderr);
   const errorMsg = stderr.includes("fatal")
     ? stderr.split("\n")[0].replace("fatal: ", "")
     : "Unable to fetch from remote";
 
-  // Check if local branch exists as fallback
+  // Check if local branch exists as offline fallback
   const localCheckCmd = new Deno.Command("git", {
     args: ["rev-parse", "--verify", branchName],
     stdout: "null",
@@ -452,6 +432,86 @@ export async function mergeBranch(
 
   // Other error
   const errorMsg = errorOutput || output || "Merge failed";
+  return {
+    success: false,
+    message: errorMsg,
+  };
+}
+
+/**
+ * Rebase current branch onto a branch
+ * @param worktreePath Path to the worktree
+ * @param sourceBranch Branch to rebase onto
+ * @returns Result of the rebase operation
+ */
+export async function rebaseBranch(
+  worktreePath: string,
+  sourceBranch: string,
+): Promise<{ success: boolean; message?: string; conflicted?: boolean; filesChanged?: number; fileStats?: string[] }> {
+  const cmd = new Deno.Command("git", {
+    args: ["-C", worktreePath, "rebase", sourceBranch],
+    stdout: "piped",
+    stderr: "piped",
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+  const output = new TextDecoder().decode(stdout);
+  const errorOutput = new TextDecoder().decode(stderr);
+
+  if (code === 0) {
+    // Rebase succeeded
+    // Check if already up to date
+    if (output.includes("is up to date") || output.includes("Current branch")) {
+      return {
+        success: true,
+        message: "Already up to date",
+        filesChanged: 0,
+      };
+    }
+
+    // Parse file stats from output
+    // Git rebase output may include file stats in the final summary
+    const fileStats: string[] = [];
+    const lines = output.split("\n");
+    for (const line of lines) {
+      // Match lines that contain file stats (have " | " in them)
+      if (line.includes(" | ")) {
+        const trimmed = line.trim();
+        if (trimmed) {
+          fileStats.push(trimmed);
+        }
+      }
+    }
+
+    // Try to extract files changed count from output
+    const filesChangedMatch = output.match(/(\d+) files? changed/);
+    const filesChanged = filesChangedMatch
+      ? parseInt(filesChangedMatch[1], 10)
+      : undefined;
+
+    return {
+      success: true,
+      filesChanged,
+      fileStats: fileStats.length > 0 ? fileStats : undefined,
+    };
+  }
+
+  // Check if it's a rebase conflict
+  if (
+    output.includes("CONFLICT") ||
+    errorOutput.includes("CONFLICT") ||
+    output.includes("could not apply") ||
+    errorOutput.includes("could not apply")
+  ) {
+    return {
+      success: false,
+      conflicted: true,
+      message: "Rebase conflict detected",
+    };
+  }
+
+  // Other error
+  const errorMsg = errorOutput || output || "Rebase failed";
   return {
     success: false,
     message: errorMsg,

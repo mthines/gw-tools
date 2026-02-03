@@ -38,6 +38,8 @@ export interface Config {
   autoClean?: boolean;
   /** Unix timestamp in milliseconds of last auto-cleanup run (managed automatically) */
   lastAutoCleanTime?: number;
+  /** Default update strategy for the update command (optional, default: "merge") */
+  updateStrategy?: "merge" | "rebase";
 }
 
 /**
@@ -83,19 +85,23 @@ export interface GlobalArgs {
 }
 
 /**
- * Options for the pull command
+ * Options for the update command
  */
-export interface PullOptions {
+export interface UpdateOptions {
   /** Show help */
   help: boolean;
   /** Skip uncommitted changes check (dangerous) */
   force: boolean;
   /** Dry run mode - show what would happen without executing */
   dryRun: boolean;
-  /** Branch to merge from (overrides defaultBranch) */
+  /** Branch to update from (overrides defaultBranch) */
   branch?: string;
   /** Remote name (default: "origin") */
   remote: string;
+  /** Force merge strategy (overrides config) */
+  merge?: boolean;
+  /** Force rebase strategy (overrides config) */
+  rebase?: boolean;
 }
 
 /**
@@ -107,6 +113,22 @@ export interface MergeResult {
   /** Human-readable message describing the result */
   message?: string;
   /** Whether there are merge conflicts */
+  conflicted?: boolean;
+  /** Number of files changed */
+  filesChanged?: number;
+  /** List of changed files with their stats */
+  fileStats?: string[];
+}
+
+/**
+ * Result of a git rebase operation
+ */
+export interface RebaseResult {
+  /** Whether the rebase succeeded */
+  success: boolean;
+  /** Human-readable message describing the result */
+  message?: string;
+  /** Whether there are rebase conflicts */
   conflicted?: boolean;
   /** Number of files changed */
   filesChanged?: number;

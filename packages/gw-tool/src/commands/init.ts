@@ -22,6 +22,7 @@ function parseInitArgs(args: string[]): {
   postAddHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
+  updateStrategy?: "merge" | "rebase";
 } {
   const result: {
     help: boolean;
@@ -33,6 +34,7 @@ function parseInitArgs(args: string[]): {
     postAddHooks?: string[];
     cleanThreshold?: number;
     autoClean?: boolean;
+    updateStrategy?: "merge" | "rebase";
   } = {
     help: false,
     interactive: false,
@@ -70,6 +72,13 @@ function parseInitArgs(args: string[]): {
       }
     } else if (arg === "--auto-clean") {
       result.autoClean = true;
+    } else if (arg === "--update-strategy" && i + 1 < args.length) {
+      const strategy = args[++i];
+      if (strategy === "merge" || strategy === "rebase") {
+        result.updateStrategy = strategy;
+      } else {
+        throw new Error("--update-strategy must be either 'merge' or 'rebase'");
+      }
     }
   }
 
@@ -86,6 +95,7 @@ function promptForConfig(): {
   postAddHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
+  updateStrategy?: "merge" | "rebase";
 } {
   console.log("\n" + output.bold("Interactive Configuration") + "\n");
   console.log(
@@ -101,6 +111,7 @@ function promptForConfig(): {
     postAddHooks?: string[];
     cleanThreshold?: number;
     autoClean?: boolean;
+    updateStrategy?: "merge" | "rebase";
   } = {};
 
   // Default branch
@@ -207,6 +218,22 @@ function promptForConfig(): {
     config.autoClean = true;
   }
 
+  // Update strategy
+  console.log();
+  const updateStrategyInput = prompt(
+    `Default update strategy (merge/rebase) [${output.dim("merge")}]:`,
+  );
+  if (updateStrategyInput && updateStrategyInput.trim()) {
+    const strategy = updateStrategyInput.trim().toLowerCase();
+    if (strategy === "merge" || strategy === "rebase") {
+      config.updateStrategy = strategy;
+    } else {
+      console.log(
+        output.warning("  Invalid value, using default (merge)"),
+      );
+    }
+  }
+
   console.log();
   return config;
 }
@@ -236,6 +263,8 @@ Options:
                                   stale for 'gw clean' (default: 7)
   --auto-clean                    Enable automatic cleanup of stale worktrees
                                   (runs on 'gw add' and 'gw list' with 24h cooldown)
+  --update-strategy <strategy>    Set default update strategy: 'merge' or 'rebase'
+                                  (default: merge)
   -h, --help                      Show this help message
 
 Hook Variables:
@@ -267,8 +296,11 @@ Examples:
   # Initialize with explicit repository root
   gw init --root /Users/username/Workspace/repo.git
 
+  # Initialize with update strategy
+  gw init --update-strategy rebase
+
   # Initialize with all options
-  gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/ --post-add "cd {worktreePath} && pnpm install"
+  gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/ --post-add "cd {worktreePath} && pnpm install" --update-strategy merge
 
   # Interactive mode with explicit root
   gw init --interactive --root /Users/username/Workspace/repo.git
@@ -343,6 +375,9 @@ export async function executeInit(args: string[]): Promise<void> {
     if (interactiveConfig.autoClean !== undefined && parsed.autoClean === undefined) {
       parsed.autoClean = interactiveConfig.autoClean;
     }
+    if (interactiveConfig.updateStrategy && !parsed.updateStrategy) {
+      parsed.updateStrategy = interactiveConfig.updateStrategy;
+    }
   }
 
   // Create config
@@ -378,6 +413,11 @@ export async function executeInit(args: string[]): Promise<void> {
   // Add autoClean if provided
   if (parsed.autoClean !== undefined) {
     config.autoClean = parsed.autoClean;
+  }
+
+  // Add updateStrategy if provided
+  if (parsed.updateStrategy) {
+    config.updateStrategy = parsed.updateStrategy;
   }
 
   // Save config at the git root (so it can be found by all worktrees)
@@ -418,6 +458,11 @@ export async function executeInit(args: string[]): Promise<void> {
     if (config.autoClean) {
       console.log(
         `  Auto-cleanup: ${output.bold("enabled")} ${output.dim("(24h cooldown)")}`,
+      );
+    }
+    if (config.updateStrategy) {
+      console.log(
+        `  Update strategy: ${output.bold(config.updateStrategy)}`,
       );
     }
     console.log();

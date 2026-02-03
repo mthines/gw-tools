@@ -130,6 +130,15 @@ function validateConfig(data: unknown): data is Config {
     }
   }
 
+  if (config.updateStrategy !== undefined) {
+    if (
+      typeof config.updateStrategy !== "string" ||
+      (config.updateStrategy !== "merge" && config.updateStrategy !== "rebase")
+    ) {
+      return false;
+    }
+  }
+
   return true;
 }
 

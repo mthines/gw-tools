@@ -9,7 +9,7 @@ import { executeAdd } from './commands/add.ts';
 import { executeCd } from './commands/cd.ts';
 import { executeCheckout } from './commands/checkout.ts';
 import { executeCopy } from './commands/sync.ts';
-import { executePull } from './commands/pull.ts';
+import { executeUpdate } from './commands/update.ts';
 import { executeInit } from './commands/init.ts';
 import { executeInstallShell } from './commands/install-shell.ts';
 import { executeRoot } from './commands/root.ts';
@@ -32,7 +32,7 @@ const COMMANDS = {
   cd: executeCd,
   checkout: executeCheckout,
   co: executeCheckout, // Alias for checkout
-  pull: executePull,
+  update: executeUpdate,
   sync: executeCopy,
   init: executeInit,
   'install-shell': executeInstallShell,
