@@ -13,7 +13,8 @@ A command-line tool for managing git worktrees, built with Deno.
     - [Keeping Secrets Updated](#keeping-secrets-updated)
   - [Features](#features)
   - [Installation](#installation)
-    - [Via npm (Recommended)](#via-npm-recommended)
+    - [Via Homebrew (macOS)](#via-homebrew-macos)
+    - [Via npm](#via-npm)
     - [Build from source](#build-from-source)
   - [Configuration](#configuration)
     - [Auto-Detection](#auto-detection)
@@ -92,10 +93,13 @@ A command-line tool for managing git worktrees, built with Deno.
 
 ```bash
 # Install (Homebrew on macOS)
-brew install mthines/gw-tools/gw
+brew install mthines/gw-tools/gw && gw install-shell
 
 # Or install via npm
-npm install -g @gw-tools/gw
+npm install -g @gw-tools/gw && gw install-shell
+
+# Or install via Linux package manager
+yay -S gw-tools && gw install-shell
 
 # Create a new worktree and copy files
 gw add feat-new-feature .env secrets/
