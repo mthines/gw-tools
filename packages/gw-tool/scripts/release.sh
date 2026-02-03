@@ -299,7 +299,7 @@ if [ "$IS_PRERELEASE" = false ]; then
   AUR_DIR="/tmp/gw-tools-aur-$NEW_VERSION"
 
   # Check if SSH key is configured for AUR
-  if ssh -T aur@aur.archlinux.org 2>&1 | grep -q "successfully authenticated"; then
+  if ssh -T aur@aur.archlinux.org 2>&1 | grep -q "Welcome to AUR"; then
     echo -e "${BLUE}Cloning AUR repository...${NC}"
 
     # Clone or update AUR repo
