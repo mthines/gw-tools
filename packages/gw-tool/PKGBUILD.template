@@ -6,6 +6,7 @@ pkgdesc="Git worktree manager - Streamline your multi-branch development workflo
 arch=('x86_64' 'aarch64')
 url="https://github.com/mthines/gw-tools"
 license=('MIT')
+options=('!strip')
 provides=('gw')
 conflicts=('gw')
 
