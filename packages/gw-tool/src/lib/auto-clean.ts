@@ -12,6 +12,7 @@ import {
   removeWorktree,
   type WorktreeInfo,
 } from "./git-utils.ts";
+import * as output from "./output.ts";
 
 /** 24 hours in milliseconds */
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -112,7 +113,10 @@ export async function executeAutoClean(): Promise<number> {
     const defaultBranch = config.defaultBranch ?? "main";
 
     // Find cleanable worktrees (excludes defaultBranch)
-    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
+    const cleanableWorktrees = await getCleanableWorktrees(
+      threshold,
+      defaultBranch,
+    );
 
     if (cleanableWorktrees.length === 0) {
       // Update timestamp even if nothing to clean
@@ -169,4 +173,82 @@ export function runAutoCleanBackground(): void {
   executeAutoClean().catch(() => {
     // Silently ignore errors - auto-clean should never affect main command
   });
+}
+
+/**
+ * Prompt user to clean stale worktrees interactively
+ * Shows a confirmation prompt when stale worktrees are detected
+ * Updates cooldown timestamp regardless of user choice to prevent repeated prompts
+ */
+export async function promptAndRunAutoClean(): Promise<void> {
+  try {
+    // Load config and check if enabled
+    const { config, gitRoot } = await loadConfig();
+    if (!config.autoClean) {
+      return;
+    }
+
+    // Check cooldown
+    if (!shouldRunAutoClean(config.lastAutoCleanTime)) {
+      return;
+    }
+
+    // Get cleanable worktrees
+    const threshold = config.cleanThreshold ?? 7;
+    const defaultBranch = config.defaultBranch ?? "main";
+    const cleanableWorktrees = await getCleanableWorktrees(
+      threshold,
+      defaultBranch,
+    );
+
+    // Update timestamp BEFORE prompting to prevent repeated prompts
+    config.lastAutoCleanTime = Date.now();
+    await saveConfig(gitRoot, config);
+
+    // Return if nothing to clean (silent)
+    if (cleanableWorktrees.length === 0) {
+      return;
+    }
+
+    // Show prompt
+    console.log();
+    const worktreeWord = cleanableWorktrees.length === 1
+      ? "worktree"
+      : "worktrees";
+    const response = prompt(
+      `🧹 Found ${cleanableWorktrees.length} stale ${worktreeWord} (${threshold}+ days old). Clean them up? [Y/n]: `,
+    );
+
+    // Handle response (default to yes if empty or Enter)
+    if (
+      response === null || response === "" ||
+      response.toLowerCase() === "y" || response.toLowerCase() === "yes"
+    ) {
+      // User accepted - remove worktrees
+      let removedCount = 0;
+      for (const wt of cleanableWorktrees) {
+        try {
+          await removeWorktree(wt.path, false);
+          removedCount++;
+        } catch {
+          // Silently ignore removal failures
+        }
+      }
+
+      if (removedCount > 0) {
+        const removedWord = removedCount === 1 ? "worktree" : "worktrees";
+        console.log(
+          `${output.checkmark()} Removed ${removedCount} stale ${removedWord}`,
+        );
+      }
+    } else {
+      // User declined
+      console.log(
+        `Skipped cleanup. Run ${output.bold("gw clean")} manually if needed.`,
+      );
+    }
+    console.log();
+  } catch {
+    // Silently fail - never interrupt main command
+  }
 }

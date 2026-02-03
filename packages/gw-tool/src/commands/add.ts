@@ -3,7 +3,7 @@
  * Creates a new worktree and optionally copies files
  */
 
-import { runAutoCleanBackground } from "../lib/auto-clean.ts";
+import { promptAndRunAutoClean } from "../lib/auto-clean.ts";
 import { loadConfig } from "../lib/config.ts";
 import { copyFiles } from "../lib/file-ops.ts";
 import { fetchAndGetStartPoint, listWorktrees } from "../lib/git-utils.ts";
@@ -564,8 +564,8 @@ export async function executeAdd(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees if enabled (runs in background)
-  runAutoCleanBackground();
+  // Auto-cleanup stale worktrees if enabled (interactive prompt)
+  await promptAndRunAutoClean();
 
   output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 
