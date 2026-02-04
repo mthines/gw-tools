@@ -3,12 +3,12 @@
  * Config is stored at .gw/config.json (searched walking up from cwd)
  */
 
-import { join, resolve } from "$std/path";
-import type { Config } from "./types.ts";
-import { findGitRoot, pathExists } from "./path-resolver.ts";
+import { join, resolve } from '$std/path';
+import type { Config } from './types.ts';
+import { findGitRoot, pathExists } from './path-resolver.ts';
 
-const CONFIG_DIR_NAME = ".gw";
-const CONFIG_FILE_NAME = "config.json";
+const CONFIG_DIR_NAME = '.gw';
+const CONFIG_FILE_NAME = 'config.json';
 
 /**
  * Get the path to the config directory for a given directory
@@ -41,7 +41,7 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
       return configPath;
     }
 
-    const parentPath = resolve(currentPath, "..");
+    const parentPath = resolve(currentPath, '..');
 
     // If we've reached the root without finding config
     if (parentPath === currentPath) {
@@ -73,7 +73,7 @@ async function ensureConfigDir(dir: string): Promise<void> {
  */
 function createDefaultConfig(): Config {
   return {
-    defaultBranch: "main",
+    defaultBranch: 'main',
     cleanThreshold: 7,
   };
 }
@@ -82,20 +82,17 @@ function createDefaultConfig(): Config {
  * Validate the config structure
  */
 function validateConfig(data: unknown): data is Config {
-  if (typeof data !== "object" || data === null) {
+  if (typeof data !== 'object' || data === null) {
     return false;
   }
 
   const config = data as Partial<Config>;
 
-  if (config.root !== undefined && typeof config.root !== "string") {
+  if (config.root !== undefined && typeof config.root !== 'string') {
     return false;
   }
 
-  if (
-    config.defaultBranch !== undefined &&
-    typeof config.defaultBranch !== "string"
-  ) {
+  if (config.defaultBranch !== undefined && typeof config.defaultBranch !== 'string') {
     return false;
   }
 
@@ -104,27 +101,33 @@ function validateConfig(data: unknown): data is Config {
       return false;
     }
     // Validate that all items are strings
-    if (!config.autoCopyFiles.every((item) => typeof item === "string")) {
+    if (!config.autoCopyFiles.every((item) => typeof item === 'string')) {
       return false;
     }
   }
 
   if (config.cleanThreshold !== undefined) {
-    if (typeof config.cleanThreshold !== "number" || config.cleanThreshold < 0) {
+    if (typeof config.cleanThreshold !== 'number' || config.cleanThreshold < 0) {
       return false;
     }
   }
 
   if (config.autoClean !== undefined) {
-    if (typeof config.autoClean !== "boolean") {
+    if (typeof config.autoClean !== 'boolean') {
       return false;
     }
   }
 
   if (config.lastAutoCleanTime !== undefined) {
+    if (typeof config.lastAutoCleanTime !== 'number' || config.lastAutoCleanTime < 0) {
+      return false;
+    }
+  }
+
+  if (config.updateStrategy !== undefined) {
     if (
-      typeof config.lastAutoCleanTime !== "number" ||
-      config.lastAutoCleanTime < 0
+      typeof config.updateStrategy !== 'string' ||
+      (config.updateStrategy !== 'merge' && config.updateStrategy !== 'rebase')
     ) {
       return false;
     }
@@ -157,7 +160,7 @@ export async function loadConfig(): Promise<{
       const data = JSON.parse(content);
 
       if (!validateConfig(data)) {
-        throw new Error("Invalid configuration file format");
+        throw new Error('Invalid configuration file format');
       }
 
       // If config has root, use it
@@ -174,7 +177,7 @@ export async function loadConfig(): Promise<{
         return { config: data, gitRoot: detectedRoot };
       } catch {
         throw new Error(
-          "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually.",
+          "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually."
         );
       }
     } catch (error) {
@@ -201,7 +204,7 @@ export async function loadConfig(): Promise<{
     return { config, gitRoot };
   } catch {
     throw new Error(
-      "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually.",
+      "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually."
     );
   }
 }
@@ -211,10 +214,7 @@ export async function loadConfig(): Promise<{
  * @param dir Directory where .gw/config.json should be saved (typically the git root)
  * @param config Configuration to save
  */
-export async function saveConfig(
-  dir: string,
-  config: Config,
-): Promise<void> {
+export async function saveConfig(dir: string, config: Config): Promise<void> {
   await ensureConfigDir(dir);
   const configPath = getConfigPath(dir);
   const content = JSON.stringify(config, null, 2);

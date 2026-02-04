@@ -2,9 +2,9 @@
  * CLI argument parsing and help text
  */
 
-import { parseArgs as denoParseArgs } from "$std/cli/parse-args";
-import type { CopyOptions, GlobalArgs, PullOptions } from "./types.ts";
-import { VERSION } from "./version.ts";
+import { parseArgs as denoParseArgs } from '$std/cli/parse-args';
+import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
+import { VERSION } from './version.ts';
 
 /**
  * Parse global CLI arguments to extract command and help flag
@@ -14,7 +14,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   const [firstArg, ...restArgs] = args;
 
   // Check for global version flag
-  if (firstArg === "--version" || firstArg === "-v") {
+  if (firstArg === '--version' || firstArg === '-v') {
     return {
       command: undefined,
       args: restArgs,
@@ -24,7 +24,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   }
 
   // Check for global help flag
-  if (firstArg === "--help" || firstArg === "-h" || !firstArg) {
+  if (firstArg === '--help' || firstArg === '-h' || !firstArg) {
     return {
       command: firstArg ? undefined : undefined,
       args: restArgs,
@@ -49,6 +49,21 @@ export function showVersion(): void {
 }
 
 /**
+ * Display version information
+ */
+export function showLogo(): void {
+  console.log(`  ██████   ██      ██
+ ██        ██      ██
+ ██   ███  ██  ██  ██
+ ██    ██   ██ ██ ██
+  ██████     ██  ██
+ _____ ___   ___  _
+|_   _/ _ \\ / _ \\| |
+  | || (_) | (_) | |__
+  |_| \\___/ \\___/|____|    `);
+}
+
+/**
  * Display global help text
  */
 export function showGlobalHelp(): void {
@@ -63,7 +78,7 @@ Commands:
   add              Create a new worktree with optional auto-copy
   cd               Navigate to a worktree directory
   checkout, co     Smart git checkout for worktree workflows
-  pull             Merge latest version of default branch into current worktree
+  update           Update current worktree with latest changes from default branch
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
   show-init        Generate a 'gw init' command from current configuration
@@ -106,13 +121,13 @@ For command-specific help:
  */
 export function parseCopyArgs(args: string[]): CopyOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ["help", "dry-run"],
-    string: ["from"],
+    boolean: ['help', 'dry-run'],
+    string: ['from'],
     alias: {
-      h: "help",
-      n: "dry-run",
+      h: 'help',
+      n: 'dry-run',
     },
-    "--": true,
+    '--': true,
   });
 
   const positionalArgs = parsed._ as string[];
@@ -123,7 +138,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
     from: parsed.from as string | undefined,
     target: target as string,
     files: files as string[],
-    dryRun: parsed["dry-run"] as boolean | undefined,
+    dryRun: parsed['dry-run'] as boolean | undefined,
   };
 }
 
@@ -196,83 +211,100 @@ Configuration:
 }
 
 /**
- * Parse arguments for the pull command
+ * Parse arguments for the update command
  */
-export function parsePullArgs(args: string[]): PullOptions {
+export function parseUpdateArgs(args: string[]): UpdateOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ["help", "force", "dry-run"],
-    string: ["from", "remote"],
+    boolean: ['help', 'force', 'dry-run', 'merge', 'rebase'],
+    string: ['from', 'remote'],
     alias: {
-      h: "help",
-      f: "force",
-      n: "dry-run",
+      h: 'help',
+      f: 'force',
+      n: 'dry-run',
+      m: 'merge',
+      r: 'rebase',
     },
-    "--": true,
+    '--': true,
   });
 
   return {
     help: parsed.help as boolean,
     force: parsed.force as boolean,
-    dryRun: parsed["dry-run"] as boolean,
+    dryRun: parsed['dry-run'] as boolean,
     branch: parsed.from as string | undefined,
-    remote: (parsed.remote as string) || "origin",
+    remote: (parsed.remote as string) || 'origin',
+    merge: parsed.merge as boolean | undefined,
+    rebase: parsed.rebase as boolean | undefined,
   };
 }
 
 /**
- * Display help text for the pull command
+ * Display help text for the update command
  */
-export function showPullHelp(): void {
+export function showUpdateHelp(): void {
   console.log(`
-gw pull - Merge latest version of default branch into current worktree
+gw update - Update current worktree with latest changes from default branch
 
 Usage:
-  gw pull [options]
+  gw update [options]
 
 Options:
-  --from <branch>      Merge from specified branch instead of defaultBranch
+  --from <branch>      Update from specified branch instead of defaultBranch
   --remote <name>      Specify remote name (default: "origin")
+  -m, --merge          Force merge strategy (overrides config)
+  -r, --rebase         Force rebase strategy (overrides config)
   -f, --force          Skip uncommitted changes check (dangerous)
   -n, --dry-run        Show what would happen without executing
   -h, --help           Show this help message
 
 Description:
   Fetches the latest version of the configured default branch (typically "main")
-  from the remote and merges it into your current worktree's active branch.
+  from the remote and updates your current worktree's active branch using either
+  merge or rebase strategy.
 
   This is useful when working in a worktree and you want to update your branch
   with the latest changes from main without having to switch worktrees or
   checkout the main branch.
 
+  Update strategy:
+  - Uses merge by default (creates merge commits if histories have diverged)
+  - Can be configured to use rebase via updateStrategy in .gw/config.json
+  - Can be overridden per-command with --merge or --rebase flags
+
   Safety checks:
   - Blocks if you have uncommitted changes (use --force to override)
   - Blocks if you're in a detached HEAD state
-  - Handles merge conflicts gracefully
-
-  Merge strategy: Creates merge commits if histories have diverged
+  - Handles merge/rebase conflicts gracefully
 
 Examples:
-  # Merge latest default branch (typically main)
-  gw pull
+  # Update with configured strategy (or merge if not configured)
+  gw update
 
-  # Merge from a specific branch
-  gw pull --from develop
+  # Force merge even if rebase is configured
+  gw update --merge
+
+  # Force rebase even if merge is configured
+  gw update --rebase
+
+  # Update from a specific branch
+  gw update --from develop
 
   # Preview what would happen without executing
-  gw pull --dry-run
+  gw update --dry-run
 
-  # Force pull even with uncommitted changes (not recommended)
-  gw pull --force
+  # Force update even with uncommitted changes (not recommended)
+  gw update --force
 
   # Use a different remote
-  gw pull --remote upstream
+  gw update --remote upstream
 
 Configuration:
-  The default branch is configured in .gw/config.json:
+  The default branch and update strategy are configured in .gw/config.json:
   {
-    "defaultBranch": "main"
+    "defaultBranch": "main",
+    "updateStrategy": "merge"  // or "rebase"
   }
 
-  If not configured, defaults to "main".
+  If updateStrategy is not configured, defaults to "merge".
 `);
 }
