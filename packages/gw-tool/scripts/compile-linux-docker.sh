@@ -5,6 +5,12 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 WORKSPACE_ROOT="$(cd "$SCRIPT_DIR/../../.." && pwd)"
 
+# If docker isn't running, exit with error
+if ! docker info > /dev/null 2>&1; then
+  echo "❌ Docker is not running. Please start Docker and try again."
+  exit 1
+fi
+
 echo "Compiling Linux binaries using Docker..."
 docker run --rm \
   -v "$WORKSPACE_ROOT:/workspace" \
