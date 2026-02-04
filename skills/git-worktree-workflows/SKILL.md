@@ -498,28 +498,41 @@ npm run dev
 # Working in feature worktree
 gw cd feature-user-profiles
 
-# Merge latest changes from main into your feature branch
-gw pull
+# Update with latest changes from main (uses configured strategy)
+gw update
 
-# Or merge from a different branch
-gw pull --from develop
+# Or update from a different branch
+gw update --from develop
 
-# Preview what would be merged
-gw pull --dry-run
+# Force merge strategy (overrides config)
+gw update --merge
+
+# Force rebase strategy (overrides config)
+gw update --rebase
+
+# Preview what would happen
+gw update --dry-run
 ```
 
-**Why use `gw pull` instead of `git pull`?**
+**Why use `gw update` instead of `git pull`?**
 
-When working in a worktree, you cannot simply checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw pull` command solves this by:
+When working in a worktree, you cannot simply checkout main to pull the latest changes because main is typically checked out in another worktree. The `gw update` command solves this by:
 
 1. Fetching the latest version of main (or specified branch) from remote
-2. Merging it into your current branch without needing to switch worktrees
+2. Updating your current branch using either merge or rebase strategy
 3. Handling conflicts and providing clear guidance
+
+**Update strategies:**
+
+- **Merge** (default): Creates merge commits, preserves complete history
+- **Rebase**: Replays commits for linear history, cleaner but rewrites history
+
+Configure default strategy in `.gw/config.json` or override per-command with `--merge`/`--rebase` flags.
 
 **Safety features:**
 - Blocks if you have uncommitted changes (use `--force` to override)
 - Blocks if you're in a detached HEAD state
-- Provides clear guidance when merge conflicts occur
+- Provides clear guidance when merge/rebase conflicts occur
 
 **Example workflow:**
 
@@ -533,13 +546,17 @@ git commit -m "feat: add dashboard widgets"
 
 # Meanwhile, main has new changes
 # Update your feature branch with latest main
-gw pull
+gw update
 
 # If there's a conflict, you'll get clear guidance:
-# Resolve conflicts manually:
+# For merge conflicts:
 #   1. Edit conflicted files
 #   2. git add <resolved-files>
 #   3. git commit
+# For rebase conflicts:
+#   1. Edit conflicted files
+#   2. git add <resolved-files>
+#   3. git rebase --continue
 
 # Continue working
 git add .

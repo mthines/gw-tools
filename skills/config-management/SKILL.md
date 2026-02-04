@@ -131,7 +131,8 @@ If no configuration exists:
     "secrets/",
     "config/local.json"
   ],
-  "cleanThreshold": 7
+  "cleanThreshold": 7,
+  "updateStrategy": "merge"
 }
 ```
 
@@ -179,9 +180,47 @@ If no configuration exists:
 - `gw add feature-x` copies from `defaultBranch` worktree
 - `gw sync target file.txt` syncs from `defaultBranch` unless `--from` specified
 - `gw sync target` (without files) syncs `autoCopyFiles` from `defaultBranch`
+- `gw update` fetches and updates from `defaultBranch` unless `--from` specified
 - **Auto-clean never removes this worktree** - it's protected as the source for file syncing
 
 **Important:** Ensure your secrets and environment files exist in the `defaultBranch` worktree **before** using `gw add` or `gw sync`. This worktree is the source from which files are copied.
+
+### `updateStrategy`: Default Update Strategy
+
+**Purpose:** Choose default strategy for `gw update` command - merge or rebase.
+
+**Example:**
+
+```json
+{
+  "updateStrategy": "rebase"
+}
+```
+
+**Valid values:**
+- `"merge"` (default) - Creates merge commits, preserves complete history
+- `"rebase"` - Replays commits for linear history, rewrites history
+
+**How it's used:**
+- `gw update` uses this strategy by default
+- Can be overridden per-command with `--merge` or `--rebase` flags
+- Strategy precedence: CLI flags > config > default (merge)
+
+**Which strategy to choose:**
+
+Use **merge** when:
+- You want to preserve complete commit history
+- Working on shared branches where others may have pulled your commits
+- You prefer explicit merge commits showing when branches were integrated
+- Team prefers "true history" approach
+
+Use **rebase** when:
+- You want a linear, clean commit history
+- Working on personal feature branches not shared with others
+- You're comfortable with rewriting history
+- Team prefers clean, linear history approach
+
+**Important:** Rebase rewrites commit history. Only use it on branches you haven't shared with others, or ensure your team understands the implications.
 
 ### `autoCopyFiles`: File Patterns to Auto-Copy
 

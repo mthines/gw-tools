@@ -318,6 +318,7 @@ Deno.test("init command - interactive mode with all defaults", async () => {
         "n", // want post-add hooks
         "", // clean threshold (accept default 7)
         "n", // enable auto-clean
+        "", // update strategy (accept default "merge")
       ];
 
       await withMockedPrompt(responses, () =>
@@ -356,6 +357,7 @@ Deno.test("init command - interactive mode with custom values", async () => {
         "", // post-add hook 2 (blank to finish)
         "14", // clean threshold
         "y", // enable auto-clean
+        "rebase", // update strategy
       ];
 
       await withMockedPrompt(responses, () =>
@@ -369,6 +371,7 @@ Deno.test("init command - interactive mode with custom values", async () => {
       assertEquals(config.hooks?.add?.post, ["pnpm install"]);
       assertEquals(config.cleanThreshold, 14);
       assertEquals(config.autoClean, true);
+      assertEquals(config.updateStrategy, "rebase");
     } finally {
       cwd.restore();
     }
@@ -397,6 +400,7 @@ Deno.test("init command - interactive mode with multiple hooks", async () => {
         "", // blank to finish post-add hooks
         "", // clean threshold (default)
         "n", // enable auto-clean
+        "", // update strategy (default)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -436,6 +440,7 @@ Deno.test("init command - interactive mode with CLI flags takes precedence", asy
         "n", // want post-add hooks
         "21", // clean threshold (should be ignored, CLI has "10")
         "y", // enable auto-clean (should be ignored, no CLI flag)
+        "rebase", // update strategy (should be ignored, CLI has "merge")
       ];
 
       await withMockedPrompt(responses, () =>
@@ -447,6 +452,8 @@ Deno.test("init command - interactive mode with CLI flags takes precedence", asy
           ".env",
           "--clean-threshold",
           "10",
+          "--update-strategy",
+          "merge",
         ])
       );
 
@@ -457,6 +464,8 @@ Deno.test("init command - interactive mode with CLI flags takes precedence", asy
       assertEquals(config.cleanThreshold, 10);
       // autoClean not set via CLI, so interactive value should be used
       assertEquals(config.autoClean, true);
+      // updateStrategy set via CLI, should take precedence
+      assertEquals(config.updateStrategy, "merge");
     } finally {
       cwd.restore();
     }
@@ -479,6 +488,7 @@ Deno.test("init command - interactive mode with invalid clean threshold", async 
         "n", // want post-add hooks
         "invalid", // clean threshold (invalid, should use default)
         "n", // enable auto-clean
+        "", // update strategy (default)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -513,6 +523,7 @@ Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", asy
         "", // blank to finish
         "", // clean threshold (default)
         "yes", // enable auto-clean (using "yes")
+        "", // update strategy (default)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -545,6 +556,7 @@ Deno.test("init command - interactive mode declining all optional features", asy
         "n", // want post-add hooks
         "7", // clean threshold
         "n", // enable auto-clean
+        "", // update strategy (default)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -580,6 +592,7 @@ Deno.test("init command - interactive mode with whitespace in responses", async 
         "n", // want post-add hooks
         " 10 ", // clean threshold with whitespace (should be parsed)
         "n", // enable auto-clean
+        " merge ", // update strategy with whitespace (should be trimmed)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -590,6 +603,7 @@ Deno.test("init command - interactive mode with whitespace in responses", async 
       assertEquals(config.defaultBranch, "staging");
       assertEquals(config.autoCopyFiles, [".env", ".env.local"]);
       assertEquals(config.cleanThreshold, 10);
+      assertEquals(config.updateStrategy, "merge");
     } finally {
       cwd.restore();
     }

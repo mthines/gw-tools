@@ -132,13 +132,18 @@ function promptForConfig(): {
       output.dim("n")
     }]: `,
   );
-  if (wantAutoCopy?.toLowerCase() === "y" || wantAutoCopy?.toLowerCase() === "yes") {
+  if (
+    wantAutoCopy?.toLowerCase() === "y" || wantAutoCopy?.toLowerCase() === "yes"
+  ) {
     console.log(
-      output.dim("  Enter comma-separated file/directory paths (e.g., .env,secrets/)"),
+      output.dim(
+        "  Enter comma-separated file/directory paths (e.g., .env,secrets/)",
+      ),
     );
     const autoCopyInput = prompt("  Files to auto-copy: ");
     if (autoCopyInput && autoCopyInput.trim()) {
-      config.autoCopyFiles = autoCopyInput.split(",").map((f) => f.trim()).filter((f) => f);
+      config.autoCopyFiles = autoCopyInput.split(",").map((f) => f.trim())
+        .filter((f) => f);
     }
   }
 
@@ -147,7 +152,9 @@ function promptForConfig(): {
   const wantPreHooks = prompt(
     `Do you want to add pre-add hooks? (y/n) [${output.dim("n")}]: `,
   );
-  if (wantPreHooks?.toLowerCase() === "y" || wantPreHooks?.toLowerCase() === "yes") {
+  if (
+    wantPreHooks?.toLowerCase() === "y" || wantPreHooks?.toLowerCase() === "yes"
+  ) {
     console.log(
       output.dim("  Enter commands to run before creating worktrees"),
     );
@@ -159,7 +166,9 @@ function promptForConfig(): {
     const preHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish): `);
+      const hookInput = prompt(
+        `  Pre-add hook ${hookNum} (leave blank to finish): `,
+      );
       if (!hookInput || !hookInput.trim()) break;
       preHooks.push(hookInput.trim());
       hookNum++;
@@ -174,7 +183,10 @@ function promptForConfig(): {
   const wantPostHooks = prompt(
     `Do you want to add post-add hooks? (y/n) [${output.dim("n")}]: `,
   );
-  if (wantPostHooks?.toLowerCase() === "y" || wantPostHooks?.toLowerCase() === "yes") {
+  if (
+    wantPostHooks?.toLowerCase() === "y" ||
+    wantPostHooks?.toLowerCase() === "yes"
+  ) {
     console.log(
       output.dim("  Enter commands to run after creating worktrees"),
     );
@@ -186,7 +198,9 @@ function promptForConfig(): {
     const postHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish): `);
+      const hookInput = prompt(
+        `  Post-add hook ${hookNum} (leave blank to finish): `,
+      );
       if (!hookInput || !hookInput.trim()) break;
       postHooks.push(hookInput.trim());
       hookNum++;
@@ -217,7 +231,10 @@ function promptForConfig(): {
   const autoCleanInput = prompt(
     `Enable automatic cleanup of stale worktrees? (y/n) [${output.dim("n")}]:`,
   );
-  if (autoCleanInput?.toLowerCase() === "y" || autoCleanInput?.toLowerCase() === "yes") {
+  if (
+    autoCleanInput?.toLowerCase() === "y" ||
+    autoCleanInput?.toLowerCase() === "yes"
+  ) {
     config.autoClean = true;
   }
 
@@ -372,10 +389,16 @@ export async function executeInit(args: string[]): Promise<void> {
     if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
       parsed.postAddHooks = interactiveConfig.postAddHooks;
     }
-    if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
+    if (
+      interactiveConfig.cleanThreshold !== undefined &&
+      parsed.cleanThreshold === undefined
+    ) {
       parsed.cleanThreshold = interactiveConfig.cleanThreshold;
     }
-    if (interactiveConfig.autoClean !== undefined && parsed.autoClean === undefined) {
+    if (
+      interactiveConfig.autoClean !== undefined &&
+      parsed.autoClean === undefined
+    ) {
       parsed.autoClean = interactiveConfig.autoClean;
     }
     if (interactiveConfig.updateStrategy && !parsed.updateStrategy) {
@@ -455,12 +478,16 @@ export async function executeInit(args: string[]): Promise<void> {
     }
     if (config.cleanThreshold !== undefined) {
       console.log(
-        `  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`,
+        `  Clean threshold: ${
+          output.bold(config.cleanThreshold.toString())
+        } days`,
       );
     }
     if (config.autoClean) {
       console.log(
-        `  Auto-cleanup: ${output.bold("enabled")} ${output.dim("(24h cooldown)")}`,
+        `  Auto-cleanup: ${output.bold("enabled")} ${
+          output.dim("(24h cooldown)")
+        }`,
       );
     }
     if (config.updateStrategy) {

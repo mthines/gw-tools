@@ -37,6 +37,7 @@
         "npm:@swc-node/register@~1.9.1",
         "npm:@swc/core@~1.5.7",
         "npm:@swc/helpers@~0.5.11",
+        "npm:@types/deno@^2.5.0",
         "npm:@types/jest@30",
         "npm:@types/node@20.19.9",
         "npm:@vitest/coverage-v8@4.0.9",
