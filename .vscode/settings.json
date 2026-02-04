@@ -6,7 +6,7 @@
   "deno.importMap": "./packages/gw-tool/deno.json",
   "deno.testing.args": ["--allow-all"],
   "[typescript]": {
-    "editor.defaultFormatter": "denoland.vscode-deno",
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
   },
   "[typescriptreact]": {

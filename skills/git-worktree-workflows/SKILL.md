@@ -1,10 +1,10 @@
 ---
-name: "@gw-git-worktree-workflows"
+name: '@gw-git-worktree-workflows'
 description: Master Git worktrees and gw-tools workflows for parallel development. Use this skill when creating worktrees, managing multiple branches simultaneously, navigating between worktrees, troubleshooting worktree issues, or setting up feature branch workflows. Triggers on tasks involving git worktree commands, branch isolation, parallel development, or gw CLI usage.
 license: MIT
 metadata:
   author: mthines
-  version: "1.0.0"
+  version: '1.0.0'
 ---
 
 # Git Worktree Workflows - Comprehensive Guide
@@ -30,6 +30,7 @@ This guide teaches you how to master Git worktrees using the `gw` CLI tool for o
 Git worktrees allow you to have multiple working directories attached to a single repository. Instead of switching branches in your current directory, you can check out different branches in separate directories simultaneously.
 
 **Traditional branch switching:**
+
 ```bash
 # Your current work is interrupted
 git checkout feature-a     # Work on feature A
@@ -38,6 +39,7 @@ git checkout main          # Switch again for hotfix
 ```
 
 **With worktrees:**
+
 ```bash
 # Each branch has its own directory
 /repo.git/main/           # Main branch always ready
@@ -48,11 +50,11 @@ git checkout main          # Switch again for hotfix
 
 ### Worktree vs Branch Switching vs Cloning
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Branch Switching** | Single directory, less disk space | Interrupts work, requires stashing, IDE reindexes |
-| **Worktrees** | Parallel work, no interruption, shared Git history | Slightly more disk space for working files |
-| **Cloning** | Complete isolation | Huge disk space, separate Git history, harder to sync |
+| Approach             | Pros                                               | Cons                                                  |
+| -------------------- | -------------------------------------------------- | ----------------------------------------------------- |
+| **Branch Switching** | Single directory, less disk space                  | Interrupts work, requires stashing, IDE reindexes     |
+| **Worktrees**        | Parallel work, no interruption, shared Git history | Slightly more disk space for working files            |
+| **Cloning**          | Complete isolation                                 | Huge disk space, separate Git history, harder to sync |
 
 ### When Worktrees Shine
 
@@ -68,6 +70,7 @@ Worktrees are ideal for:
 ### Worktree Limitations and Gotchas
 
 **What worktrees share:**
+
 - ✅ Git repository (.git directory)
 - ✅ Commit history and objects
 - ✅ Branches and tags
@@ -75,6 +78,7 @@ Worktrees are ideal for:
 - ✅ Hooks and config
 
 **What worktrees DON'T share:**
+
 - ❌ Working directory files
 - ❌ Untracked files
 - ❌ node_modules (unless symlinked)
@@ -82,6 +86,7 @@ Worktrees are ideal for:
 - ❌ .env files (unless copied)
 
 **Important limitations:**
+
 - You cannot check out the same branch in multiple worktrees simultaneously
 - Each worktree needs its own dependencies installed (node_modules, vendor/, etc.)
 - IDE workspace settings may need adjustment for each worktree
@@ -137,22 +142,19 @@ When creating worktrees with `gw add`, files configured in `.gw/config.json` are
 {
   "root": "/Users/you/projects/myapp.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "secrets/",
-    "components/ui/.vercel/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "secrets/", "components/ui/.vercel/"]
 }
 ```
 
 **What gets copied:**
+
 - Environment files (.env, .env.local)
 - Secrets and credentials
 - Local configuration
 - Cache directories (if needed)
 
 **What should NOT be auto-copied:**
+
 - node_modules (install fresh or symlink)
 - Build artifacts (build fresh)
 - Large binary files
@@ -196,6 +198,7 @@ gw sync --from staging feature-auth .env
 ### Tracking vs Detached HEAD States
 
 **Tracking branches** (recommended):
+
 ```bash
 # Creates branch from origin/main, tracking its own remote branch
 gw add feature-x
@@ -212,6 +215,7 @@ git push  # Pushes to origin/feature-x
 **Note:** When `gw add` creates a new branch, it automatically configures upstream tracking to `origin/<branch-name>`, not to the branch it was created from. This ensures `git push` works correctly.
 
 **Detached HEAD** (for temporary work):
+
 ```bash
 # Check out specific commit
 gw add temp-test --detach v1.2.3
@@ -226,6 +230,7 @@ Use tracking branches for features you'll push. Use detached HEAD for temporary 
 ### Branch Creation Strategies
 
 **Feature branches:**
+
 ```bash
 # Branch from main
 gw add feature-name -b feature-name main
@@ -235,6 +240,7 @@ gw add feature-name -b feature-name develop
 ```
 
 **Hotfix branches:**
+
 ```bash
 # Branch from production tag
 gw add hotfix-security -b hotfix-security v1.2.3
@@ -244,6 +250,7 @@ gw add hotfix-critical -b hotfix-critical main
 ```
 
 **Release branches:**
+
 ```bash
 # Create release candidate from develop
 gw add release-v2.0 -b release-v2.0 develop
@@ -290,6 +297,7 @@ gw checkout feature-new
 ```
 
 **When to use `gw checkout` vs `gw cd`:**
+
 - Use `gw checkout <branch>` when you think of branches (like `git checkout`)
 - Use `gw cd <worktree>` when you think of directory names
 - Both support partial matching and navigate to existing worktrees
@@ -298,6 +306,7 @@ gw checkout feature-new
 **Why not just use `git checkout`?**
 
 With worktrees, `git checkout main` will fail if main is checked out in another worktree:
+
 ```bash
 $ git checkout main
 fatal: 'main' is already checked out at '/projects/myapp.git/main'
@@ -331,6 +340,7 @@ gw install-shell
 ```
 
 **Shell integration features:**
+
 - **Real-time streaming output** - Commands like `gw add` now stream output as it's generated (no buffering)
 - **Auto-navigation** - Automatically navigate to new worktrees after `gw add` completes
 - **Smart cleanup** - Auto-navigate to repo root when removing the current worktree with `gw remove`
@@ -412,27 +422,35 @@ $ gw list
 ### Understanding Worktree States
 
 **Normal worktree:**
+
 ```
 /projects/myapp.git/feature-auth  def456a [feature-auth]
 ```
+
 - Path, commit hash, branch name
 
 **Detached HEAD:**
+
 ```
 /projects/myapp.git/temp  xyz789d (detached)
 ```
+
 - No branch, pointing to specific commit
 
 **Locked worktree:**
+
 ```
 /projects/myapp.git/protected  abc123f [protected] (locked)
 ```
+
 - Cannot be removed with `gw remove` unless unlocked first
 
 **Prunable worktree:**
+
 ```
 /old/path/feature  abc123f [feature] (prunable)
 ```
+
 - Directory was moved or deleted, reference still exists
 
 ### Finding Worktrees by Branch Name
@@ -459,6 +477,7 @@ $ gw list
 ```
 
 The main worktree:
+
 - Contains the actual `.git` directory
 - Cannot be removed
 - Is the parent of all other worktrees
@@ -530,6 +549,7 @@ When working in a worktree, you cannot simply checkout main to pull the latest c
 Configure default strategy in `.gw/config.json` or override per-command with `--merge`/`--rebase` flags.
 
 **Safety features:**
+
 - Blocks if you have uncommitted changes (use `--force` to override)
 - Blocks if you're in a detached HEAD state
 - Provides clear guidance when merge/rebase conflicts occur
@@ -689,6 +709,7 @@ gw remove feature-abandoned --force
 ```
 
 **What happens:**
+
 - Working directory is deleted
 - Worktree reference removed from Git
 - Branch remains in repository (can still be checked out elsewhere)
@@ -709,6 +730,7 @@ gw clean --force
 ```
 
 **How it works:**
+
 - Checks for worktrees older than the configured threshold (default: 7 days)
 - By default, only removes worktrees with:
   - NO uncommitted changes
@@ -761,6 +783,7 @@ SUCCESS: Removed 2 worktree(s)
 The gw tool provides two complementary cleanup commands for different scenarios:
 
 **Age-based Cleanup: `gw clean`**
+
 - Removes worktrees **older than configured threshold** (default: 7 days)
 - Good for regular maintenance
 - Respects safety checks (no uncommitted changes, no unpushed commits)
@@ -773,6 +796,7 @@ gw clean            # Remove old worktrees
 ```
 
 **Complete Cleanup: `gw prune --clean`**
+
 - Removes **ALL clean worktrees** (regardless of age)
 - First runs `git worktree prune` to clean up administrative data
 - Protects default branch and current worktree
@@ -796,17 +820,20 @@ gw prune --clean            # Remove all clean worktrees
 **When to use which:**
 
 Use `gw clean`:
+
 - Weekly/monthly maintenance to remove stale worktrees
 - When you want to keep recent worktrees but clean up old ones
 - As part of automated cleanup routines
 
 Use `gw prune --clean`:
+
 - Before archiving a project or taking a break
 - When you need to free up disk space quickly
 - To reset to a minimal worktree setup (just main branch + current work)
 - After completing a major milestone or release
 
 **Example workflow:**
+
 ```bash
 # Regular maintenance (weekly)
 gw clean --dry-run  # Preview old worktrees
@@ -866,6 +893,7 @@ du -sh /projects/myapp.git/*
 **Optimization strategies:**
 
 1. **Share node_modules with symlinks** (advanced, use with caution):
+
 ```bash
 # In feature worktree
 rm -rf node_modules
@@ -873,11 +901,13 @@ ln -s ../main/node_modules node_modules
 ```
 
 2. **Use pnpm** (shares packages automatically):
+
 ```bash
 pnpm install  # Shares packages across worktrees
 ```
 
 3. **Remove old worktrees regularly**:
+
 ```bash
 # List and remove old feature worktrees
 gw list | grep feature-old
@@ -885,6 +915,7 @@ gw remove feature-old-1 feature-old-2
 ```
 
 4. **Archive instead of keeping:**
+
 ```bash
 # Push branch, remove worktree
 git push origin feature-complete
@@ -1080,6 +1111,7 @@ source ~/.zshrc  # or ~/.bashrc
 ```
 
 **Common causes:**
+
 - Conflicting alias and function with same name (remove alias from .zshrc)
 - Old integration script format (reinstall fixes this)
 - Shell not supported (only zsh, bash, fish)
@@ -1129,4 +1161,4 @@ You now understand:
 
 ---
 
-*Part of the [gw-tools skills collection](../README.md)*
+_Part of the [gw-tools skills collection](../README.md)_

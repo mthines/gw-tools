@@ -2,9 +2,9 @@
  * CLI argument parsing and help text
  */
 
-import { parseArgs as denoParseArgs } from "$std/cli/parse-args";
-import type { CopyOptions, GlobalArgs, UpdateOptions } from "./types.ts";
-import { VERSION } from "./version.ts";
+import { parseArgs as denoParseArgs } from '$std/cli/parse-args';
+import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
+import { VERSION } from './version.ts';
 
 /**
  * Parse global CLI arguments to extract command and help flag
@@ -14,7 +14,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   const [firstArg, ...restArgs] = args;
 
   // Check for global version flag
-  if (firstArg === "--version" || firstArg === "-v") {
+  if (firstArg === '--version' || firstArg === '-v') {
     return {
       command: undefined,
       args: restArgs,
@@ -24,7 +24,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
   }
 
   // Check for global help flag
-  if (firstArg === "--help" || firstArg === "-h" || !firstArg) {
+  if (firstArg === '--help' || firstArg === '-h' || !firstArg) {
     return {
       command: firstArg ? undefined : undefined,
       args: restArgs,
@@ -121,13 +121,13 @@ For command-specific help:
  */
 export function parseCopyArgs(args: string[]): CopyOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ["help", "dry-run"],
-    string: ["from"],
+    boolean: ['help', 'dry-run'],
+    string: ['from'],
     alias: {
-      h: "help",
-      n: "dry-run",
+      h: 'help',
+      n: 'dry-run',
     },
-    "--": true,
+    '--': true,
   });
 
   const positionalArgs = parsed._ as string[];
@@ -138,7 +138,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
     from: parsed.from as string | undefined,
     target: target as string,
     files: files as string[],
-    dryRun: parsed["dry-run"] as boolean | undefined,
+    dryRun: parsed['dry-run'] as boolean | undefined,
   };
 }
 
@@ -215,24 +215,24 @@ Configuration:
  */
 export function parseUpdateArgs(args: string[]): UpdateOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ["help", "force", "dry-run", "merge", "rebase"],
-    string: ["from", "remote"],
+    boolean: ['help', 'force', 'dry-run', 'merge', 'rebase'],
+    string: ['from', 'remote'],
     alias: {
-      h: "help",
-      f: "force",
-      n: "dry-run",
-      m: "merge",
-      r: "rebase",
+      h: 'help',
+      f: 'force',
+      n: 'dry-run',
+      m: 'merge',
+      r: 'rebase',
     },
-    "--": true,
+    '--': true,
   });
 
   return {
     help: parsed.help as boolean,
     force: parsed.force as boolean,
-    dryRun: parsed["dry-run"] as boolean,
+    dryRun: parsed['dry-run'] as boolean,
     branch: parsed.from as string | undefined,
-    remote: (parsed.remote as string) || "origin",
+    remote: (parsed.remote as string) || 'origin',
     merge: parsed.merge as boolean | undefined,
     rebase: parsed.rebase as boolean | undefined,
   };

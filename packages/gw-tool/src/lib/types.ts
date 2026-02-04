@@ -39,7 +39,7 @@ export interface Config {
   /** Unix timestamp in milliseconds of last auto-cleanup run (managed automatically) */
   lastAutoCleanTime?: number;
   /** Default update strategy for the update command (optional, default: "merge") */
-  updateStrategy?: "merge" | "rebase";
+  updateStrategy?: 'merge' | 'rebase';
 }
 
 /**

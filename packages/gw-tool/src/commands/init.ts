@@ -3,12 +3,12 @@
  * Initializes the gw configuration for a repository
  */
 
-import { resolve } from "$std/path";
-import { saveConfig } from "../lib/config.ts";
-import { findGitRoot, validatePathExists } from "../lib/path-resolver.ts";
-import type { Config } from "../lib/types.ts";
-import * as output from "../lib/output.ts";
-import { showLogo } from "../lib/cli.ts";
+import { resolve } from '$std/path';
+import { saveConfig } from '../lib/config.ts';
+import { findGitRoot, validatePathExists } from '../lib/path-resolver.ts';
+import type { Config } from '../lib/types.ts';
+import * as output from '../lib/output.ts';
+import { showLogo } from '../lib/cli.ts';
 
 /**
  * Parse init command arguments
@@ -23,7 +23,7 @@ function parseInitArgs(args: string[]): {
   postAddHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
-  updateStrategy?: "merge" | "rebase";
+  updateStrategy?: 'merge' | 'rebase';
 } {
   const result: {
     help: boolean;
@@ -35,7 +35,7 @@ function parseInitArgs(args: string[]): {
     postAddHooks?: string[];
     cleanThreshold?: number;
     autoClean?: boolean;
-    updateStrategy?: "merge" | "rebase";
+    updateStrategy?: 'merge' | 'rebase';
   } = {
     help: false,
     interactive: false,
@@ -44,38 +44,38 @@ function parseInitArgs(args: string[]): {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
-    if (arg === "--help" || arg === "-h") {
+    if (arg === '--help' || arg === '-h') {
       result.help = true;
-    } else if (arg === "--interactive" || arg === "-i") {
+    } else if (arg === '--interactive' || arg === '-i') {
       result.interactive = true;
-    } else if (arg === "--root" && i + 1 < args.length) {
+    } else if (arg === '--root' && i + 1 < args.length) {
       result.root = args[++i];
-    } else if (arg === "--default-source" && i + 1 < args.length) {
+    } else if (arg === '--default-source' && i + 1 < args.length) {
       result.defaultBranch = args[++i];
-    } else if (arg === "--auto-copy-files" && i + 1 < args.length) {
+    } else if (arg === '--auto-copy-files' && i + 1 < args.length) {
       // Split comma-separated list
       const filesArg = args[++i];
-      result.autoCopyFiles = filesArg.split(",").map((f) => f.trim());
-    } else if (arg === "--pre-add" && i + 1 < args.length) {
+      result.autoCopyFiles = filesArg.split(',').map((f) => f.trim());
+    } else if (arg === '--pre-add' && i + 1 < args.length) {
       // Add to pre-add hooks array (can be specified multiple times)
       if (!result.preAddHooks) result.preAddHooks = [];
       result.preAddHooks.push(args[++i]);
-    } else if (arg === "--post-add" && i + 1 < args.length) {
+    } else if (arg === '--post-add' && i + 1 < args.length) {
       // Add to post-add hooks array (can be specified multiple times)
       if (!result.postAddHooks) result.postAddHooks = [];
       result.postAddHooks.push(args[++i]);
-    } else if (arg === "--clean-threshold" && i + 1 < args.length) {
+    } else if (arg === '--clean-threshold' && i + 1 < args.length) {
       const value = parseInt(args[++i], 10);
       if (!isNaN(value) && value >= 0) {
         result.cleanThreshold = value;
       } else {
-        throw new Error("--clean-threshold must be a non-negative number");
+        throw new Error('--clean-threshold must be a non-negative number');
       }
-    } else if (arg === "--auto-clean") {
+    } else if (arg === '--auto-clean') {
       result.autoClean = true;
-    } else if (arg === "--update-strategy" && i + 1 < args.length) {
+    } else if (arg === '--update-strategy' && i + 1 < args.length) {
       const strategy = args[++i];
-      if (strategy === "merge" || strategy === "rebase") {
+      if (strategy === 'merge' || strategy === 'rebase') {
         result.updateStrategy = strategy;
       } else {
         throw new Error("--update-strategy must be either 'merge' or 'rebase'");
@@ -96,16 +96,12 @@ function promptForConfig(): {
   postAddHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
-  updateStrategy?: "merge" | "rebase";
+  updateStrategy?: 'merge' | 'rebase';
 } {
   showLogo();
 
-  console.log("\n" + output.bold("Interactive Configuration") + "\n");
-  console.log(
-    output.dim(
-      "Press Enter to accept defaults. Leave blank to skip optional settings.\n",
-    ),
-  );
+  console.log('\n' + output.bold('Interactive Configuration') + '\n');
+  console.log(output.dim('Press Enter to accept defaults. Leave blank to skip optional settings.\n'));
 
   const config: {
     defaultBranch?: string;
@@ -114,61 +110,39 @@ function promptForConfig(): {
     postAddHooks?: string[];
     cleanThreshold?: number;
     autoClean?: boolean;
-    updateStrategy?: "merge" | "rebase";
+    updateStrategy?: 'merge' | 'rebase';
   } = {};
 
   // Default branch
-  const defaultBranchInput = prompt(
-    `Default source worktree name [${output.dim("main")}]: `,
-  );
+  const defaultBranchInput = prompt(`Default source worktree name [${output.dim('main')}]: `);
   if (defaultBranchInput && defaultBranchInput.trim()) {
     config.defaultBranch = defaultBranchInput.trim();
   }
 
   // Auto-copy files
   console.log();
-  const wantAutoCopy = prompt(
-    `Do you want to auto-copy files when creating worktrees? (y/n) [${
-      output.dim("n")
-    }]: `,
-  );
-  if (
-    wantAutoCopy?.toLowerCase() === "y" || wantAutoCopy?.toLowerCase() === "yes"
-  ) {
-    console.log(
-      output.dim(
-        "  Enter comma-separated file/directory paths (e.g., .env,secrets/)",
-      ),
-    );
-    const autoCopyInput = prompt("  Files to auto-copy: ");
+  const wantAutoCopy = prompt(`Do you want to auto-copy files when creating worktrees? (y/n) [${output.dim('n')}]: `);
+  if (wantAutoCopy?.toLowerCase() === 'y' || wantAutoCopy?.toLowerCase() === 'yes') {
+    console.log(output.dim('  Enter comma-separated file/directory paths (e.g., .env,secrets/)'));
+    const autoCopyInput = prompt('  Files to auto-copy: ');
     if (autoCopyInput && autoCopyInput.trim()) {
-      config.autoCopyFiles = autoCopyInput.split(",").map((f) => f.trim())
+      config.autoCopyFiles = autoCopyInput
+        .split(',')
+        .map((f) => f.trim())
         .filter((f) => f);
     }
   }
 
   // Pre-add hooks
   console.log();
-  const wantPreHooks = prompt(
-    `Do you want to add pre-add hooks? (y/n) [${output.dim("n")}]: `,
-  );
-  if (
-    wantPreHooks?.toLowerCase() === "y" || wantPreHooks?.toLowerCase() === "yes"
-  ) {
-    console.log(
-      output.dim("  Enter commands to run before creating worktrees"),
-    );
-    console.log(
-      output.dim(
-        "  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}",
-      ),
-    );
+  const wantPreHooks = prompt(`Do you want to add pre-add hooks? (y/n) [${output.dim('n')}]: `);
+  if (wantPreHooks?.toLowerCase() === 'y' || wantPreHooks?.toLowerCase() === 'yes') {
+    console.log(output.dim('  Enter commands to run before creating worktrees'));
+    console.log(output.dim('  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}'));
     const preHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(
-        `  Pre-add hook ${hookNum} (leave blank to finish): `,
-      );
+      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       preHooks.push(hookInput.trim());
       hookNum++;
@@ -180,27 +154,14 @@ function promptForConfig(): {
 
   // Post-add hooks
   console.log();
-  const wantPostHooks = prompt(
-    `Do you want to add post-add hooks? (y/n) [${output.dim("n")}]: `,
-  );
-  if (
-    wantPostHooks?.toLowerCase() === "y" ||
-    wantPostHooks?.toLowerCase() === "yes"
-  ) {
-    console.log(
-      output.dim("  Enter commands to run after creating worktrees"),
-    );
-    console.log(
-      output.dim(
-        "  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}",
-      ),
-    );
+  const wantPostHooks = prompt(`Do you want to add post-add hooks? (y/n) [${output.dim('n')}]: `);
+  if (wantPostHooks?.toLowerCase() === 'y' || wantPostHooks?.toLowerCase() === 'yes') {
+    console.log(output.dim('  Enter commands to run after creating worktrees'));
+    console.log(output.dim('  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}'));
     const postHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(
-        `  Post-add hook ${hookNum} (leave blank to finish): `,
-      );
+      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       postHooks.push(hookInput.trim());
       hookNum++;
@@ -212,45 +173,32 @@ function promptForConfig(): {
 
   // Clean threshold
   console.log();
-  const cleanThresholdInput = prompt(
-    `Days before worktrees are considered stale [${output.dim("7")}]:`,
-  );
+  const cleanThresholdInput = prompt(`Days before worktrees are considered stale [${output.dim('7')}]:`);
   if (cleanThresholdInput && cleanThresholdInput.trim()) {
     const value = parseInt(cleanThresholdInput.trim(), 10);
     if (!isNaN(value) && value >= 0) {
       config.cleanThreshold = value;
     } else {
-      console.log(
-        output.warning("  Invalid value, using default (7 days)"),
-      );
+      console.log(output.warning('  Invalid value, using default (7 days)'));
     }
   }
 
   // Auto-clean
   console.log();
-  const autoCleanInput = prompt(
-    `Enable automatic cleanup of stale worktrees? (y/n) [${output.dim("n")}]:`,
-  );
-  if (
-    autoCleanInput?.toLowerCase() === "y" ||
-    autoCleanInput?.toLowerCase() === "yes"
-  ) {
+  const autoCleanInput = prompt(`Enable automatic cleanup of stale worktrees? (y/n) [${output.dim('n')}]:`);
+  if (autoCleanInput?.toLowerCase() === 'y' || autoCleanInput?.toLowerCase() === 'yes') {
     config.autoClean = true;
   }
 
   // Update strategy
   console.log();
-  const updateStrategyInput = prompt(
-    `Default update strategy (merge/rebase) [${output.dim("merge")}]:`,
-  );
+  const updateStrategyInput = prompt(`Default update strategy (merge/rebase) [${output.dim('merge')}]:`);
   if (updateStrategyInput && updateStrategyInput.trim()) {
     const strategy = updateStrategyInput.trim().toLowerCase();
-    if (strategy === "merge" || strategy === "rebase") {
+    if (strategy === 'merge' || strategy === 'rebase') {
       config.updateStrategy = strategy;
     } else {
-      console.log(
-        output.warning("  Invalid value, using default (merge)"),
-      );
+      console.log(output.warning('  Invalid value, using default (merge)'));
     }
   }
 
@@ -352,7 +300,7 @@ export async function executeInit(args: string[]): Promise<void> {
     rootPath = resolve(parsed.root);
 
     try {
-      await validatePathExists(rootPath, "directory");
+      await validatePathExists(rootPath, 'directory');
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(message);
@@ -366,7 +314,7 @@ export async function executeInit(args: string[]): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Could not auto-detect git root - ${message}`);
-      console.error("Please specify the repository root with --root option\n");
+      console.error('Please specify the repository root with --root option\n');
       showInitHelp();
       Deno.exit(1);
     }
@@ -389,16 +337,10 @@ export async function executeInit(args: string[]): Promise<void> {
     if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
       parsed.postAddHooks = interactiveConfig.postAddHooks;
     }
-    if (
-      interactiveConfig.cleanThreshold !== undefined &&
-      parsed.cleanThreshold === undefined
-    ) {
+    if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
       parsed.cleanThreshold = interactiveConfig.cleanThreshold;
     }
-    if (
-      interactiveConfig.autoClean !== undefined &&
-      parsed.autoClean === undefined
-    ) {
+    if (interactiveConfig.autoClean !== undefined && parsed.autoClean === undefined) {
       parsed.autoClean = interactiveConfig.autoClean;
     }
     if (interactiveConfig.updateStrategy && !parsed.updateStrategy) {
@@ -409,7 +351,7 @@ export async function executeInit(args: string[]): Promise<void> {
   // Create config
   const config: Config = {
     root: rootPath,
-    defaultBranch: parsed.defaultBranch || "main",
+    defaultBranch: parsed.defaultBranch || 'main',
     cleanThreshold: 7, // Default value
   };
 
@@ -449,51 +391,27 @@ export async function executeInit(args: string[]): Promise<void> {
   // Save config at the git root (so it can be found by all worktrees)
   try {
     await saveConfig(rootPath, config);
-    output.success("Configuration created successfully");
+    output.success('Configuration created successfully');
     console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
     console.log(`  Repository root: ${output.path(rootPath)}`);
-    console.log(
-      `  Default source worktree: ${
-        output.bold(config.defaultBranch || "main")
-      }`,
-    );
+    console.log(`  Default source worktree: ${output.bold(config.defaultBranch || 'main')}`);
     if (config.autoCopyFiles) {
-      console.log(
-        `  Auto-copy files: ${output.dim(config.autoCopyFiles.join(", "))}`,
-      );
+      console.log(`  Auto-copy files: ${output.dim(config.autoCopyFiles.join(', '))}`);
     }
     if (config.hooks?.add?.pre) {
-      console.log(
-        `  Pre-add hooks: ${
-          output.dim(config.hooks.add.pre.length.toString())
-        } command(s)`,
-      );
+      console.log(`  Pre-add hooks: ${output.dim(config.hooks.add.pre.length.toString())} command(s)`);
     }
     if (config.hooks?.add?.post) {
-      console.log(
-        `  Post-add hooks: ${
-          output.dim(config.hooks.add.post.length.toString())
-        } command(s)`,
-      );
+      console.log(`  Post-add hooks: ${output.dim(config.hooks.add.post.length.toString())} command(s)`);
     }
     if (config.cleanThreshold !== undefined) {
-      console.log(
-        `  Clean threshold: ${
-          output.bold(config.cleanThreshold.toString())
-        } days`,
-      );
+      console.log(`  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`);
     }
     if (config.autoClean) {
-      console.log(
-        `  Auto-cleanup: ${output.bold("enabled")} ${
-          output.dim("(24h cooldown)")
-        }`,
-      );
+      console.log(`  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(24h cooldown)')}`);
     }
     if (config.updateStrategy) {
-      console.log(
-        `  Update strategy: ${output.bold(config.updateStrategy)}`,
-      );
+      console.log(`  Update strategy: ${output.bold(config.updateStrategy)}`);
     }
     console.log();
   } catch (error) {
