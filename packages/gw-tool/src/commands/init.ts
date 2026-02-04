@@ -8,6 +8,7 @@ import { saveConfig } from "../lib/config.ts";
 import { findGitRoot, validatePathExists } from "../lib/path-resolver.ts";
 import type { Config } from "../lib/types.ts";
 import * as output from "../lib/output.ts";
+import { showLogo } from "../lib/cli.ts";
 
 /**
  * Parse init command arguments
@@ -97,6 +98,8 @@ function promptForConfig(): {
   autoClean?: boolean;
   updateStrategy?: "merge" | "rebase";
 } {
+  showLogo();
+
   console.log("\n" + output.bold("Interactive Configuration") + "\n");
   console.log(
     output.dim(

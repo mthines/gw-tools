@@ -49,6 +49,21 @@ export function showVersion(): void {
 }
 
 /**
+ * Display version information
+ */
+export function showLogo(): void {
+  console.log(`  ██████   ██      ██
+ ██        ██      ██
+ ██   ███  ██  ██  ██
+ ██    ██   ██ ██ ██
+  ██████     ██  ██
+ _____ ___   ___  _
+|_   _/ _ \\ / _ \\| |
+  | || (_) | (_) | |__
+  |_| \\___/ \\___/|____|    `);
+}
+
+/**
  * Display global help text
  */
 export function showGlobalHelp(): void {
