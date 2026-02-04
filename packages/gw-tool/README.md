@@ -274,7 +274,7 @@ gw init --root /path/to/your/repo.git
   - **hooks.add.pre**: Array of commands to run before creating a worktree
   - **hooks.add.post**: Array of commands to run after creating a worktree
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
-- **autoClean**: Automatically remove stale worktrees when running `gw add` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
+- **autoClean**: Prompt to remove stale worktrees when running `gw add` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
 - **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
@@ -768,7 +768,7 @@ Hooks support variable substitution:
 
 #### Auto-Cleanup Configuration
 
-Enable automatic removal of stale worktrees to keep your repository clean:
+Enable interactive cleanup prompts for stale worktrees to keep your repository clean:
 
 ```bash
 # Enable auto-cleanup with default 7-day threshold
@@ -783,14 +783,19 @@ gw init --auto-clean --auto-copy-files .env --post-add "pnpm install"
 
 **How it works:**
 
-- Runs automatically on `gw add` and `gw list` commands (in the background, non-blocking)
-- Only runs once per 24 hours (cooldown)
+- Prompts after `gw add` and `gw list` commands when stale worktrees are detected
+- Only prompts once per 24 hours (cooldown)
 - **Never removes the `defaultBranch` worktree** - it's protected as the source for file syncing
-- Removes worktrees older than `cleanThreshold` with:
+- Checks for worktrees older than `cleanThreshold` with:
   - No uncommitted changes
   - No staged files
   - No unpushed commits
-- Shows brief message only when worktrees are removed: `🧹 Auto-cleanup: Removed 2 stale worktrees`
+- Shows interactive prompt when stale worktrees are found:
+  ```
+  🧹 Found 2 stale worktrees (7+ days old). Clean them up? [Y/n]:
+  ```
+- Press Enter or `y` to remove them, or `n` to skip
+- Shows brief summary after cleanup: `✓ Removed 2 stale worktrees`
 - Never interrupts or fails the main command
 
 This is an opt-in feature. Use `gw clean` for manual, interactive cleanup with more control.

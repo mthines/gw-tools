@@ -86,7 +86,7 @@ Do you want to add post-add hooks? (y/n) [n]: y
   Post-add hook 1 (leave blank to finish): pnpm install
   Post-add hook 2 (leave blank to finish):
 Days before worktrees are considered stale [7]: 14
-Enable automatic cleanup of stale worktrees? (y/n) [n]: n
+Prompt to cleanup stale worktrees after add/list? (y/n) [n]: n
 
 ✓ Configuration created successfully
 ```
@@ -128,8 +128,9 @@ If no configuration exists:
   "root": "/absolute/path/to/repo.git",
   "defaultBranch": "main",
   "autoCopyFiles": [".env", ".env.local", "secrets/", "config/local.json"],
+  "updateStrategy": "merge",
   "cleanThreshold": 7,
-  "updateStrategy": "merge"
+  "autoClean": true
 }
 ```
 
@@ -296,6 +297,53 @@ gw init --clean-threshold 14
 - Age is calculated from the worktree's `.git` file modification time
 - Bare/main repository worktrees are never removed
 - Use `--force` flag to bypass safety checks (not recommended)
+
+### `autoClean`: Interactive Cleanup Prompts
+
+**Purpose:** Enable interactive prompts to clean up stale worktrees automatically after `gw add` and `gw list` commands.
+
+**Example:**
+
+```json
+{
+  "autoClean": true,
+  "cleanThreshold": 7
+}
+```
+
+**How it works:**
+
+- Prompts appear after `gw add` or `gw list` when stale worktrees are detected
+- Only prompts once per 24 hours (cooldown period)
+- Shows: `🧹 Found 2 stale worktrees (7+ days old). Clean them up? [Y/n]:`
+- Press Enter or `y` to remove them, or `n` to skip
+- Uses the same safety checks as `gw clean` (no uncommitted/unpushed changes)
+- Never removes the `defaultBranch` worktree
+
+**Setting auto-clean:**
+
+```bash
+# Enable during initialization
+gw init --auto-clean
+
+# With custom threshold
+gw init --auto-clean --clean-threshold 14
+```
+
+**When to use:**
+
+- Teams that frequently create feature branches
+- Repositories with many short-lived worktrees
+- Projects where disk space is a concern
+- Development workflows with regular cleanup needs
+
+**When NOT to use:**
+
+- You prefer manual cleanup control
+- Long-lived feature branches are common
+- You want to review worktrees before removing them
+
+**Tip:** If you decline the prompt, you can always run `gw clean` manually to review and clean worktrees interactively.
 
 ---
 

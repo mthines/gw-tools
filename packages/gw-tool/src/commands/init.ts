@@ -185,7 +185,7 @@ function promptForConfig(): {
 
   // Auto-clean
   console.log();
-  const autoCleanInput = prompt(`Enable automatic cleanup of stale worktrees? (y/n) [${output.dim('n')}]:`);
+  const autoCleanInput = prompt(`[autoClean]: Want to cleanup stale worktrees? (y/n) [${output.dim('n')}]:`);
   if (autoCleanInput?.toLowerCase() === 'y' || autoCleanInput?.toLowerCase() === 'yes') {
     config.autoClean = true;
   }
@@ -229,8 +229,7 @@ Options:
                                   (can be specified multiple times for multiple hooks)
   --clean-threshold <days>        Number of days before worktrees are considered
                                   stale for 'gw clean' (default: 7)
-  --auto-clean                    Enable automatic cleanup of stale worktrees
-                                  (runs on 'gw add' and 'gw list' with 24h cooldown)
+  --auto-clean                    Prompt to cleanup stale worktrees (after add/list, 24h cooldown)
   --update-strategy <strategy>    Set default update strategy: 'merge' or 'rebase'
                                   (default: merge)
   -h, --help                      Show this help message
@@ -408,7 +407,7 @@ export async function executeInit(args: string[]): Promise<void> {
       console.log(`  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`);
     }
     if (config.autoClean) {
-      console.log(`  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(24h cooldown)')}`);
+      console.log(`  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(interactive prompts, 24h cooldown)')}`);
     }
     if (config.updateStrategy) {
       console.log(`  Update strategy: ${output.bold(config.updateStrategy)}`);
