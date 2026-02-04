@@ -533,9 +533,13 @@ This is useful when:
 **Age-based cleanup (regular maintenance):**
 
 ```bash
-# Remove worktrees older than configured threshold (default: 7 days)
+# Remove all safe worktrees (default)
 gw clean --dry-run  # Preview
 gw clean            # Remove
+
+# Or remove only worktrees older than configured threshold (default: 7 days)
+gw clean --use-autoclean-threshold --dry-run  # Preview old worktrees
+gw clean --use-autoclean-threshold            # Remove old worktrees
 ```
 
 **Prune stale references:**

@@ -923,7 +923,7 @@ gw sync /full/path/to/repo/feat-branch .env
 
 ### clean
 
-Remove stale worktrees that are older than a configured threshold. By default, only removes worktrees with no uncommitted changes and no unpushed commits.
+Remove safe worktrees with no uncommitted changes and no unpushed commits. By default, removes **ALL** safe worktrees regardless of age. Use `--use-autoclean-threshold` to only remove worktrees older than the configured threshold.
 
 **Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 
@@ -933,6 +933,7 @@ gw clean [options]
 
 #### Options
 
+- `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
 - `-h, --help`: Show help message
@@ -940,28 +941,41 @@ gw clean [options]
 #### Examples
 
 ```bash
-# Preview stale worktrees (safe to run)
+# Preview all safe worktrees (default behavior)
 gw clean --dry-run
 
-# Remove stale worktrees with safety checks
+# Remove all safe worktrees regardless of age
 gw clean
 
-# Force remove without safety checks (dangerous!)
-gw clean --force
+# Only remove worktrees older than configured threshold
+gw clean --use-autoclean-threshold
 
-# Configure threshold during init
-gw init --clean-threshold 14
+# Preview old worktrees with threshold check
+gw clean --use-autoclean-threshold --dry-run
+
+# Force remove all worktrees without safety checks (dangerous!)
+gw clean --force
 ```
 
 #### How It Works
 
 The clean command:
 
-1. Checks for worktrees older than the configured threshold (default: 7 days)
+1. **Default mode:** Finds ALL safe worktrees (no age check)
+   - **With `--use-autoclean-threshold`:** Only finds worktrees older than configured threshold (default: 7 days)
 2. Verifies they have no uncommitted changes (unless `--force`)
 3. Verifies they have no unpushed commits (unless `--force`)
 4. Prompts for confirmation before deleting (unless `--dry-run`)
 5. Never removes bare/main repository worktrees
+
+**Behavior Modes:**
+
+| Command | Age Check | Safety Checks | Use Case |
+|---------|-----------|---------------|----------|
+| `gw clean` | No (all worktrees) | Yes (unless --force) | Clean up all finished work |
+| `gw clean --use-autoclean-threshold` | Yes (7+ days) | Yes (unless --force) | Clean up old, stale worktrees |
+| `gw clean --force` | No (all worktrees) | No | Force removal of all worktrees |
+| `gw prune --clean` | No (all worktrees) | No | Git's native cleanup (no gw safety) |
 
 **Safety Features:**
 
@@ -973,7 +987,7 @@ The clean command:
 
 **Configuration:**
 
-The age threshold is stored in `.gw/config.json` and can be set during initialization:
+The age threshold (used by `--use-autoclean-threshold`) is stored in `.gw/config.json`:
 
 ```bash
 # Set clean threshold to 14 days
@@ -1055,7 +1069,7 @@ Clean up worktree administrative data and optionally remove clean worktrees.
 Wraps `git worktree prune` to clean up administrative files for deleted worktrees.
 
 **Clean Mode** (with `--clean`):
-First runs `git worktree prune`, then removes ALL worktrees that have no uncommitted changes, no staged files, and no unpushed commits. Unlike `gw clean` (which is age-based), `gw prune --clean` removes worktrees regardless of age.
+First runs `git worktree prune`, then removes ALL worktrees that have no uncommitted changes, no staged files, and no unpushed commits. This is similar to default `gw clean` behavior but with additional protections for the default branch.
 
 ```bash
 gw prune [options]
@@ -1091,13 +1105,13 @@ gw prune --clean --verbose    # Show detailed output
 ```
 
 **Comparison with `gw clean`:**
-| Feature | `gw clean` | `gw prune --clean` |
-|---------|-----------|-------------------|
-| Age-based | Yes (configurable threshold) | No (removes all clean) |
-| Safety checks | Yes | Yes |
-| Protects default branch | No | Yes |
-| Runs `git worktree prune` | No | Yes |
-| Use case | Regular maintenance | Aggressive cleanup |
+| Feature | `gw clean` | `gw clean --use-autoclean-threshold` | `gw prune --clean` |
+|---------|-----------|-------------------------------------|-------------------|
+| Age-based | No (all worktrees) | Yes (configurable threshold) | No (removes all clean) |
+| Safety checks | Yes | Yes | Yes |
+| Protects default branch | No | No | Yes |
+| Runs `git worktree prune` | No | No | Yes |
+| Use case | Clean up finished work | Regular maintenance | Aggressive cleanup |
 
 #### lock
 
