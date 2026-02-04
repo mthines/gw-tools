@@ -260,7 +260,7 @@ Use **rebase** when:
 
 ### `cleanThreshold`: Worktree Cleanup Age
 
-**Purpose:** Number of days before worktrees are considered stale for `gw clean`.
+**Purpose:** Number of days before worktrees are considered stale when using `gw clean --use-autoclean-threshold` or auto-cleanup.
 
 **Example:**
 
@@ -279,9 +279,11 @@ Use **rebase** when:
 
 **How it's used:**
 
-- `gw clean` removes worktrees older than this threshold
+- `gw clean` (default) removes ALL safe worktrees regardless of age
+- `gw clean --use-autoclean-threshold` removes only worktrees older than this threshold
+- Auto-cleanup (via `autoClean` setting) respects this threshold
 - Only removes worktrees with no uncommitted changes and no unpushed commits (unless `--force`)
-- `gw clean --dry-run` previews which worktrees would be removed
+- `gw clean --dry-run` or `gw clean --use-autoclean-threshold --dry-run` previews which worktrees would be removed
 
 **Setting the threshold:**
 

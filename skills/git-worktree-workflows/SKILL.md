@@ -716,14 +716,20 @@ gw remove feature-abandoned --force
 
 ### Cleaning Up Stale Worktrees
 
-**Automatically remove old worktrees:**
+**Remove safe worktrees:**
 
 ```bash
-# Preview what would be removed (safe to run)
+# Preview all safe worktrees (default behavior)
 gw clean --dry-run
 
-# Remove stale worktrees older than configured threshold
+# Remove all safe worktrees regardless of age
 gw clean
+
+# Only remove worktrees older than configured threshold
+gw clean --use-autoclean-threshold
+
+# Preview old worktrees with threshold check
+gw clean --use-autoclean-threshold --dry-run
 
 # Force removal (skips safety checks - dangerous!)
 gw clean --force
@@ -731,12 +737,21 @@ gw clean --force
 
 **How it works:**
 
-- Checks for worktrees older than the configured threshold (default: 7 days)
+- **Default mode:** Finds ALL safe worktrees (no age check)
+- **With `--use-autoclean-threshold`:** Only finds worktrees older than configured threshold (default: 7 days)
 - By default, only removes worktrees with:
   - NO uncommitted changes
   - NO unpushed commits
 - Always prompts for confirmation before deletion
 - Never removes bare/main repository worktrees
+
+**Cleanup strategies:**
+
+| Command | When to Use |
+|---------|-------------|
+| `gw clean` | Clean up all finished work regardless of age |
+| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees) |
+| `gw prune --clean` | Aggressive cleanup with default branch protection |
 
 **Configure the threshold:**
 
@@ -750,11 +765,39 @@ gw init --clean-threshold 14
 }
 ```
 
-**Example workflow:**
+**Example workflow (default mode):**
 
 ```bash
-# Check what would be cleaned
+# Check what would be cleaned (all safe worktrees)
 $ gw clean --dry-run
+INFO: Checking for safe worktrees to clean...
+
+Worktrees to remove:
+  ✗ completed-feature-1 (2 days old)
+  ✗ completed-feature-2 (14 days old)
+
+Skipped worktrees:
+  ⚠ active-feature - has uncommitted changes
+
+# Review and clean
+$ gw clean
+Remove 2 worktree(s)?
+Type 'yes' to confirm: yes
+
+Removing completed-feature-1...
+  ✓ Removed
+
+Removing completed-feature-2...
+  ✓ Removed
+
+SUCCESS: Removed 2 worktree(s)
+```
+
+**Example workflow (threshold mode):**
+
+```bash
+# Check what would be cleaned (only old worktrees)
+$ gw clean --use-autoclean-threshold --dry-run
 INFO: Checking for worktrees older than 7 days...
 
 Worktrees to remove:
@@ -765,15 +808,9 @@ Skipped worktrees:
   ⚠ recent-feature - has uncommitted changes
 
 # Review and clean
-$ gw clean
+$ gw clean --use-autoclean-threshold
 Remove 2 worktree(s)?
 Type 'yes' to confirm: yes
-
-Removing old-feature-1...
-  ✓ Removed
-
-Removing old-feature-2...
-  ✓ Removed
 
 SUCCESS: Removed 2 worktree(s)
 ```

@@ -21,11 +21,13 @@ function parseCleanArgs(args: string[]): {
   help: boolean;
   force: boolean;
   dryRun: boolean;
+  useThreshold: boolean;
 } {
   return {
     help: args.includes("--help") || args.includes("-h"),
     force: args.includes("--force") || args.includes("-f"),
     dryRun: args.includes("--dry-run") || args.includes("-n"),
+    useThreshold: args.includes("--use-autoclean-threshold"),
   };
 }
 
@@ -35,17 +37,18 @@ function parseCleanArgs(args: string[]): {
 function showCleanHelp(): void {
   console.log(`Usage: gw clean [options]
 
-Remove worktrees older than the configured threshold with no uncommitted changes
-or unpushed commits.
+Remove safe worktrees with no uncommitted changes or unpushed commits.
 
-The age threshold is configured in .gw/config.json (cleanThreshold field, default: 7 days)
-and can be set during initialization with 'gw init --clean-threshold <days>'.
+By default, removes ALL safe worktrees regardless of age. Use
+--use-autoclean-threshold to only remove worktrees older than the configured
+age threshold (.gw/config.json cleanThreshold field, default: 7 days).
 
 Options:
-  -f, --force      Skip safety checks (uncommitted changes, unpushed commits)
-                   WARNING: This may result in data loss
-  -n, --dry-run    Preview what would be removed without actually removing
-  -h, --help       Show this help message
+  --use-autoclean-threshold  Only remove worktrees older than configured threshold
+  -f, --force                Skip safety checks (uncommitted changes, unpushed commits)
+                             WARNING: This may result in data loss
+  -n, --dry-run              Preview what would be removed without actually removing
+  -h, --help                 Show this help message
 
 Safety Features:
   - By default, only removes worktrees with NO uncommitted changes
@@ -55,22 +58,33 @@ Safety Features:
   - Use --force to bypass safety checks (use with caution)
 
 Examples:
-  # Preview stale worktrees (safe to run)
+  # Preview all safe worktrees (default behavior)
   gw clean --dry-run
 
-  # Remove stale worktrees with safety checks
+  # Remove all safe worktrees regardless of age
   gw clean
 
-  # Force remove without safety checks (dangerous!)
+  # Only remove worktrees older than configured threshold
+  gw clean --use-autoclean-threshold
+
+  # Preview old worktrees with threshold check
+  gw clean --use-autoclean-threshold --dry-run
+
+  # Force remove all worktrees without safety checks (dangerous!)
   gw clean --force
 
-  # Configure threshold during init
+  # Configure threshold during init (used by --use-autoclean-threshold)
   gw init --clean-threshold 14
+
+Comparison:
+  gw clean                         - Removes ALL safe worktrees
+  gw clean --use-autoclean-threshold - Removes only OLD safe worktrees
+  gw prune --clean                 - Removes all clean worktrees (no safety checks)
 
 Configuration:
   The clean threshold is stored in .gw/config.json:
   {
-    "cleanThreshold": 7  // Days before worktree is considered stale
+    "cleanThreshold": 7  // Days threshold for --use-autoclean-threshold flag
   }
 `);
 }
@@ -118,7 +132,11 @@ export async function executeClean(args: string[]): Promise<void> {
   const { config } = await loadConfig();
   const threshold = config.cleanThreshold ?? 7;
 
-  output.info(`Checking for worktrees older than ${threshold} days...`);
+  if (parsed.useThreshold) {
+    output.info(`Checking for worktrees older than ${threshold} days...`);
+  } else {
+    output.info(`Checking for safe worktrees to clean...`);
+  }
 
   // Get all worktrees
   const worktrees = await listWorktrees();
@@ -139,8 +157,8 @@ export async function executeClean(args: string[]): Promise<void> {
   for (const wt of nonBareWorktrees) {
     const ageDays = await getWorktreeAgeDays(wt.path);
 
-    // Skip if not old enough
-    if (ageDays < threshold) {
+    // Skip if not old enough (only when using threshold)
+    if (parsed.useThreshold && ageDays < threshold) {
       continue;
     }
 

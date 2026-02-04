@@ -84,7 +84,7 @@ Commands:
   show-init        Generate a 'gw init' command from current configuration
   install-shell    Install shell integration for gw cd (auto-runs on npm install)
   root             Get the root directory of the current git repository
-  clean            Remove stale worktrees older than configured threshold
+  clean            Remove safe worktrees (use --use-autoclean-threshold for age-based)
 
 Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository
