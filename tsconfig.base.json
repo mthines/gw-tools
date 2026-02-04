@@ -16,6 +16,7 @@
     "skipLibCheck": true,
     "strict": true,
     "target": "es2022",
+    "baseUrl": ".",
     "customConditions": ["@gw-tools/source"],
     "paths": {
       "gw-tool": ["packages/gw-tool/src/index.ts"]
