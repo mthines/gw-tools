@@ -50,7 +50,7 @@ Configuration created at .gw/config.json
 
 ```bash
 # Create a worktree for the hotfix
-$ gw add hotfix-login -b hotfix-login main
+$ gw checkout hotfix-login -b hotfix-login main
 
 Creating worktree hotfix-login...
 ✓ Branch 'hotfix-login' set up to track 'origin/main'
@@ -165,7 +165,7 @@ npm install
 **Problem:**
 
 ```bash
-$ gw add feature-auth
+$ gw checkout feature-auth
 fatal: 'feature-auth' is already checked out at '...'
 ```
 
@@ -176,7 +176,7 @@ fatal: 'feature-auth' is already checked out at '...'
 gw cd feature-auth
 
 # Or create a new branch
-gw add feature-auth-v2 -b feature-auth-v2 feature-auth
+gw checkout feature-auth-v2 -b feature-auth-v2 feature-auth
 ```
 
 ### Pitfall 3: Leaving Environment Files Behind
@@ -211,7 +211,7 @@ Now that you understand the basics:
 ## Key Takeaways
 
 - Git worktrees let you work on multiple branches in parallel
-- `gw add` creates worktrees with auto-copy support
+- `gw checkout` creates worktrees with auto-copy support
 - `gw cd` provides quick navigation with smart matching
 - Each worktree is independent (needs its own node_modules, etc.)
 - Clean up with `gw remove` when done

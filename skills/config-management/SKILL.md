@@ -80,11 +80,11 @@ Default source worktree name [main]: main
 Do you want to auto-copy files when creating worktrees? (y/n) [n]: y
   Enter comma-separated file/directory paths (e.g., .env,secrets/)
   Files to auto-copy: .env,.env.local,secrets/
-Do you want to add post-add hooks? (y/n) [n]: y
+Do you want to add post-checkout hooks? (y/n) [n]: y
   Enter commands to run after creating worktrees
   Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}
-  Post-add hook 1 (leave blank to finish): pnpm install
-  Post-add hook 2 (leave blank to finish):
+  Post-checkout hook 1 (leave blank to finish): pnpm install
+  Post-checkout hook 2 (leave blank to finish):
 Days before worktrees are considered stale [7]: 14
 Prompt to cleanup stale worktrees after add/list? (y/n) [n]: n
 
@@ -111,7 +111,7 @@ Configuration is **per-repository**, not global:
 If no configuration exists:
 
 1. `gw` searches for `.gw/config.json` walking up from current directory
-2. If not found, attempts auto-detection on first `gw add` command
+2. If not found, attempts auto-detection on first `gw checkout` command
 3. Uses fallback defaults:
    - `root`: Auto-detected from `git worktree list`
    - `defaultBranch`: "main"
@@ -179,13 +179,13 @@ If no configuration exists:
 
 **How it's used:**
 
-- `gw add feature-x` copies from `defaultBranch` worktree
+- `gw checkout feature-x` copies from `defaultBranch` worktree
 - `gw sync target file.txt` syncs from `defaultBranch` unless `--from` specified
 - `gw sync target` (without files) syncs `autoCopyFiles` from `defaultBranch`
 - `gw update` fetches and updates from `defaultBranch` unless `--from` specified
 - **Auto-clean never removes this worktree** - it's protected as the source for file syncing
 
-**Important:** Ensure your secrets and environment files exist in the `defaultBranch` worktree **before** using `gw add` or `gw sync`. This worktree is the source from which files are copied.
+**Important:** Ensure your secrets and environment files exist in the `defaultBranch` worktree **before** using `gw checkout` or `gw sync`. This worktree is the source from which files are copied.
 
 ### `updateStrategy`: Default Update Strategy
 
@@ -248,7 +248,7 @@ Use **rebase** when:
 
 **How it's used:**
 
-- `gw add feature-x` automatically copies these files when creating worktrees
+- `gw checkout feature-x` automatically copies these files when creating worktrees
 - `gw sync feature-x` (without file arguments) syncs these files to existing worktrees
 
 **Important notes:**
@@ -302,7 +302,7 @@ gw init --clean-threshold 14
 
 ### `autoClean`: Interactive Cleanup Prompts
 
-**Purpose:** Enable interactive prompts to clean up stale worktrees automatically after `gw add` and `gw list` commands.
+**Purpose:** Enable interactive prompts to clean up stale worktrees automatically after `gw checkout` and `gw list` commands.
 
 **Example:**
 
@@ -315,7 +315,7 @@ gw init --clean-threshold 14
 
 **How it works:**
 
-- Prompts appear after `gw add` or `gw list` when stale worktrees are detected
+- Prompts appear after `gw checkout` or `gw list` when stale worktrees are detected
 - Only prompts once per 24 hours (cooldown period)
 - Shows: `🧹 Found 2 stale worktrees (7+ days old). Clean them up? [Y/n]:`
 - Press Enter or `y` to remove them, or `n` to skip
@@ -351,7 +351,7 @@ gw init --auto-clean --clean-threshold 14
 
 ## 3. Initial Setup: Secrets in the Default Branch
 
-Before using `gw add` with auto-copy, your secrets and environment files **must exist** in your `defaultBranch` worktree. This worktree is the **source** from which files are copied.
+Before using `gw checkout` with auto-copy, your secrets and environment files **must exist** in your `defaultBranch` worktree. This worktree is the **source** from which files are copied.
 
 ### First-Time Setup Flow
 
@@ -375,13 +375,13 @@ gw init --auto-copy-files .env,secrets/
 
 # 5. Now create feature worktrees - files are copied automatically
 cd ..
-gw add feat-new-feature
+gw checkout feat-new-feature
 # .env and secrets/ are automatically copied from main
 ```
 
 ### Why This Order Matters
 
-1. **Source must exist first** - `gw add` copies from `defaultBranch`, so files must be there
+1. **Source must exist first** - `gw checkout` copies from `defaultBranch`, so files must be there
 2. **Auto-clean protection** - The `defaultBranch` worktree is never auto-cleaned, ensuring your source files are always available
 3. **Sync depends on source** - `gw sync` also uses `defaultBranch` as the source
 
@@ -744,7 +744,7 @@ The repository includes gw configuration (`.gw/config.json`) that automatically 
 
 ### 3. Create Feature Worktree
 
-gw add feature-name -b feature-name main
+gw checkout feature-name -b feature-name main
 
 Files will be automatically copied from the main worktree.
 ```
@@ -756,7 +756,7 @@ Use `gw show-init` to automatically generate a setup command from your current c
 ```bash
 # Generate the init command from current config
 gw show-init
-# Output: gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+# Output: gw init --auto-copy-files .env,secrets/ --post-checkout 'pnpm install'
 
 # Add to documentation automatically
 echo "## Setup\n\n\`\`\`bash\n$(gw show-init)\n\`\`\`" >> README.md
@@ -783,7 +783,7 @@ gw show-init | xclip -selection clipboard
 To configure gw for this project, run:
 
 \`\`\`bash
-gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install' --clean-threshold 14
+gw init --auto-copy-files .env,secrets/ --post-checkout 'pnpm install' --clean-threshold 14
 \`\`\`
 
 This will:
@@ -806,7 +806,7 @@ This will:
    ```
 4. Create first worktree:
    ```bash
-   gw add feature-onboarding -b feature-onboarding main
+   gw checkout feature-onboarding -b feature-onboarding main
    # Automatically copies configured files
    ```
 
@@ -820,10 +820,10 @@ This will:
 
 ```bash
 # Feature branches copy from develop
-gw add feature-x -b feature-x
+gw checkout feature-x -b feature-x
 
 # Hotfixes copy from main
-gw add hotfix-y --from main -b hotfix-y
+gw checkout hotfix-y --from main -b hotfix-y
 ```
 
 **Configuration supports one default:**
@@ -860,14 +860,14 @@ cp .gw/config.production.json .gw/config.json
 
 ```bash
 # After creating worktree, inject secrets
-gw add feature-x
+gw checkout feature-x
 op inject -i feature-x/.env.template -o feature-x/.env
 ```
 
 **AWS Secrets Manager:**
 
 ```bash
-gw add feature-x
+gw checkout feature-x
 aws secretsmanager get-secret-value --secret-id myapp/dev \
   --query SecretString --output text > feature-x/.env
 ```
@@ -875,7 +875,7 @@ aws secretsmanager get-secret-value --secret-id myapp/dev \
 **HashiCorp Vault:**
 
 ```bash
-gw add feature-x
+gw checkout feature-x
 vault kv get -field=.env secret/myapp > feature-x/.env
 ```
 
@@ -888,7 +888,7 @@ vault kv get -field=.env secret/myapp > feature-x/.env
 **Problem:**
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Error: Could not find .gw/config.json
 ```
 
@@ -907,7 +907,7 @@ gw init --root $(gw root)
 **Problem:**
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 ✓ Worktree created
 # But .env is missing!
 ```
@@ -959,7 +959,7 @@ vim .gw/config.json
 **Problem:**
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Error: Source file not found: secrets/api-key.json
 ```
 

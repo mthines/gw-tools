@@ -57,7 +57,7 @@ Or manually edit `.gw/config.json`:
 
 ```bash
 # Create a test worktree
-gw add test-config
+gw checkout test-config
 
 # Check if files were copied
 ls -la test-config/.env
@@ -162,7 +162,7 @@ Don't copy `.env.production` - that should only exist in CI/CD.
 
 ```bash
 # 1. Create feature worktree
-gw add feat/new-checkout
+gw checkout feat/new-checkout
 
 # Output:
 # Branch feat/new-checkout doesn't exist, creating from main

@@ -38,9 +38,9 @@ Working on multiple branches simultaneously eliminates:
 
 ```bash
 # Create worktrees for different features
-gw add feat/user-auth
-gw add feat/payment-gateway
-gw add feat/email-notifications
+gw checkout feat/user-auth
+gw checkout feat/payment-gateway
+gw checkout feat/email-notifications
 
 # List all worktrees
 gw list
@@ -120,7 +120,7 @@ With 5 worktrees: **2.5GB** of duplicated dependencies!
 
 ```bash
 # Each worktree installs independently
-gw add feat/new-feature
+gw checkout feat/new-feature
 gw cd feat/new-feature
 npm install
 ```
@@ -166,10 +166,10 @@ Best for: Read-only testing, identical environments.
 ### Strategy 4: Post-Add Hook for Auto-Install
 
 ```bash
-gw init --post-add "npm install"
+gw init --post-checkout "npm install"
 ```
 
-Now every `gw add` automatically installs dependencies.
+Now every `gw checkout` automatically installs dependencies.
 
 ---
 
@@ -322,8 +322,8 @@ Test the same feature in multiple environments:
 
 ```bash
 # Create test worktrees
-gw add test-node18 --force
-gw add test-node20 --force
+gw checkout test-node18 --force
+gw checkout test-node20 --force
 
 # Terminal 1: Node 18
 gw cd test-node18
@@ -362,7 +362,7 @@ jobs:
 #!/bin/bash
 # test-matrix.sh
 for version in 18 20 22; do
-  gw add "test-node$version" --force
+  gw checkout "test-node$version" --force
   (
     gw cd "test-node$version"
     nvm use "$version"
@@ -445,7 +445,7 @@ npm run build
 
 ```bash
 # Create worktree from PR branch
-gw add review-pr-123
+gw checkout review-pr-123
 gw cd review-pr-123
 
 # Review code, run tests
@@ -466,12 +466,12 @@ gw remove review-pr-123
 
 ```bash
 # Developer A
-gw add pair/feature-x-alice
+gw checkout pair/feature-x-alice
 gw cd pair/feature-x-alice
 # Work on frontend...
 
 # Developer B
-gw add pair/feature-x-bob
+gw checkout pair/feature-x-bob
 gw cd pair/feature-x-bob
 # Work on backend...
 
@@ -485,8 +485,8 @@ git pull origin pair/feature-x
 
 ```bash
 # Create demo worktrees
-gw add demo/client-a
-gw add demo/client-b
+gw checkout demo/client-a
+gw checkout demo/client-b
 
 # Each with different configuration
 # demo/client-a/.env
@@ -595,7 +595,7 @@ You now understand:
 ### Next Steps
 
 1. Set up pnpm for efficient dependency management
-2. Configure post-add hooks for automatic setup
+2. Configure post-checkout hooks for automatic setup
 3. Create team guidelines for worktree usage
 4. Implement cleanup automation
 

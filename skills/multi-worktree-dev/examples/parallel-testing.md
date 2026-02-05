@@ -19,9 +19,9 @@ Running tests sequentially takes too long. Worktrees enable parallel execution.
 
 ```bash
 # Create worktrees for each Node version
-gw add test-node18
-gw add test-node20
-gw add test-node22
+gw checkout test-node18
+gw checkout test-node20
+gw checkout test-node22
 ```
 
 ### Parallel Execution (Manual)
@@ -98,9 +98,9 @@ gw remove test-node18 test-node20 test-node22
 
 ```bash
 # Create worktrees for each browser
-gw add test-chrome
-gw add test-firefox
-gw add test-safari
+gw checkout test-chrome
+gw checkout test-firefox
+gw checkout test-safari
 ```
 
 ### Run Tests
@@ -146,9 +146,9 @@ echo "All browser tests complete!"
 
 ```bash
 # Create worktrees
-gw add test-pg14
-gw add test-pg15
-gw add test-pg16
+gw checkout test-pg14
+gw checkout test-pg15
+gw checkout test-pg16
 
 # Each with different docker-compose
 ```
@@ -249,7 +249,7 @@ for combo in "${matrix[@]}"; do
   os="${combo##*:}"
 
   echo "Testing Node $node_ver on $os..."
-  gw add "test-$node_ver-$os" --force
+  gw checkout "test-$node_ver-$os" --force
 
   (
     gw cd "test-$node_ver-$os"
@@ -322,8 +322,8 @@ echo "}"
 
 ```bash
 # Testing same branch in multiple environments
-gw add test-env1 --force
-gw add test-env2 --force
+gw checkout test-env1 --force
+gw checkout test-env2 --force
 ```
 
 ### 2. Isolate Port Usage

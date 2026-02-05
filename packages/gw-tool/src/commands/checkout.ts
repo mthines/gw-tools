@@ -1,9 +1,14 @@
 /**
  * Checkout command implementation
- * Smart git checkout wrapper that works well with worktrees
+ * Creates a new worktree and optionally copies files
  */
 
-import { listWorktrees } from "../lib/git-utils.ts";
+import { promptAndRunAutoClean } from "../lib/auto-clean.ts";
+import { loadConfig } from "../lib/config.ts";
+import { copyFiles } from "../lib/file-ops.ts";
+import { fetchAndGetStartPoint, listWorktrees } from "../lib/git-utils.ts";
+import { executeHooks, type HookVariables } from "../lib/hooks.ts";
+import { resolveWorktreePath } from "../lib/path-resolver.ts";
 import { signalNavigation } from "../lib/shell-navigation.ts";
 import * as output from "../lib/output.ts";
 
@@ -21,207 +26,582 @@ async function branchExistsLocally(branchName: string): Promise<boolean> {
 }
 
 /**
- * Check if a branch exists on remote
+ * Check if a branch exists (locally or remotely)
  */
-async function branchExistsOnRemote(
-  branchName: string,
-  remoteName = "origin",
-): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["rev-parse", "--verify", `${remoteName}/${branchName}`],
+async function branchExists(branchName: string): Promise<boolean> {
+  // Check local branch
+  if (await branchExistsLocally(branchName)) return true;
+
+  // Check remote branch
+  const remoteCheck = new Deno.Command("git", {
+    args: ["rev-parse", "--verify", `origin/${branchName}`],
     stdout: "null",
     stderr: "null",
   });
-  const result = await cmd.output();
-  return result.code === 0;
+  const remoteResult = await remoteCheck.output();
+  return remoteResult.code === 0;
 }
 
 /**
- * Get current branch name
+ * Check if creating a branch would conflict with existing Git refs
+ * Git doesn't allow both "refs/heads/foo" and "refs/heads/foo/bar"
  */
-async function getCurrentBranch(): Promise<string | null> {
+async function hasRefConflict(branchName: string): Promise<{ hasConflict: boolean; conflictingBranch?: string }> {
+  // List all branches to check for conflicts
   const cmd = new Deno.Command("git", {
-    args: ["branch", "--show-current"],
+    args: ["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
     stdout: "piped",
     stderr: "piped",
   });
 
   const { code, stdout } = await cmd.output();
   if (code !== 0) {
-    return null; // Detached HEAD or error
+    return { hasConflict: false };
   }
 
-  const branch = new TextDecoder().decode(stdout).trim();
-  return branch || null;
+  const output = new TextDecoder().decode(stdout);
+  const branches = output.trim().split("\n").filter(b => b.length > 0);
+
+  // Check if any existing branch would conflict with the new branch name
+  for (const branch of branches) {
+    // Conflict if existing branch is a "subdirectory" of our branch
+    // e.g., creating "test" when "test/foo" exists
+    if (branch.startsWith(branchName + "/")) {
+      return { hasConflict: true, conflictingBranch: branch };
+    }
+    // Conflict if our branch is a "subdirectory" of an existing branch
+    // e.g., creating "test/foo" when "test" exists
+    if (branchName.startsWith(branch + "/")) {
+      return { hasConflict: true, conflictingBranch: branch };
+    }
+  }
+
+  return { hasConflict: false };
 }
 
 /**
- * Checkout a branch in the current worktree
+ * Check if -b or -B flag is present in git args
  */
-async function checkoutBranch(branchName: string): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["checkout", branchName],
-    stdout: "inherit",
-    stderr: "inherit",
-  });
+function hasBranchFlag(gitArgs: string[]): boolean {
+  return gitArgs.includes("-b") || gitArgs.includes("-B");
+}
 
-  const { code } = await cmd.output();
-  return code === 0;
+/**
+ * Parse checkout command arguments
+ */
+function parseCheckoutArgs(args: string[]): {
+  help: boolean;
+  worktreeName?: string;
+  files: string[];
+  gitArgs: string[];
+  noNavigate: boolean;
+} {
+  const result = {
+    help: false,
+    worktreeName: undefined as string | undefined,
+    files: [] as string[],
+    gitArgs: [] as string[],
+    noNavigate: false,
+  };
+
+  // Check for help flag
+  if (args.includes("--help") || args.includes("-h")) {
+    result.help = true;
+    return result;
+  }
+
+  // Check for no-navigate flag
+  if (args.includes("--no-cd")) {
+    result.noNavigate = true;
+    // Remove it from args so it doesn't interfere with other parsing
+    args = args.filter(a => a !== "--no-cd");
+  }
+
+  // First positional arg is the worktree name (required)
+  // All other args are either git flags or files to copy
+  // Git flags start with - or --, files don't
+
+  let foundWorktreeName = false;
+  for (let i = 0; i < args.length; i++) {
+    const arg = args[i];
+
+    // Git worktree flags that take a value
+    if (arg === "-b" || arg === "-B" || arg === "--track") {
+      result.gitArgs.push(arg);
+      if (i + 1 < args.length) {
+        result.gitArgs.push(args[++i]);
+      }
+      continue;
+    }
+
+    // Git worktree boolean flags
+    if (
+      arg.startsWith("-") &&
+      (arg === "--detach" || arg === "--force" || arg === "-f" ||
+        arg === "--quiet" || arg === "-q" || arg === "--guess-remote")
+    ) {
+      result.gitArgs.push(arg);
+      continue;
+    }
+
+    // If we haven't found the worktree name yet and it doesn't start with -, it's the worktree name
+    if (!foundWorktreeName && !arg.startsWith("-")) {
+      result.worktreeName = arg;
+      foundWorktreeName = true;
+      continue;
+    }
+
+    // After worktree name, non-flag args are files to copy
+    if (foundWorktreeName && !arg.startsWith("-")) {
+      result.files.push(arg);
+    }
+  }
+
+  return result;
 }
 
 /**
  * Show help for the checkout command
  */
 function showCheckoutHelp(): void {
-  console.log(`
-gw checkout - Smart git checkout for worktree workflows
+  console.log(`Usage: gw checkout [options] <branch-name> [files...]
 
-Usage:
-  gw checkout <branch>
-  gw co <branch>
+Create a new git worktree for a branch and optionally copy files.
+
+If the branch is already checked out in another worktree, gw will navigate there instead.
+
+If the branch doesn't exist, it will be automatically created from the
+defaultBranch configured in .gw/config.json (defaults to "main"). The new
+branch will be configured to track origin/<branch-name>, so git push works
+without needing to specify -u origin <branch>.
+
+If autoCopyFiles is configured in .gw/config.json, those files will be
+automatically copied to the new worktree. You can override this by passing
+specific files as arguments.
 
 Arguments:
-  <branch>    Branch name to checkout
-
-Description:
-  A smart wrapper around git checkout that handles common worktree scenarios:
-
-  1. If the branch exists locally and isn't checked out anywhere:
-     - Checks out the branch in the current worktree (standard git checkout)
-
-  2. If the branch is already checked out in another worktree:
-     - Navigates to that worktree automatically
-     - Shows you where the branch is checked out
-
-  3. If the branch exists on remote but not locally:
-     - Prompts to create a new worktree for it (via gw add)
-
-  4. If the branch doesn't exist anywhere:
-     - Shows an error with suggestions
+  <branch-name>           Branch name (also used as worktree directory name)
+  [files...]              Optional files to copy (overrides config)
 
 Options:
-  -h, --help    Show this help message
+  --no-cd                 Don't navigate to the new worktree after creation
+
+  All git worktree add options are supported:
+    -b <branch>           Create a new branch (explicit, overrides auto-create)
+    -B <branch>           Create or reset a branch
+    --detach              Detach HEAD in new worktree
+    --force, -f           Force checkout even if already checked out
+    --track               Track branch from remote
+    -h, --help            Show this help message
 
 Examples:
-  # Checkout a local branch
-  gw checkout feature-x
+  # Create worktree - auto-creates branch if it doesn't exist
+  # (automatically navigates to new worktree)
+  gw checkout feat/new-feature
 
-  # Navigate to worktree where main is checked out
-  gw checkout main
+  # Create worktree without navigating to it
+  gw checkout feat/new-feature --no-cd
 
-  # Create worktree for remote branch (prompts)
-  gw checkout origin/feature-y
+  # Create worktree with explicit branch from specific start point
+  gw checkout feat/new-feature -b my-branch develop
 
-Tips:
-  - Use 'gw co' as a shorthand for 'gw checkout'
-  - To update your branch with main, use 'gw pull' instead of checking out main
-  - The command teaches you worktree workflows by showing what's happening
+  # Create worktree and copy specific files (overrides config)
+  gw checkout feat/new-feature .env secrets/
+
+Aliases:
+  gw co                   Short alias for checkout
+  gw add                  Backwards-compatible alias
+
+Configuration:
+  To enable auto-copy, use 'gw init' with --auto-copy-files:
+
+  gw init --auto-copy-files .env,secrets/
+
+Hooks:
+  Pre-checkout and post-checkout hooks can be configured to run before and after
+  worktree creation. Use 'gw init' to configure hooks:
+
+  # Configure post-checkout hook to install dependencies
+  gw init --post-checkout "cd {worktreePath} && pnpm install"
+
+  # Configure pre-checkout hook for validation
+  gw init --pre-checkout "echo 'Creating worktree: {worktree}'"
+
+  Hook variables:
+    {worktree}      - The worktree name
+    {worktreePath}  - Full absolute path to the worktree
+    {gitRoot}       - The git repository root path
+    {branch}        - The branch name
+
+  Pre-checkout hooks run before the worktree is created and abort on failure.
+  Post-checkout hooks run in the new worktree directory after creation.
 `);
 }
 
 /**
  * Execute the checkout command
+ *
+ * @param args Command-line arguments for the checkout command
  */
 export async function executeCheckout(args: string[]): Promise<void> {
-  // Check for help flag
-  if (args.includes("--help") || args.includes("-h") || args.length === 0) {
+  const parsed = parseCheckoutArgs(args);
+
+  // Show help if requested
+  if (parsed.help) {
     showCheckoutHelp();
-    Deno.exit(args.length === 0 ? 1 : 0);
-  }
-
-  const branchName = args[0];
-
-  // Get current branch
-  const currentBranch = await getCurrentBranch();
-  if (currentBranch === branchName) {
-    output.info(`Already on '${branchName}'`);
     Deno.exit(0);
   }
 
-  // Get list of all worktrees
-  const worktrees = await listWorktrees();
-
-  // Check if branch is checked out in any worktree
-  const worktreeWithBranch = worktrees.find((wt) => wt.branch === branchName);
-
-  if (worktreeWithBranch) {
-    // Case 2: Branch is checked out in another worktree - navigate to it
-    console.log("");
-    output.info(
-      `Branch ${output.bold(branchName)} is checked out in another worktree:`,
-    );
-    console.log(`  ${output.path(worktreeWithBranch.path)}`);
-    console.log("");
-    console.log("Navigating there...");
-
-    await signalNavigation(worktreeWithBranch.path);
-    Deno.exit(0);
+  // Validate arguments
+  if (!parsed.worktreeName) {
+    output.error("Branch name is required");
+    showCheckoutHelp();
+    Deno.exit(1);
   }
 
-  // Check if branch exists locally
-  const existsLocally = await branchExistsLocally(branchName);
+  // Load config
+  const { config, gitRoot } = await loadConfig();
 
-  if (existsLocally) {
-    // Case 1: Branch exists locally and not checked out - checkout normally
-    console.log(`Checking out ${output.bold(branchName)}...`);
-    const success = await checkoutBranch(branchName);
+  // Resolve worktree path (preserves full path including slashes like feat/foo-bar)
+  const worktreePath = resolveWorktreePath(gitRoot, parsed.worktreeName);
 
-    if (success) {
-      output.success(`Switched to branch '${branchName}'`);
+  // Determine the branch name (from -b/-B flag or worktree name)
+  let branchName = parsed.worktreeName;
+  for (let i = 0; i < parsed.gitArgs.length; i++) {
+    if (
+      (parsed.gitArgs[i] === "-b" || parsed.gitArgs[i] === "-B") &&
+      i + 1 < parsed.gitArgs.length
+    ) {
+      branchName = parsed.gitArgs[i + 1];
+      break;
+    }
+  }
+
+  // Smart navigation: Check if branch already exists and is checked out in another worktree
+  // Only do this check if the branch exists locally (not for new branches)
+  if (await branchExistsLocally(branchName)) {
+    const worktrees = await listWorktrees();
+    const worktreeWithBranch = worktrees.find((wt) => wt.branch === branchName);
+
+    if (worktreeWithBranch) {
+      // Branch is already checked out in another worktree - navigate there directly
+      // (can't checkout the same branch in two worktrees)
+      console.log("");
+      output.info(
+        `Branch ${output.bold(branchName)} is already checked out in:`,
+      );
+      console.log(`  ${output.path(worktreeWithBranch.path)}`);
+      console.log("");
+      console.log("Navigating there...");
+
+      await signalNavigation(worktreeWithBranch.path);
       Deno.exit(0);
-    } else {
-      output.error(`Failed to checkout '${branchName}'`);
+    }
+  }
+
+  // Prepare hook variables
+  const hookVariables: HookVariables = {
+    worktree: parsed.worktreeName,
+    worktreePath,
+    gitRoot,
+    branch: branchName,
+  };
+
+  // Get hooks config (prefer checkout, fall back to add for backwards compat)
+  const hooksConfig = config.hooks?.checkout ?? config.hooks?.add;
+
+  // Execute pre-checkout hooks (abort on failure)
+  if (hooksConfig?.pre && hooksConfig.pre.length > 0) {
+    const { allSuccessful } = await executeHooks(
+      hooksConfig.pre,
+      gitRoot,
+      hookVariables,
+      "pre-checkout",
+      true, // abort on failure
+    );
+
+    if (!allSuccessful) {
+      output.error("Pre-checkout hook failed. Aborting worktree creation.");
       Deno.exit(1);
     }
   }
 
-  // Check if branch exists on remote
-  const existsOnRemote = await branchExistsOnRemote(branchName);
+  // Check for leftover directory that isn't a valid worktree
+  try {
+    const stat = await Deno.stat(worktreePath);
+    if (stat.isDirectory || stat.isFile) {
+      // Path exists - check if it's a valid worktree
+      const worktrees = await listWorktrees();
+      const isValidWorktree = worktrees.some((wt) => wt.path === worktreePath);
 
-  if (existsOnRemote) {
-    // Case 3: Branch exists on remote but not locally - prompt to create worktree
-    console.log("");
-    output.info(
-      `Branch ${output.bold(branchName)} exists on remote but not locally.`,
-    );
-    console.log("");
+      if (isValidWorktree) {
+        // Worktree already exists - prompt user to navigate to it
+        console.log("");
+        output.info(
+          `Worktree ${output.bold(parsed.worktreeName)} already exists at:`,
+        );
+        console.log(`  ${output.path(worktreePath)}`);
+        console.log("");
 
-    const response = prompt(
-      `Create a new worktree for it? [Y/n]:`,
-    );
+        const response = prompt(`Navigate to it? [Y/n]:`);
 
-    if (
-      response === null || response === "" || response.toLowerCase() === "y" ||
-      response.toLowerCase() === "yes"
-    ) {
-      console.log("");
-      console.log(`Running: ${output.dim(`gw add ${branchName}`)}`);
-      console.log("");
-
-      // Execute gw add
-      const addCmd = new Deno.Command(Deno.execPath(), {
-        args: ["run", "--allow-all", Deno.mainModule, "add", branchName],
-        stdout: "inherit",
-        stderr: "inherit",
-      });
-
-      const { code } = await addCmd.output();
-      Deno.exit(code);
-    } else {
-      console.log("");
-      output.info("Operation cancelled.");
-      Deno.exit(0);
+        if (response === null || response === "" || response.toLowerCase() === "y" || response.toLowerCase() === "yes") {
+          // Signal navigation to shell integration via temp file
+          // This avoids buffering output
+          await signalNavigation(worktreePath);
+          Deno.exit(0);
+        } else {
+          console.log("");
+          output.info("Worktree creation cancelled.");
+          Deno.exit(0);
+        }
+      } else {
+        // Path exists but isn't a valid worktree - automatically clean up
+        console.log("");
+        output.error(
+          `Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`,
+        );
+        Deno.exit(1);
+      }
+    }
+  } catch (error) {
+    // Path doesn't exist - this is fine, we'll create it
+    if (!(error instanceof Deno.errors.NotFound)) {
+      // Some other error occurred
+      throw error;
     }
   }
 
-  // Case 4: Branch doesn't exist anywhere
-  console.log("");
-  output.error(`Branch '${branchName}' not found locally or on remote.`);
-  console.log("");
-  console.log("Did you mean to:");
-  console.log(
-    `  ${output.bold(`gw add ${branchName}`)} - Create a new worktree with a new branch`,
-  );
-  console.log("");
-  Deno.exit(1);
+  // Check if branch exists and auto-create if needed
+  const gitArgs = [...parsed.gitArgs];
+  let startPoint: string | undefined;
+
+  // If user specified -b or -B, check for ref conflicts since they're creating a new branch
+  if (hasBranchFlag(gitArgs)) {
+    const { hasConflict, conflictingBranch } = await hasRefConflict(branchName);
+    if (hasConflict) {
+      console.log("");
+      output.error(
+        `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
+      );
+      console.log("");
+      console.log(
+        `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
+      );
+      console.log("");
+      console.log("Options:");
+      console.log(`  1. Use a different name: ${output.bold(`gw checkout ${parsed.worktreeName} -b ${branchName}-new`)}`);
+      console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
+      console.log(`  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`);
+      console.log("");
+      Deno.exit(1);
+    }
+  } else {
+    // No -b flag, check if branch exists
+    const exists = await branchExists(parsed.worktreeName);
+    if (!exists) {
+      // Branch doesn't exist, we'll auto-create it - check for ref conflicts
+      const { hasConflict, conflictingBranch } = await hasRefConflict(parsed.worktreeName);
+      if (hasConflict) {
+        console.log("");
+        output.error(
+          `Cannot create branch ${output.bold(parsed.worktreeName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
+        );
+        console.log("");
+        console.log(
+          `Git doesn't allow both ${output.dim(`refs/heads/${parsed.worktreeName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
+        );
+        console.log("");
+        console.log("Options:");
+        console.log(`  1. Use a different name: ${output.bold(`gw checkout ${parsed.worktreeName}-new`)}`);
+        console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
+        console.log(`  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`);
+        console.log("");
+        Deno.exit(1);
+      }
+
+      // Auto-create branch from defaultBranch
+      const defaultBranch = config.defaultBranch || "main";
+
+      console.log(
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, fetching latest ${output.bold(defaultBranch)}...`,
+      );
+
+      try {
+        const { startPoint: fetchedStartPoint, fetchSucceeded, message } =
+          await fetchAndGetStartPoint(defaultBranch);
+
+        startPoint = fetchedStartPoint;
+        gitArgs.unshift("-b", parsed.worktreeName);
+
+        if (fetchSucceeded) {
+          if (message) {
+            // There's a message even though fetch succeeded (e.g., using remote ref)
+            console.log(output.dim(message));
+          }
+          console.log(
+            `Creating from ${output.bold(startPoint)} (latest from remote)`,
+          );
+        } else {
+          output.warning(message || "Could not fetch from remote");
+          console.log(
+            `Creating from ${output.bold(startPoint)} (local branch)`,
+          );
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        output.error(`Failed to prepare branch: ${errorMsg}`);
+        Deno.exit(1);
+      }
+    } else {
+      // Branch exists - explicitly pass it to git to avoid git inferring from path basename
+      // Without this, "gw checkout test/foo" would make git use basename "foo" as branch name
+      startPoint = parsed.worktreeName;
+    }
+  }
+
+  // Build git worktree add command
+  // Format: git worktree add [-b <new-branch>] <path> [<commit-ish>]
+  const gitCmd = [
+    "git",
+    "worktree",
+    "add",
+    ...gitArgs,
+    worktreePath,
+    ...(startPoint ? [startPoint] : []),
+  ];
+
+  // Execute git worktree add
+  console.log(`Creating worktree: ${output.bold(parsed.worktreeName)}\n`);
+
+  const gitProcess = new Deno.Command(gitCmd[0], {
+    args: gitCmd.slice(1),
+    stdout: "inherit",
+    stderr: "inherit",
+  });
+
+  const { code } = await gitProcess.output();
+
+  if (code !== 0) {
+    output.error("Failed to create worktree");
+    Deno.exit(code);
+  }
+
+  // Set up correct upstream tracking if we auto-created a new branch
+  // When creating a branch from a remote-tracking branch (e.g., origin/main),
+  // git automatically sets tracking to that branch. We need to change it to
+  // track the new branch name instead (e.g., origin/feat/new-feature).
+  if (startPoint) {
+    const configRemoteCmd = new Deno.Command("git", {
+      args: [
+        "-C",
+        worktreePath,
+        "config",
+        `branch.${branchName}.remote`,
+        "origin",
+      ],
+      stdout: "null",
+      stderr: "null",
+    });
+
+    const configMergeCmd = new Deno.Command("git", {
+      args: [
+        "-C",
+        worktreePath,
+        "config",
+        `branch.${branchName}.merge`,
+        `refs/heads/${branchName}`,
+      ],
+      stdout: "null",
+      stderr: "null",
+    });
+
+    await configRemoteCmd.output();
+    await configMergeCmd.output();
+  }
+
+  // Determine which files to copy
+  let filesToCopy: string[] = [];
+
+  if (parsed.files.length > 0) {
+    // Files explicitly passed as arguments - use those
+    filesToCopy = parsed.files;
+  } else if (config.autoCopyFiles && config.autoCopyFiles.length > 0) {
+    // No files passed, but autoCopyFiles is configured - use those
+    filesToCopy = config.autoCopyFiles;
+  }
+
+  // Copy files if any
+  if (filesToCopy.length > 0) {
+    console.log(`Copying files to new worktree...`);
+
+    const sourceWorktree = config.defaultBranch || "main";
+    let sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
+
+    // If the resolved source path doesn't exist, use git root (main worktree is at repo root)
+    try {
+      await Deno.stat(sourcePath);
+    } catch {
+      sourcePath = gitRoot;
+    }
+
+    try {
+      const results = await copyFiles(
+        sourcePath,
+        worktreePath,
+        filesToCopy,
+        false,
+      );
+
+      // Display results
+      console.log();
+      for (const result of results) {
+        if (result.success) {
+          console.log(`  ${output.checkmark()} ${result.message}`);
+        } else {
+          console.log(`  ${output.warningSymbol()} ${result.message}`);
+        }
+      }
+
+      const successCount = results.filter((r) => r.success).length;
+      const fileWord = successCount === 1 ? "file" : "files";
+      console.log();
+      console.log(
+        `  Copied ${
+          output.bold(`${successCount}/${results.length}`)
+        } ${fileWord}`,
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.warning(`Failed to copy files - ${message}`);
+      console.log(
+        "Worktree was created successfully, but file copying failed.\n",
+      );
+    }
+  }
+
+  // Execute post-checkout hooks (warn but don't abort on failure)
+  if (hooksConfig?.post && hooksConfig.post.length > 0) {
+    const { allSuccessful } = await executeHooks(
+      hooksConfig.post,
+      worktreePath, // Run post-checkout hooks in the new worktree directory
+      hookVariables,
+      "post-checkout",
+      false, // don't abort on failure, just warn
+    );
+
+    if (!allSuccessful) {
+      output.warning("One or more post-checkout hooks failed");
+    }
+  }
+
+  // Auto-cleanup stale worktrees if enabled (interactive prompt)
+  await promptAndRunAutoClean();
+
+  output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
+
+  // Navigate to new worktree unless --no-cd flag is set
+  if (!parsed.noNavigate) {
+    await signalNavigation(worktreePath);
+  }
 }

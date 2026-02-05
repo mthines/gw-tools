@@ -54,6 +54,10 @@ function generateInitCommand(config: {
   defaultBranch?: string;
   autoCopyFiles?: string[];
   hooks?: {
+    checkout?: {
+      pre?: string[];
+      post?: string[];
+    };
     add?: {
       pre?: string[];
       post?: string[];
@@ -80,17 +84,20 @@ function generateInitCommand(config: {
     parts.push(`--auto-copy-files ${escapeShellArg(filesArg)}`);
   }
 
-  // Add pre-add hooks
-  if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
-    for (const hook of config.hooks.add.pre) {
-      parts.push(`--pre-add ${escapeShellArg(hook)}`);
+  // Get hooks config (prefer checkout, fall back to add for backwards compat)
+  const hooksConfig = config.hooks?.checkout ?? config.hooks?.add;
+
+  // Add pre-checkout hooks
+  if (hooksConfig?.pre && hooksConfig.pre.length > 0) {
+    for (const hook of hooksConfig.pre) {
+      parts.push(`--pre-checkout ${escapeShellArg(hook)}`);
     }
   }
 
-  // Add post-add hooks
-  if (config.hooks?.add?.post && config.hooks.add.post.length > 0) {
-    for (const hook of config.hooks.add.post) {
-      parts.push(`--post-add ${escapeShellArg(hook)}`);
+  // Add post-checkout hooks
+  if (hooksConfig?.post && hooksConfig.post.length > 0) {
+    for (const hook of hooksConfig.post) {
+      parts.push(`--post-checkout ${escapeShellArg(hook)}`);
     }
   }
 

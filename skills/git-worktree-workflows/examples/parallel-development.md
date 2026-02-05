@@ -21,7 +21,7 @@ Both features are independent and can be developed in parallel. Traditional bran
 
 ```bash
 # Create worktree for payment gateway feature
-$ gw add feature-payment-gateway -b feature-payment-gateway main
+$ gw checkout feature-payment-gateway -b feature-payment-gateway main
 
 Creating worktree feature-payment-gateway...
 ✓ Worktree created: /projects/ecommerce.git/feature-payment-gateway
@@ -30,7 +30,7 @@ Copying files from main...
 ✓ Copied: secrets/stripe-keys.json
 
 # Create worktree for recommendations feature
-$ gw add feature-recommendations -b feature-recommendations main
+$ gw checkout feature-recommendations -b feature-recommendations main
 
 Creating worktree feature-recommendations...
 ✓ Worktree created: /projects/ecommerce.git/feature-recommendations

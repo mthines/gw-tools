@@ -5,7 +5,6 @@
  */
 
 import { parseGlobalArgs, showGlobalHelp, showLogo, showVersion } from './lib/cli.ts';
-import { executeAdd } from './commands/add.ts';
 import { executeCd } from './commands/cd.ts';
 import { executeCheckout } from './commands/checkout.ts';
 import { executeCopy } from './commands/sync.ts';
@@ -28,10 +27,10 @@ import * as output from './lib/output.ts';
  * Available commands mapped to their handler functions
  */
 const COMMANDS = {
-  add: executeAdd,
-  cd: executeCd,
   checkout: executeCheckout,
   co: executeCheckout, // Alias for checkout
+  add: executeCheckout, // Backwards-compatible alias (silent)
+  cd: executeCd,
   update: executeUpdate,
   sync: executeCopy,
   init: executeInit,

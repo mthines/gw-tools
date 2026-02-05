@@ -7,7 +7,7 @@
 This skill teaches you how to leverage Git worktrees effectively with the `gw` CLI tool. You'll learn:
 
 - **Git worktree fundamentals** - What they are, when to use them, and how they compare to branch switching
-- **Creating and managing worktrees** - Using `gw add` with auto-copy functionality
+- **Creating and managing worktrees** - Using `gw checkout` with auto-copy functionality
 - **Quick navigation** - Mastering `gw cd` for seamless context switching
 - **Common workflow patterns** - Feature development, hotfixes, code reviews, and testing
 - **Maintenance and cleanup** - Keeping your worktrees organized and your disk space manageable

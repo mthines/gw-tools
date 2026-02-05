@@ -23,7 +23,7 @@ Common problems and their solutions when working with Git worktrees and gw.
 ### Problem
 
 ```bash
-$ gw add feature-auth
+$ gw checkout feature-auth
 fatal: 'feature-auth' already exists
 ```
 
@@ -43,13 +43,13 @@ $ ls -la ../feature-auth/
 
 ```bash
 $ gw remove feature-auth
-$ gw add feature-auth -b feature-auth
+$ gw checkout feature-auth -b feature-auth
 ```
 
 **Solution B: Use different name**
 
 ```bash
-$ gw add feature-auth-v2 -b feature-auth-v2 feature-auth
+$ gw checkout feature-auth-v2 -b feature-auth-v2 feature-auth
 ```
 
 **Solution C: Navigate to existing worktree**
@@ -65,7 +65,7 @@ $ gw cd feature-auth
 ### Problem
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 fatal: 'feature-x' is already checked out at '/projects/repo.git/other-worktree'
 ```
 
@@ -91,7 +91,7 @@ $ gw cd feature-x
 **Solution B: Create new branch from existing branch**
 
 ```bash
-$ gw add feature-x-continued -b feature-x-continued feature-x
+$ gw checkout feature-x-continued -b feature-x-continued feature-x
 ```
 
 **Solution C: Force checkout (dangerous!)**
@@ -99,7 +99,7 @@ $ gw add feature-x-continued -b feature-x-continued feature-x
 Only use if you understand the implications:
 
 ```bash
-$ gw add feature-x-copy --force -b feature-x-copy feature-x
+$ gw checkout feature-x-copy --force -b feature-x-copy feature-x
 ```
 
 **When to use `--force`:**
@@ -118,7 +118,7 @@ $ gw add feature-x-copy --force -b feature-x-copy feature-x
 ### Problem
 
 ```bash
-$ gw add test
+$ gw checkout test
 Cannot create branch test because it conflicts with existing branch test/foo
 
 Git doesn't allow both refs/heads/test and refs/heads/test/foo
@@ -127,7 +127,7 @@ Git doesn't allow both refs/heads/test and refs/heads/test/foo
 Or the reverse:
 
 ```bash
-$ gw add test/bar
+$ gw checkout test/bar
 Cannot create branch test/bar because it conflicts with existing branch test
 
 Git doesn't allow both refs/heads/test and refs/heads/test/bar
@@ -160,16 +160,16 @@ test/foo
 
 ### Solutions
 
-The `gw add` command detects these conflicts automatically and provides helpful suggestions:
+The `gw checkout` command detects these conflicts automatically and provides helpful suggestions:
 
 **Solution A: Use a different branch name**
 
 ```bash
 # Instead of creating "test" when "test/foo" exists:
-$ gw add test-new -b test-new
+$ gw checkout test-new -b test-new
 
 # Or use a different naming pattern:
-$ gw add testing -b testing
+$ gw checkout testing -b testing
 ```
 
 **Solution B: Delete the conflicting branch**
@@ -184,7 +184,7 @@ $ git branch -d test/foo
 $ git branch -D test/foo
 
 # Now you can create the desired branch:
-$ gw add test
+$ gw checkout test
 ```
 
 **Solution C: Use the existing conflicting branch**
@@ -193,7 +193,7 @@ If the conflicting branch is what you actually want:
 
 ```bash
 # Instead of creating "test", use the existing "test/foo":
-$ gw add test/foo
+$ gw checkout test/foo
 ```
 
 ### Prevention
@@ -305,7 +305,7 @@ $ git worktree repair feature-x
 $ gw remove feature-x --force
 
 # Recreate from branch
-$ gw add feature-x -b feature-x origin/feature-x
+$ gw checkout feature-x -b feature-x origin/feature-x
 ```
 
 **Solution C: Manual cleanup**
@@ -325,7 +325,7 @@ $ gw prune
 ### Problem
 
 ```bash
-$ gw add feature-y
+$ gw checkout feature-y
 fatal: could not create work tree dir 'feature-y': Permission denied
 ```
 
@@ -355,14 +355,14 @@ $ sudo chown -R $USER:$GROUP /projects/repo.git/
 
 ```bash
 # Create worktree in your home directory
-$ gw add ~/worktrees/feature-y -b feature-y
+$ gw checkout ~/worktrees/feature-y -b feature-y
 ```
 
 **Solution C: Use sudo (not recommended)**
 
 ```bash
 # Last resort, avoid if possible
-$ sudo gw add feature-y
+$ sudo gw checkout feature-y
 ```
 
 ---
@@ -419,7 +419,7 @@ $ gw cd main
 $ gw remove feature-old
 
 # Later, recreate and restore stash
-$ gw add feature-old -b feature-old origin/feature-old
+$ gw checkout feature-old -b feature-old origin/feature-old
 $ gw cd feature-old
 $ git stash pop
 ```
@@ -544,7 +544,7 @@ $ gw cd feature-auth
 **Solution B: Create worktree if it doesn't exist**
 
 ```bash
-$ gw add feature-x -b feature-x origin/feature-x
+$ gw checkout feature-x -b feature-x origin/feature-x
 $ gw cd feature-x
 ```
 
@@ -557,7 +557,7 @@ $ gw cd feature-x
 Files not automatically copied when creating worktree:
 
 ```bash
-$ gw add feature-new
+$ gw checkout feature-new
 ✓ Worktree created
 
 # But .env file is missing!
@@ -646,7 +646,7 @@ Create a team guide:
 ```markdown
 ## Worktree Workflow
 
-- Create: `gw add feature-name -b feature-name`
+- Create: `gw checkout feature-name -b feature-name`
 - Navigate: `gw cd feature-name`
 - Clean up: `gw remove feature-name`
 - Never manually delete worktree directories!

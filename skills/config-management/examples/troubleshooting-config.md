@@ -19,7 +19,7 @@ Common configuration problems and their solutions.
 ### Problem
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Error: Could not find .gw/config.json
 ```
 
@@ -65,7 +65,7 @@ gw init
 ### Problem
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Creating worktree: feature-x
 # No files copied!
 ```
@@ -170,7 +170,7 @@ gw sync --from main feature-x .env
 ### Problem
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Error: Source file not found: /wrong/path/.env
 ```
 
@@ -282,7 +282,7 @@ If your structure is different, specify root explicitly.
 ### Problem
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 Error: Permission denied: .gw/config.json
 ```
 
@@ -392,7 +392,7 @@ Before using gw, ensure you have:
 cat .gw/config.json
 
 # Verify gw can read it
-gw add --help  # Should work without errors
+gw checkout --help  # Should work without errors
 ```
 
 ### Reset Configuration
@@ -407,7 +407,7 @@ gw init --auto-copy-files .env,.env.local
 
 ```bash
 # Create test worktree
-gw add test-config
+gw checkout test-config
 
 # Verify files copied
 ls -la test-config/.env

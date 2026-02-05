@@ -96,34 +96,34 @@ Worktrees are ideal for:
 
 ## 2. Creating and Managing Worktrees with gw
 
-### The `gw add` Command
+### The `gw checkout` Command
 
-The `gw add` command is an enhanced version of `git worktree add` with automatic file copying and navigation:
+The `gw checkout` command is an enhanced version of `git worktree add` with automatic file copying and navigation:
 
 ```bash
 # Basic usage - create worktree for existing branch
 # Automatically navigates to the new worktree
-gw add feature-auth
+gw checkout feature-auth
 
 # Create worktree without automatic navigation
-gw add feature-auth --no-cd
+gw checkout feature-auth --no-cd
 
 # Create worktree with new branch
-gw add feature-payments -b feature-payments
+gw checkout feature-payments -b feature-payments
 
 # Create from specific start point
-gw add hotfix-security -b hotfix-security main
+gw checkout hotfix-security -b hotfix-security main
 
 # Force creation (even if branch already checked out elsewhere)
-gw add feature-test --force
+gw checkout feature-test --force
 ```
 
 ### Navigating to Existing Worktrees
 
-If you try to add a worktree that already exists, `gw add` will prompt you to navigate to it:
+If you try to add a worktree that already exists, `gw checkout` will prompt you to navigate to it:
 
 ```bash
-$ gw add feature-auth
+$ gw checkout feature-auth
 
 ℹ Worktree feature-auth already exists at:
   /projects/myapp.git/feature-auth
@@ -136,7 +136,7 @@ This is convenient when you're not sure if you've already created a worktree for
 
 ### Auto-Copying Files
 
-When creating worktrees with `gw add`, files configured in `.gw/config.json` are automatically copied:
+When creating worktrees with `gw checkout`, files configured in `.gw/config.json` are automatically copied:
 
 ```json
 {
@@ -163,7 +163,7 @@ When creating worktrees with `gw add`, files configured in `.gw/config.json` are
 Example creating a worktree with auto-copy:
 
 ```bash
-$ gw add feature-new-dashboard
+$ gw checkout feature-new-dashboard
 
 Creating worktree feature-new-dashboard...
 ✓ Branch 'feature-new-dashboard' set up to track 'origin/feature-new-dashboard'
@@ -201,7 +201,7 @@ gw sync --from staging feature-auth .env
 
 ```bash
 # Creates branch from origin/main, tracking its own remote branch
-gw add feature-x
+gw checkout feature-x
 
 # Shows branch relationship
 $ git status
@@ -212,13 +212,13 @@ Your branch is up to date with 'origin/feature-x'.
 git push  # Pushes to origin/feature-x
 ```
 
-**Note:** When `gw add` creates a new branch, it automatically configures upstream tracking to `origin/<branch-name>`, not to the branch it was created from. This ensures `git push` works correctly.
+**Note:** When `gw checkout` creates a new branch, it automatically configures upstream tracking to `origin/<branch-name>`, not to the branch it was created from. This ensures `git push` works correctly.
 
 **Detached HEAD** (for temporary work):
 
 ```bash
 # Check out specific commit
-gw add temp-test --detach v1.2.3
+gw checkout temp-test --detach v1.2.3
 
 # No branch, just a commit
 $ git status
@@ -233,27 +233,27 @@ Use tracking branches for features you'll push. Use detached HEAD for temporary 
 
 ```bash
 # Branch from main
-gw add feature-name -b feature-name main
+gw checkout feature-name -b feature-name main
 
 # Branch from develop
-gw add feature-name -b feature-name develop
+gw checkout feature-name -b feature-name develop
 ```
 
 **Hotfix branches:**
 
 ```bash
 # Branch from production tag
-gw add hotfix-security -b hotfix-security v1.2.3
+gw checkout hotfix-security -b hotfix-security v1.2.3
 
 # Branch from main for immediate fix
-gw add hotfix-critical -b hotfix-critical main
+gw checkout hotfix-critical -b hotfix-critical main
 ```
 
 **Release branches:**
 
 ```bash
 # Create release candidate from develop
-gw add release-v2.0 -b release-v2.0 develop
+gw checkout release-v2.0 -b release-v2.0 develop
 ```
 
 ---
@@ -341,8 +341,8 @@ gw install-shell
 
 **Shell integration features:**
 
-- **Real-time streaming output** - Commands like `gw add` now stream output as it's generated (no buffering)
-- **Auto-navigation** - Automatically navigate to new worktrees after `gw add` completes
+- **Real-time streaming output** - Commands like `gw checkout` now stream output as it's generated (no buffering)
+- **Auto-navigation** - Automatically navigate to new worktrees after `gw checkout` completes
 - **Smart cleanup** - Auto-navigate to repo root when removing the current worktree with `gw remove`
 
 **For development aliases:**
@@ -495,7 +495,7 @@ The main worktree:
 pwd  # /projects/myapp.git/main
 
 # Create feature worktree
-gw add feature-user-profiles -b feature-user-profiles
+gw checkout feature-user-profiles -b feature-user-profiles
 
 # Navigate to new worktree
 gw cd feature-user-profiles
@@ -595,7 +595,7 @@ gw cd feature-dashboard
 # In the middle of uncommitted changes...
 
 # Create hotfix worktree (doesn't interrupt feature work)
-gw add hotfix-login-bug -b hotfix-login-bug main
+gw checkout hotfix-login-bug -b hotfix-login-bug main
 
 # Navigate to hotfix
 gw cd hotfix-login-bug
@@ -619,7 +619,7 @@ gw cd feature-dashboard
 
 ```bash
 # Create reviewer worktree
-gw add review-pr-123 -b pr-123 origin/pr-123
+gw checkout review-pr-123 -b pr-123 origin/pr-123
 
 # Navigate and review
 gw cd review-pr-123
@@ -646,8 +646,8 @@ gw remove review-pr-123
 
 ```bash
 # Create worktrees for each test environment
-gw add test-node18 -b feature-api
-gw add test-node20 -b feature-api --force
+gw checkout test-node18 -b feature-api
+gw checkout test-node20 -b feature-api --force
 
 # Set up Node 18 environment
 gw cd test-node18
@@ -672,7 +672,7 @@ npm test
 
 ```bash
 # Create experiment worktree
-gw add experiment-new-architecture -b experiment/new-arch
+gw checkout experiment-new-architecture -b experiment/new-arch
 
 # Work on experiment over days/weeks
 gw cd experiment-new-architecture
@@ -969,7 +969,7 @@ gw remove feature-complete
 **Problem:**
 
 ```bash
-$ gw add feature-auth
+$ gw checkout feature-auth
 fatal: 'feature-auth' already exists
 ```
 
@@ -983,7 +983,7 @@ gw list
 gw remove feature-auth
 
 # Or use a different name
-gw add feature-auth-v2
+gw checkout feature-auth-v2
 ```
 
 ### Git Ref Conflicts (Branch Name Hierarchy)
@@ -991,7 +991,7 @@ gw add feature-auth-v2
 **Problem:**
 
 ```bash
-$ gw add test
+$ gw checkout test
 Cannot create branch test because it conflicts with existing branch test/foo
 
 Git doesn't allow both refs/heads/test and refs/heads/test/foo
@@ -1003,14 +1003,14 @@ Git prevents creating branches with hierarchical naming conflicts (e.g., both `t
 
 ```bash
 # Option 1: Use a different name
-gw add test-new -b test-new
+gw checkout test-new -b test-new
 
 # Option 2: Delete the conflicting branch
 git branch -d test/foo
-gw add test
+gw checkout test
 
 # Option 3: Use the existing conflicting branch
-gw add test/foo
+gw checkout test/foo
 ```
 
 **Prevention:** Use consistent naming conventions. Good: `feature/auth`, `feature/checkout`. Bad: mixing `feature` and `feature/new`.
@@ -1051,7 +1051,7 @@ gw repair
 
 # If that doesn't work, remove and recreate
 gw remove feature-x --force
-gw add feature-x -b feature-x origin/feature-x
+gw checkout feature-x -b feature-x origin/feature-x
 ```
 
 ### Permission Issues
@@ -1059,7 +1059,7 @@ gw add feature-x -b feature-x origin/feature-x
 **Problem:**
 
 ```bash
-$ gw add feature-y
+$ gw checkout feature-y
 fatal: could not create work tree dir 'feature-y': Permission denied
 ```
 
@@ -1073,7 +1073,7 @@ ls -la /projects/myapp.git/
 chmod 755 /projects/myapp.git/
 
 # Or use sudo (not recommended)
-sudo gw add feature-y
+sudo gw checkout feature-y
 ```
 
 ### Git Administrative File Repair
@@ -1105,7 +1105,7 @@ git add .
 **Problem:**
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 fatal: 'feature-x' is already checked out at '/projects/myapp.git/other-worktree'
 ```
 
@@ -1116,10 +1116,10 @@ fatal: 'feature-x' is already checked out at '/projects/myapp.git/other-worktree
 gw cd feature-x  # Goes to /projects/myapp.git/other-worktree
 
 # Option 2: Create new branch
-gw add feature-x-new -b feature-x-new feature-x
+gw checkout feature-x-new -b feature-x-new feature-x
 
 # Option 3: Force checkout (only if you know what you're doing)
-gw add feature-x-copy -b feature-x-copy --force
+gw checkout feature-x-copy -b feature-x-copy --force
 ```
 
 ### Shell Integration Issues
@@ -1177,7 +1177,7 @@ gw list
 You now understand:
 
 - ✅ Git worktree fundamentals and when to use them
-- ✅ Creating and managing worktrees with `gw add`
+- ✅ Creating and managing worktrees with `gw checkout`
 - ✅ Quick navigation with `gw cd`
 - ✅ Common workflow patterns for features, hotfixes, and reviews
 - ✅ Maintenance and cleanup strategies
@@ -1185,7 +1185,7 @@ You now understand:
 
 ### Next Steps
 
-1. Try creating your first worktree with `gw add`
+1. Try creating your first worktree with `gw checkout`
 2. Set up auto-copy configuration (see [config-management skill](../config-management/))
 3. Explore advanced parallel workflows (see [multi-worktree-dev skill](../multi-worktree-dev/))
 

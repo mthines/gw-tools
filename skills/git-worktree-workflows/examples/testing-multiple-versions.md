@@ -23,9 +23,9 @@ Running tests sequentially would take significant time. With worktrees, you can 
 
 ```bash
 # Create a worktree for each Node version you want to test
-$ gw add test-node18 -b feature-new-api
-$ gw add test-node20 -b feature-new-api --force
-$ gw add test-node22 -b feature-new-api --force
+$ gw checkout test-node18 -b feature-new-api
+$ gw checkout test-node20 -b feature-new-api --force
+$ gw checkout test-node22 -b feature-new-api --force
 
 # List all test environments
 $ gw list
@@ -168,8 +168,8 @@ $ git push origin feature-new-api
 
 ```bash
 # Test with React 17 and React 18
-$ gw add test-react17 -b feature-components
-$ gw add test-react18 -b feature-components --force
+$ gw checkout test-react17 -b feature-components
+$ gw checkout test-react18 -b feature-components --force
 
 # In each worktree, install different React versions
 $ gw cd test-react17
@@ -183,8 +183,8 @@ $ npm install react@18 react-dom@18
 
 ```bash
 # Test with different build modes
-$ gw add test-build-dev -b feature-build-optimization
-$ gw add test-build-prod -b feature-build-optimization --force
+$ gw checkout test-build-dev -b feature-build-optimization
+$ gw checkout test-build-prod -b feature-build-optimization --force
 
 $ gw cd test-build-dev
 $ npm run build:dev
@@ -199,9 +199,9 @@ $ npm run build:prod
 
 ```bash
 # Set up worktrees for different browser test environments
-$ gw add test-chrome -b feature-ui
-$ gw add test-firefox -b feature-ui --force
-$ gw add test-safari -b feature-ui --force
+$ gw checkout test-chrome -b feature-ui
+$ gw checkout test-firefox -b feature-ui --force
+$ gw checkout test-safari -b feature-ui --force
 
 # Run Playwright/Cypress tests targeting different browsers
 $ gw cd test-chrome

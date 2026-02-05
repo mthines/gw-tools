@@ -436,8 +436,8 @@ Keep a `PORTS.md` in your repo:
 ### 3. Automate with gw Hooks
 
 ```bash
-# Configure post-add hook to start services
-gw init --post-add "cd {worktreePath} && ./scripts/start-services.sh"
+# Configure post-checkout hook to start services
+gw init --post-checkout "cd {worktreePath} && ./scripts/start-services.sh"
 ```
 
 ### 4. Resource Limits
