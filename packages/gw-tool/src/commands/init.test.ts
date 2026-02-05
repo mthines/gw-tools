@@ -584,3 +584,154 @@ Deno.test('init command - interactive mode with whitespace in responses', async 
     await repo.cleanup();
   }
 });
+// Clone mode tests
+
+Deno.test('init command - clone mode with file URL', async () => {
+  // Create a test repository to clone from
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    // Create temp directory for clone target
+    const targetDir = Deno.makeTempDirSync({ prefix: 'gw-test-clone-' });
+    const cwd = new TempCwd(targetDir);
+    try {
+      // Clone using file:// URL (simulates SSH/HTTPS in test environment)
+      const cloneUrl = `file://${sourceRepo.path}`;
+      await executeInit([cloneUrl]);
+
+      // Verify the repository was cloned
+      const clonedRepoPath = join(targetDir, 'test-repo');
+      await assertFileExists(join(clonedRepoPath, '.git'));
+
+      // Verify config was created
+      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+      // Verify config content
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.root, clonedRepoPath);
+
+      // Verify default worktree was created
+      await assertFileExists(join(targetDir, 'main'));
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode with custom directory', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    const targetDir = Deno.makeTempDirSync({ prefix: 'gw-test-clone-' });
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepo.path}`;
+      await executeInit([cloneUrl, 'custom-name']);
+
+      // Verify cloned to custom directory
+      const clonedRepoPath = join(targetDir, 'custom-name');
+      await assertFileExists(join(clonedRepoPath, '.git'));
+      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.root, clonedRepoPath);
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode with configuration options', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    const targetDir = Deno.makeTempDirSync({ prefix: 'gw-test-clone-' });
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepo.path}`;
+      await executeInit([
+        cloneUrl,
+        '--auto-copy-files', '.env,secrets/',
+        '--post-add', 'echo "installed"',
+        '--clean-threshold', '14',
+      ]);
+
+      const clonedRepoPath = join(targetDir, 'test-repo');
+      const config = await readTestConfig(clonedRepoPath);
+
+      assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
+      assertEquals(config.hooks?.add?.post, ['echo "installed"']);
+      assertEquals(config.cleanThreshold, 14);
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode fails when directory exists', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+
+    const targetDir = Deno.makeTempDirSync({ prefix: 'gw-test-clone-' });
+    const cwd = new TempCwd(targetDir);
+    try {
+      // Create a directory with the target name
+      const existingDir = join(targetDir, 'test-repo');
+      await Deno.mkdir(existingDir);
+
+      const cloneUrl = `file://${sourceRepo.path}`;
+      const { exitCode } = await withMockedExit(() => executeInit([cloneUrl]));
+
+      // Should exit with error code
+      assertEquals(exitCode, 1, 'Should exit with code 1 when directory exists');
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - existing repo mode when already initialized', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First initialization
+      await executeInit([]);
+
+      // Verify config exists
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
+
+      // Try to initialize again (should skip with message)
+      await executeInit([]);
+
+      // Config should still exist and be unchanged
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.root, repo.path);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});

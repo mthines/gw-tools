@@ -96,6 +96,63 @@ Worktrees are ideal for:
 
 ## 2. Creating and Managing Worktrees with gw
 
+### Getting Started: Clone and Initialize
+
+If you're setting up a new repository with gw, you can clone and initialize in one step:
+
+```bash
+# Clone a repository and automatically set up gw
+$ gw init git@github.com:user/repo.git
+
+Cloning repository from git@github.com:user/repo.git...
+✓ Repository cloned to repo
+
+Setting up gw_root branch...
+✓ Created gw_root branch
+
+Initializing gw configuration...
+✓ Configuration created
+
+Creating main worktree...
+✓ Created main worktree
+
+✓ Repository initialized successfully!
+```
+
+This automatically:
+1. Clones the repository with `--no-checkout`
+2. Creates a `gw_root` branch for the bare repository
+3. Auto-detects the default branch (main, master, etc.)
+4. Creates the gw configuration at `.gw/config.json`
+5. Creates your first worktree for the default branch
+
+**Clone with configuration:**
+
+```bash
+# Clone with auto-copy files configured
+$ gw init git@github.com:user/repo.git \
+          --auto-copy-files .env,secrets/ \
+          --post-add "pnpm install"
+
+# Clone into a custom directory
+$ gw init git@github.com:user/repo.git my-project
+
+# Clone and configure interactively
+$ gw init https://github.com/user/repo.git --interactive
+```
+
+**For existing repositories:**
+
+If you already have a cloned repository, initialize gw from within it:
+
+```bash
+$ cd ~/projects/myapp
+$ gw init
+
+Auto-detected git root: /projects/myapp.git
+✓ Configuration created successfully
+```
+
 ### The `gw add` Command
 
 The `gw add` command is an enhanced version of `git worktree add` with automatic file copying and navigation:
