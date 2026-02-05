@@ -20,7 +20,7 @@
   ],
 
   "hooks": {
-    "add": {
+    "checkout": {
       "pre": [
         "echo 'Validating repository state...'",
         "git fetch origin"

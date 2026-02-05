@@ -342,7 +342,7 @@ DATABASE_URL=postgresql://localhost:5432/myapp_${WORKTREE_NAME}
 ### 3. Automate with Hooks
 
 ```bash
-gw init --post-add "./scripts/setup-db.sh"
+gw init --post-checkout "./scripts/setup-db.sh"
 ```
 
 ### 4. Regular Cleanup

@@ -22,7 +22,7 @@
   ],
 
   "hooks": {
-    "add": {
+    "checkout": {
       "post": [
         "cd {worktreePath} && pnpm install"
       ]

@@ -38,7 +38,7 @@ pnpm install
 
 ```bash
 # Create worktree
-gw add feat/new-feature
+gw checkout feat/new-feature
 gw cd feat/new-feature
 
 # Install with pnpm (reuses cached packages)
@@ -63,10 +63,10 @@ du -sh */node_modules/
 # Total: ~530MB
 ```
 
-### Configure Post-Add Hook
+### Configure Post-Checkout Hook
 
 ```bash
-gw init --post-add "pnpm install"
+gw init --post-checkout "pnpm install"
 ```
 
 ---
@@ -210,10 +210,10 @@ fi
 echo "Setup complete!"
 ```
 
-Configure as post-add hook:
+Configure as post-checkout hook:
 
 ```bash
-gw init --post-add "~/.local/bin/gw-setup"
+gw init --post-checkout "~/.local/bin/gw-setup"
 ```
 
 ---

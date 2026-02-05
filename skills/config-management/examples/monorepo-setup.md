@@ -89,7 +89,7 @@ pnpm shares dependencies efficiently, but each worktree still needs its own `nod
 
 ```bash
 # After creating worktree
-gw add feat/new-feature
+gw checkout feat/new-feature
 gw cd feat/new-feature
 
 # Install all workspace dependencies
@@ -101,7 +101,7 @@ pnpm install
 ### Yarn Workspaces
 
 ```bash
-gw add feat/new-feature
+gw checkout feat/new-feature
 gw cd feat/new-feature
 yarn install
 ```
@@ -109,7 +109,7 @@ yarn install
 ### npm Workspaces
 
 ```bash
-gw add feat/new-feature
+gw checkout feat/new-feature
 gw cd feat/new-feature
 npm install
 ```
@@ -169,7 +169,7 @@ npm install
 
 ```bash
 # 1. Create feature worktree
-gw add feat/unified-auth
+gw checkout feat/unified-auth
 
 # Output:
 # Creating worktree: feat/unified-auth
@@ -208,12 +208,12 @@ git push origin feat/unified-auth
 
 Not recommended for monorepos - let your package manager handle it.
 
-### Option 2: Use Post-Add Hooks
+### Option 2: Use Post-Checkout Hooks
 
 Configure automatic dependency installation:
 
 ```bash
-gw init --post-add "pnpm install"
+gw init --post-checkout "pnpm install"
 ```
 
 This runs `pnpm install` automatically after creating each worktree.
@@ -247,7 +247,7 @@ Add to your README:
 
 ### Creating Feature Worktrees
 
-gw add feat/your-feature
+gw checkout feat/your-feature
 gw cd feat/your-feature
 pnpm install
 

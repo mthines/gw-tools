@@ -22,7 +22,7 @@
   ],
 
   "hooks": {
-    "add": {
+    "checkout": {
       "pre": [
         "echo '👋 Creating worktree for {branch}'",
         "echo 'This will take a moment while we set everything up...'"

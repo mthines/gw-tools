@@ -16,7 +16,9 @@ export interface CommandHooks {
  * Hooks configuration for various gw commands
  */
 export interface HooksConfig {
-  /** Hooks for the add command */
+  /** Hooks for the checkout command */
+  checkout?: CommandHooks;
+  /** @deprecated Use checkout instead */
   add?: CommandHooks;
 }
 

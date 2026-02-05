@@ -24,7 +24,7 @@
   ],
 
   "hooks": {
-    "add": {
+    "checkout": {
       "pre": [
         "echo 'Creating worktree: {worktree} at {worktreePath}'",
         "echo 'Branch: {branch}'"

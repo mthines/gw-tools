@@ -75,9 +75,8 @@ Usage:
   gw --help
 
 Commands:
-  add              Create a new worktree with optional auto-copy
+  checkout, co     Create a new worktree with optional auto-copy
   cd               Navigate to a worktree directory
-  checkout, co     Smart git checkout for worktree workflows
   update           Update current worktree with latest changes from default branch
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
@@ -100,11 +99,10 @@ Options:
   -v, --version    Show version information
 
 Examples:
-  gw add feat-branch
-  gw add feat-branch -b my-branch
-  gw cd feat-branch
-  gw checkout main
+  gw checkout feat-branch
+  gw checkout feat-branch -b my-branch
   gw co feature-x
+  gw cd feat-branch
   gw sync feat-branch .env components/agents/.env
   gw list
   gw remove feat-branch
