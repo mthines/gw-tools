@@ -698,10 +698,12 @@ gw root
 
 ### init
 
-Initialize gw configuration for a git repository. This command creates or updates the `.gw/config.json` file with your settings.
+Initialize gw configuration for a git repository. This command can:
+1. **Clone mode**: Clone a repository and set it up with gw configuration
+2. **Existing repo mode**: Initialize gw in an existing repository
 
 ```bash
-gw init [options]
+gw init [repository-url] [directory] [options]
 ```
 
 #### Options
@@ -717,7 +719,37 @@ gw init [options]
 - `--update-strategy <strategy>`: Set default update strategy: 'merge' or 'rebase' (default: merge)
 - `-h, --help`: Show help message
 
-#### Examples
+#### Clone Examples
+
+Clone a repository and automatically set up gw configuration:
+
+```bash
+# Clone and initialize (auto-derive directory name from repository)
+gw init git@github.com:user/repo.git
+
+# Clone into specific directory
+gw init git@github.com:user/repo.git my-project
+
+# Clone with HTTPS URL
+gw init https://github.com/user/repo.git
+
+# Clone and configure interactively
+gw init git@github.com:user/repo.git --interactive
+
+# Clone with auto-copy files configured
+gw init git@github.com:user/repo.git --auto-copy-files .env,secrets/
+```
+
+When cloning, `gw init` will:
+1. Clone the repository with `--no-checkout`
+2. Create a `gw_root` branch
+3. Auto-detect the default branch from the remote
+4. Create gw configuration
+5. Create the default branch worktree
+
+#### Existing Repository Examples
+
+Initialize gw in an existing repository:
 
 ```bash
 # Interactive mode - prompts for all configuration options

@@ -3,17 +3,17 @@
  * Initializes the gw configuration for a repository
  */
 
-import { resolve } from '$std/path';
+import { join, resolve } from '$std/path';
 import { saveConfig } from '../lib/config.ts';
-import { findGitRoot, validatePathExists } from '../lib/path-resolver.ts';
+import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 
 /**
- * Parse init command arguments
+ * Parsed init command arguments
  */
-function parseInitArgs(args: string[]): {
+interface ParsedInitArgs {
   help: boolean;
   interactive: boolean;
   root?: string;
@@ -24,22 +24,20 @@ function parseInitArgs(args: string[]): {
   cleanThreshold?: number;
   autoClean?: boolean;
   updateStrategy?: 'merge' | 'rebase';
-} {
-  const result: {
-    help: boolean;
-    interactive: boolean;
-    root?: string;
-    defaultBranch?: string;
-    autoCopyFiles?: string[];
-    preAddHooks?: string[];
-    postAddHooks?: string[];
-    cleanThreshold?: number;
-    autoClean?: boolean;
-    updateStrategy?: 'merge' | 'rebase';
-  } = {
+  repoUrl?: string;
+  targetDirectory?: string;
+}
+
+/**
+ * Parse init command arguments
+ */
+function parseInitArgs(args: string[]): ParsedInitArgs {
+  const result: ParsedInitArgs = {
     help: false,
     interactive: false,
   };
+
+  const positionalArgs: string[] = [];
 
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
@@ -80,10 +78,141 @@ function parseInitArgs(args: string[]): {
       } else {
         throw new Error("--update-strategy must be either 'merge' or 'rebase'");
       }
+    } else if (!arg.startsWith('-')) {
+      // Collect positional args (non-flags)
+      positionalArgs.push(arg);
+    }
+  }
+
+  // Parse positional args
+  if (positionalArgs.length > 0) {
+    const first = positionalArgs[0];
+    // Check if looks like git URL
+    if (first.startsWith('git@') || first.startsWith('https://') || first.startsWith('http://')) {
+      result.repoUrl = first;
+      if (positionalArgs.length > 1) {
+        result.targetDirectory = positionalArgs[1];
+      }
     }
   }
 
   return result;
+}
+
+/**
+ * Extract repository name from URL path
+ */
+function extractRepoName(path: string): string {
+  // Extract last segment and remove .git suffix
+  // "user/repo.git" -> "repo"
+  // "user/repo" -> "repo"
+  const parts = path.split('/');
+  const lastPart = parts[parts.length - 1];
+  return lastPart.replace(/\.git$/, '') || lastPart;
+}
+
+/**
+ * Parse git URL to extract repository name
+ */
+function parseGitUrl(url: string): { repoName: string } {
+  // Handle SSH: git@github.com:user/repo.git
+  if (url.startsWith('git@')) {
+    const match = url.match(/git@[^:]+:(.+)/);
+    if (!match) {
+      throw new Error('Invalid SSH URL format');
+    }
+    return { repoName: extractRepoName(match[1]) };
+  }
+
+  // Handle HTTPS: https://github.com/user/repo.git
+  try {
+    const parsed = new URL(url);
+    return { repoName: extractRepoName(parsed.pathname.slice(1)) };
+  } catch {
+    throw new Error('Invalid git URL format');
+  }
+}
+
+/**
+ * Clone a git repository with --no-checkout
+ */
+async function cloneRepository(url: string, targetDir: string): Promise<void> {
+  const cmd = new Deno.Command('git', {
+    args: ['clone', '--no-checkout', url, targetDir],
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+
+  const { code } = await cmd.output();
+  if (code !== 0) {
+    throw new Error(`Failed to clone repository from ${url}`);
+  }
+}
+
+/**
+ * Create gw_root branch in repository
+ */
+async function createGwRootBranch(repoPath: string): Promise<void> {
+  const cmd = new Deno.Command('git', {
+    args: ['-C', repoPath, 'switch', '-c', 'gw_root'],
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+
+  const { code } = await cmd.output();
+  if (code !== 0) {
+    throw new Error('Failed to create gw_root branch');
+  }
+}
+
+/**
+ * Detect the default branch from remote
+ */
+async function detectDefaultBranch(repoPath: string): Promise<string> {
+  // Try to get remote HEAD
+  const cmd = new Deno.Command('git', {
+    args: ['-C', repoPath, 'symbolic-ref', 'refs/remotes/origin/HEAD', '--short'],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout } = await cmd.output();
+
+  if (code === 0) {
+    const fullRef = new TextDecoder().decode(stdout).trim();
+    // "origin/main" -> "main"
+    return fullRef.replace('origin/', '');
+  }
+
+  // Fallback: try common names
+  for (const branch of ['main', 'master', 'develop']) {
+    const checkCmd = new Deno.Command('git', {
+      args: ['-C', repoPath, 'show-ref', '--verify', `refs/remotes/origin/${branch}`],
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+    const { code: checkCode } = await checkCmd.output();
+    if (checkCode === 0) {
+      return branch;
+    }
+  }
+
+  // Final fallback
+  return 'main';
+}
+
+/**
+ * Check if gw is already initialized in current or parent directories
+ */
+async function isAlreadyInitialized(): Promise<{ initialized: boolean; gitRoot?: string }> {
+  try {
+    const gitRoot = await findGitRoot();
+    const configPath = join(gitRoot, '.gw', 'config.json');
+    const exists = await pathExists(configPath);
+    return { initialized: exists, gitRoot };
+  } catch {
+    return { initialized: false };
+  }
 }
 
 /**
@@ -210,12 +339,13 @@ function promptForConfig(): {
  * Show help for the init command
  */
 function showInitHelp(): void {
-  console.log(`Usage: gw init [options]
+  console.log(`Usage: gw init [repository-url] [directory] [options]
 
 Initialize gw configuration for a git repository.
 
-Creates a .gw/config.json file with the repository root and other settings.
-If --root is not provided, attempts to auto-detect the git repository root.
+Can be used in two modes:
+  1. Clone mode: Clone a repository and set up gw configuration
+  2. Existing repo mode: Initialize gw in an existing repository
 
 Options:
   -i, --interactive               Interactively prompt for configuration options
@@ -241,7 +371,20 @@ Hook Variables:
     {gitRoot}       - The git repository root path
     {branch}        - The branch name
 
-Examples:
+Clone Examples:
+  # Clone and initialize (auto-derive directory name)
+  gw init git@github.com:user/repo.git
+
+  # Clone into specific directory
+  gw init git@github.com:user/repo.git my-project
+
+  # Clone with HTTPS
+  gw init https://github.com/user/repo.git
+
+  # Clone and configure interactively
+  gw init git@github.com:user/repo.git --interactive
+
+Existing Repository Examples:
   # Interactive mode - prompts for all configuration options
   gw init --interactive
 
@@ -278,17 +421,164 @@ Examples:
 }
 
 /**
- * Execute the init command
- *
- * @param args Command-line arguments for the init command
+ * Build config from parsed arguments
  */
-export async function executeInit(args: string[]): Promise<void> {
-  const parsed = parseInitArgs(args);
+function buildConfigFromArgs(parsed: ParsedInitArgs): Partial<Config> {
+  const config: Partial<Config> = {
+    defaultBranch: parsed.defaultBranch || 'main',
+    cleanThreshold: 7,
+  };
 
-  // Show help if requested
-  if (parsed.help) {
-    showInitHelp();
-    Deno.exit(0);
+  // Add autoCopyFiles if provided
+  if (parsed.autoCopyFiles && parsed.autoCopyFiles.length > 0) {
+    config.autoCopyFiles = parsed.autoCopyFiles;
+  }
+
+  // Add hooks if provided
+  if (parsed.preAddHooks || parsed.postAddHooks) {
+    config.hooks = {
+      add: {},
+    };
+    if (parsed.preAddHooks && parsed.preAddHooks.length > 0) {
+      config.hooks.add!.pre = parsed.preAddHooks;
+    }
+    if (parsed.postAddHooks && parsed.postAddHooks.length > 0) {
+      config.hooks.add!.post = parsed.postAddHooks;
+    }
+  }
+
+  // Add cleanThreshold if provided
+  if (parsed.cleanThreshold !== undefined) {
+    config.cleanThreshold = parsed.cleanThreshold;
+  }
+
+  // Add autoClean if provided
+  if (parsed.autoClean !== undefined) {
+    config.autoClean = parsed.autoClean;
+  }
+
+  // Add updateStrategy if provided
+  if (parsed.updateStrategy) {
+    config.updateStrategy = parsed.updateStrategy;
+  }
+
+  return config;
+}
+
+/**
+ * Initialize from a cloned repository
+ */
+async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
+  const repoUrl = parsed.repoUrl!;
+
+  // Determine target directory
+  let targetDir: string;
+  if (parsed.targetDirectory) {
+    targetDir = parsed.targetDirectory;
+  } else {
+    const { repoName } = parseGitUrl(repoUrl);
+    targetDir = repoName;
+  }
+
+  const fullPath = resolve(targetDir);
+
+  // Check if directory already exists
+  if (await pathExists(fullPath)) {
+    output.error(`Directory already exists: ${output.path(fullPath)}`);
+    Deno.exit(1);
+  }
+
+  try {
+    // Step 1: Clone
+    output.info(`Cloning repository from ${repoUrl}...`);
+    await cloneRepository(repoUrl, targetDir);
+    output.success(`Repository cloned to ${output.path(targetDir)}`);
+
+    // Step 2: Create gw_root branch
+    console.log('\nSetting up gw_root branch...');
+    await createGwRootBranch(fullPath);
+    output.success('Created gw_root branch');
+
+    // Step 3: Build and save config
+    console.log('\nInitializing gw configuration...');
+
+    let config: Partial<Config>;
+    if (parsed.interactive) {
+      config = promptForConfig();
+    } else {
+      config = buildConfigFromArgs(parsed);
+    }
+
+    // Detect default branch from remote
+    const detectedBranch = await detectDefaultBranch(fullPath);
+    if (!parsed.defaultBranch && !parsed.interactive) {
+      config.defaultBranch = detectedBranch;
+    }
+
+    config.root = fullPath;
+    await saveConfig(fullPath, config as Config);
+    output.success('Configuration created');
+
+    // Step 4: Create default worktree via gw add
+    const defaultBranch = config.defaultBranch || detectedBranch;
+    console.log(`\nCreating ${defaultBranch} worktree...`);
+
+    // Get the path to the gw executable (this file)
+    const gwPath = new URL(import.meta.url).pathname;
+    const mainPath = resolve(gwPath, '../../main.ts');
+
+    // Call add command to create worktree
+    const addCmd = new Deno.Command('deno', {
+      args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
+      cwd: fullPath,
+      stdout: 'inherit',
+      stderr: 'inherit',
+    });
+
+    const { code } = await addCmd.output();
+    if (code !== 0) {
+      output.warning('Failed to create default worktree automatically');
+      output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
+    } else {
+      output.success(`Created ${defaultBranch} worktree`);
+    }
+
+    // Success summary
+    console.log('\n' + output.checkmark() + ' Repository initialized successfully!\n');
+    console.log(`  Repository: ${output.path(fullPath)}`);
+    console.log(`  Config: ${output.path(join(fullPath, '.gw/config.json'))}`);
+    console.log(`  Default worktree: ${output.bold(defaultBranch)}`);
+    console.log();
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    output.error(`Failed to initialize repository: ${message}`);
+
+    // Cleanup on failure
+    if (await pathExists(fullPath)) {
+      output.info('Cleaning up partial clone...');
+      try {
+        await Deno.remove(fullPath, { recursive: true });
+      } catch {
+        output.warning(`Please manually remove: ${fullPath}`);
+      }
+    }
+
+    Deno.exit(1);
+  }
+}
+
+/**
+ * Initialize existing repository
+ */
+async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
+  // Check if already initialized
+  const { initialized, gitRoot } = await isAlreadyInitialized();
+
+  if (initialized && !parsed.interactive) {
+    output.info('gw is already initialized in this repository');
+    console.log(`  Config: ${output.path(join(gitRoot!, '.gw/config.json'))}`);
+    console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);
+    return;
   }
 
   // Determine root path: use provided --root or try auto-detection
@@ -313,7 +603,7 @@ export async function executeInit(args: string[]): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Could not auto-detect git root - ${message}`);
-      console.error('Please specify the repository root with --root option\n');
+      console.error('Please specify the repository root with --root option or provide a repository URL\n');
       showInitHelp();
       Deno.exit(1);
     }
@@ -417,5 +707,29 @@ export async function executeInit(args: string[]): Promise<void> {
     const message = error instanceof Error ? error.message : String(error);
     output.error(`Failed to create config - ${message}`);
     Deno.exit(1);
+  }
+}
+
+/**
+ * Execute the init command
+ *
+ * @param args Command-line arguments for the init command
+ */
+export async function executeInit(args: string[]): Promise<void> {
+  const parsed = parseInitArgs(args);
+
+  // Show help if requested
+  if (parsed.help) {
+    showInitHelp();
+    Deno.exit(0);
+  }
+
+  // Branch based on clone vs. existing repo
+  if (parsed.repoUrl) {
+    // Clone mode
+    await initializeFromClone(parsed);
+  } else {
+    // Existing repo mode
+    await initializeExistingRepo(parsed);
   }
 }
