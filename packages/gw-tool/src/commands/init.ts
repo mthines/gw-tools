@@ -555,16 +555,40 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     // Step 3: Build and save config
     console.log('\nInitializing gw configuration...');
 
-    let config: Partial<Config>;
+    // Get configuration from interactive prompts or parsed args
     if (parsed.interactive) {
-      config = promptForConfig();
-    } else {
-      config = buildConfigFromArgs(parsed);
+      const interactiveConfig = promptForConfig();
+
+      // Merge interactive config into parsed (interactive values take precedence unless parsed has values)
+      if (interactiveConfig.defaultBranch && !parsed.defaultBranch) {
+        parsed.defaultBranch = interactiveConfig.defaultBranch;
+      }
+      if (interactiveConfig.autoCopyFiles && !parsed.autoCopyFiles) {
+        parsed.autoCopyFiles = interactiveConfig.autoCopyFiles;
+      }
+      if (interactiveConfig.preAddHooks && !parsed.preAddHooks) {
+        parsed.preAddHooks = interactiveConfig.preAddHooks;
+      }
+      if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
+        parsed.postAddHooks = interactiveConfig.postAddHooks;
+      }
+      if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
+        parsed.cleanThreshold = interactiveConfig.cleanThreshold;
+      }
+      if (interactiveConfig.autoClean !== undefined && parsed.autoClean === undefined) {
+        parsed.autoClean = interactiveConfig.autoClean;
+      }
+      if (interactiveConfig.updateStrategy && !parsed.updateStrategy) {
+        parsed.updateStrategy = interactiveConfig.updateStrategy;
+      }
     }
+
+    // Build config from parsed args (this handles the hook structure conversion)
+    const config = buildConfigFromArgs(parsed);
 
     // Detect default branch from remote
     const detectedBranch = await detectDefaultBranch(fullPath);
-    if (!parsed.defaultBranch && !parsed.interactive) {
+    if (!parsed.defaultBranch) {
       config.defaultBranch = detectedBranch;
     }
 
