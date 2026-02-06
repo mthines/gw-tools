@@ -363,7 +363,7 @@ function promptForConfig(): {
 
   // Auto-clean
   console.log();
-  const autoCleanInput = prompt(`[autoClean]: Want to cleanup stale worktrees? (y/n) [${output.dim('n')}]:`);
+  const autoCleanInput = prompt(`Want to automatically cleanup stale worktrees? (y/n) [${output.dim('n')}]:`);
   if (autoCleanInput?.toLowerCase() === 'y' || autoCleanInput?.toLowerCase() === 'yes') {
     config.autoClean = true;
   }
