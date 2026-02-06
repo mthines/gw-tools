@@ -620,9 +620,14 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       console.log(output.dim('Shell integration is not installed.'));
       console.log(output.dim('This enables automatic navigation with "gw cd" and "gw init".\n'));
 
-      const response = prompt('Would you like to install shell integration now? (y/n): ');
+      const response = prompt('Would you like to install shell integration now? (Y/n): ');
 
-      if (response?.toLowerCase() === 'y' || response?.toLowerCase() === 'yes') {
+      // Default to yes if user just presses Enter
+      const shouldInstall = !response || response.trim() === '' ||
+                           response.toLowerCase() === 'y' ||
+                           response.toLowerCase() === 'yes';
+
+      if (shouldInstall && response?.toLowerCase() !== 'n' && response?.toLowerCase() !== 'no') {
         console.log();
         try {
           await executeInstallShell(['--quiet']);
