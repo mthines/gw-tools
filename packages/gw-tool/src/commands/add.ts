@@ -120,6 +120,19 @@ function parseAddArgs(args: string[]): {
   for (let i = 0; i < args.length; i++) {
     const arg = args[i];
 
+    // Handle --from flag
+    if (arg === "--from") {
+      if (i + 1 < args.length) {
+        result.fromBranch = args[++i];
+      }
+      continue;
+    }
+
+    if (arg.startsWith("--from=")) {
+      result.fromBranch = arg.substring("--from=".length);
+      continue;
+    }
+
     // Git worktree flags that take a value
     if (arg === "-b" || arg === "-B" || arg === "--track") {
       result.gitArgs.push(arg);
@@ -178,6 +191,7 @@ Arguments:
 
 Options:
   --no-cd                 Don't navigate to the new worktree after creation
+  --from <branch>         Create new branch from specified branch instead of defaultBranch
 
   All git worktree add options are supported:
     -b <branch>           Create a new branch (explicit, overrides auto-create)
@@ -194,6 +208,12 @@ Examples:
 
   # Create worktree without navigating to it
   gw add feat/new-feature --no-cd
+
+  # Create worktree from a different branch
+  gw add feat/new-feature --from develop
+
+  # Create child feature from parent feature
+  gw add feat/child-feature --from feat/parent-feature
 
   # Create worktree with explicit branch from specific start point
   gw add feat/new-feature -b my-branch develop
@@ -391,16 +411,33 @@ export async function executeAdd(args: string[]): Promise<void> {
         Deno.exit(1);
       }
 
-      // Auto-create branch from defaultBranch
-      const defaultBranch = config.defaultBranch || "main";
+      // Auto-create branch from --from or defaultBranch
+      const sourceBranch = parsed.fromBranch || config.defaultBranch || "main";
+
+      // Validate source branch exists if --from was specified
+      if (parsed.fromBranch) {
+        const sourceBranchExists = await branchExists(sourceBranch);
+        if (!sourceBranchExists) {
+          console.log("");
+          output.error(
+            `Source branch ${output.bold(sourceBranch)} does not exist locally or remotely`
+          );
+          console.log("");
+          console.log("Options:");
+          console.log(`  1. Use a different source: ${output.bold(`gw add ${parsed.worktreeName} --from <existing-branch>`)}`);
+          console.log(`  2. Use default branch: ${output.bold(`gw add ${parsed.worktreeName}`)}`);
+          console.log("");
+          Deno.exit(1);
+        }
+      }
 
       console.log(
-        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, fetching latest ${output.bold(defaultBranch)}...`,
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, fetching latest ${output.bold(sourceBranch)}...`,
       );
 
       try {
         const { startPoint: fetchedStartPoint, fetchSucceeded, message } =
-          await fetchAndGetStartPoint(defaultBranch);
+          await fetchAndGetStartPoint(sourceBranch);
 
         startPoint = fetchedStartPoint;
         gitArgs.unshift("-b", parsed.worktreeName);

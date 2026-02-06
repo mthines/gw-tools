@@ -605,3 +605,174 @@ Deno.test("add command - prompts to navigate when worktree already exists (no)",
     await repo.cleanup();
   }
 });
+
+Deno.test("add command - creates branch from specified --from branch", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch("develop");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeAdd(["feat-branch", "--from", "develop"]);
+
+      await assertWorktreeExists(repo.path, "feat-branch");
+      await assertBranchExists(repo.path, "feat-branch");
+
+      // Verify remote tracking points to feat-branch, not develop
+      const worktreePath = join(repo.path, "feat-branch");
+      const remoteCmd = new Deno.Command("git", {
+        args: ["-C", worktreePath, "config", "branch.feat-branch.remote"],
+        stdout: "piped",
+      });
+      const remoteResult = await remoteCmd.output();
+      assertEquals(new TextDecoder().decode(remoteResult.stdout).trim(), "origin");
+
+      const mergeCmd = new Deno.Command("git", {
+        args: ["-C", worktreePath, "config", "branch.feat-branch.merge"],
+        stdout: "piped",
+      });
+      const mergeResult = await mergeCmd.output();
+      assertEquals(new TextDecoder().decode(mergeResult.stdout).trim(), "refs/heads/feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - supports --from=branch equals syntax", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch("develop");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeAdd(["feat-branch", "--from=develop"]);
+
+      await assertWorktreeExists(repo.path, "feat-branch");
+      await assertBranchExists(repo.path, "feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - --from errors when source branch doesn't exist", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(() =>
+        executeAdd(["feat-branch", "--from", "non-existent"])
+      );
+
+      assertEquals(exitCode, 1, "Should exit with code 1 when source branch doesn't exist");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - --from overrides defaultBranch config", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch("develop");
+    await repo.createBranch("feature-base");
+
+    const config = {
+      root: repo.path,
+      defaultBranch: "develop",
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Even though defaultBranch is develop, --from should override it
+      await executeAdd(["feat-branch", "--from", "feature-base"]);
+
+      await assertWorktreeExists(repo.path, "feat-branch");
+      await assertBranchExists(repo.path, "feat-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - --from ignored when branch already exists", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch("develop");
+    await repo.createBranch("existing-branch");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Branch already exists, so --from should be ignored
+      await executeAdd(["existing-branch", "--from", "develop"]);
+
+      // Should still create worktree successfully
+      await assertWorktreeExists(repo.path, "existing-branch");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("add command - --from works with branch names containing slashes", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch("feat/parent");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeAdd(["feat/child", "--from", "feat/parent"]);
+
+      await assertWorktreeExists(repo.path, "feat/child");
+      await assertBranchExists(repo.path, "feat/child");
+
+      // Verify remote tracking points to feat/child, not feat/parent
+      const worktreePath = join(repo.path, "feat/child");
+      const mergeCmd = new Deno.Command("git", {
+        args: ["-C", worktreePath, "config", "branch.feat/child.merge"],
+        stdout: "piped",
+      });
+      const mergeResult = await mergeCmd.output();
+      assertEquals(new TextDecoder().decode(mergeResult.stdout).trim(), "refs/heads/feat/child");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
