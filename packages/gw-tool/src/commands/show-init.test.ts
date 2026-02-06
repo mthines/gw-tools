@@ -180,3 +180,79 @@ Deno.test("show-init command - generates complete init command with all options"
     await repo.cleanup();
   }
 });
+
+Deno.test("show-init command - includes remote URL in output when remote exists", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Add a remote URL
+    const remoteUrl = "git@github.com:user/repo.git";
+    await repo.runCommand("git", ["remote", "add", "origin", remoteUrl], repo.path);
+
+    const config: Config = {
+      root: repo.path,
+      defaultBranch: "main",
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Capture stdout to verify remote URL is included
+      const originalStdout = console.log;
+      let output = "";
+      console.log = (msg: string) => {
+        output += msg;
+      };
+
+      try {
+        await executeShowInit([]);
+        // Verify the output contains the remote URL
+        assertEquals(output.includes(remoteUrl), true);
+      } finally {
+        console.log = originalStdout;
+      }
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("show-init command - uses --root when no remote exists", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config: Config = {
+      root: repo.path,
+      defaultBranch: "main",
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Capture stdout to verify --root is used when no remote exists
+      const originalStdout = console.log;
+      let output = "";
+      console.log = (msg: string) => {
+        output += msg;
+      };
+
+      try {
+        await executeShowInit([]);
+        // Verify the output contains --root flag
+        assertEquals(output.includes("--root"), true);
+      } finally {
+        console.log = originalStdout;
+      }
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});

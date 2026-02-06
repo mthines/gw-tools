@@ -47,25 +47,58 @@ function escapeShellArg(arg: string): string {
 }
 
 /**
+ * Get remote URL from git config
+ */
+async function getRemoteUrl(gitRoot?: string): Promise<string | null> {
+  try {
+    const args = gitRoot
+      ? ['-C', gitRoot, 'config', '--get', 'remote.origin.url']
+      : ['config', '--get', 'remote.origin.url'];
+
+    const cmd = new Deno.Command('git', {
+      args,
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+
+    const { code, stdout } = await cmd.output();
+
+    if (code === 0) {
+      return new TextDecoder().decode(stdout).trim();
+    }
+
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Generate a gw init command from a config object
  */
-function generateInitCommand(config: {
-  root?: string;
-  defaultBranch?: string;
-  autoCopyFiles?: string[];
-  hooks?: {
-    add?: {
-      pre?: string[];
-      post?: string[];
+function generateInitCommand(
+  config: {
+    root?: string;
+    defaultBranch?: string;
+    autoCopyFiles?: string[];
+    hooks?: {
+      add?: {
+        pre?: string[];
+        post?: string[];
+      };
     };
-  };
-  cleanThreshold?: number;
-  autoClean?: boolean;
-}): string {
+    cleanThreshold?: number;
+    autoClean?: boolean;
+  },
+  remoteUrl?: string | null
+): string {
   const parts: string[] = ["gw init"];
 
-  // Add root if specified (though typically not needed for docs)
-  if (config.root) {
+  // Add remote URL if available (takes precedence over --root)
+  if (remoteUrl) {
+    parts.push(escapeShellArg(remoteUrl));
+  } else if (config.root) {
+    // Add root if specified and no remote URL
     parts.push(`--root ${escapeShellArg(config.root)}`);
   }
 
@@ -121,10 +154,13 @@ export async function executeShowInit(args: string[]): Promise<void> {
 
   try {
     // Load current config
-    const { config } = await loadConfig();
+    const { config, gitRoot } = await loadConfig();
 
-    // Generate the init command
-    const initCommand = generateInitCommand(config);
+    // Fetch remote URL from git
+    const remoteUrl = await getRemoteUrl(gitRoot);
+
+    // Generate the init command with URL
+    const initCommand = generateInitCommand(config, remoteUrl);
 
     // Output the command
     console.log(initCommand);

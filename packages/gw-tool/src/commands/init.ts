@@ -571,17 +571,30 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     const defaultBranch = config.defaultBranch || detectedBranch;
     console.log(`\nCreating ${defaultBranch} worktree...`);
 
-    // Get the path to the gw executable (this file)
+    // Detect if we're running from a compiled binary or in development
     const gwPath = new URL(import.meta.url).pathname;
     const mainPath = resolve(gwPath, '../../main.ts');
+    const isCompiled = !await pathExists(mainPath);
 
     // Call add command to create worktree
-    const addCmd = new Deno.Command('deno', {
-      args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
-      cwd: fullPath,
-      stdout: 'inherit',
-      stderr: 'inherit',
-    });
+    let addCmd: Deno.Command;
+    if (isCompiled) {
+      // Running from compiled binary - use 'gw' command directly
+      addCmd = new Deno.Command('gw', {
+        args: ['add', defaultBranch],
+        cwd: fullPath,
+        stdout: 'inherit',
+        stderr: 'inherit',
+      });
+    } else {
+      // Running in development - use deno run
+      addCmd = new Deno.Command('deno', {
+        args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
+        cwd: fullPath,
+        stdout: 'inherit',
+        stderr: 'inherit',
+      });
+    }
 
     const { code } = await addCmd.output();
     if (code !== 0) {
