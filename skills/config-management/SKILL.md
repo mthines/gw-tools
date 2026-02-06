@@ -232,16 +232,19 @@ If no configuration exists:
 
 ### Complete Configuration Structure
 
-```json
+```jsonc
 {
   "root": "/absolute/path/to/repo.git",
   "defaultBranch": "main",
+  // Auto-copy these files to new worktrees
   "autoCopyFiles": [".env", ".env.local", "secrets/", "config/local.json"],
-  "updateStrategy": "merge",
+  "updateStrategy": "merge",  // or "rebase"
   "cleanThreshold": 7,
-  "autoClean": true
+  "autoClean": true,  // trailing comma OK
 }
 ```
+
+**JSONC Support:** The `.gw/config.json` file supports JSONC (JSON with Comments), allowing you to document your configuration directly in the file. You can use `//` for single-line comments or `/* */` for multi-line comments. Trailing commas are also supported for cleaner diffs. When `gw` saves the configuration, it writes clean JSON without comments.
 
 ### `root`: Repository Root Path
 

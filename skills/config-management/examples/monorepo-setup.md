@@ -63,19 +63,20 @@ gw init --auto-copy-files \
 
 `.gw/config.json`:
 
-```json
+```jsoncc
 {
   "root": "/Users/you/projects/my-monorepo.git",
   "defaultBranch": "main",
+  // Copy environment files for all workspaces
   "autoCopyFiles": [
-    ".env",
-    "packages/api/.env",
-    "packages/api/secrets/",
-    "packages/web/.env",
-    "packages/web/.vercel/",
-    "apps/mobile/.env",
-    "apps/mobile/google-services.json"
-  ]
+    ".env",                                  // Root env
+    "packages/api/.env",                     // API service env
+    "packages/api/secrets/",                 // API secrets
+    "packages/web/.env",                     // Web app env
+    "packages/web/.vercel/",                 // Deployment config
+    "apps/mobile/.env",                      // Mobile app env
+    "apps/mobile/google-services.json",      // Firebase config
+  ],
 }
 ```
 
@@ -120,7 +121,7 @@ npm install
 
 ### Pattern 1: Nx Monorepo
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
@@ -134,7 +135,7 @@ npm install
 
 ### Pattern 2: Turborepo
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
@@ -148,7 +149,7 @@ npm install
 
 ### Pattern 3: Full-Stack (API + Web + Mobile)
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
@@ -267,7 +268,7 @@ This automatically copies:
 
 **Solution:** Ensure exact path in config:
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     "packages/api/.env"  // Not "api/.env"

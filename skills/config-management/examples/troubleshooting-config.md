@@ -93,7 +93,7 @@ gw init --auto-copy-files .env,.env.local,secrets/
 
 **Solution B: Edit configuration manually**
 
-```json
+```jsonc
 {
   "root": "/path/to/repo.git",
   "defaultBranch": "main",
@@ -157,7 +157,7 @@ gw sync --from main feature-x .env
 
 **Solution C: Edit configuration**
 
-```json
+```jsonc
 {
   "defaultBranch": "main"
 }
@@ -188,7 +188,7 @@ ls -la $(cat .gw/config.json | grep root | cut -d'"' -f4)
 
 **Solution A: Use relative paths in autoCopyFiles**
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",           // ✓ Relative to worktree root
@@ -199,7 +199,7 @@ ls -la $(cat .gw/config.json | grep root | cut -d'"' -f4)
 
 Not:
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     "/Users/you/repo/.env"  // ✗ Absolute path
@@ -219,7 +219,7 @@ gw init --root $(git rev-parse --show-toplevel)
 
 **Solution C: Check for typos in paths**
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",

@@ -97,10 +97,16 @@ packages/gw-tool/
 
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
-alias gw-dev='deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts'
+GW_TOOL_PATH=/Users/mthines/Workspace/gw-tools.git/main
+alias gw-dev='deno run --allow-all "$GW_TOOL_PATH/packages/gw-tool/src/main.ts"'
+
+# ----
 
 # Usage
 gw-dev add feat-branch
+
+# Or if you're testing a specific worktree of the gw tool
+GW_TOOL_PATH=/Users/mthines/Workspace/gw-tools.git/feat/sync-command && gw-dev sync feat-branch
 ```
 
 ### Method 2: Symlink to Compiled Binary
@@ -138,6 +144,7 @@ nx run gw-tool:dev
 ### File Naming
 
 Use **kebab-case** for all files:
+
 - `install-shell.ts` (not `installShell.ts`)
 - `file-ops.ts` (not `fileOps.ts`)
 - `git-proxy.ts` (not `gitProxy.ts`)
@@ -157,29 +164,29 @@ Every file starts with a JSDoc block describing the module:
 
 ```typescript
 // Standard library imports use $std/ aliases (defined in deno.json)
-import { join, resolve } from "$std/path";
-import { parseArgs } from "$std/cli/parse-args";
+import { join, resolve } from '$std/path';
+import { parseArgs } from '$std/cli/parse-args';
 
 // Type-only imports use `import type`
-import type { Config, CopyOptions } from "./types.ts";
+import type { Config, CopyOptions } from './types.ts';
 
 // Namespace import for output utilities
-import * as output from "../lib/output.ts";
+import * as output from '../lib/output.ts';
 
 // Named imports for everything else (always include .ts extension)
-import { loadConfig, saveConfig } from "../lib/config.ts";
-import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
+import { loadConfig, saveConfig } from '../lib/config.ts';
+import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 ```
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Functions | camelCase | `parseAddArgs`, `executeList` |
-| Types/Interfaces | PascalCase | `Config`, `CopyOptions` |
-| Module constants | UPPER_SNAKE_CASE | `COMMANDS`, `CONFIG_DIR_NAME` |
-| Local constants | camelCase | `configPath`, `gitRoot` |
-| Files | kebab-case | `install-shell.ts`, `git-proxy.ts` |
+| Type             | Convention       | Example                            |
+| ---------------- | ---------------- | ---------------------------------- |
+| Functions        | camelCase        | `parseAddArgs`, `executeList`      |
+| Types/Interfaces | PascalCase       | `Config`, `CopyOptions`            |
+| Module constants | UPPER_SNAKE_CASE | `COMMANDS`, `CONFIG_DIR_NAME`      |
+| Local constants  | camelCase        | `configPath`, `gitRoot`            |
+| Files            | kebab-case       | `install-shell.ts`, `git-proxy.ts` |
 
 ### Command Structure
 
@@ -259,7 +266,7 @@ For commands that simply wrap `git worktree` subcommands:
  * <Description>
  */
 
-import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
+import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
 /**
  * Execute the <command> command
@@ -268,20 +275,17 @@ import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
  */
 export async function execute<CommandName>(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes("--help") || args.includes("-h")) {
+  if (args.includes('--help') || args.includes('-h')) {
     showProxyHelp(
-      "<command>",           // gw command name
-      "<git-subcommand>",    // git worktree subcommand
-      "<description>",       // Brief description
-      [
-        "gw <command>",
-        "gw <command> --option",
-      ],
+      '<command>', // gw command name
+      '<git-subcommand>', // git worktree subcommand
+      '<description>', // Brief description
+      ['gw <command>', 'gw <command> --option']
     );
     Deno.exit(0);
   }
 
-  await executeGitWorktree("<git-subcommand>", args);
+  await executeGitWorktree('<git-subcommand>', args);
 }
 ```
 
@@ -318,7 +322,7 @@ export async function copyFiles(
   sourcePath: string,
   targetPath: string,
   files: string[],
-  dryRun: boolean,
+  dryRun: boolean
 ): Promise<CopyResult[]> {
   // Implementation
 }
@@ -386,7 +390,7 @@ try {
 } catch (error) {
   const message = error instanceof Error ? error.message : String(error);
   output.warning(`Failed to copy files - ${message}`);
-  console.log("Worktree was created successfully, but file copying failed.\n");
+  console.log('Worktree was created successfully, but file copying failed.\n');
 }
 ```
 
@@ -395,31 +399,31 @@ try {
 Use the `output` module for consistent CLI messages:
 
 ```typescript
-import * as output from "../lib/output.ts";
+import * as output from '../lib/output.ts';
 
 // Status messages (include badges and newlines)
-output.error("Something went wrong");      // Red ERROR badge
-output.success("Operation completed");     // Green SUCCESS badge
-output.warning("Proceed with caution");    // Yellow WARNING badge
-output.info("FYI: something happened");    // Blue INFO badge
+output.error('Something went wrong'); // Red ERROR badge
+output.success('Operation completed'); // Green SUCCESS badge
+output.warning('Proceed with caution'); // Yellow WARNING badge
+output.info('FYI: something happened'); // Blue INFO badge
 
 // Inline formatting (no badges/newlines)
-console.log(`Created: ${output.path("/path/to/file")}`);   // Cyan path
-console.log(`Branch: ${output.bold("main")}`);             // Bold text
-console.log(`Details: ${output.dim("optional info")}`);    // Dim text
-console.log(`  ${output.checkmark()} Copied file`);        // Green checkmark
-console.log(`  ${output.warningSymbol()} Skipped`);        // Yellow warning
+console.log(`Created: ${output.path('/path/to/file')}`); // Cyan path
+console.log(`Branch: ${output.bold('main')}`); // Bold text
+console.log(`Details: ${output.dim('optional info')}`); // Dim text
+console.log(`  ${output.checkmark()} Copied file`); // Green checkmark
+console.log(`  ${output.warningSymbol()} Skipped`); // Yellow warning
 ```
 
 ### Formatting Rules (from deno.json)
 
-| Rule | Value |
-|------|-------|
-| Indentation | 2 spaces (no tabs) |
-| Line width | 80 characters |
-| Semicolons | Required |
-| Quotes | Double quotes (`"`) |
-| Trailing commas | Yes (Deno default) |
+| Rule            | Value               |
+| --------------- | ------------------- |
+| Indentation     | 2 spaces (no tabs)  |
+| Line width      | 80 characters       |
+| Semicolons      | Required            |
+| Quotes          | Double quotes (`"`) |
+| Trailing commas | Yes (Deno default)  |
 
 Run `nx run gw-tool:fmt` to auto-format code.
 
@@ -463,11 +467,11 @@ Configuration:
 2. Import and register in `src/main.ts`:
 
 ```typescript
-import { executeNewCommand } from "./commands/new-command.ts";
+import { executeNewCommand } from './commands/new-command.ts';
 
 const COMMANDS = {
   // ... existing commands
-  "new-command": executeNewCommand,
+  'new-command': executeNewCommand,
 };
 ```
 
@@ -513,7 +517,7 @@ This handles versioning (via conventional commits), building, GitHub release, an
 ### Loading Config
 
 ```typescript
-import { loadConfig } from "../lib/config.ts";
+import { loadConfig } from '../lib/config.ts';
 
 const { config, gitRoot } = await loadConfig();
 ```
@@ -521,7 +525,7 @@ const { config, gitRoot } = await loadConfig();
 ### Resolving Worktree Paths
 
 ```typescript
-import { resolveWorktreePath } from "../lib/path-resolver.ts";
+import { resolveWorktreePath } from '../lib/path-resolver.ts';
 
 const worktreePath = resolveWorktreePath(gitRoot, worktreeName);
 ```
@@ -529,16 +533,16 @@ const worktreePath = resolveWorktreePath(gitRoot, worktreeName);
 ### Running Git Commands
 
 ```typescript
-const gitProcess = new Deno.Command("git", {
-  args: ["worktree", "add", worktreeName],
-  stdout: "inherit",
-  stderr: "inherit",
+const gitProcess = new Deno.Command('git', {
+  args: ['worktree', 'add', worktreeName],
+  stdout: 'inherit',
+  stderr: 'inherit',
 });
 
 const { code } = await gitProcess.output();
 
 if (code !== 0) {
-  output.error("Failed to create worktree");
+  output.error('Failed to create worktree');
   Deno.exit(code);
 }
 ```
@@ -546,14 +550,14 @@ if (code !== 0) {
 ### Parsing Arguments with Options
 
 ```typescript
-import { parseArgs } from "$std/cli/parse-args";
+import { parseArgs } from '$std/cli/parse-args';
 
 const parsed = parseArgs(args, {
-  boolean: ["help", "dry-run"],
-  string: ["from"],
+  boolean: ['help', 'dry-run'],
+  string: ['from'],
   alias: {
-    h: "help",
-    n: "dry-run",
+    h: 'help',
+    n: 'dry-run',
   },
 });
 ```
@@ -562,7 +566,7 @@ const parsed = parseArgs(args, {
 
 ```typescript
 if (!parsed.requiredArg) {
-  output.error("Required argument is missing");
+  output.error('Required argument is missing');
   showHelp();
   Deno.exit(1);
 }
@@ -573,28 +577,28 @@ if (!parsed.requiredArg) {
 Use the `hooks.ts` module for running pre/post command hooks:
 
 ```typescript
-import { executeHooks, type HookVariables } from "../lib/hooks.ts";
+import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 
 // Prepare hook variables for substitution
 const hookVariables: HookVariables = {
-  worktree: "feat/new-feature",
-  worktreePath: "/path/to/repo/feat/new-feature",
-  gitRoot: "/path/to/repo",
-  branch: "feat/new-feature",
+  worktree: 'feat/new-feature',
+  worktreePath: '/path/to/repo/feat/new-feature',
+  gitRoot: '/path/to/repo',
+  branch: 'feat/new-feature',
 };
 
 // Execute pre-hooks (abort on failure)
 if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
   const { allSuccessful } = await executeHooks(
     config.hooks.add.pre,
-    gitRoot,           // working directory
+    gitRoot, // working directory
     hookVariables,
-    "pre-add",         // hook type for logging
-    true,              // abort on failure
+    'pre-add', // hook type for logging
+    true // abort on failure
   );
 
   if (!allSuccessful) {
-    output.error("Pre-add hook failed. Aborting.");
+    output.error('Pre-add hook failed. Aborting.');
     Deno.exit(1);
   }
 }
@@ -603,19 +607,20 @@ if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
 if (config.hooks?.add?.post && config.hooks.add.post.length > 0) {
   const { allSuccessful } = await executeHooks(
     config.hooks.add.post,
-    worktreePath,      // working directory (new worktree)
+    worktreePath, // working directory (new worktree)
     hookVariables,
-    "post-add",        // hook type for logging
-    false,             // don't abort on failure
+    'post-add', // hook type for logging
+    false // don't abort on failure
   );
 
   if (!allSuccessful) {
-    output.warning("One or more post-add hooks failed");
+    output.warning('One or more post-add hooks failed');
   }
 }
 ```
 
 Hook variables support substitution in commands:
+
 - `{worktree}` - The worktree name
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
