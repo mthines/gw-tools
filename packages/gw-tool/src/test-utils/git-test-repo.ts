@@ -166,7 +166,7 @@ export class GitTestRepo {
   /**
    * Helper to run git command and wait for completion
    */
-  private async runCommand(
+  async runCommand(
     cmd: string,
     args: string[],
     cwd?: string,
