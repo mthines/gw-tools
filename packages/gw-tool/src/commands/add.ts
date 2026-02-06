@@ -233,6 +233,22 @@ Configuration:
 
   gw init --auto-copy-files .env,secrets/
 
+Network Behavior:
+  When creating a new branch, gw add fetches the latest version from the remote
+  to ensure your branch starts from fresh code. This prevents conflicts and
+  ensures you're working with up-to-date code.
+
+  Without --from flag:
+    - Fetches from remote (e.g., origin/main)
+    - Falls back to local branch if fetch fails (offline support)
+
+  With --from flag:
+    - Requires successful fetch from remote (ensures fresh code)
+    - Exits with error if fetch fails (network issues, auth problems)
+
+  Remote fetch ensures your new branch is based on the latest remote code,
+  not an outdated local branch.
+
 Hooks:
   Pre-add and post-add hooks can be configured to run before and after
   worktree creation. Use 'gw init' to configure hooks:
@@ -435,8 +451,9 @@ export async function executeAdd(args: string[]): Promise<void> {
       }
 
       console.log(
-        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, fetching latest ${output.bold(sourceBranch)}...`
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(sourceBranch)}...`
       );
+      console.log(output.dim('Fetching latest from remote to ensure fresh start point...'));
 
       try {
         const { startPoint: fetchedStartPoint, fetchSucceeded, message } = await fetchAndGetStartPoint(sourceBranch);
@@ -445,11 +462,13 @@ export async function executeAdd(args: string[]): Promise<void> {
         gitArgs.unshift('-b', parsed.worktreeName);
 
         if (fetchSucceeded) {
+          console.log(output.dim('✓ Fetched successfully from remote'));
           if (message) {
             // There's a message even though fetch succeeded (e.g., using remote ref)
             console.log(output.dim(message));
           }
           console.log(`Creating from ${output.bold(startPoint)} (latest from remote)`);
+          console.log('');
         } else {
           // Check if failure is due to no remote (acceptable) or fetch failure (problematic)
           const noRemoteConfigured = message && message.includes('No remote');
@@ -481,7 +500,12 @@ export async function executeAdd(args: string[]): Promise<void> {
           }
 
           // For default branch (no --from specified) or no remote configured, warn but allow local fallback
+          console.log('');
           output.warning(message || 'Could not fetch from remote');
+          console.log('');
+          console.log(output.dim('Falling back to local branch. The start point may not be up-to-date with remote.'));
+          console.log(output.dim('This is acceptable for offline development or when remote is unavailable.'));
+          console.log('');
           console.log(`Creating from ${output.bold(startPoint)} (local branch)`);
         }
       } catch (error) {

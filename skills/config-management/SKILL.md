@@ -98,6 +98,68 @@ Interactive mode is useful when:
 - You want to explore all available settings
 - Onboarding new team members who need guidance
 
+### Network Behavior and Offline Support
+
+The `gw add` command follows a **remote-first approach** when creating new branches to ensure you're always working with the latest code:
+
+**Remote-First Design:**
+
+When you create a new branch (e.g., `gw add feat/new-feature`), gw:
+1. Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
+2. Creates your new branch from the fresh remote ref
+3. Sets up tracking to your new branch's remote counterpart (e.g., `origin/feat/new-feature`)
+
+**Why this matters:**
+
+- **Prevents conflicts**: Your branch starts from the latest remote code, not a potentially outdated local branch
+- **Ensures fresh code**: You're building on the most recent changes from your team
+- **Reduces merge pain**: Fewer surprises when you eventually merge back
+- **Team synchronization**: Everyone starts from the same point
+
+**Automatic Fallback for Offline Work:**
+
+The command has intelligent fallback behavior based on how you use it:
+
+| Command | Fetch Behavior | Fallback |
+|---------|----------------|----------|
+| `gw add feat/new` | Fetches `origin/main` | Falls back to local `main` with warning |
+| `gw add feat/new --from develop` | Fetches `origin/develop` | **No fallback** - exits with error |
+
+**When `--from` is specified**, gw assumes you need that exact source and requires a successful remote fetch. If the fetch fails, you'll get:
+- Clear error message about why the fetch failed
+- Troubleshooting steps (check network, verify branch exists, check auth)
+- Alternative command suggestions
+
+**When using default branch** (no `--from`), gw allows local fallback for offline development or when no remote is configured. You'll see:
+- Warning that remote fetch failed
+- Explanation that start point may not be current
+- Note that this is acceptable for offline work
+- Confirmation that local branch is being used
+
+**Example output (offline scenario):**
+
+```bash
+$ gw add feat/offline
+
+Branch feat/offline doesn't exist, creating from main...
+Fetching latest from remote to ensure fresh start point...
+
+⚠ WARNING Could not fetch from remote
+
+Falling back to local branch. The start point may not be up-to-date with remote.
+This is acceptable for offline development or when remote is unavailable.
+
+Creating from main (local branch)
+
+Creating worktree: feat/offline
+```
+
+**Strictness Levels:**
+
+- **Lenient**: `gw add feat/new` - Allows local fallback for offline work
+- **Strict**: `gw add feat/new --from develop` - Requires fresh remote ref, no fallback
+- **Manual override**: Can always use local branches explicitly with `git worktree add`
+
 **Clone and initialize (new repositories):**
 
 ```bash

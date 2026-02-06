@@ -184,6 +184,85 @@ gw add hotfix-security -b hotfix-security main
 gw add feature-test --force
 ```
 
+### Remote Fetch Behavior
+
+When creating a new branch, `gw add` follows a **remote-first approach** to ensure your work starts from the latest code:
+
+**What's happening under the hood:**
+
+```bash
+$ gw add feat/new-feature
+
+Branch feat/new-feature doesn't exist, creating from main...
+Fetching latest from remote to ensure fresh start point...
+✓ Fetched successfully from remote
+Creating from origin/main (latest from remote)
+
+Creating worktree: feat/new-feature
+```
+
+The command:
+1. Detects that `feat/new-feature` doesn't exist
+2. Fetches the latest version of `main` from the remote (`origin/main`)
+3. Creates your new branch from the fresh remote ref
+4. Sets up tracking to `origin/feat/new-feature` for easy pushing
+
+**Why this matters:**
+
+- **Prevents conflicts**: Your branch starts from the latest remote code, not an outdated local branch
+- **Ensures fresh code**: You're building on the most recent changes from your team
+- **Reduces merge pain**: Fewer surprises when you eventually merge back to main
+
+**Offline/fallback behavior:**
+
+When remote fetch fails (network issues, offline work, no remote configured), behavior depends on the context:
+
+```bash
+# Without --from (default branch): Warns but allows local fallback
+$ gw add feat/offline
+
+Branch feat/offline doesn't exist, creating from main...
+Fetching latest from remote to ensure fresh start point...
+
+⚠ WARNING Could not fetch from remote
+
+Falling back to local branch. The start point may not be up-to-date with remote.
+This is acceptable for offline development or when remote is unavailable.
+
+Creating from main (local branch)
+
+Creating worktree: feat/offline
+```
+
+```bash
+# With --from: Requires successful fetch, exits on failure
+$ gw add feat/explicit --from develop
+
+Branch feat/explicit doesn't exist, creating from develop...
+Fetching latest from remote to ensure fresh start point...
+
+ERROR Could not fetch from remote
+
+Cannot create branch from develop because the remote fetch failed.
+This would use a potentially outdated local branch.
+
+Possible causes:
+  • Network connectivity issues
+  • Branch develop doesn't exist on remote
+  • Authentication issues
+
+Options:
+  1. Check your network connection and try again
+  2. Verify the branch exists: git ls-remote origin develop
+  3. Use a different source branch: gw add feat/explicit --from <branch>
+  4. Create without --from to use default branch: gw add feat/explicit
+```
+
+**Key difference: `--from` requires freshness**
+
+- **Without `--from`**: Uses default branch with fallback to local (offline support)
+- **With `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
+
 ### Navigating to Existing Worktrees
 
 If you try to add a worktree that already exists, `gw add` will prompt you to navigate to it:
