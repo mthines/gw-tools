@@ -3,16 +3,17 @@
  * Remove stale worktrees based on age threshold
  */
 
-import { loadConfig } from "../lib/config.ts";
+import { loadConfig } from '../lib/config.ts';
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
   hasUnpushedCommits,
   listWorktrees,
+  pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
-} from "../lib/git-utils.ts";
-import * as output from "../lib/output.ts";
+} from '../lib/git-utils.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Parse clean command arguments
@@ -24,10 +25,10 @@ function parseCleanArgs(args: string[]): {
   useThreshold: boolean;
 } {
   return {
-    help: args.includes("--help") || args.includes("-h"),
-    force: args.includes("--force") || args.includes("-f"),
-    dryRun: args.includes("--dry-run") || args.includes("-n"),
-    useThreshold: args.includes("--use-autoclean-threshold"),
+    help: args.includes('--help') || args.includes('-h'),
+    force: args.includes('--force') || args.includes('-f'),
+    dryRun: args.includes('--dry-run') || args.includes('-n'),
+    useThreshold: args.includes('--use-autoclean-threshold'),
   };
 }
 
@@ -42,6 +43,9 @@ Remove safe worktrees with no uncommitted changes or unpushed commits.
 By default, removes ALL safe worktrees regardless of age. Use
 --use-autoclean-threshold to only remove worktrees older than the configured
 age threshold (.gw/config.json cleanThreshold field, default: 7 days).
+
+Automatically prunes stale worktree metadata before listing, ensuring only
+worktrees that actually exist on disk are shown.
 
 Options:
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
@@ -101,9 +105,8 @@ async function confirm(message: string): Promise<boolean> {
 
   if (!n) return false;
 
-  const response = new TextDecoder().decode(buf.subarray(0, n)).trim()
-    .toLowerCase();
-  return response === "yes";
+  const response = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
+  return response === 'yes';
 }
 
 /**
@@ -138,14 +141,24 @@ export async function executeClean(args: string[]): Promise<void> {
     output.info(`Checking for safe worktrees to clean...`);
   }
 
-  // Get all worktrees
+  // Prune stale worktree metadata before listing
+  // This ensures we only see worktrees that actually exist on disk
+  try {
+    await pruneWorktrees(true); // silent = true
+  } catch (error) {
+    // Don't fail the entire command if prune fails
+    // Just continue with whatever worktrees git can list
+    console.error(output.dim('Warning: Failed to prune worktree metadata'));
+  }
+
+  // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
   // Filter out bare repository
   const nonBareWorktrees = worktrees.filter((wt) => !wt.bare);
 
   if (nonBareWorktrees.length === 0) {
-    console.log("No worktrees found.\n");
+    console.log('No worktrees found.\n');
     Deno.exit(0);
   }
 
@@ -171,10 +184,10 @@ export async function executeClean(args: string[]): Promise<void> {
     if (!parsed.force) {
       if (hasUncommitted) {
         canClean = false;
-        reason = "has uncommitted changes";
+        reason = 'has uncommitted changes';
       } else if (hasUnpushed) {
         canClean = false;
-        reason = "has unpushed commits";
+        reason = 'has unpushed commits';
       }
     }
 
@@ -194,53 +207,39 @@ export async function executeClean(args: string[]): Promise<void> {
 
   // Display results
   if (toClean.length === 0) {
-    output.success("No stale worktrees to clean");
+    output.success('No stale worktrees to clean');
 
     if (toSkip.length > 0) {
-      console.log(
-        `\n${output.bold("Skipped worktrees:")} (protected by safety checks)\n`,
-      );
+      console.log(`\n${output.bold('Skipped worktrees:')} (protected by safety checks)\n`);
       for (const wt of toSkip) {
-        console.log(
-          `  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)}`,
-        );
+        console.log(`  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)}`);
         console.log(`    Age: ${wt.ageDays} days`);
-        console.log(`    Reason: ${output.dim(wt.reason || "unknown")}`);
+        console.log(`    Reason: ${output.dim(wt.reason || 'unknown')}`);
         console.log();
       }
-      console.log(
-        `Use ${output.bold("--force")} to remove these (not recommended)\n`,
-      );
+      console.log(`Use ${output.bold('--force')} to remove these (not recommended)\n`);
     }
 
     Deno.exit(0);
   }
 
   // Display cleanable worktrees
-  console.log(`${output.bold("Worktrees to remove:")}\n`);
+  console.log(`${output.bold('Worktrees to remove:')}\n`);
   for (const wt of toClean) {
     const statusFlags = [];
-    if (wt.hasUncommitted) statusFlags.push(output.dim("uncommitted"));
-    if (wt.hasUnpushed) statusFlags.push(output.dim("unpushed"));
-    const status = statusFlags.length > 0
-      ? ` ${output.dim("[")}${statusFlags.join(", ")}${output.dim("]")}`
-      : "";
+    if (wt.hasUncommitted) statusFlags.push(output.dim('uncommitted'));
+    if (wt.hasUnpushed) statusFlags.push(output.dim('unpushed'));
+    const status = statusFlags.length > 0 ? ` ${output.dim('[')}${statusFlags.join(', ')}${output.dim(']')}` : '';
 
-    console.log(
-      `  ${output.errorSymbol()} ${
-        output.path(wt.branch || wt.path)
-      } (${wt.ageDays} days old)${status}`,
-    );
+    console.log(`  ${output.errorSymbol()} ${output.path(wt.branch || wt.path)} (${wt.ageDays} days old)${status}`);
   }
   console.log();
 
   if (toSkip.length > 0) {
-    console.log(`${output.bold("Skipped worktrees:")}\n`);
+    console.log(`${output.bold('Skipped worktrees:')}\n`);
     for (const wt of toSkip) {
       console.log(
-        `  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)} - ${
-          output.dim(wt.reason || "unknown")
-        }`,
+        `  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)} - ${output.dim(wt.reason || 'unknown')}`
       );
     }
     console.log();
@@ -248,17 +247,15 @@ export async function executeClean(args: string[]): Promise<void> {
 
   // Dry run - exit early
   if (parsed.dryRun) {
-    output.info("Dry run complete - no worktrees were removed");
+    output.info('Dry run complete - no worktrees were removed');
     Deno.exit(0);
   }
 
   // Prompt for confirmation
-  const confirmed = await confirm(
-    `Remove ${toClean.length} worktree(s)?`,
-  );
+  const confirmed = await confirm(`Remove ${toClean.length} worktree(s)?`);
 
   if (!confirmed) {
-    console.log("\nCancelled.\n");
+    console.log('\nCancelled.\n');
     Deno.exit(0);
   }
 

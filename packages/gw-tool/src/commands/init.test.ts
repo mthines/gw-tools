@@ -8,7 +8,7 @@ import { executeInit } from './init.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { readTestConfig } from '../test-utils/fixtures.ts';
-import { assertFileExists } from '../test-utils/assertions.ts';
+import { assertFileExists, assertDirExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
 
@@ -582,5 +582,259 @@ Deno.test('init command - interactive mode with whitespace in responses', async 
     }
   } finally {
     await repo.cleanup();
+  }
+});
+// Clone mode tests
+
+Deno.test('init command - clone mode with file URL', async () => {
+  // Create a test repository to clone from
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    // Create temp directory for clone target
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
+    const cwd = new TempCwd(targetDir);
+    try {
+      // Clone using file:// URL (simulates SSH/HTTPS in test environment)
+      const cloneUrl = `file://${sourceRepo.path}`;
+
+      // Calculate expected directory name from source repo path
+      const sourceDirName = sourceRepo.path.split('/').pop();
+      const expectedRepoName = `${sourceDirName}.git`;
+
+      // Mock the shell integration prompt (respond 'n' to decline)
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl]);
+      });
+
+      // Verify the repository was cloned
+      const clonedRepoPath = join(targetDir, expectedRepoName);
+      await assertDirExists(join(clonedRepoPath, '.git'));
+
+      // Verify config was created
+      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+      // Verify config content
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.root, clonedRepoPath);
+
+      // Verify default worktree was created (inside the repository directory)
+      await assertDirExists(join(clonedRepoPath, 'main'));
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode with custom directory', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepo.path}`;
+
+      // Mock the shell integration prompt (respond 'n' to decline)
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'custom-name']);
+      });
+
+      // Verify cloned to custom directory
+      const clonedRepoPath = join(targetDir, 'custom-name');
+      await assertDirExists(join(clonedRepoPath, '.git'));
+      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+      // Verify config content
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.root, clonedRepoPath);
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode with configuration options', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+    await sourceRepo.createFile('README.md', '# Test Repo');
+
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepo.path}`;
+
+      // Calculate expected directory name from source repo path
+      const sourceDirName = sourceRepo.path.split('/').pop();
+      const expectedRepoName = `${sourceDirName}.git`;
+
+      // Mock the shell integration prompt (respond 'n' to decline)
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([
+          cloneUrl,
+          '--auto-copy-files',
+          '.env,secrets/',
+          '--post-add',
+          'echo "installed"',
+          '--clean-threshold',
+          '14',
+        ]);
+      });
+
+      const clonedRepoPath = join(targetDir, expectedRepoName);
+      const config = await readTestConfig(clonedRepoPath);
+
+      assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
+      assertEquals(config.hooks?.add?.post, ['echo "installed"']);
+      assertEquals(config.cleanThreshold, 14);
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - clone mode fails when directory exists', async () => {
+  const sourceRepo = new GitTestRepo();
+  try {
+    await sourceRepo.init();
+
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
+    const cwd = new TempCwd(targetDir);
+    try {
+      // Calculate expected directory name from source repo path
+      const sourceDirName = sourceRepo.path.split('/').pop();
+      const expectedRepoName = `${sourceDirName}.git`;
+
+      // Create a directory with the target name
+      const existingDir = join(targetDir, expectedRepoName);
+      await Deno.mkdir(existingDir);
+
+      const cloneUrl = `file://${sourceRepo.path}`;
+      const { exitCode } = await withMockedExit(() => executeInit([cloneUrl]));
+
+      // Should exit with error code
+      assertEquals(exitCode, 1, 'Should exit with code 1 when directory exists');
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(() => {});
+    }
+  } finally {
+    await sourceRepo.cleanup();
+  }
+});
+
+Deno.test('init command - existing repo mode when already initialized', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First initialization
+      await executeInit([]);
+
+      // Verify config exists
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
+
+      // Try to initialize again (should skip with message)
+      await executeInit([]);
+
+      // Config should still exist and be unchanged
+      const config = await readTestConfig(repo.path);
+      assertEquals(config.root, repo.path);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('init command - interactive mode prompts for URL when not in git repo', async () => {
+  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-no-git-' }));
+  try {
+    const cwd = new TempCwd(tempDir);
+    try {
+      // Create a source repo to clone from
+      const sourceRepo = new GitTestRepo();
+      try {
+        await sourceRepo.init();
+        await sourceRepo.createFile('README.md', '# Test');
+
+        // Mock prompt to provide URL
+        const cloneUrl = `file://${sourceRepo.path}`;
+
+        // Calculate expected directory name from source repo path
+        const sourceDirName = sourceRepo.path.split('/').pop();
+        const expectedRepoName = `${sourceDirName}.git`;
+
+        const responses = [
+          cloneUrl, // Repository URL prompt
+          '', // default branch (accept default "main")
+          'n', // want auto-copy files
+          'n', // want pre-add hooks
+          'n', // want post-add hooks
+          '', // clean threshold (accept default 7)
+          'n', // enable auto-clean
+          '', // update strategy (accept default "merge")
+          'n', // shell integration install prompt (decline)
+        ];
+
+        await withMockedPrompt(responses, () => executeInit(['--interactive']));
+
+        // Verify repository was cloned (with .git suffix)
+        const clonedRepoPath = join(tempDir, expectedRepoName);
+        await assertDirExists(join(clonedRepoPath, '.git'));
+        await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+        // Verify config
+        const config = await readTestConfig(clonedRepoPath);
+        assertEquals(config.root, clonedRepoPath);
+      } finally {
+        await sourceRepo.cleanup();
+      }
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+  }
+});
+
+Deno.test('init command - interactive mode exits when URL prompt is skipped', async () => {
+  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-no-git-' }));
+  try {
+    const cwd = new TempCwd(tempDir);
+    try {
+      // Mock prompt to skip URL (press Enter with empty input)
+      const responses = [
+        '', // Empty URL (skip)
+      ];
+
+      const { exitCode } = await withMockedExit(() =>
+        withMockedPrompt(responses, () => executeInit(['--interactive']))
+      );
+
+      // Should exit with error code
+      assertEquals(exitCode, 1, 'Should exit with code 1 when URL is skipped');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
   }
 });

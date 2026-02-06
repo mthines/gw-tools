@@ -409,3 +409,159 @@ Deno.test('update command - uses custom remote', async () => {
     await repo.cleanup();
   }
 });
+
+Deno.test('update command - fails gracefully when --from branch fetch fails', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Add a remote that exists but doesn't have the branch
+    await repo.runCommand('git', ['remote', 'add', 'origin', 'https://github.com/nonexistent/repo.git'], repo.path);
+
+    // Create a feature branch and worktree
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    // Setup config
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Switch to feature worktree and try to update from a non-existent branch
+    const cwd = new TempCwd(featurePath);
+    try {
+      const { exitCode } = await withMockedExit(() => executeUpdate(['--from', 'nonexistent-branch']));
+
+      // Should exit with error code because --from was explicitly specified
+      // and fetch failed (not due to missing remote)
+      assertEquals(exitCode, 1);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command - warns but continues when default branch fetch fails', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Add a remote that exists but doesn't have the default branch
+    await repo.runCommand('git', ['remote', 'add', 'origin', 'https://github.com/nonexistent/repo.git'], repo.path);
+
+    // Create a feature branch and worktree
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    // Setup config with main as default
+    const config = createMinimalConfig(repo.path);
+    config.defaultBranch = 'main';
+    await writeTestConfig(repo.path, config);
+
+    // Add a commit to main so the merge isn't a no-op
+    await repo.createFile('main-file.txt', 'main content');
+    await repo.createCommit('Add main file');
+
+    // Switch to feature worktree and update (without --from)
+    const cwd = new TempCwd(featurePath);
+    try {
+      // Should succeed by using local branch despite fetch failure
+      await executeUpdate([]);
+
+      // Verify it used the local branch
+      const content = await Deno.readTextFile(join(featurePath, 'main-file.txt'));
+      assertEquals(content, 'main content');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command - warns but continues when no remote configured', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Don't add any remote - this simulates a local-only repo
+
+    // Create a feature branch and worktree
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    // Setup config
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Add a commit to main
+    await repo.createFile('main-file.txt', 'main content');
+    await repo.createCommit('Add main file');
+
+    // Switch to feature worktree and update
+    const cwd = new TempCwd(featurePath);
+    try {
+      // Should succeed by using local branch
+      await executeUpdate([]);
+
+      // Verify it used the local branch
+      const content = await Deno.readTextFile(join(featurePath, 'main-file.txt'));
+      assertEquals(content, 'main content');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command - allows --from with no remote configured', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Don't add any remote - this simulates a local-only repo
+
+    // Create a develop worktree (this will create the branch too)
+    const developPath = join(repo.path, 'develop-wt');
+    await repo.createWorktree('develop-wt', 'develop');
+    await Deno.writeTextFile(join(developPath, 'develop-file.txt'), 'develop content');
+
+    // Commit in develop worktree
+    const developCmd = new Deno.Command('git', {
+      args: ['add', '-A'],
+      cwd: developPath,
+    });
+    await developCmd.output();
+
+    const commitCmd = new Deno.Command('git', {
+      args: ['commit', '-m', 'Add develop file'],
+      cwd: developPath,
+    });
+    await commitCmd.output();
+
+    // Create feature worktree from main
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    // Setup config
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Switch to feature worktree and update from develop
+    const cwd = new TempCwd(featurePath);
+    try {
+      // Should succeed because no remote = acceptable condition
+      await executeUpdate(['--from', 'develop']);
+
+      // Verify merge from develop happened
+      const content = await Deno.readTextFile(join(featurePath, 'develop-file.txt'));
+      assertEquals(content, 'develop content');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});

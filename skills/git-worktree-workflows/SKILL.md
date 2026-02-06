@@ -96,6 +96,66 @@ Worktrees are ideal for:
 
 ## 2. Creating and Managing Worktrees with gw
 
+### Getting Started: Clone and Initialize
+
+If you're setting up a new repository with gw, you can clone and initialize in one step:
+
+```bash
+# Clone a repository and automatically set up gw
+$ gw init git@github.com:user/repo.git
+
+Cloning repository from git@github.com:user/repo.git...
+✓ Repository cloned to repo
+
+Setting up gw_root branch...
+✓ Created gw_root branch
+
+Initializing gw configuration...
+✓ Configuration created
+
+Creating main worktree...
+✓ Created main worktree
+
+✓ Repository initialized successfully!
+```
+
+This automatically:
+
+1. Clones the repository with `--no-checkout`
+2. Creates a `gw_root` branch for the bare repository
+3. Auto-detects the default branch (main, master, etc.)
+4. Creates the gw configuration at `.gw/config.json`
+5. Creates your first worktree for the default branch
+6. Names the repository directory with `.git` suffix (bare repo convention)
+7. Navigates you to the repository directory (with shell integration)
+
+**Clone with configuration:**
+
+```bash
+# Clone with auto-copy files configured
+$ gw init git@github.com:user/repo.git \
+          --auto-copy-files .env,secrets/ \
+          --post-add "pnpm install"
+
+# Clone into a custom directory
+$ gw init git@github.com:user/repo.git my-project
+
+# Clone and configure interactively
+$ gw init https://github.com/user/repo.git --interactive
+```
+
+**For existing repositories:**
+
+If you already have a cloned repository, initialize gw from within it:
+
+```bash
+$ cd ~/projects/myapp
+$ gw init
+
+Auto-detected git root: /projects/myapp.git
+✓ Configuration created successfully
+```
+
 ### The `gw add` Command
 
 The `gw add` command is an enhanced version of `git worktree add` with automatic file copying and navigation:
@@ -110,6 +170,12 @@ gw add feature-auth --no-cd
 
 # Create worktree with new branch
 gw add feature-payments -b feature-payments
+
+# Create from a different branch instead of defaultBranch
+gw add feature-payment-v2 --from develop
+
+# Create child feature branch from parent feature branch
+gw add feature-auth-social --from feature-auth
 
 # Create from specific start point
 gw add hotfix-security -b hotfix-security main
@@ -179,6 +245,13 @@ Done! Navigate with: gw cd feature-new-dashboard
 ```
 
 **Note:** The branch is configured to track its own remote branch (`origin/feature-new-dashboard`), not `origin/main`. This means `git push` will push to the correct branch without needing `-u origin <branch>`.
+
+**Network Failure Handling:**
+
+When creating worktrees, `gw add` has different behavior depending on whether you explicitly specify a source branch:
+
+- **With `--from <branch>`**: Requires a successful fetch from the remote. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command exits with detailed error messages and suggestions. This ensures you're working with the latest code when you explicitly specify a source.
+- **Without `--from` (default branch)**: Warns about fetch failures but allows creation using the local branch. This provides a fallback for offline work or when no remote is configured.
 
 ### Manual File Copying with `gw sync`
 
@@ -554,6 +627,13 @@ Configure default strategy in `.gw/config.json` or override per-command with `--
 - Blocks if you're in a detached HEAD state
 - Provides clear guidance when merge/rebase conflicts occur
 
+**Network Failure Handling:**
+
+Similar to `gw add`, the `gw update` command has different behavior for network failures:
+
+- **With `--from <branch>`**: Requires a successful fetch from the remote. If the fetch fails, the command exits with detailed error messages and troubleshooting steps. This prevents updating from a potentially outdated local branch when you've explicitly specified a source.
+- **Without `--from` (default branch)**: Warns about fetch failures but allows the update using the local branch. This provides a fallback for offline work.
+
 **Example workflow:**
 
 ```bash
@@ -612,6 +692,64 @@ gw cd feature-dashboard
 ```
 
 **Benefit:** No need to stash, commit WIP, or lose context.
+
+### Hierarchical Feature Development
+
+**Scenario:** Building related features where one depends on another
+
+Sometimes you need to create a child feature branch that builds on top of a parent feature branch that hasn't been merged yet. The `--from` option makes this workflow seamless:
+
+```bash
+# Create parent feature from main
+gw add feature-auth
+
+# Work on authentication foundation
+gw cd feature-auth
+# ... implement basic auth ...
+git add .
+git commit -m "feat: add basic authentication"
+
+# Create child feature from the auth branch (not main)
+gw add feature-auth-social --from feature-auth
+
+# Navigate to child feature
+gw cd feature-auth-social
+
+# This branch now has all the auth foundation from feature-auth
+# Build social login on top of basic auth
+# ... implement OAuth integration ...
+git add .
+git commit -m "feat: add social login with OAuth"
+```
+
+**Benefits:**
+
+- Child feature automatically includes all parent feature commits
+- Can develop related features in parallel without waiting for merges
+- Tracks `origin/feature-auth-social` for push (not `origin/feature-auth`)
+- Clear dependency relationship between features
+- Ensures latest code from the source branch by requiring successful remote fetch
+
+**Common patterns:**
+
+```bash
+# Experimental variations of a feature
+gw add feature-dashboard-v2 --from feature-dashboard
+
+# Staged rollouts with different implementations
+gw add feature-api-graphql --from feature-api
+gw add feature-api-rest --from feature-api
+
+# Environment-specific feature branches
+gw add feature-payment-staging --from develop
+gw add feature-payment-prod --from main
+```
+
+**When to merge:**
+
+1. Merge parent feature first: `feature-auth` → `main`
+2. Rebase or merge child onto updated main
+3. Merge child feature: `feature-auth-social` → `main`
 
 ### Code Review Workflows
 
@@ -747,11 +885,11 @@ gw clean --force
 
 **Cleanup strategies:**
 
-| Command | When to Use |
-|---------|-------------|
-| `gw clean` | Clean up all finished work regardless of age |
-| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees) |
-| `gw prune --clean` | Aggressive cleanup with default branch protection |
+| Command                              | When to Use                                       |
+| ------------------------------------ | ------------------------------------------------- |
+| `gw clean`                           | Clean up all finished work regardless of age      |
+| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)          |
+| `gw prune --clean`                   | Aggressive cleanup with default branch protection |
 
 **Configure the threshold:**
 

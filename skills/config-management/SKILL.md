@@ -98,6 +98,53 @@ Interactive mode is useful when:
 - You want to explore all available settings
 - Onboarding new team members who need guidance
 
+**Clone and initialize (new repositories):**
+
+```bash
+# Clone a repository and automatically set up gw
+$ gw init git@github.com:user/repo.git
+
+Cloning repository from git@github.com:user/repo.git...
+✓ Repository cloned to repo
+
+Setting up gw_root branch...
+✓ Created gw_root branch
+
+Initializing gw configuration...
+✓ Configuration created
+
+Creating main worktree...
+✓ Created main worktree
+
+✓ Repository initialized successfully!
+
+  Repository: /projects/repo
+  Config: /projects/repo/.gw/config.json
+  Default worktree: main
+```
+
+Clone mode automatically:
+
+- Clones the repository with `--no-checkout`
+- Creates a `gw_root` branch
+- Auto-detects the default branch from the remote
+- Creates gw configuration
+- Creates the default branch worktree
+- Uses `.git` suffix for the repository directory (bare repo convention)
+- Navigates you to the repository directory (with shell integration)
+
+You can also specify a custom directory and configuration:
+
+```bash
+# Clone into a specific directory with configuration
+$ gw init git@github.com:user/repo.git my-project \
+          --auto-copy-files .env,secrets/ \
+          --post-add "pnpm install"
+
+# Clone and configure interactively
+$ gw init https://github.com/user/repo.git --interactive
+```
+
 ### Configuration Scope
 
 Configuration is **per-repository**, not global:

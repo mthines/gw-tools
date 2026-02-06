@@ -291,7 +291,12 @@ gw add <worktree-name> [files...]
 This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
 
 **Branch Creation Behavior:**
-When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
+When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
+
+**Network Failure Handling:**
+
+- When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're working with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
+- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
 
 **Upstream Tracking:**
 When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
@@ -313,6 +318,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 #### Options
 
 - `--no-cd`: Don't navigate to the new worktree after creation
+- `--from <branch>`: Create new branch from specified branch instead of `defaultBranch`
 
 All `git worktree add` options are supported:
 
@@ -332,6 +338,12 @@ gw add feat/new-feature
 
 # Create worktree without navigating to it
 gw add feat/new-feature --no-cd
+
+# Create worktree from a different branch instead of defaultBranch
+gw add feat/new-feature --from develop
+
+# Create child feature branch from parent feature branch
+gw add feat/child-feature --from feat/parent-feature
 
 # Create worktree with new branch
 gw add feat/new-feature -b my-branch
@@ -584,6 +596,11 @@ gw update --remote upstream
 - Blocks if you're in a detached HEAD state
 - Handles merge/rebase conflicts gracefully with clear guidance
 
+**Network Failure Handling:**
+
+- When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're updating with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
+- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow the update using the local branch.
+
 **Update strategy:**
 
 The strategy can be configured in `.gw/config.json` or overridden per-command:
@@ -698,10 +715,13 @@ gw root
 
 ### init
 
-Initialize gw configuration for a git repository. This command creates or updates the `.gw/config.json` file with your settings.
+Initialize gw configuration for a git repository. This command can:
+
+1. **Clone mode**: Clone a repository and set it up with gw configuration
+2. **Existing repo mode**: Initialize gw in an existing repository
 
 ```bash
-gw init [options]
+gw init [repository-url] [directory] [options]
 ```
 
 #### Options
@@ -717,10 +737,49 @@ gw init [options]
 - `--update-strategy <strategy>`: Set default update strategy: 'merge' or 'rebase' (default: merge)
 - `-h, --help`: Show help message
 
-#### Examples
+#### Clone Examples
+
+Clone a repository and automatically set up gw configuration:
+
+```bash
+# Clone and initialize (auto-derive directory name from repository)
+gw init git@github.com:user/repo.git
+
+# Clone into specific directory
+gw init git@github.com:user/repo.git my-project
+
+# Clone with HTTPS URL
+gw init https://github.com/user/repo.git
+
+# Clone and configure interactively
+gw init git@github.com:user/repo.git --interactive
+
+# Clone with auto-copy files configured
+gw init git@github.com:user/repo.git --auto-copy-files .env,secrets/
+```
+
+When cloning, `gw init` will:
+
+1. Clone the repository with `--no-checkout`
+2. Create a `gw_root` branch
+3. Auto-detect the default branch from the remote
+4. Create gw configuration
+5. Create the default branch worktree
+6. Automatically navigate to the repository directory (requires shell integration)
+
+**Notes**:
+
+- Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions
+- After cloning, you'll be automatically navigated to the repository root where you can run gw commands
+- Shell integration must be installed (`gw install-shell`) for automatic navigation to work
+
+#### Existing Repository Examples
+
+Initialize gw in an existing repository:
 
 ```bash
 # Interactive mode - prompts for all configuration options
+# If not in a git repo, will first prompt for repository URL to clone
 gw init --interactive
 
 # Initialize with auto-detected root
@@ -925,6 +984,8 @@ gw sync /full/path/to/repo/feat-branch .env
 
 Remove safe worktrees with no uncommitted changes and no unpushed commits. By default, removes **ALL** safe worktrees regardless of age. Use `--use-autoclean-threshold` to only remove worktrees older than the configured threshold.
 
+**Automatic Pruning:** The clean command automatically runs `git worktree prune` before listing worktrees, ensuring only worktrees that actually exist on disk are shown. This prevents "phantom" worktrees (manually deleted directories) from appearing in the list.
+
 **Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 
 ```bash
@@ -970,12 +1031,12 @@ The clean command:
 
 **Behavior Modes:**
 
-| Command | Age Check | Safety Checks | Use Case |
-|---------|-----------|---------------|----------|
-| `gw clean` | No (all worktrees) | Yes (unless --force) | Clean up all finished work |
-| `gw clean --use-autoclean-threshold` | Yes (7+ days) | Yes (unless --force) | Clean up old, stale worktrees |
-| `gw clean --force` | No (all worktrees) | No | Force removal of all worktrees |
-| `gw prune --clean` | No (all worktrees) | No | Git's native cleanup (no gw safety) |
+| Command                              | Age Check          | Safety Checks        | Use Case                            |
+| ------------------------------------ | ------------------ | -------------------- | ----------------------------------- |
+| `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
+| `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
+| `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
+| `gw prune --clean`                   | No (all worktrees) | No                   | Git's native cleanup (no gw safety) |
 
 **Safety Features:**
 

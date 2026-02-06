@@ -75,6 +75,26 @@ export async function listWorktrees(): Promise<WorktreeInfo[]> {
 }
 
 /**
+ * Run git worktree prune to clean up stale administrative files
+ * @param silent If true, suppresses all output
+ */
+export async function pruneWorktrees(silent = true): Promise<void> {
+  const cmd = new Deno.Command('git', {
+    args: ['worktree', 'prune'],
+    stdout: silent ? 'null' : 'inherit',
+    stderr: silent ? 'null' : 'inherit',
+  });
+
+  const { code } = await cmd.output();
+
+  // Don't throw on error - prune failures shouldn't break clean
+  // Just silently continue if prune fails
+  if (code !== 0 && !silent) {
+    console.error('Warning: git worktree prune encountered errors');
+  }
+}
+
+/**
  * Check if worktree has uncommitted changes
  */
 export async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
