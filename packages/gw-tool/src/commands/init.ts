@@ -4,7 +4,7 @@
  */
 
 import { join, resolve } from '$std/path';
-import { saveConfig } from '../lib/config.ts';
+import { saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
@@ -593,7 +593,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     }
 
     config.root = fullPath;
-    await saveConfig(fullPath, config as Config);
+    await saveConfigTemplate(fullPath, config as Config);
     output.success('Configuration created');
 
     // Step 4: Create default worktree via gw add
@@ -815,7 +815,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
 
   // Save config at the git root (so it can be found by all worktrees)
   try {
-    await saveConfig(rootPath, config);
+    await saveConfigTemplate(rootPath, config);
     output.success('Configuration created successfully');
     console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
     console.log(`  Repository root: ${output.path(rootPath)}`);

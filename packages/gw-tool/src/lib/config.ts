@@ -4,6 +4,7 @@
  */
 
 import { join, resolve } from '$std/path';
+import { parse as parseJsonc } from '$std/jsonc';
 import type { Config } from './types.ts';
 import { findGitRoot, pathExists } from './path-resolver.ts';
 
@@ -157,7 +158,7 @@ export async function loadConfig(): Promise<{
     // Config file exists, load it
     try {
       const content = await Deno.readTextFile(configPath);
-      const data = JSON.parse(content);
+      const data = parseJsonc(content);
 
       if (!validateConfig(data)) {
         throw new Error('Invalid configuration file format');
@@ -218,5 +219,176 @@ export async function saveConfig(dir: string, config: Config): Promise<void> {
   await ensureConfigDir(dir);
   const configPath = getConfigPath(dir);
   const content = JSON.stringify(config, null, 2);
+  await Deno.writeTextFile(configPath, content);
+}
+
+/**
+ * Generate a comprehensive JSONC template from config
+ * Shows all available options with inline documentation
+ * @param config Configuration object
+ * @returns JSONC template string
+ */
+function generateConfigTemplate(config: Config): string {
+  const lines: string[] = [];
+
+  // Header
+  lines.push('{');
+  lines.push('  // ============================================================================');
+  lines.push('  // gw Configuration File');
+  lines.push('  // ============================================================================');
+  lines.push('  // Documentation: https://github.com/mthines/gw-tools');
+  lines.push('  // All fields except "root" are optional.');
+  lines.push('  // ============================================================================');
+  lines.push('');
+
+  // Core Settings Section
+  lines.push('  // Core Settings');
+  lines.push('  // ----------------------------------------------------------------------------');
+
+  // root (always required if present)
+  if (config.root) {
+    lines.push(`  "root": ${JSON.stringify(config.root)},`);
+  } else {
+    lines.push('  // "root": "/path/to/your/repository",');
+  }
+
+  // defaultBranch
+  if (config.defaultBranch !== undefined) {
+    lines.push(`  "defaultBranch": ${JSON.stringify(config.defaultBranch)},`);
+  } else {
+    lines.push('  // "defaultBranch": "main",  // Default source branch for new worktrees');
+  }
+
+  // cleanThreshold
+  if (config.cleanThreshold !== undefined) {
+    lines.push(`  "cleanThreshold": ${config.cleanThreshold},`);
+  } else {
+    lines.push('  // "cleanThreshold": 7,  // Days before worktrees are eligible for cleanup');
+  }
+
+  lines.push('');
+
+  // Auto-Copy Files Section
+  lines.push('  // Auto-Copy Files');
+  lines.push('  // ----------------------------------------------------------------------------');
+  lines.push('  // Files/directories to automatically copy when creating new worktrees.');
+  lines.push('  // Useful for environment files, secrets, and local configuration.');
+
+  if (config.autoCopyFiles && config.autoCopyFiles.length > 0) {
+    // Active auto-copy configuration
+    lines.push('  "autoCopyFiles": [');
+    config.autoCopyFiles.forEach((file, index) => {
+      const comma = index < config.autoCopyFiles!.length - 1 ? ',' : '';
+      lines.push(`    ${JSON.stringify(file)}${comma}`);
+    });
+    lines.push('  ],');
+  } else {
+    // Show commented examples
+    lines.push('  // "autoCopyFiles": [');
+    lines.push('  //   ".env",              // Environment variables');
+    lines.push('  //   ".env.local",        // Local overrides');
+    lines.push('  //   "config/secrets/",   // Secrets directory');
+    lines.push('  //   "node_modules/"      // Dependencies (if not using symlinks)');
+    lines.push('  // ],');
+  }
+
+  lines.push('');
+
+  // Hooks Section
+  lines.push('  // Hooks');
+  lines.push('  // ----------------------------------------------------------------------------');
+  lines.push('  // Commands to run before/after gw operations.');
+  lines.push('  // Available variables: {worktree}, {worktreePath}, {gitRoot}, {branch}');
+
+  if (config.hooks && Object.keys(config.hooks).length > 0) {
+    // Active hooks configuration
+    lines.push('  "hooks": {');
+
+    if (config.hooks.add) {
+      lines.push('    "add": {');
+
+      const preHooks = config.hooks.add.pre;
+      if (preHooks && preHooks.length > 0) {
+        lines.push('      "pre": [');
+        preHooks.forEach((cmd, index) => {
+          const comma = index < preHooks.length - 1 ? ',' : '';
+          lines.push(`        ${JSON.stringify(cmd)}${comma}`);
+        });
+        const hasPost = config.hooks.add.post && config.hooks.add.post.length > 0;
+        lines.push(`      ]${hasPost ? ',' : ''}`);
+      }
+
+      const postHooks = config.hooks.add.post;
+      if (postHooks && postHooks.length > 0) {
+        lines.push('      "post": [');
+        postHooks.forEach((cmd, index) => {
+          const comma = index < postHooks.length - 1 ? ',' : '';
+          lines.push(`        ${JSON.stringify(cmd)}${comma}`);
+        });
+        lines.push('      ]');
+      }
+
+      lines.push('    }');
+    }
+
+    lines.push('  },');
+  } else {
+    // Show commented examples
+    lines.push('  // "hooks": {');
+    lines.push('  //   "add": {');
+    lines.push('  //     "pre": [');
+    lines.push('  //       "echo \'Creating worktree: {worktree}\'"');
+    lines.push('  //     ],');
+    lines.push('  //     "post": [');
+    lines.push('  //       "cd {worktreePath} && npm install",');
+    lines.push('  //       "cd {worktreePath} && npm run build"');
+    lines.push('  //     ]');
+    lines.push('  //   }');
+    lines.push('  // },');
+  }
+
+  lines.push('');
+
+  // Advanced Options Section
+  lines.push('  // Advanced Options');
+  lines.push('  // ----------------------------------------------------------------------------');
+
+  // autoClean
+  if (config.autoClean !== undefined) {
+    lines.push(`  "autoClean": ${config.autoClean},`);
+    lines.push('  // Automatically clean stale worktrees (older than cleanThreshold)');
+  } else {
+    lines.push('  // "autoClean": false,  // Automatically clean stale worktrees');
+  }
+
+  // updateStrategy
+  if (config.updateStrategy !== undefined) {
+    lines.push(`  "updateStrategy": ${JSON.stringify(config.updateStrategy)}`);
+    lines.push('  // Default update strategy: "merge" or "rebase"');
+  } else {
+    lines.push('  // "updateStrategy": "merge",  // Default: "merge" or "rebase"');
+  }
+
+  lines.push('');
+
+  // Footer
+  lines.push('  // Internal fields (managed automatically):');
+  lines.push('  // - lastAutoCleanTime: Unix timestamp of last auto-cleanup run');
+
+  lines.push('}');
+
+  return lines.join('\n');
+}
+
+/**
+ * Save config as comprehensive JSONC template
+ * Used by init command for self-documenting configs
+ * @param dir Directory where .gw/config.json should be saved (typically the git root)
+ * @param config Configuration to save
+ */
+export async function saveConfigTemplate(dir: string, config: Config): Promise<void> {
+  await ensureConfigDir(dir);
+  const configPath = getConfigPath(dir);
+  const content = generateConfigTemplate(config);
   await Deno.writeTextFile(configPath, content);
 }

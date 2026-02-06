@@ -3,6 +3,7 @@
  */
 
 import { join } from "$std/path";
+import { parse as parseJsonc } from "$std/jsonc";
 import type { Config } from "../lib/types.ts";
 
 /**
@@ -104,9 +105,10 @@ export async function writeTestConfig(
 
 /**
  * Read config from .gw/config.json
+ * Supports both JSON and JSONC formats
  */
 export async function readTestConfig(repoPath: string): Promise<Config> {
   const configPath = join(repoPath, ".gw", "config.json");
   const content = await Deno.readTextFile(configPath);
-  return JSON.parse(content) as Config;
+  return parseJsonc(content) as Config;
 }
