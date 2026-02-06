@@ -202,6 +202,7 @@ Creating worktree: feat/new-feature
 ```
 
 The command:
+
 1. Detects that `feat/new-feature` doesn't exist
 2. Fetches the latest version of `main` from the remote (`origin/main`)
 3. Creates your new branch from the fresh remote ref
@@ -926,6 +927,7 @@ gw remove feature-abandoned --force
 ```
 
 **Protected branches** (cannot be removed):
+
 - Default branch (typically `main`, configured in `.gw/config.json`)
 - `gw_root` branch (bare repository root)
 - Bare repository worktree
