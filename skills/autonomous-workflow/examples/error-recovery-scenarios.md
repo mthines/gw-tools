@@ -32,11 +32,13 @@ Tests: 1 failed, 15 passed, 16 total
 ### Iteration 1: Analyze and Fix Obvious Issue
 
 **Analysis:**
+
 - Expected 401 (Unauthorized), got 500 (Internal Server Error)
 - Suggests unhandled exception in token expiry logic
 - Check error handling in middleware
 
 **Investigation:**
+
 ```typescript
 // src/middleware/auth.ts - Current code
 export function authMiddleware(req: Request) {
@@ -56,6 +58,7 @@ export function authMiddleware(req: Request) {
 **Root cause:** `jwt.verify()` throws `TokenExpiredError` when token is expired, but we're not catching it.
 
 **Fix:**
+
 ```typescript
 export function authMiddleware(req: Request) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -83,6 +86,7 @@ export function authMiddleware(req: Request) {
 ```
 
 **Retest:**
+
 ```bash
 $ pnpm test
 FAIL  src/middleware/__tests__/auth.test.ts
@@ -98,17 +102,19 @@ Tests: 1 failed, 15 passed, 16 total
 ### Iteration 2: Deep Analysis
 
 **Analysis:**
+
 - Different test now failing
 - Error: "Cannot read property 'id' of undefined"
 - Suggests decoded token not being passed to next handler
 
 **Investigation:**
+
 ```typescript
 // Test that's now failing
 it('should allow valid tokens', async () => {
   const validToken = jwt.sign({ id: 'user123' }, SECRET);
   const mockRequest = {
-    headers: { authorization: `Bearer ${validToken}` }
+    headers: { authorization: `Bearer ${validToken}` },
   };
 
   const response = await authMiddleware(mockRequest);
@@ -121,6 +127,7 @@ it('should allow valid tokens', async () => {
 **Root cause:** We're not attaching decoded token to request object before calling `next()`.
 
 **Fix:**
+
 ```typescript
 export function authMiddleware(req: Request) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -149,6 +156,7 @@ export function authMiddleware(req: Request) {
 ```
 
 **Retest:**
+
 ```bash
 $ pnpm test
 FAIL  src/middleware/__tests__/auth.test.ts
@@ -167,11 +175,13 @@ Tests: 1 failed, 15 passed, 16 total
 ### Iteration 3: Edge Case Handling
 
 **Analysis:**
+
 - Missing token test failing
 - Returns `undefined` instead of 401
 - Need to handle case where token is not provided
 
 **Investigation:**
+
 ```typescript
 // Current code doesn't check if token exists
 const token = req.headers.authorization?.replace('Bearer ', '');
@@ -185,6 +195,7 @@ try {
 **Root cause:** If `authorization` header is missing, `token` is `undefined`, and `jwt.verify(undefined)` behaves unexpectedly.
 
 **Fix:**
+
 ```typescript
 export function authMiddleware(req: Request) {
   const authHeader = req.headers.authorization;
@@ -219,6 +230,7 @@ export function authMiddleware(req: Request) {
 ```
 
 **Retest:**
+
 ```bash
 $ pnpm test
 PASS  src/middleware/__tests__/auth.test.ts
@@ -231,6 +243,7 @@ Tests: 16 passed, 16 total
 
 **Iterations:** 3
 **Issues found:**
+
 1. Unhandled exception on expired tokens (500 → 401)
 2. Missing user data attachment to request
 3. Missing token edge case not handled
@@ -238,6 +251,7 @@ Tests: 16 passed, 16 total
 **Resolution:** Comprehensive error handling with proper edge case coverage.
 
 **Commits:**
+
 ```bash
 $ git add src/middleware/auth.ts
 $ git commit -m "fix(auth): add comprehensive error handling for JWT validation
@@ -271,10 +285,12 @@ This error happened while installing a direct dependency of /path/to/repo.git/fe
 ### Recovery: Investigate Package Name
 
 **Analysis:**
+
 - Package `@types/stripe` not found
 - Could be: wrong name, private package, or doesn't exist
 
 **Investigation:**
+
 ```bash
 # Check if package exists
 $ npm search @types/stripe
@@ -292,6 +308,7 @@ $ cat package.json | grep stripe
 **Root cause:** Package name is wrong. Should be `stripe` (types included) or check if `@types/stripe` ever existed.
 
 **Fix:**
+
 ```bash
 # Check official Stripe documentation
 # Found: Types are included in 'stripe' package itself
@@ -311,12 +328,14 @@ $ pnpm install
 ```
 
 **Validation:**
+
 ```bash
 $ pnpm tsc --noEmit
 ✓ TypeScript recognizes Stripe types
 ```
 
 **Commit:**
+
 ```bash
 $ git add package.json pnpm-lock.yaml
 $ git commit -m "fix(deps): use stripe package with built-in types
@@ -351,11 +370,13 @@ hint: 'git pull ...') before pushing again.
 ### Recovery: Rebase and Resolve Conflicts
 
 **Analysis:**
+
 - Remote branch has new commits
 - Need to integrate remote changes
 - Possible conflicts
 
 **Step 1: Fetch and Rebase**
+
 ```bash
 $ git fetch origin
 $ git rebase origin/feat/user-profile
@@ -373,21 +394,12 @@ Resolve all conflicts manually, mark them as resolved with
 
 ```typescript
 // src/types/user.ts - Conflict
-<<<<<<< HEAD
 export interface User {
   id: string;
   email: string;
-  displayName: string;  // My change
-  avatar?: string;
-}
-=======
-export interface User {
-  id: string;
-  email: string;
-  username: string;      // Their change
+  username: string; // Their change
   profile?: UserProfile;
 }
->>>>>>> origin/feat/user-profile
 ```
 
 **Step 3: Understand Both Changes**
@@ -404,8 +416,8 @@ export interface User {
 export interface User {
   id: string;
   email: string;
-  username: string;      // Unique handle
-  displayName: string;   // Display name
+  username: string; // Unique handle
+  displayName: string; // Display name
   avatar?: string;
   profile?: UserProfile;
 }
@@ -415,12 +427,8 @@ export interface User {
 
 ```typescript
 // src/components/UserProfile.tsx - Conflict
-<<<<<<< HEAD
-<h1>{user.displayName}</h1>
-=======
 <h1>@{user.username}</h1>
 <div>{user.profile?.bio}</div>
->>>>>>> origin/feat/user-profile
 ```
 
 **Resolution:** Show both username and display name
@@ -495,13 +503,15 @@ Found 2 errors in 2 files.
 **Error 1: Undefined endpoint parameter**
 
 **Investigation:**
+
 ```typescript
 // src/lib/api-client.ts
 export async function getUser(id?: string) {
   // endpoint could be undefined if id is undefined
   const endpoint = id ? `/users/${id}` : undefined;
 
-  return fetchAPI(endpoint, {  // Error: endpoint might be undefined
+  return fetchAPI(endpoint, {
+    // Error: endpoint might be undefined
     method: 'GET',
   });
 }
@@ -510,6 +520,7 @@ export async function getUser(id?: string) {
 **Root cause:** Not handling case where `id` is undefined.
 
 **Fix:**
+
 ```typescript
 export async function getUser(id?: string) {
   if (!id) {
@@ -525,6 +536,7 @@ export async function getUser(id?: string) {
 ```
 
 **Alternative fix (if undefined is valid):**
+
 ```typescript
 export async function getUser(id?: string) {
   const endpoint = id ? `/users/${id}` : '/users/me'; // Default to current user
@@ -538,6 +550,7 @@ export async function getUser(id?: string) {
 **Error 2: String vs Date type confusion**
 
 **Investigation:**
+
 ```typescript
 // src/utils/format.ts
 export function formatDate(date: string | Date) {
@@ -553,6 +566,7 @@ export function formatDate(date: string | Date) {
 **Root cause:** Function accepts string but tries to call Date method.
 
 **Fix:**
+
 ```typescript
 export function formatDate(date: string | Date): string {
   // Ensure we have a Date object
@@ -572,12 +586,14 @@ export function formatDate(date: string | Date): string {
 ```
 
 **Rebuild:**
+
 ```bash
 $ pnpm build
 ✓ Compiled successfully in 3.2s
 ```
 
 **Test:**
+
 ```bash
 $ pnpm test
 PASS  src/lib/__tests__/api-client.test.ts
@@ -587,6 +603,7 @@ Tests: 28 passed, 28 total
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/lib/api-client.ts src/utils/format.ts
 $ git commit -m "fix(types): add proper type handling for optional params
@@ -632,11 +649,13 @@ PASS  src/services/__tests__/cache.test.ts
 ### Recovery: Identify and Fix Flaky Test
 
 **Analysis:**
+
 - Test passes sometimes, fails others
 - Classic sign of timing/async issue
 - Need to make test deterministic
 
 **Investigation:**
+
 ```typescript
 // src/services/__tests__/cache.test.ts
 describe('CacheService', () => {
@@ -646,7 +665,7 @@ describe('CacheService', () => {
     cache.set('key', 'cached-value');
 
     // Wait for expiration
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise((resolve) => setTimeout(resolve, 100));
 
     // Should be expired
     expect(cache.get('key')).toBe(undefined);
@@ -657,6 +676,7 @@ describe('CacheService', () => {
 **Root cause:** Race condition - we wait exactly 100ms, but expiration happens at 100ms, so timing varies based on execution speed.
 
 **Fix: Add buffer time**
+
 ```typescript
 it('should expire cached items after TTL', async () => {
   const cache = new CacheService({ ttl: 100 }); // 100ms TTL
@@ -667,7 +687,7 @@ it('should expire cached items after TTL', async () => {
   expect(cache.get('key')).toBe('cached-value');
 
   // Wait slightly longer than TTL to ensure expiration
-  await new Promise(resolve => setTimeout(resolve, 150)); // 50ms buffer
+  await new Promise((resolve) => setTimeout(resolve, 150)); // 50ms buffer
 
   // Should be expired
   expect(cache.get('key')).toBe(undefined);
@@ -675,6 +695,7 @@ it('should expire cached items after TTL', async () => {
 ```
 
 **Better fix: Use fake timers**
+
 ```typescript
 describe('CacheService', () => {
   beforeEach(() => {
@@ -703,6 +724,7 @@ describe('CacheService', () => {
 ```
 
 **Validation: Run test 10 times**
+
 ```bash
 $ for i in {1..10}; do pnpm test cache.test.ts; done
 PASS (10/10 runs)
@@ -710,6 +732,7 @@ PASS (10/10 runs)
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/services/__tests__/cache.test.ts
 $ git commit -m "test(cache): fix flaky expiration test with fake timers
@@ -750,6 +773,7 @@ $ git commit -m "test(cache): fix flaky expiration test with fake timers
 ### Validation Checkpoints
 
 After each error recovery:
+
 - ✅ Build succeeds
 - ✅ All tests pass
 - ✅ Lint rules pass

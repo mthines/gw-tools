@@ -17,6 +17,7 @@ npx skills add mthines/gw-tools/git-worktree-workflows
 ```
 
 **Learn:**
+
 - Git worktree fundamentals and best practices
 - Creating and managing worktrees with `gw`
 - Quick navigation with `gw cd`
@@ -36,6 +37,7 @@ npx skills add mthines/gw-tools/config-management
 ```
 
 **Learn:**
+
 - Understanding `.gw/config.json` structure
 - Auto-copy strategies for different project types
 - Configuration templates for Next.js, Node.js APIs, monorepos, and more
@@ -55,6 +57,7 @@ npx skills add mthines/gw-tools/autonomous-workflow
 ```
 
 **Capabilities:**
+
 - Autonomous feature implementation from requirements to PR
 - Worktree creation and environment setup
 - Continuous testing and iteration
@@ -174,4 +177,4 @@ These skills are licensed under the MIT License - see the [LICENSE](../LICENSE) 
 
 ---
 
-*Made with ❤️ for the Git worktree community*
+_Made with ❤️ for the Git worktree community_
