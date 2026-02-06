@@ -572,9 +572,10 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     console.log(`\nCreating ${defaultBranch} worktree...`);
 
     // Detect if we're running from a compiled binary or in development
-    const gwPath = new URL(import.meta.url).pathname;
-    const mainPath = resolve(gwPath, '../../main.ts');
-    const isCompiled = !await pathExists(mainPath);
+    // Compiled binaries have execPath pointing to the binary itself (e.g., /usr/local/bin/gw)
+    // In development, execPath points to the deno executable (e.g., /opt/homebrew/bin/deno)
+    const execPath = Deno.execPath();
+    const isCompiled = !execPath.endsWith('/deno') && !execPath.endsWith('\\deno.exe');
 
     // Call add command to create worktree
     let addCmd: Deno.Command;
@@ -587,7 +588,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
         stderr: 'inherit',
       });
     } else {
-      // Running in development - use deno run
+      // Running in development - use deno run with main.ts
+      const gwPath = new URL(import.meta.url).pathname;
+      const mainPath = resolve(gwPath, '../../main.ts');
       addCmd = new Deno.Command('deno', {
         args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
         cwd: fullPath,
