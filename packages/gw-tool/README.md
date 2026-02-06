@@ -747,12 +747,15 @@ When cloning, `gw init` will:
 4. Create gw configuration
 5. Create the default branch worktree
 
+**Note**: Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions.
+
 #### Existing Repository Examples
 
 Initialize gw in an existing repository:
 
 ```bash
 # Interactive mode - prompts for all configuration options
+# If not in a git repo, will first prompt for repository URL to clone
 gw init --interactive
 
 # Initialize with auto-detected root

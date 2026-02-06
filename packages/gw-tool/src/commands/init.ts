@@ -9,6 +9,7 @@ import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolve
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
+import { signalNavigation } from '../lib/shell-navigation.ts';
 
 /**
  * Parsed init command arguments
@@ -103,12 +104,19 @@ function parseInitArgs(args: string[]): ParsedInitArgs {
  * Extract repository name from URL path
  */
 function extractRepoName(path: string): string {
-  // Extract last segment and remove .git suffix
-  // "user/repo.git" -> "repo"
-  // "user/repo" -> "repo"
+  // Extract last segment, keep .git suffix for bare repos
+  // "user/repo.git" -> "repo.git"
+  // "user/repo" -> "repo.git"
   const parts = path.split('/');
   const lastPart = parts[parts.length - 1];
-  return lastPart.replace(/\.git$/, '') || lastPart;
+
+  // If it already has .git suffix, keep it
+  if (lastPart.endsWith('.git')) {
+    return lastPart;
+  }
+
+  // Otherwise, add .git suffix for bare repository convention
+  return `${lastPart}.git`;
 }
 
 /**
@@ -227,6 +235,8 @@ function promptForConfig(): {
   autoClean?: boolean;
   updateStrategy?: 'merge' | 'rebase';
 } {
+  console.log();
+  console.log();
   showLogo();
 
   console.log('\n' + output.bold('Interactive Configuration') + '\n');
@@ -386,6 +396,7 @@ Clone Examples:
 
 Existing Repository Examples:
   # Interactive mode - prompts for all configuration options
+  # If not in a git repo, will first prompt for repository URL to clone
   gw init --interactive
 
   # Initialize with auto-detected root and auto-copy files
@@ -549,6 +560,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     console.log(`  Config: ${output.path(join(fullPath, '.gw/config.json'))}`);
     console.log(`  Default worktree: ${output.bold(defaultBranch)}`);
     console.log();
+
+    // Navigate to the repository directory
+    await signalNavigation(fullPath);
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     output.error(`Failed to initialize repository: ${message}`);
@@ -722,6 +736,40 @@ export async function executeInit(args: string[]): Promise<void> {
   if (parsed.help) {
     showInitHelp();
     Deno.exit(0);
+  }
+
+  // In interactive mode without a URL, check if we need to prompt for one
+  if (parsed.interactive && !parsed.repoUrl && !parsed.root) {
+    // Check if we're in a git repository
+    try {
+      await findGitRoot();
+      // We're in a git repo, proceed with existing repo mode
+    } catch {
+      // Not in a git repo, prompt for URL
+      console.log();
+      showLogo();
+      console.log('\n' + output.bold('Repository Setup') + '\n');
+      console.log('You are not in a git repository.');
+      console.log('Enter a repository URL to clone, or press Enter to specify a repository path with --root.\n');
+
+      const urlInput = prompt('Repository URL (leave blank to exit): ');
+
+      if (urlInput && urlInput.trim()) {
+        // User provided a URL, switch to clone mode
+        parsed.repoUrl = urlInput.trim();
+      } else {
+        // User didn't provide URL, show error
+        console.log();
+        output.error('No repository URL or path provided');
+        console.log('\nTo clone a repository:');
+        console.log(`  ${output.bold('gw init <repository-url>')}`);
+        console.log('\nTo initialize an existing repository:');
+        console.log(`  ${output.bold('cd <repository> && gw init --interactive')}`);
+        console.log('\nOr specify a repository path:');
+        console.log(`  ${output.bold('gw init --interactive --root <path>')}`);
+        Deno.exit(1);
+      }
+    }
   }
 
   // Branch based on clone vs. existing repo

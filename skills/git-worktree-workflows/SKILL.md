@@ -125,6 +125,7 @@ This automatically:
 3. Auto-detects the default branch (main, master, etc.)
 4. Creates the gw configuration at `.gw/config.json`
 5. Creates your first worktree for the default branch
+6. Names the repository directory with `.git` suffix (bare repo convention)
 
 **Clone with configuration:**
 

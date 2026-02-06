@@ -129,6 +129,7 @@ Clone mode automatically:
 - Auto-detects the default branch from the remote
 - Creates gw configuration
 - Creates the default branch worktree
+- Uses `.git` suffix for the repository directory (bare repo convention)
 
 You can also specify a custom directory and configuration:
 
