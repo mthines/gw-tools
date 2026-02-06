@@ -88,7 +88,7 @@ For full git worktree remove documentation:
   let isLeftoverDirectory = false;
 
   try {
-    const { gitRoot } = await loadConfig();
+    const { config, gitRoot } = await loadConfig();
     const worktrees = await listWorktrees();
 
     // First, try to find an EXACT match by worktree name or path
@@ -108,7 +108,23 @@ For full git worktree remove documentation:
     });
 
     if (exactMatch) {
-      // Found exact match
+      // Found exact match - check if it's a protected branch
+      const defaultBranch = config.defaultBranch || 'main';
+      if (exactMatch.branch === defaultBranch || exactMatch.branch === 'gw_root') {
+        console.log("");
+        output.error(
+          `Cannot remove ${output.bold(exactMatch.branch)} - this is a protected branch.`
+        );
+        console.log("");
+        if (exactMatch.branch === defaultBranch) {
+          console.log(`The default branch (${output.bold(defaultBranch)}) cannot be removed.`);
+        } else {
+          console.log(`The ${output.bold('gw_root')} branch is the bare repository root and cannot be removed.`);
+        }
+        console.log("");
+        Deno.exit(1);
+      }
+
       worktreePath = exactMatch.path;
       isValidWorktree = true;
       isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);

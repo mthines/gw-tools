@@ -560,6 +560,42 @@ Deno.test('clean command - uses main as default when defaultBranch not configure
   }
 });
 
+Deno.test('clean command - never removes gw_root worktree', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Create gw_root and a feature worktree
+    await repo.createWorktree('gw_root');
+    const featWorktree = await repo.createWorktree('feat-branch');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Confirm removal with "yes"
+      await withMockedStdin('yes', async () => {
+        await executeClean([]);
+      });
+
+      const worktrees = await repo.listWorktrees();
+
+      // gw_root worktree should still exist (protected)
+      const hasGwRoot = worktrees.some((wt) => wt.includes('gw_root'));
+      assertEquals(hasGwRoot, true, 'gw_root worktree should never be removed');
+
+      // Feature worktree should be removed
+      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
+      assertEquals(hasFeat, false, 'Non-protected worktree should be removed');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('clean command - automatically prunes phantom worktrees before listing', async () => {
   const repo = new GitTestRepo();
   try {

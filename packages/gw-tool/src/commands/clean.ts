@@ -58,7 +58,7 @@ Safety Features:
   - By default, only removes worktrees with NO uncommitted changes
   - By default, only removes worktrees with NO unpushed commits
   - Always prompts for confirmation before deletion (unless --dry-run)
-  - Main/bare repository and default branch worktrees are never removed
+  - Main/bare repository, default branch, and gw_root are never removed
   - Use --force to bypass safety checks (use with caution)
 
 Examples:
@@ -154,9 +154,11 @@ export async function executeClean(args: string[]): Promise<void> {
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
-  // Filter out bare repository and default branch
+  // Filter out bare repository, default branch, and gw_root
   const defaultBranch = config.defaultBranch || 'main';
-  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && wt.branch !== defaultBranch);
+  const nonBareWorktrees = worktrees.filter(
+    (wt) => !wt.bare && wt.branch !== defaultBranch && wt.branch !== 'gw_root'
+  );
 
   if (nonBareWorktrees.length === 0) {
     console.log('No worktrees found.\n');

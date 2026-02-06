@@ -296,3 +296,80 @@ Deno.test("remove command - does not delete parent directory containing worktree
     await repo.cleanup();
   }
 });
+
+Deno.test("remove command - prevents removal of default branch", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create develop worktree and set it as default
+    await repo.createWorktree("develop", "develop");
+
+    const config = {
+      root: repo.path,
+      defaultBranch: "develop",
+    };
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Try to remove the default branch worktree
+      const { exitCode } = await withMockedExit(() =>
+        executeRemove(["develop"])
+      );
+
+      // Should exit with error code 1
+      assertEquals(
+        exitCode,
+        1,
+        "Should exit with error when trying to remove default branch",
+      );
+
+      // Verify develop worktree still exists
+      const worktrees = await repo.listWorktrees();
+      const hasDevelop = worktrees.some((wt) => wt.includes("develop"));
+      assertEquals(hasDevelop, true, "Default branch worktree should not be removed");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("remove command - prevents removal of gw_root", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create gw_root worktree
+    await repo.createWorktree("gw_root", "gw_root");
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Try to remove the gw_root worktree
+      const { exitCode } = await withMockedExit(() =>
+        executeRemove(["gw_root"])
+      );
+
+      // Should exit with error code 1
+      assertEquals(
+        exitCode,
+        1,
+        "Should exit with error when trying to remove gw_root",
+      );
+
+      // Verify gw_root worktree still exists
+      const worktrees = await repo.listWorktrees();
+      const hasGwRoot = worktrees.some((wt) => wt.includes("gw_root"));
+      assertEquals(hasGwRoot, true, "gw_root worktree should not be removed");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
