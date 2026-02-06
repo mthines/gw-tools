@@ -15,6 +15,7 @@ Common problems and their solutions when working with Git worktrees and gw.
 9. [Git Index Corruption](#9-git-index-corruption)
 10. [Worktree Not Found](#10-worktree-not-found)
 11. [Auto-Copy Files Not Working](#11-auto-copy-files-not-working)
+12. [Remote Fetch Failures](#12-remote-fetch-failures)
 
 ---
 
@@ -619,6 +620,185 @@ $ gw sync feature-new .env .env.local
 ```bash
 $ cp ../main/.env .env
 $ cp ../main/.env.local .env.local
+```
+
+---
+
+## 12. Remote Fetch Failures
+
+### Problem
+
+When using `gw add --from <branch>` or `gw update --from <branch>`, the command fails with a fetch error:
+
+```bash
+$ gw add feature-new --from develop
+
+Could not fetch from remote
+
+Cannot create branch from develop because the remote fetch failed.
+This would use a potentially outdated local branch.
+
+Possible causes:
+  • Network connectivity issues
+  • Branch develop doesn't exist on remote
+  • Authentication issues
+
+Options:
+  1. Check your network connection and try again
+  2. Verify the branch exists: git ls-remote origin develop
+  3. Use a different source branch: gw add feature-new --from <branch>
+  4. Create without --from to use default branch: gw add feature-new
+```
+
+Or with `gw update`:
+
+```bash
+$ gw update --from develop
+
+Could not fetch from remote
+
+Cannot update from develop because the remote fetch failed.
+This would use a potentially outdated local branch.
+
+Possible causes:
+  • Network connectivity issues
+  • Branch develop doesn't exist on remote
+  • Authentication issues
+
+Options:
+  1. Check your network connection and try again
+  2. Verify the branch exists: git ls-remote origin develop
+  3. Use a different source branch: gw update --from <branch>
+  4. Update from default branch: gw update
+```
+
+### Why It Happens
+
+When you explicitly specify a source branch with `--from`, `gw` requires a successful fetch from the remote to ensure you're working with the latest code. This prevents accidentally creating branches or updating from outdated local copies.
+
+**Behavior differences:**
+
+- **With `--from <branch>`**: Fetch failure causes the command to exit with an error
+- **Without `--from` (default branch)**: Fetch failure shows a warning but allows the operation using the local branch
+
+### Diagnostic Commands
+
+```bash
+# Check network connectivity
+$ ping github.com
+$ ping gitlab.com
+
+# Verify branch exists on remote
+$ git ls-remote origin develop
+abc123... refs/heads/develop
+
+# Check if you can fetch manually
+$ git fetch origin develop
+From github.com:user/repo
+ * branch            develop    -> FETCH_HEAD
+
+# Check authentication
+$ ssh -T git@github.com
+Hi username! You've successfully authenticated...
+```
+
+### Solutions
+
+**Solution A: Fix network connectivity**
+
+```bash
+# Check internet connection
+# Reconnect to network/VPN
+# Try again
+$ gw add feature-new --from develop
+```
+
+**Solution B: Verify branch exists**
+
+```bash
+# List all remote branches
+$ git branch -r
+  origin/main
+  origin/develop
+  origin/feature-x
+
+# If branch doesn't exist on remote, use a different one
+$ gw add feature-new --from main
+```
+
+**Solution C: Fix authentication**
+
+```bash
+# For SSH authentication issues
+$ ssh-add ~/.ssh/id_rsa
+
+# For HTTPS authentication issues
+$ git config --global credential.helper store
+
+# Test authentication
+$ git fetch origin
+```
+
+**Solution D: Use default branch (without --from)**
+
+If you don't need to specify a specific source branch:
+
+```bash
+# This will warn about fetch failure but allow using local branch
+$ gw add feature-new
+
+# Or for update:
+$ gw update
+```
+
+**Solution E: Work offline with local branch**
+
+If you need to work offline and accept using the local branch:
+
+```bash
+# For gw add: don't use --from flag
+$ gw add feature-new
+
+# For gw update: don't use --from flag
+$ gw update
+```
+
+### Prevention
+
+**1. Fetch regularly to keep local branches updated:**
+
+```bash
+# Fetch all branches from remote
+$ git fetch --all
+
+# Now local branches are up to date if network fails later
+```
+
+**2. Use default branch for most operations:**
+
+Only use `--from` when you specifically need a different source branch:
+
+```bash
+# Good: Use default branch (main)
+$ gw add feature-new
+
+# Good: Explicitly need develop
+$ gw add feature-new --from develop
+
+# Unnecessary: Specifying default branch
+$ gw add feature-new --from main  # Just use: gw add feature-new
+```
+
+**3. Set up reliable authentication:**
+
+```bash
+# SSH key (recommended)
+$ ssh-keygen -t ed25519 -C "your_email@example.com"
+$ cat ~/.ssh/id_ed25519.pub
+# Add to GitHub/GitLab
+
+# Or use credential helper for HTTPS
+$ git config --global credential.helper cache
 ```
 
 ---

@@ -291,7 +291,11 @@ gw add <worktree-name> [files...]
 This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
 
 **Branch Creation Behavior:**
-When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
+When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
+
+**Network Failure Handling:**
+- When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're working with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
+- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
 
 **Upstream Tracking:**
 When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
@@ -590,6 +594,11 @@ gw update --remote upstream
 - Blocks if you have uncommitted changes (use `--force` to override)
 - Blocks if you're in a detached HEAD state
 - Handles merge/rebase conflicts gracefully with clear guidance
+
+**Network Failure Handling:**
+
+- When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're updating with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
+- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow the update using the local branch.
 
 **Update strategy:**
 

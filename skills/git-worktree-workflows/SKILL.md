@@ -245,6 +245,13 @@ Done! Navigate with: gw cd feature-new-dashboard
 
 **Note:** The branch is configured to track its own remote branch (`origin/feature-new-dashboard`), not `origin/main`. This means `git push` will push to the correct branch without needing `-u origin <branch>`.
 
+**Network Failure Handling:**
+
+When creating worktrees, `gw add` has different behavior depending on whether you explicitly specify a source branch:
+
+- **With `--from <branch>`**: Requires a successful fetch from the remote. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command exits with detailed error messages and suggestions. This ensures you're working with the latest code when you explicitly specify a source.
+- **Without `--from` (default branch)**: Warns about fetch failures but allows creation using the local branch. This provides a fallback for offline work or when no remote is configured.
+
 ### Manual File Copying with `gw sync`
 
 If you need to copy files later or from a different source:
@@ -619,6 +626,13 @@ Configure default strategy in `.gw/config.json` or override per-command with `--
 - Blocks if you're in a detached HEAD state
 - Provides clear guidance when merge/rebase conflicts occur
 
+**Network Failure Handling:**
+
+Similar to `gw add`, the `gw update` command has different behavior for network failures:
+
+- **With `--from <branch>`**: Requires a successful fetch from the remote. If the fetch fails, the command exits with detailed error messages and troubleshooting steps. This prevents updating from a potentially outdated local branch when you've explicitly specified a source.
+- **Without `--from` (default branch)**: Warns about fetch failures but allows the update using the local branch. This provides a fallback for offline work.
+
 **Example workflow:**
 
 ```bash
@@ -712,6 +726,7 @@ git commit -m "feat: add social login with OAuth"
 - Can develop related features in parallel without waiting for merges
 - Tracks `origin/feature-auth-social` for push (not `origin/feature-auth`)
 - Clear dependency relationship between features
+- Ensures latest code from the source branch by requiring successful remote fetch
 
 **Common patterns:**
 ```bash
