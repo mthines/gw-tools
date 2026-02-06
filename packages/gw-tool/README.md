@@ -7,6 +7,7 @@ A command-line tool for managing git worktrees, built with Deno.
 - [gw - Git Worktree Tools](#gw---git-worktree-tools)
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
+  - [🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)](#-ai-skills-for-claude-code-copilot-cursor-etc)
   - [Initial Setup: Secrets in the Default Branch](#initial-setup-secrets-in-the-default-branch)
     - [First-Time Setup Flow](#first-time-setup-flow)
     - [Why This Matters](#why-this-matters)
@@ -126,6 +127,35 @@ gw cd feat/another-feature
 # Checkout an existing branch (navigates if already checked out elsewhere)
 gw checkout main
 ```
+
+## 🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)
+
+Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
+
+```bash
+npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows @gw-config-management @gw-autonomous-workflow # installs all skills
+```
+
+```bash
+# Master Git worktrees and gw workflows
+npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows
+
+# Configure gw for your project type (Next.js, monorepos, etc.)
+npx skills add https://github.com/mthines/gw-tools --skill @gw-config-management
+
+# Autonomous feature development workflow
+npx skills add https://github.com/mthines/gw-tools --skill @gw-autonomous-workflow
+```
+
+Once installed, your AI agent can:
+
+- Execute complete feature development cycles autonomously
+- Create worktrees for bug fixes and features automatically
+- Configure gw for your specific project type
+- Navigate between worktrees and manage files
+- Create tested PRs from isolated worktrees
+
+📖 **Skill documentation:** [skills/README.md](../../skills/README.md)
 
 ## Initial Setup: Secrets in the Default Branch
 

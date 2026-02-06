@@ -53,7 +53,7 @@ gw remove feature-auth
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows @gw-config-management @gw-multi-worktree-dev # installs all skills
+npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows @gw-config-management @gw-autonomous-workflow # installs all skills
 ```
 
 ```bash
@@ -63,15 +63,16 @@ npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-work
 # Configure gw for your project type (Next.js, monorepos, etc.)
 npx skills add https://github.com/mthines/gw-tools --skill @gw-config-management
 
-# Advanced parallel development patterns
-npx skills add https://github.com/mthines/gw-tools --skill @gw-multi-worktree-dev
+# Autonomous feature development workflow
+npx skills add https://github.com/mthines/gw-tools --skill @gw-autonomous-workflow
 ```
 
 Once installed, your AI agent can:
 
+- Execute complete feature development cycles autonomously
 - Create worktrees for bug fixes and features automatically
 - Configure gw for your specific project type
 - Navigate between worktrees and manage files
-- Create PRs from isolated worktrees
+- Create tested PRs from isolated worktrees
 
 📖 **Skill documentation:** [skills/README.md](skills/README.md)
