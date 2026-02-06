@@ -10,6 +10,7 @@ import {
   hasUncommittedChanges,
   hasUnpushedCommits,
   listWorktrees,
+  pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
 } from "../lib/git-utils.ts";
@@ -151,15 +152,10 @@ async function runGitWorktreePrune(verbose: boolean): Promise<void> {
     output.info("Running git worktree prune...");
   }
 
-  const cmd = new Deno.Command("git", {
-    args: ["worktree", "prune"],
-    stdout: verbose ? "inherit" : "null",
-    stderr: verbose ? "inherit" : "null",
-  });
+  await pruneWorktrees(!verbose); // verbose = show output
 
-  const { code } = await cmd.output();
-  if (code !== 0 && verbose) {
-    output.warning("git worktree prune encountered errors");
+  if (verbose) {
+    output.success("Pruning complete");
   }
 }
 

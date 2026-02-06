@@ -291,7 +291,7 @@ gw add <worktree-name> [files...]
 This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
 
 **Branch Creation Behavior:**
-When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
+When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead. If the remote is unavailable (no network or no remote configured), it gracefully falls back to using the local branch with a warning message.
 
 **Upstream Tracking:**
 When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
@@ -313,6 +313,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 #### Options
 
 - `--no-cd`: Don't navigate to the new worktree after creation
+- `--from <branch>`: Create new branch from specified branch instead of `defaultBranch`
 
 All `git worktree add` options are supported:
 
@@ -332,6 +333,12 @@ gw add feat/new-feature
 
 # Create worktree without navigating to it
 gw add feat/new-feature --no-cd
+
+# Create worktree from a different branch instead of defaultBranch
+gw add feat/new-feature --from develop
+
+# Create child feature branch from parent feature branch
+gw add feat/child-feature --from feat/parent-feature
 
 # Create worktree with new branch
 gw add feat/new-feature -b my-branch
@@ -963,6 +970,8 @@ gw sync /full/path/to/repo/feat-branch .env
 ### clean
 
 Remove safe worktrees with no uncommitted changes and no unpushed commits. By default, removes **ALL** safe worktrees regardless of age. Use `--use-autoclean-threshold` to only remove worktrees older than the configured threshold.
+
+**Automatic Pruning:** The clean command automatically runs `git worktree prune` before listing worktrees, ensuring only worktrees that actually exist on disk are shown. This prevents "phantom" worktrees (manually deleted directories) from appearing in the list.
 
 **Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 

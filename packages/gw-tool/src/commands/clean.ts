@@ -9,6 +9,7 @@ import {
   hasUncommittedChanges,
   hasUnpushedCommits,
   listWorktrees,
+  pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
 } from "../lib/git-utils.ts";
@@ -42,6 +43,9 @@ Remove safe worktrees with no uncommitted changes or unpushed commits.
 By default, removes ALL safe worktrees regardless of age. Use
 --use-autoclean-threshold to only remove worktrees older than the configured
 age threshold (.gw/config.json cleanThreshold field, default: 7 days).
+
+Automatically prunes stale worktree metadata before listing, ensuring only
+worktrees that actually exist on disk are shown.
 
 Options:
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
@@ -138,7 +142,17 @@ export async function executeClean(args: string[]): Promise<void> {
     output.info(`Checking for safe worktrees to clean...`);
   }
 
-  // Get all worktrees
+  // Prune stale worktree metadata before listing
+  // This ensures we only see worktrees that actually exist on disk
+  try {
+    await pruneWorktrees(true); // silent = true
+  } catch (error) {
+    // Don't fail the entire command if prune fails
+    // Just continue with whatever worktrees git can list
+    console.error(output.dim("Warning: Failed to prune worktree metadata"));
+  }
+
+  // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
   // Filter out bare repository

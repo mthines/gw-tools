@@ -170,6 +170,12 @@ gw add feature-auth --no-cd
 # Create worktree with new branch
 gw add feature-payments -b feature-payments
 
+# Create from a different branch instead of defaultBranch
+gw add feature-payment-v2 --from develop
+
+# Create child feature branch from parent feature branch
+gw add feature-auth-social --from feature-auth
+
 # Create from specific start point
 gw add hotfix-security -b hotfix-security main
 
@@ -671,6 +677,60 @@ gw cd feature-dashboard
 ```
 
 **Benefit:** No need to stash, commit WIP, or lose context.
+
+### Hierarchical Feature Development
+
+**Scenario:** Building related features where one depends on another
+
+Sometimes you need to create a child feature branch that builds on top of a parent feature branch that hasn't been merged yet. The `--from` option makes this workflow seamless:
+
+```bash
+# Create parent feature from main
+gw add feature-auth
+
+# Work on authentication foundation
+gw cd feature-auth
+# ... implement basic auth ...
+git add .
+git commit -m "feat: add basic authentication"
+
+# Create child feature from the auth branch (not main)
+gw add feature-auth-social --from feature-auth
+
+# Navigate to child feature
+gw cd feature-auth-social
+
+# This branch now has all the auth foundation from feature-auth
+# Build social login on top of basic auth
+# ... implement OAuth integration ...
+git add .
+git commit -m "feat: add social login with OAuth"
+```
+
+**Benefits:**
+- Child feature automatically includes all parent feature commits
+- Can develop related features in parallel without waiting for merges
+- Tracks `origin/feature-auth-social` for push (not `origin/feature-auth`)
+- Clear dependency relationship between features
+
+**Common patterns:**
+```bash
+# Experimental variations of a feature
+gw add feature-dashboard-v2 --from feature-dashboard
+
+# Staged rollouts with different implementations
+gw add feature-api-graphql --from feature-api
+gw add feature-api-rest --from feature-api
+
+# Environment-specific feature branches
+gw add feature-payment-staging --from develop
+gw add feature-payment-prod --from main
+```
+
+**When to merge:**
+1. Merge parent feature first: `feature-auth` → `main`
+2. Rebase or merge child onto updated main
+3. Merge child feature: `feature-auth-social` → `main`
 
 ### Code Review Workflows
 

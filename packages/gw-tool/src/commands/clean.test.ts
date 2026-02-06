@@ -440,3 +440,100 @@ Deno.test("clean command - never removes bare repository", async () => {
     await repo.cleanup();
   }
 });
+
+Deno.test("clean command - automatically prunes phantom worktrees before listing", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Create a worktree
+    const worktreePath = await repo.createWorktree("feat-branch");
+
+    // Manually delete the worktree directory (simulating rm -rf)
+    await Deno.remove(worktreePath, { recursive: true });
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Run clean with dry-run
+      const { exitCode } = await withMockedExit(() => executeClean(["--dry-run"]));
+
+      assertEquals(exitCode, 0, "Should exit successfully");
+
+      // Verify phantom worktree was pruned
+      const cmd = new Deno.Command("git", {
+        args: ["-C", repo.path, "worktree", "list"],
+        stdout: "piped",
+      });
+      const { stdout } = await cmd.output();
+      const output = new TextDecoder().decode(stdout);
+
+      assertEquals(
+        output.includes("feat-branch"),
+        false,
+        "Phantom worktree should be pruned"
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("clean command - continues successfully even if prune fails", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    await repo.createWorktree("feat-branch");
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(() => executeClean(["--dry-run"]));
+      assertEquals(exitCode, 0, "Should succeed even if prune has issues");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test("clean command - prunes multiple phantom worktrees at once", async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    // Create and delete multiple worktrees
+    const wt1 = await repo.createWorktree("feat-1");
+    const wt2 = await repo.createWorktree("feat-2");
+    const wt3 = await repo.createWorktree("feat-3");
+
+    await Deno.remove(wt1, { recursive: true });
+    await Deno.remove(wt2, { recursive: true });
+    await Deno.remove(wt3, { recursive: true });
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(() => executeClean([]));
+      assertEquals(exitCode, 0);
+
+      // Verify all are pruned
+      const worktrees = await repo.listWorktrees();
+      const hasAnyPhantom = worktrees.some(wt =>
+        wt.includes("feat-1") || wt.includes("feat-2") || wt.includes("feat-3")
+      );
+      assertEquals(hasAnyPhantom, false, "All phantoms should be pruned");
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
