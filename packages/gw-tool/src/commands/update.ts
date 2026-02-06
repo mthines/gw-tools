@@ -88,29 +88,27 @@ export async function executeUpdate(args: string[]): Promise<void> {
       console.log(output.dim(`${output.checkmark()} Fetched successfully`));
     } else {
       // Check if failure is due to no remote (acceptable) or fetch failure (problematic)
-      const noRemoteConfigured = message && message.includes("No remote");
+      const noRemoteConfigured = message && message.includes('No remote');
 
       // When --from is explicitly specified and remote exists but fetch failed
       if (parsed.branch && !noRemoteConfigured) {
-        console.log("");
-        output.error(message || "Could not fetch from remote");
-        console.log("");
-        console.log(
-          `Cannot update from ${output.bold(targetBranch)} because the remote fetch failed.`
-        );
-        console.log("This would use a potentially outdated local branch.");
-        console.log("");
-        console.log("Possible causes:");
-        console.log("  • Network connectivity issues");
+        console.log('');
+        output.error(message || 'Could not fetch from remote');
+        console.log('');
+        console.log(`Cannot update from ${output.bold(targetBranch)} because the remote fetch failed.`);
+        console.log('This would use a potentially outdated local branch.');
+        console.log('');
+        console.log('Possible causes:');
+        console.log('  • Network connectivity issues');
         console.log(`  • Branch ${output.bold(targetBranch)} doesn't exist on remote`);
-        console.log("  • Authentication issues");
-        console.log("");
-        console.log("Options:");
+        console.log('  • Authentication issues');
+        console.log('');
+        console.log('Options:');
         console.log(`  1. Check your network connection and try again`);
         console.log(`  2. Verify the branch exists: ${output.bold(`git ls-remote ${parsed.remote} ${targetBranch}`)}`);
         console.log(`  3. Use a different source branch: ${output.bold(`gw update --from <branch>`)}`);
         console.log(`  4. Update from default branch: ${output.bold(`gw update`)}`);
-        console.log("");
+        console.log('');
         Deno.exit(1);
       }
 

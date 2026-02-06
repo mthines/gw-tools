@@ -124,6 +124,7 @@ Creating main worktree...
 ```
 
 Clone mode automatically:
+
 - Clones the repository with `--no-checkout`
 - Creates a `gw_root` branch
 - Auto-detects the default branch from the remote

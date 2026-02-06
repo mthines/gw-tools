@@ -683,9 +683,12 @@ Deno.test('init command - clone mode with configuration options', async () => {
       await withMockedPrompt(['n'], async () => {
         await executeInit([
           cloneUrl,
-          '--auto-copy-files', '.env,secrets/',
-          '--post-add', 'echo "installed"',
-          '--clean-threshold', '14',
+          '--auto-copy-files',
+          '.env,secrets/',
+          '--post-add',
+          'echo "installed"',
+          '--clean-threshold',
+          '14',
         ]);
       });
 
@@ -780,15 +783,15 @@ Deno.test('init command - interactive mode prompts for URL when not in git repo'
         const expectedRepoName = `${sourceDirName}.git`;
 
         const responses = [
-          cloneUrl,           // Repository URL prompt
-          '',                 // default branch (accept default "main")
-          'n',                // want auto-copy files
-          'n',                // want pre-add hooks
-          'n',                // want post-add hooks
-          '',                 // clean threshold (accept default 7)
-          'n',                // enable auto-clean
-          '',                 // update strategy (accept default "merge")
-          'n',                // shell integration install prompt (decline)
+          cloneUrl, // Repository URL prompt
+          '', // default branch (accept default "main")
+          'n', // want auto-copy files
+          'n', // want pre-add hooks
+          'n', // want post-add hooks
+          '', // clean threshold (accept default 7)
+          'n', // enable auto-clean
+          '', // update strategy (accept default "merge")
+          'n', // shell integration install prompt (decline)
         ];
 
         await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -819,7 +822,7 @@ Deno.test('init command - interactive mode exits when URL prompt is skipped', as
     try {
       // Mock prompt to skip URL (press Enter with empty input)
       const responses = [
-        '',  // Empty URL (skip)
+        '', // Empty URL (skip)
       ];
 
       const { exitCode } = await withMockedExit(() =>

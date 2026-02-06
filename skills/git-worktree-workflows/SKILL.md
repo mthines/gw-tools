@@ -120,6 +120,7 @@ Creating main worktree...
 ```
 
 This automatically:
+
 1. Clones the repository with `--no-checkout`
 2. Creates a `gw_root` branch for the bare repository
 3. Auto-detects the default branch (main, master, etc.)
@@ -722,6 +723,7 @@ git commit -m "feat: add social login with OAuth"
 ```
 
 **Benefits:**
+
 - Child feature automatically includes all parent feature commits
 - Can develop related features in parallel without waiting for merges
 - Tracks `origin/feature-auth-social` for push (not `origin/feature-auth`)
@@ -729,6 +731,7 @@ git commit -m "feat: add social login with OAuth"
 - Ensures latest code from the source branch by requiring successful remote fetch
 
 **Common patterns:**
+
 ```bash
 # Experimental variations of a feature
 gw add feature-dashboard-v2 --from feature-dashboard
@@ -743,6 +746,7 @@ gw add feature-payment-prod --from main
 ```
 
 **When to merge:**
+
 1. Merge parent feature first: `feature-auth` → `main`
 2. Rebase or merge child onto updated main
 3. Merge child feature: `feature-auth-social` → `main`
@@ -881,11 +885,11 @@ gw clean --force
 
 **Cleanup strategies:**
 
-| Command | When to Use |
-|---------|-------------|
-| `gw clean` | Clean up all finished work regardless of age |
-| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees) |
-| `gw prune --clean` | Aggressive cleanup with default branch protection |
+| Command                              | When to Use                                       |
+| ------------------------------------ | ------------------------------------------------- |
+| `gw clean`                           | Clean up all finished work regardless of age      |
+| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)          |
+| `gw prune --clean`                   | Aggressive cleanup with default branch protection |
 
 **Configure the threshold:**
 

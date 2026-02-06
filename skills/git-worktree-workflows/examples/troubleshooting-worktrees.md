@@ -104,11 +104,13 @@ $ gw add feature-x-copy --force -b feature-x-copy feature-x
 ```
 
 **When to use `--force`:**
+
 - Testing the same code in multiple environments (different Node versions)
 - Read-only operations (you won't commit in both)
 - You know what you're doing
 
 **When NOT to use `--force`:**
+
 - You plan to commit in both worktrees
 - You don't understand why Git prevented it
 
@@ -139,6 +141,7 @@ Git doesn't allow both refs/heads/test and refs/heads/test/bar
 Git stores branches as files in the `.git/refs/heads/` directory. Since you can't have both a file named `test` and a directory named `test/` in the same location, Git prevents creating branches with hierarchical naming conflicts.
 
 This limitation exists because:
+
 - Branch `test` would be stored as `.git/refs/heads/test` (a file)
 - Branch `test/foo` would be stored as `.git/refs/heads/test/foo` (requiring `test` to be a directory)
 
@@ -202,16 +205,19 @@ $ gw add test/foo
 **Use consistent branch naming conventions:**
 
 Good naming patterns that avoid conflicts:
+
 - `feature/user-auth`, `feature/user-profile` ✅
 - `fix/bug-123`, `fix/bug-456` ✅
 - `test-migration`, `test-performance` ✅
 
 Problematic naming patterns:
+
 - Having both `test` and `test/integration` ❌
 - Having both `feature` and `feature/new` ❌
 - Having both `api` and `api/v2` ❌
 
 **Team guidelines:**
+
 ```bash
 # Good: All features use the same level
 feature/auth
@@ -853,4 +859,4 @@ $ gw remove risky-worktree --force
 
 ---
 
-*Part of the [git-worktree-workflows skill](../README.md)*
+_Part of the [git-worktree-workflows skill](../README.md)_

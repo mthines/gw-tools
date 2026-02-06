@@ -3,8 +3,8 @@
  * Reads the current .gw/config.json and generates an equivalent gw init command
  */
 
-import { loadConfig } from "../lib/config.ts";
-import * as output from "../lib/output.ts";
+import { loadConfig } from '../lib/config.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Show help for the show-init command
@@ -92,7 +92,7 @@ function generateInitCommand(
   },
   remoteUrl?: string | null
 ): string {
-  const parts: string[] = ["gw init"];
+  const parts: string[] = ['gw init'];
 
   // Add remote URL if available (takes precedence over --root)
   if (remoteUrl) {
@@ -103,13 +103,13 @@ function generateInitCommand(
   }
 
   // Add default branch if not "main"
-  if (config.defaultBranch && config.defaultBranch !== "main") {
+  if (config.defaultBranch && config.defaultBranch !== 'main') {
     parts.push(`--default-source ${escapeShellArg(config.defaultBranch)}`);
   }
 
   // Add auto-copy files
   if (config.autoCopyFiles && config.autoCopyFiles.length > 0) {
-    const filesArg = config.autoCopyFiles.join(",");
+    const filesArg = config.autoCopyFiles.join(',');
     parts.push(`--auto-copy-files ${escapeShellArg(filesArg)}`);
   }
 
@@ -134,10 +134,10 @@ function generateInitCommand(
 
   // Add auto-clean if enabled
   if (config.autoClean) {
-    parts.push("--auto-clean");
+    parts.push('--auto-clean');
   }
 
-  return parts.join(" ");
+  return parts.join(' ');
 }
 
 /**
@@ -147,7 +147,7 @@ function generateInitCommand(
  */
 export async function executeShowInit(args: string[]): Promise<void> {
   // Check for help
-  if (args.includes("--help") || args.includes("-h")) {
+  if (args.includes('--help') || args.includes('-h')) {
     showShowInitHelp();
     Deno.exit(0);
   }

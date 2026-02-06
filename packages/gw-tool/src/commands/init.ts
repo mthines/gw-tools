@@ -123,7 +123,12 @@ function parseInitArgs(args: string[]): ParsedInitArgs {
   if (positionalArgs.length > 0) {
     const first = positionalArgs[0];
     // Check if looks like git URL (including file:// for testing)
-    if (first.startsWith('git@') || first.startsWith('https://') || first.startsWith('http://') || first.startsWith('file://')) {
+    if (
+      first.startsWith('git@') ||
+      first.startsWith('https://') ||
+      first.startsWith('http://') ||
+      first.startsWith('file://')
+    ) {
       result.repoUrl = first;
       if (positionalArgs.length > 1) {
         result.targetDirectory = positionalArgs[1];
@@ -623,9 +628,8 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       const response = prompt('Would you like to install shell integration now? (Y/n): ');
 
       // Default to yes if user just presses Enter
-      const shouldInstall = !response || response.trim() === '' ||
-                           response.toLowerCase() === 'y' ||
-                           response.toLowerCase() === 'yes';
+      const shouldInstall =
+        !response || response.trim() === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes';
 
       if (shouldInstall && response?.toLowerCase() !== 'n' && response?.toLowerCase() !== 'no') {
         console.log();

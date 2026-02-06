@@ -294,6 +294,7 @@ This command wraps `git worktree add` and optionally copies files to the new wor
 When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
 
 **Network Failure Handling:**
+
 - When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're working with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
 - When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
 
@@ -715,6 +716,7 @@ gw root
 ### init
 
 Initialize gw configuration for a git repository. This command can:
+
 1. **Clone mode**: Clone a repository and set it up with gw configuration
 2. **Existing repo mode**: Initialize gw in an existing repository
 
@@ -757,6 +759,7 @@ gw init git@github.com:user/repo.git --auto-copy-files .env,secrets/
 ```
 
 When cloning, `gw init` will:
+
 1. Clone the repository with `--no-checkout`
 2. Create a `gw_root` branch
 3. Auto-detect the default branch from the remote
@@ -765,6 +768,7 @@ When cloning, `gw init` will:
 6. Automatically navigate to the repository directory (requires shell integration)
 
 **Notes**:
+
 - Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions
 - After cloning, you'll be automatically navigated to the repository root where you can run gw commands
 - Shell integration must be installed (`gw install-shell`) for automatic navigation to work
@@ -1027,12 +1031,12 @@ The clean command:
 
 **Behavior Modes:**
 
-| Command | Age Check | Safety Checks | Use Case |
-|---------|-----------|---------------|----------|
-| `gw clean` | No (all worktrees) | Yes (unless --force) | Clean up all finished work |
-| `gw clean --use-autoclean-threshold` | Yes (7+ days) | Yes (unless --force) | Clean up old, stale worktrees |
-| `gw clean --force` | No (all worktrees) | No | Force removal of all worktrees |
-| `gw prune --clean` | No (all worktrees) | No | Git's native cleanup (no gw safety) |
+| Command                              | Age Check          | Safety Checks        | Use Case                            |
+| ------------------------------------ | ------------------ | -------------------- | ----------------------------------- |
+| `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
+| `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
+| `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
+| `gw prune --clean`                   | No (all worktrees) | No                   | Git's native cleanup (no gw safety) |
 
 **Safety Features:**
 
