@@ -39,17 +39,18 @@ gw init --auto-copy-files .env,.env.local,.vercel/,public/uploads/
 
 Or manually edit `.gw/config.json`:
 
-```json
+```jsonc
 {
   "root": "/Users/you/projects/nextjs-app.git",
   "defaultBranch": "main",
+  // Environment and deployment configs
   "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development",
-    ".vercel/",
-    "public/uploads/"
-  ]
+    ".env",              // Base environment variables
+    ".env.local",        // Local overrides
+    ".env.development",  // Dev environment
+    ".vercel/",          // Vercel deployment config
+    "public/uploads/",   // User-generated content
+  ],
 }
 ```
 
@@ -119,13 +120,13 @@ public/uploads/
 
 ### Pattern 1: Development vs Production Environments
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
     ".env.local",
-    ".env.development"
-  ]
+    ".env.development",  // trailing comma OK
+  ],
 }
 ```
 
@@ -133,26 +134,26 @@ Don't copy `.env.production` - that should only exist in CI/CD.
 
 ### Pattern 2: With Prisma
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
     ".env.local",
-    "prisma/.env"
-  ]
+    "prisma/.env",  // Prisma database config
+  ],
 }
 ```
 
 ### Pattern 3: With Multiple Vercel Projects (Monorepo)
 
-```json
+```jsonc
 {
   "autoCopyFiles": [
     ".env",
-    "apps/web/.vercel/",
-    "apps/admin/.vercel/",
-    "packages/ui/.env"
-  ]
+    "apps/web/.vercel/",     // Web app deployment config
+    "apps/admin/.vercel/",   // Admin app deployment config
+    "packages/ui/.env",      // UI package variables
+  ],
 }
 ```
 

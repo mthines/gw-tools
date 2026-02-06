@@ -270,10 +270,11 @@ gw init --root /path/to/your/repo.git
 
 ### Example Configuration
 
-```json
+```jsonc
 {
   "root": "/Users/username/Workspace/my-project.git",
   "defaultBranch": "main",
+  // Auto-copy these files when creating new worktrees
   "autoCopyFiles": [".env", "components/agents/.env", "components/ui/.vercel/"],
   "hooks": {
     "add": {
@@ -284,9 +285,11 @@ gw init --root /path/to/your/repo.git
   "cleanThreshold": 7,
   "autoClean": true,
   "updateStrategy": "merge",
-  "lastAutoCleanTime": 1706371200000
+  "lastAutoCleanTime": 1706371200000,  // trailing comma OK
 }
 ```
+
+**JSONC Support**: Configuration files support JSONC (JSON with Comments) with `//` single-line comments, `/* */` multi-line comments, and trailing commas. When you run `gw init`, it generates a comprehensive self-documenting template with inline documentation for all available options. Active features are shown uncommented while inactive features appear as commented examples with usage patterns.
 
 **More Examples**: See the [examples/](./examples/) directory for configuration templates for various project types (Next.js, Node.js API, monorepos, CI/CD, etc.).
 
