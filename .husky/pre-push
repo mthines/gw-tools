@@ -1,0 +1,34 @@
+#!/usr/bin/env sh
+
+# Check if there are any formatting issues
+echo "🔍 Checking code formatting..."
+npx nx format:check --base=HEAD~1 || FORMAT_CHECK_EXIT_CODE=$?
+
+# If format check failed (exit code != 0), auto-fix and commit
+if [ -n "$FORMAT_CHECK_EXIT_CODE" ] && [ "$FORMAT_CHECK_EXIT_CODE" -ne 0 ]; then
+  echo "⚠️  Formatting issues detected. Auto-fixing..."
+
+  # Format all changed files
+  npx nx format:write || true
+
+  # Format gw-tool package with Deno (if it exists)
+  if [ -d "packages/gw-tool" ]; then
+    echo "🦕 Running Deno formatter for gw-tool..."
+    (cd packages/gw-tool && deno fmt) 2>/dev/null || true
+  fi
+
+  # Check if there are any changes after formatting
+  if [ -n "$(git status --porcelain)" ]; then
+    echo "📝 Creating auto-format commit..."
+    git add -A
+    git commit -m "chore: auto format fix" --no-verify
+    echo "✅ Formatting fixes committed!"
+  else
+    echo "✨ No changes needed after format check."
+  fi
+else
+  echo "✅ Code formatting looks good!"
+fi
+
+# Continue with push
+exit 0

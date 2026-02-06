@@ -48,6 +48,47 @@ gw remove feature-auth
 
 ---
 
+## 🔧 Git Hooks
+
+This repository uses a pre-push hook for automatic code formatting.
+
+### How It Works
+
+- Commits are fast and immediate (no formatting checks)
+- When you push, the pre-push hook checks formatting
+- If issues are found, they're auto-fixed and a "chore: auto format fix" commit is created
+- The push continues with your commits + the auto-format commit
+
+### Formatting Tools
+
+- **Prettier**: Formats all workspace files (TypeScript, JavaScript, JSON, etc.)
+- **Deno fmt**: Formats the gw-tool package specifically
+
+### Bypassing the Hook
+
+If you need to push without formatting (not recommended):
+
+```bash
+git push --no-verify
+```
+
+### Manual Formatting
+
+To manually check and fix formatting:
+
+```bash
+# Check formatting
+nx format:check
+
+# Fix formatting
+nx format:write
+
+# Format gw-tool with Deno
+cd packages/gw-tool && deno fmt
+```
+
+---
+
 ## 🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)
 
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
