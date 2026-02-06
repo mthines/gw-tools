@@ -10,6 +10,40 @@ import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
+import { executeInstallShell } from './install-shell.ts';
+
+/**
+ * Check if shell integration is installed
+ */
+async function isShellIntegrationInstalled(): Promise<boolean> {
+  const shell = Deno.env.get('SHELL') || '';
+  const shellName = shell.split('/').pop() || '';
+  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+
+  if (!home) {
+    return false;
+  }
+
+  let scriptFile: string;
+
+  if (shellName === 'zsh') {
+    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
+  } else if (shellName === 'bash') {
+    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
+  } else if (shellName === 'fish') {
+    scriptFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
+  } else {
+    // Unsupported shell
+    return false;
+  }
+
+  try {
+    await Deno.stat(scriptFile);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 /**
  * Parsed init command arguments
@@ -88,8 +122,8 @@ function parseInitArgs(args: string[]): ParsedInitArgs {
   // Parse positional args
   if (positionalArgs.length > 0) {
     const first = positionalArgs[0];
-    // Check if looks like git URL
-    if (first.startsWith('git@') || first.startsWith('https://') || first.startsWith('http://')) {
+    // Check if looks like git URL (including file:// for testing)
+    if (first.startsWith('git@') || first.startsWith('https://') || first.startsWith('http://') || first.startsWith('file://')) {
       result.repoUrl = first;
       if (positionalArgs.length > 1) {
         result.targetDirectory = positionalArgs[1];
@@ -563,6 +597,42 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     console.log(`  Config: ${output.path(join(fullPath, '.gw/config.json'))}`);
     console.log(`  Default worktree: ${output.bold(defaultBranch)}`);
     console.log();
+
+    // Check for shell integration and offer to install if not present
+    const hasShellIntegration = await isShellIntegrationInstalled();
+    if (!hasShellIntegration) {
+      console.log(output.dim('Shell integration is not installed.'));
+      console.log(output.dim('This enables automatic navigation with "gw cd" and "gw init".\n'));
+
+      const response = prompt('Would you like to install shell integration now? (y/n): ');
+
+      if (response?.toLowerCase() === 'y' || response?.toLowerCase() === 'yes') {
+        console.log();
+        try {
+          await executeInstallShell(['--quiet']);
+          output.success('Shell integration installed!');
+          console.log('\nRestart your terminal or run:');
+          const shell = Deno.env.get('SHELL') || '';
+          const shellName = shell.split('/').pop() || '';
+          if (shellName === 'zsh') {
+            console.log(`  ${output.bold('source ~/.zshrc')}`);
+          } else if (shellName === 'bash') {
+            console.log(`  ${output.bold('source ~/.bashrc')}`);
+          } else if (shellName === 'fish') {
+            console.log('  Fish will automatically load the function.');
+          }
+          console.log();
+        } catch (error) {
+          // executeInstallShell exits on error, but just in case
+          output.warning('Shell integration installation failed.');
+          console.log(`You can install it manually later with: ${output.bold('gw install-shell')}\n`);
+        }
+      } else {
+        console.log();
+        console.log(output.dim('You can install it later with: ') + output.bold('gw install-shell'));
+        console.log();
+      }
+    }
 
     // Navigate to the repository directory
     await signalNavigation(fullPath);
