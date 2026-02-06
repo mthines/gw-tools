@@ -451,6 +451,34 @@ export async function executeAdd(args: string[]): Promise<void> {
             `Creating from ${output.bold(startPoint)} (latest from remote)`,
           );
         } else {
+          // Check if failure is due to no remote (acceptable) or fetch failure (problematic)
+          const noRemoteConfigured = message && message.includes("No remote");
+
+          // When --from is explicitly specified and remote exists but fetch failed
+          if (parsed.fromBranch && !noRemoteConfigured) {
+            console.log("");
+            output.error(message || "Could not fetch from remote");
+            console.log("");
+            console.log(
+              `Cannot create branch from ${output.bold(sourceBranch)} because the remote fetch failed.`
+            );
+            console.log("This would use a potentially outdated local branch.");
+            console.log("");
+            console.log("Possible causes:");
+            console.log("  • Network connectivity issues");
+            console.log(`  • Branch ${output.bold(sourceBranch)} doesn't exist on remote`);
+            console.log("  • Authentication issues");
+            console.log("");
+            console.log("Options:");
+            console.log(`  1. Check your network connection and try again`);
+            console.log(`  2. Verify the branch exists: ${output.bold(`git ls-remote origin ${sourceBranch}`)}`);
+            console.log(`  3. Use a different source branch: ${output.bold(`gw add ${parsed.worktreeName} --from <branch>`)}`);
+            console.log(`  4. Create without --from to use default branch: ${output.bold(`gw add ${parsed.worktreeName}`)}`);
+            console.log("");
+            Deno.exit(1);
+          }
+
+          // For default branch (no --from specified) or no remote configured, warn but allow local fallback
           output.warning(message || "Could not fetch from remote");
           console.log(
             `Creating from ${output.bold(startPoint)} (local branch)`,
