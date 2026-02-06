@@ -1,6 +1,6 @@
 {
   "name": "@gw-tools/gw",
-  "version": "0.19.0",
+  "version": "0.20.0",
   "description": "A command-line tool for managing git worktrees - copy files between worktrees with ease",
   "keywords": [
     "git",
