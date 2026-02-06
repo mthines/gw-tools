@@ -45,7 +45,7 @@ Based on the changes, determine which documentation files need updates:
 2. **Skills Documentation**:
    - `skills/config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
-   - `skills/multi-worktree-dev/SKILL.md` - Multi-worktree development features
+   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features
 
 3. **CLI Help Text**: Update `showXxxHelp()` functions in command files
 

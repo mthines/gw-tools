@@ -1852,10 +1852,6 @@ This autonomous workflow enables complete feature delivery through:
 - [Complete Workflow Example](./examples/autonomous-workflow-complete.md)
 - [Error Recovery Scenarios](./examples/error-recovery-scenarios.md)
 - [Iterative Refinement Example](./examples/iterative-refinement.md)
-- [Dependency Management Strategies](./examples/dependency-strategies.md)
-- [Database Isolation Patterns](./examples/database-isolation-patterns.md)
-- [Parallel Testing Automation](./examples/parallel-testing-automation.md)
-- [Port Management Conventions](./examples/port-management-conventions.md)
 
 ---
 

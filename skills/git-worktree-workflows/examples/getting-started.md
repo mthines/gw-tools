@@ -204,7 +204,7 @@ Now that you understand the basics:
 
 1. **Configure auto-copy** - Set up automatic file copying with the [config-management skill](../../config-management/)
 2. **Learn parallel development** - See [Parallel Development Example](./parallel-development.md)
-3. **Explore advanced workflows** - Check out the [multi-worktree-dev skill](../../multi-worktree-dev/)
+3. **Explore autonomous workflows** - Check out the [autonomous-workflow skill](../../autonomous-workflow/)
 
 ---
 

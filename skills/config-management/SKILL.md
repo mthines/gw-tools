@@ -1111,7 +1111,7 @@ You now understand:
 
 1. Configure gw for your project using a [template](./templates/)
 2. Read project-specific examples ([Next.js](./examples/nextjs-setup.md), [Monorepo](./examples/monorepo-setup.md))
-3. Explore [advanced parallel development](../multi-worktree-dev/)
+3. Explore [autonomous workflow](../autonomous-workflow/)
 
 ---
 

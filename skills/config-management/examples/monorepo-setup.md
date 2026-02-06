@@ -305,7 +305,7 @@ pnpm add react@19
 ## Next Steps
 
 - See [Troubleshooting Guide](./troubleshooting-config.md) for more issues
-- Check [multi-worktree-dev skill](../../multi-worktree-dev/) for advanced parallel development
+- Check [autonomous-workflow skill](../../autonomous-workflow/) for autonomous feature development
 
 ---
 

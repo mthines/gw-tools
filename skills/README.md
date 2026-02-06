@@ -46,7 +46,7 @@ npx skills add mthines/gw-tools/config-management
 
 ---
 
-### 3. [Autonomous Workflow](./multi-worktree-dev/)
+### 3. [Autonomous Workflow](./autonomous-workflow/)
 
 Execute complete feature development cycles autonomously using isolated worktrees.
 

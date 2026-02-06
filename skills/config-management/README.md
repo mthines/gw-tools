@@ -92,7 +92,7 @@ vim .gw/config.json
 ## 🔗 Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Learn worktree basics first
-- [multi-worktree-dev](../multi-worktree-dev/) - Advanced parallel development patterns
+- [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
 
 ## 💬 Common Configuration Patterns
 

@@ -271,7 +271,7 @@ While worktrees are great for local testing, use CI/CD (GitHub Actions, etc.) fo
 
 ## Next Steps
 
-- Explore [Multi-Worktree Development](../../multi-worktree-dev/) for advanced parallel workflows
+- Explore [Autonomous Workflow](../../autonomous-workflow/) for end-to-end feature development
 - Set up [Configuration Management](../../config-management/) for environment-specific configs
 
 ---

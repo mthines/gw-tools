@@ -1412,7 +1412,7 @@ You now understand:
 
 1. Try creating your first worktree with `gw add`
 2. Set up auto-copy configuration (see [config-management skill](../config-management/))
-3. Explore advanced parallel workflows (see [multi-worktree-dev skill](../multi-worktree-dev/))
+3. Explore autonomous workflows (see [autonomous-workflow skill](../autonomous-workflow/))
 
 ### Additional Resources
 

@@ -61,7 +61,7 @@ After installing this skill, try asking your AI agent:
 ## 🔗 Related Skills
 
 - [config-management](../config-management/) - Configure auto-copy behavior for your project type
-- [multi-worktree-dev](../multi-worktree-dev/) - Advanced techniques for parallel development
+- [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
 
 ## 💬 Example Use Cases
 

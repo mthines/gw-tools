@@ -231,14 +231,14 @@ PORT=3002
 
 **Problem:** Both features modify the same database
 
-**Solution:** Use separate databases or Docker containers (see [multi-worktree-dev skill](../../multi-worktree-dev/))
+**Solution:** Use separate databases or Docker containers (see [autonomous-workflow examples](../../autonomous-workflow/examples/))
 
 ---
 
 ## Next Steps
 
 - Learn about [Testing Multiple Versions](./testing-multiple-versions.md)
-- Explore [Advanced Multi-Worktree Development](../../multi-worktree-dev/)
+- Explore [Autonomous Workflow](../../autonomous-workflow/)
 - Set up [Configuration Management](../../config-management/)
 
 ---
