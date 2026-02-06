@@ -746,8 +746,12 @@ When cloning, `gw init` will:
 3. Auto-detect the default branch from the remote
 4. Create gw configuration
 5. Create the default branch worktree
+6. Automatically navigate to the repository directory (requires shell integration)
 
-**Note**: Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions.
+**Notes**:
+- Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions
+- After cloning, you'll be automatically navigated to the repository root where you can run gw commands
+- Shell integration must be installed (`gw install-shell`) for automatic navigation to work
 
 #### Existing Repository Examples
 

@@ -126,6 +126,7 @@ This automatically:
 4. Creates the gw configuration at `.gw/config.json`
 5. Creates your first worktree for the default branch
 6. Names the repository directory with `.git` suffix (bare repo convention)
+7. Navigates you to the repository directory (with shell integration)
 
 **Clone with configuration:**
 

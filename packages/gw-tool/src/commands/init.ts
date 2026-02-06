@@ -382,7 +382,7 @@ Hook Variables:
     {branch}        - The branch name
 
 Clone Examples:
-  # Clone and initialize (auto-derive directory name)
+  # Clone and initialize (creates repo.git/ directory, auto-navigates to it)
   gw init git@github.com:user/repo.git
 
   # Clone into specific directory
@@ -391,8 +391,11 @@ Clone Examples:
   # Clone with HTTPS
   gw init https://github.com/user/repo.git
 
-  # Clone and configure interactively
+  # Clone and configure interactively (prompts for URL if not in git repo)
   gw init git@github.com:user/repo.git --interactive
+
+  Note: Cloned repos use .git suffix (bare repo convention) and automatically
+        navigate to the repo directory (requires shell integration)
 
 Existing Repository Examples:
   # Interactive mode - prompts for all configuration options

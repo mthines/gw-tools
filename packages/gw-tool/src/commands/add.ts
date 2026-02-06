@@ -88,6 +88,7 @@ function parseAddArgs(args: string[]): {
   files: string[];
   gitArgs: string[];
   noNavigate: boolean;
+  fromBranch?: string;
 } {
   const result = {
     help: false,
@@ -95,6 +96,7 @@ function parseAddArgs(args: string[]): {
     files: [] as string[],
     gitArgs: [] as string[],
     noNavigate: false,
+    fromBranch: undefined as string | undefined,
   };
 
   // Check for help flag

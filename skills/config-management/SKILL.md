@@ -130,6 +130,7 @@ Clone mode automatically:
 - Creates gw configuration
 - Creates the default branch worktree
 - Uses `.git` suffix for the repository directory (bare repo convention)
+- Navigates you to the repository directory (with shell integration)
 
 You can also specify a custom directory and configuration:
 
