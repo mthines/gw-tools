@@ -1063,7 +1063,7 @@ The clean command:
 - By default, only removes worktrees with NO uncommitted changes
 - By default, only removes worktrees with NO unpushed commits
 - Always prompts for confirmation before deletion
-- Main/bare repository worktrees are never removed
+- Main/bare repository, default branch, and gw_root worktrees are never removed
 - Use `--force` to bypass safety checks (use with caution)
 
 **Configuration:**
@@ -1117,6 +1117,13 @@ gw remove <worktree>
 gw rm <worktree>
 ```
 
+**Protected Branches:**
+
+The following worktrees are protected and cannot be removed:
+- Default branch (configured in `.gw/config.json`, typically `main`)
+- `gw_root` (bare repository root branch)
+- Bare repository worktree
+
 **Examples:**
 
 ```bash
@@ -1167,6 +1174,7 @@ gw prune [options]
 **Safety Features** (in clean mode):
 
 - Default branch is protected (configured in `.gw/config.json`)
+- gw_root branch is protected (bare repository root)
 - Current worktree cannot be removed
 - Bare repository is never removed
 - Confirmation prompt before removal (defaults to yes, just press Enter to confirm)

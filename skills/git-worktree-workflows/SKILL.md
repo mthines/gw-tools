@@ -925,6 +925,11 @@ gw remove feature-completed
 gw remove feature-abandoned --force
 ```
 
+**Protected branches** (cannot be removed):
+- Default branch (typically `main`, configured in `.gw/config.json`)
+- `gw_root` branch (bare repository root)
+- Bare repository worktree
+
 **What happens:**
 
 - Working directory is deleted
@@ -960,7 +965,10 @@ gw clean --force
   - NO uncommitted changes
   - NO unpushed commits
 - Always prompts for confirmation before deletion
-- Never removes bare/main repository worktrees
+- **Protected worktrees** (never removed):
+  - Bare repository worktree
+  - Default branch (configured in `.gw/config.json`, typically `main`)
+  - `gw_root` branch (bare repository root)
 
 **Cleanup strategies:**
 
