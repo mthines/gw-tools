@@ -435,6 +435,131 @@ Deno.test('clean command - never removes bare repository', async () => {
   }
 });
 
+Deno.test('clean command - never removes default branch worktree', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a custom branch to use as the default
+    await repo.createWorktree('develop');
+
+    const config = {
+      root: repo.path,
+      defaultBranch: 'develop',
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    // Create another worktree that should be removed
+    const featWorktree = await repo.createWorktree('feat-branch');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Confirm removal with "yes"
+      await withMockedStdin('yes', async () => {
+        await executeClean([]);
+      });
+
+      const worktrees = await repo.listWorktrees();
+
+      // Develop worktree should still exist (protected as default branch)
+      const hasDevelop = worktrees.some((wt) => wt.includes('develop'));
+      assertEquals(hasDevelop, true, 'Default branch worktree should never be removed');
+
+      // Feature worktree should be removed
+      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
+      assertEquals(hasFeat, false, 'Non-default branch worktree should be removed');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('clean command - protects default branch even with --force', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a custom branch to use as the default
+    await repo.createWorktree('develop');
+
+    const config = {
+      root: repo.path,
+      defaultBranch: 'develop',
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    // Create another worktree with uncommitted changes
+    const featWorktree = await repo.createWorktree('feat-branch');
+    await repo.createFile('feat-branch/uncommitted.txt', 'content');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Confirm removal with "yes" and use --force
+      await withMockedStdin('yes', async () => {
+        await executeClean(['--force']);
+      });
+
+      const worktrees = await repo.listWorktrees();
+
+      // Develop worktree should still exist (protected as default branch)
+      const hasDevelop = worktrees.some((wt) => wt.includes('develop'));
+      assertEquals(hasDevelop, true, 'Default branch should be protected even with --force');
+
+      // Feature worktree should be removed (force bypasses uncommitted changes check)
+      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
+      assertEquals(hasFeat, false, 'Non-default branch should be removed with --force');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('clean command - uses main as default when defaultBranch not configured', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create worktrees for both main and a feature branch
+    await repo.createWorktree('staging');
+    const featWorktree = await repo.createWorktree('feat-branch');
+
+    // Config without defaultBranch set (should default to 'main')
+    const config = {
+      root: repo.path,
+      cleanThreshold: 7,
+    };
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Confirm removal with "yes"
+      await withMockedStdin('yes', async () => {
+        await executeClean([]);
+      });
+
+      const worktrees = await repo.listWorktrees();
+
+      // Staging worktree should be removed (not the default)
+      const hasStaging = worktrees.some((wt) => wt.includes('staging'));
+      assertEquals(hasStaging, false, 'Staging worktree should be removed');
+
+      // Feature worktree should be removed
+      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
+      assertEquals(hasFeat, false, 'Feature branch worktree should be removed');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('clean command - automatically prunes phantom worktrees before listing', async () => {
   const repo = new GitTestRepo();
   try {
