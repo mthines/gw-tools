@@ -47,22 +47,23 @@ A command-line tool for managing git worktrees, built with Deno.
       - [How It Works](#how-it-works-3)
     - [init](#init)
       - [Options](#options-3)
-      - [Examples](#examples-6)
+      - [Clone Examples](#clone-examples)
+      - [Existing Repository Examples](#existing-repository-examples)
       - [Hook Variables](#hook-variables)
       - [Auto-Cleanup Configuration](#auto-cleanup-configuration)
       - [When to Use](#when-to-use)
     - [show-init](#show-init)
       - [Options](#options-4)
-      - [Examples](#examples-7)
+      - [Examples](#examples-6)
       - [Output Example](#output-example)
       - [When to Use](#when-to-use-1)
     - [sync](#sync)
       - [Arguments](#arguments-3)
       - [Options](#options-5)
-      - [Examples](#examples-8)
+      - [Examples](#examples-7)
     - [clean](#clean)
       - [Options](#options-6)
-      - [Examples](#examples-9)
+      - [Examples](#examples-8)
       - [How It Works](#how-it-works-4)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
@@ -91,35 +92,39 @@ A command-line tool for managing git worktrees, built with Deno.
 
 ## Quick Start
 
+**New Project Setup:**
+
 ```bash
 # Install (Homebrew on macOS)
-brew install mthines/gw-tools/gw && gw install-shell
+brew install mthines/gw-tools/gw
 
 # Or install via npm
-npm install -g @gw-tools/gw && gw install-shell
+npm install -g @gw-tools/gw
 
 # Or install via Linux package manager
-yay -S gw-tools && gw install-shell
+yay -S gw-tools
 
-# Create a new worktree and copy files
-gw add feat-new-feature .env secrets/
+# Clone a repository with gw setup (interactive prompts for configuration)
+gw init git@github.com:user/repo.git --interactive
+# Automatically navigates to the new repository
 
-# Navigate to your new worktree
-gw cd feat-new-feature
-
-# Or checkout an existing branch (navigates if already checked out elsewhere)
-gw checkout main
+# Create worktrees and start working
+gw add feat/new-feature
+gw cd feat/new-feature
 ```
 
-**Or with auto-copy (one-time setup):**
+**Existing Repository Setup:**
 
 ```bash
-# Configure auto-copy files once per repository
-gw init --root $(gw root) --auto-copy-files .env,secrets/
+# Configure gw in an existing repository
+gw init --auto-copy-files .env,secrets/ --post-add "pnpm install"
 
-# Now just create worktrees - files are copied automatically
-gw add feat-another-feature
-gw cd feat-another-feature
+# Create worktrees - files are copied automatically, dependencies installed
+gw add feat/another-feature
+gw cd feat/another-feature
+
+# Checkout an existing branch (navigates if already checked out elsewhere)
+gw checkout main
 ```
 
 ## Initial Setup: Secrets in the Default Branch
@@ -129,27 +134,45 @@ gw cd feat-another-feature
 ### First-Time Setup Flow
 
 ```bash
-# 1. Set up your bare repository structure
-git clone --bare https://github.com/user/repo.git repo.git
-cd repo.git
+# 1. Clone and set up repository with gw (interactive mode)
+gw init git@github.com:user/repo.git --interactive
 
-# 2. Create the main worktree (your defaultBranch)
-git worktree add main main
+# During interactive setup:
+# - Configure auto-copy files: .env,secrets/
+# - Set up post-add hooks if needed (e.g., pnpm install)
+# - Configure other options as desired
 
-# 3. Set up secrets in the main worktree FIRST
+# This automatically:
+# - Clones the repository
+# - Creates the gw_root branch
+# - Creates the main worktree
+# - Navigates you to the repository root
+
+# 2. Set up secrets in the main worktree FIRST
 cd main
 cp .env.example .env           # Create your environment file
 # Edit .env with your actual secrets, API keys, etc.
 mkdir -p secrets/
 # Add any other secret files your project needs
 
-# 4. Initialize gw with auto-copy configuration
-gw init --auto-copy-files .env,secrets/
-
-# 5. Now create feature worktrees - files are copied automatically from main
+# 3. Now create feature worktrees - files are copied automatically from main
 cd ..
-gw add feat-new-feature
-# .env and secrets/ are automatically copied from main to feat-new-feature
+gw add feat/new-feature
+# .env and secrets/ are automatically copied from main to feat/new-feature
+```
+
+**Alternative: Non-Interactive Setup**
+
+```bash
+# Clone with configuration in one command
+gw init git@github.com:user/repo.git \
+  --auto-copy-files .env,secrets/ \
+  --post-add "pnpm install"
+
+# Then set up secrets in main worktree as shown above
+cd repo.git/main
+cp .env.example .env
+# Edit .env with your secrets
 ```
 
 ### Why This Matters
@@ -173,11 +196,13 @@ gw sync feat-existing-branch .env
 
 ## Features
 
+- **Easy setup**: Clone and configure repositories in one command with `gw init <url> --interactive`
 - **Quick navigation**: Navigate to worktrees instantly with smart partial matching (`gw cd feat` finds `feat-branch`)
 - **Smart checkout**: `gw checkout` handles worktree-specific scenarios, navigating to branches checked out elsewhere instead of showing errors
+- **Auto-copy files**: Configure once, automatically copy `.env`, secrets, and config files to every new worktree
+- **Hooks support**: Run commands before/after worktree creation (install dependencies, validate setup, etc.)
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
 - **Automatic shell integration**: Shell function installs automatically on npm install for seamless `gw cd` navigation
-- **Multi-command architecture**: Extensible framework for adding new worktree management commands
 - **Auto-configured per repository**: Each repository gets its own local config file, automatically created on first use
 - **Dry-run mode**: Preview what would be copied without making changes
 - **Standalone binary**: Compiles to a single executable with no runtime dependencies
@@ -463,7 +488,7 @@ gw cd <worktree>
 # Navigate to a worktree by exact name
 gw cd feat-branch
 
-# Navigate using partial match (finds "feat-new-feature")
+# Navigate using partial match (finds "feat/new-feature")
 gw cd feat
 
 # If multiple matches found, shows list with helpful error:
@@ -735,9 +760,11 @@ gw root
 
 ### init
 
-Initialize gw configuration for a git repository. This command can:
+Initialize gw configuration for a git repository. This is the recommended way to get started with gw.
 
-1. **Clone mode**: Clone a repository and set it up with gw configuration
+**Two modes:**
+
+1. **Clone mode**: Clone a repository and automatically set it up with gw (recommended for new projects)
 2. **Existing repo mode**: Initialize gw in an existing repository
 
 ```bash
@@ -759,38 +786,52 @@ gw init [repository-url] [directory] [options]
 
 #### Clone Examples
 
-Clone a repository and automatically set up gw configuration:
+Clone a repository and automatically set it up with gw configuration. **This is the recommended way to start using gw with a new project.**
 
 ```bash
-# Clone and initialize (auto-derive directory name from repository)
-gw init git@github.com:user/repo.git
+# Clone and configure interactively (RECOMMENDED - prompts for all options)
+gw init git@github.com:user/repo.git --interactive
+# Prompts for:
+# - Auto-copy files (.env, secrets/, etc.)
+# - Pre-add and post-add hooks (pnpm install, etc.)
+# - Clean threshold
+# - Update strategy
+# Then automatically creates the main worktree and navigates to the repo
+
+# Clone with configuration in one command (non-interactive)
+gw init git@github.com:user/repo.git \
+  --auto-copy-files .env,secrets/ \
+  --post-add "pnpm install"
 
 # Clone into specific directory
-gw init git@github.com:user/repo.git my-project
+gw init git@github.com:user/repo.git my-project --interactive
 
 # Clone with HTTPS URL
-gw init https://github.com/user/repo.git
+gw init https://github.com/user/repo.git --interactive
 
-# Clone and configure interactively
-gw init git@github.com:user/repo.git --interactive
-
-# Clone with auto-copy files configured
-gw init git@github.com:user/repo.git --auto-copy-files .env,secrets/
+# Simple clone with defaults (no configuration yet)
+gw init git@github.com:user/repo.git
 ```
 
-When cloning, `gw init` will:
+**What happens when you clone with `gw init`:**
 
-1. Clone the repository with `--no-checkout`
-2. Create a `gw_root` branch
-3. Auto-detect the default branch from the remote
-4. Create gw configuration
-5. Create the default branch worktree
-6. Automatically navigate to the repository directory (requires shell integration)
+1. Clones the repository with `--no-checkout`
+2. Creates a `gw_root` branch
+3. Auto-detects the default branch from the remote
+4. Creates gw configuration (`.gw/config.json`)
+5. Creates the default branch worktree (e.g., `main`)
+6. Automatically navigates to the repository directory (requires shell integration)
 
-**Notes**:
+**Benefits:**
+
+- No need to manually run `git clone --bare` or `git worktree add`
+- Configuration is set up immediately
+- Ready to use `gw add` right away
+
+**Notes:**
 
 - Cloned repositories use the `.git` suffix (e.g., `repo.git`) following bare repository conventions
-- After cloning, you'll be automatically navigated to the repository root where you can run gw commands
+- After cloning, you're automatically in the repository root and can run `cd main` or `gw cd main`
 - Shell integration must be installed (`gw install-shell`) for automatic navigation to work
 
 #### Existing Repository Examples
@@ -1120,6 +1161,7 @@ gw rm <worktree>
 **Protected Branches:**
 
 The following worktrees are protected and cannot be removed:
+
 - Default branch (configured in `.gw/config.json`, typically `main`)
 - `gw_root` (bare repository root branch)
 - Bare repository worktree
@@ -1254,24 +1296,51 @@ The tool automatically detects which git repository you're working in and create
 
 ### Typical Workflow
 
+**Starting with a new repository:**
+
 ```bash
-# One-time setup: Configure auto-copy files
-gw init --root $(gw root) --auto-copy-files .env,components/agents/.env,components/ui/.vercel/
+# Clone and set up with gw (one command!)
+gw init git@github.com:user/repo.git --interactive
+# Configure auto-copy files, hooks, etc. during the interactive prompts
+# Automatically navigates to the repo and creates main worktree
 
-# From within any worktree of your repository
-# Create a new worktree with auto-copy
-gw add feat-new-feature
+# Set up secrets in main worktree
+cd main
+cp .env.example .env
+# Edit .env with your secrets
 
-# Navigate to your new worktree
-gw cd feat-new-feature
+# Create feature worktrees - files copied automatically
+cd ..
+gw add feat/new-feature
+# Already in feat/new-feature worktree!
 
 # Keep your feature branch updated with latest changes from main
 gw update
 
+# Navigate between worktrees easily
+gw cd main
+gw cd feat/new-feature
+```
+
+**Working with an existing repository:**
+
+```bash
+# One-time setup: Configure auto-copy files and hooks
+gw init --auto-copy-files .env,components/agents/.env,components/ui/.vercel/ \
+  --post-add "pnpm install"
+
+# From within any worktree of your repository
+# Create a new worktree with auto-copy and hooks
+gw add feat/new-feature
+# Automatically: copies files, runs hooks, navigates to new worktree
+
 # Navigate to main worktree (if you need to work on it)
 gw checkout main  # or gw co main
 
-# Alternative: Create worktree and copy specific files
+# Keep your feature branch updated
+gw update
+
+# Alternative: Create worktree and copy specific files (overrides config)
 gw add feat-bugfix .env custom-config.json
 
 # Alternative: Use the manual sync command
