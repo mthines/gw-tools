@@ -87,6 +87,41 @@ function hasBranchFlag(gitArgs: string[]): boolean {
 }
 
 /**
+ * Show ref conflict error and exit
+ */
+function showRefConflictError(
+  branchName: string,
+  conflictingBranch: string | undefined,
+  worktreeName: string,
+  hasExplicitFlag: boolean,
+): never {
+  console.log("");
+  output.error(
+    `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`,
+  );
+  console.log("");
+  console.log(
+    `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`,
+  );
+  console.log("");
+  console.log("Options:");
+
+  const suggestion = hasExplicitFlag
+    ? `gw checkout ${worktreeName} -b ${branchName}-new`
+    : `gw checkout ${worktreeName}-new`;
+
+  console.log(`  1. Use a different name: ${output.bold(suggestion)}`);
+  console.log(
+    `  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`,
+  );
+  console.log(
+    `  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`,
+  );
+  console.log("");
+  Deno.exit(1);
+}
+
+/**
  * Parse checkout command arguments
  */
 function parseCheckoutArgs(args: string[]): {
@@ -277,14 +312,13 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
   }
 
-  // Smart navigation: Check if branch already exists and is checked out in another worktree
-  // Only do this check if the branch exists locally (not for new branches)
-  if (await branchExistsLocally(branchName)) {
-    const worktrees = await listWorktrees();
-    const worktreeWithBranch = worktrees.find((wt) => wt.branch === branchName);
+  const worktrees = await listWorktrees();
 
+  // Check 1: Is this branch already checked out in a worktree?
+  if (await branchExistsLocally(branchName)) {
+    const worktreeWithBranch = worktrees.find((wt) => wt.branch === branchName);
     if (worktreeWithBranch) {
-      // Branch is already checked out in another worktree - navigate there directly
+      // Branch is already checked out - navigate there directly
       // (can't checkout the same branch in two worktrees)
       console.log("");
       output.info(
@@ -296,6 +330,35 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
       await signalNavigation(worktreeWithBranch.path);
       Deno.exit(0);
+    }
+  }
+
+  // Check 2: Does this path already exist as a worktree?
+  // Navigate automatically
+  const worktreeAtPath = worktrees.find((wt) => wt.path === worktreePath);
+  if (worktreeAtPath) {
+    console.log("");
+    output.info(`Worktree already exists at:`);
+    console.log(`  ${output.path(worktreePath)}`);
+    console.log("");
+    console.log("Navigating there...");
+
+    await signalNavigation(worktreePath);
+    Deno.exit(0);
+  }
+
+  // Check 3: Path exists but is NOT a valid worktree (leftover directory)
+  try {
+    await Deno.stat(worktreePath);
+    // Path exists but isn't a worktree - error out
+    console.log("");
+    output.error(
+      `Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`,
+    );
+    Deno.exit(1);
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
     }
   }
 
@@ -326,101 +389,29 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
   }
 
-  // Check for leftover directory that isn't a valid worktree
-  try {
-    const stat = await Deno.stat(worktreePath);
-    if (stat.isDirectory || stat.isFile) {
-      // Path exists - check if it's a valid worktree
-      const worktrees = await listWorktrees();
-      const isValidWorktree = worktrees.some((wt) => wt.path === worktreePath);
-
-      if (isValidWorktree) {
-        // Worktree already exists - prompt user to navigate to it
-        console.log("");
-        output.info(
-          `Worktree ${output.bold(parsed.worktreeName)} already exists at:`,
-        );
-        console.log(`  ${output.path(worktreePath)}`);
-        console.log("");
-
-        const response = prompt(`Navigate to it? [Y/n]:`);
-
-        if (response === null || response === "" || response.toLowerCase() === "y" || response.toLowerCase() === "yes") {
-          // Signal navigation to shell integration via temp file
-          // This avoids buffering output
-          await signalNavigation(worktreePath);
-          Deno.exit(0);
-        } else {
-          console.log("");
-          output.info("Worktree creation cancelled.");
-          Deno.exit(0);
-        }
-      } else {
-        // Path exists but isn't a valid worktree - automatically clean up
-        console.log("");
-        output.error(
-          `Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`,
-        );
-        Deno.exit(1);
-      }
-    }
-  } catch (error) {
-    // Path doesn't exist - this is fine, we'll create it
-    if (!(error instanceof Deno.errors.NotFound)) {
-      // Some other error occurred
-      throw error;
-    }
-  }
-
-  // Check if branch exists and auto-create if needed
+  // === Check if we're creating a new branch and handle ref conflicts ===
   const gitArgs = [...parsed.gitArgs];
   let startPoint: string | undefined;
 
-  // If user specified -b or -B, check for ref conflicts since they're creating a new branch
-  if (hasBranchFlag(gitArgs)) {
+  // Determine if we're creating a new branch
+  const explicitCreate = hasBranchFlag(gitArgs);
+  const branchExistsAlready = await branchExists(parsed.worktreeName);
+  const willCreateBranch = explicitCreate || !branchExistsAlready;
+
+  if (willCreateBranch) {
+    // Check for ref conflicts (single check for both paths)
     const { hasConflict, conflictingBranch } = await hasRefConflict(branchName);
     if (hasConflict) {
-      console.log("");
-      output.error(
-        `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
+      showRefConflictError(
+        branchName,
+        conflictingBranch,
+        parsed.worktreeName,
+        explicitCreate,
       );
-      console.log("");
-      console.log(
-        `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
-      );
-      console.log("");
-      console.log("Options:");
-      console.log(`  1. Use a different name: ${output.bold(`gw checkout ${parsed.worktreeName} -b ${branchName}-new`)}`);
-      console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
-      console.log(`  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`);
-      console.log("");
-      Deno.exit(1);
     }
-  } else {
-    // No -b flag, check if branch exists
-    const exists = await branchExists(parsed.worktreeName);
-    if (!exists) {
-      // Branch doesn't exist, we'll auto-create it - check for ref conflicts
-      const { hasConflict, conflictingBranch } = await hasRefConflict(parsed.worktreeName);
-      if (hasConflict) {
-        console.log("");
-        output.error(
-          `Cannot create branch ${output.bold(parsed.worktreeName)} because it conflicts with existing branch ${output.bold(conflictingBranch || "")}`
-        );
-        console.log("");
-        console.log(
-          `Git doesn't allow both ${output.dim(`refs/heads/${parsed.worktreeName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
-        );
-        console.log("");
-        console.log("Options:");
-        console.log(`  1. Use a different name: ${output.bold(`gw checkout ${parsed.worktreeName}-new`)}`);
-        console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
-        console.log(`  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`);
-        console.log("");
-        Deno.exit(1);
-      }
 
-      // Auto-create branch from defaultBranch
+    // If auto-creating (no explicit -b flag), fetch and prepare
+    if (!explicitCreate) {
       const defaultBranch = config.defaultBranch || "main";
 
       console.log(
@@ -453,11 +444,11 @@ export async function executeCheckout(args: string[]): Promise<void> {
         output.error(`Failed to prepare branch: ${errorMsg}`);
         Deno.exit(1);
       }
-    } else {
-      // Branch exists - explicitly pass it to git to avoid git inferring from path basename
-      // Without this, "gw checkout test/foo" would make git use basename "foo" as branch name
-      startPoint = parsed.worktreeName;
     }
+  } else {
+    // Branch exists - explicitly pass it to git to avoid git inferring from path basename
+    // Without this, "gw checkout test/foo" would make git use basename "foo" as branch name
+    startPoint = parsed.worktreeName;
   }
 
   // Build git worktree add command

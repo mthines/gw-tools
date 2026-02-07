@@ -162,11 +162,22 @@ Deno.test("checkout command - handles leftover directories gracefully", async ()
 
     const cwd = new TempCwd(repo.path);
     try {
-      // Should automatically clean up leftover and create worktree
-      await executeCheckout(["feat-branch"]);
+      // Should error out when path exists but isn't a valid worktree
+      const { exitCode } = await withMockedExit(() => executeCheckout(["feat-branch"]));
 
-      // Verify worktree was created successfully
-      await assertWorktreeExists(repo.path, "feat-branch");
+      // Should have exited with error code
+      assertEquals(exitCode, 1, "Should exit with code 1 for leftover directory");
+
+      // Worktree should NOT have been created
+      try {
+        await assertWorktreeExists(repo.path, "feat-branch");
+        throw new Error("Expected worktree to not exist");
+      } catch (e) {
+        // Expected - worktree doesn't exist
+        if (e instanceof Error && e.message === "Expected worktree to not exist") {
+          throw e;
+        }
+      }
     } finally {
       cwd.restore();
     }
