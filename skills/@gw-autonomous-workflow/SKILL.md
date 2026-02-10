@@ -27,7 +27,7 @@ Execute complete feature development cycles autonomously—from task intake thro
 1. [Workflow Overview](#1-workflow-overview)
 2. [Phase 0: Validation & Questions (MANDATORY)](#2-phase-0-validation--questions-mandatory)
 3. [Phase 1: Task Intake & Planning](#3-phase-1-task-intake--planning)
-4. [Phase 2: Worktree Setup](#4-phase-2-worktree-setup)
+4. [Phase 2: Worktree Setup (🔴 MANDATORY)](#4-phase-2-worktree-setup--mandatory)
 5. [Phase 3: Implementation](#5-phase-3-implementation)
 6. [Phase 4: Testing & Iteration](#6-phase-4-testing--iteration)
 7. [Phase 5: Documentation](#7-phase-5-documentation)
@@ -39,6 +39,26 @@ Execute complete feature development cycles autonomously—from task intake thro
 
 ---
 
+## 🔴 CRITICAL REQUIREMENT: Isolated Worktree Development
+
+**This skill ALWAYS creates a new isolated worktree before any code changes.**
+
+Every autonomous execution follows this sequence:
+1. Phase 0: Ask questions and validate requirements
+2. Phase 1: Analyze codebase and plan approach
+3. **Phase 2: Create new worktree with `gw add <branch-name>` (MANDATORY)**
+4. Phase 3-7: All work happens in the isolated worktree
+
+**Never skip worktree creation unless user explicitly requests it.**
+
+This ensures:
+- User's current work remains untouched
+- True parallel development capability
+- Clean rollback if needed
+- Best practices with gw-tools
+
+---
+
 ## 1. Workflow Overview
 
 ### What This Skill Does
@@ -47,34 +67,53 @@ This skill enables **autonomous execution** of complete feature development work
 
 1. **Validates requirements** through upfront questions
 2. **Plans implementation** based on deep codebase analysis
-3. **Creates isolated environment** using `gw add`
-4. **Implements features** following existing patterns
+3. **🔴 ALWAYS creates isolated worktree** using `gw add` (MANDATORY - see note below)
+4. **Implements features** following existing patterns in the isolated worktree
 5. **Tests iteratively** until all tests pass
 6. **Documents changes** in relevant files
 7. **Delivers draft PR** ready for human review
+
+### 🔴 CRITICAL: Worktree Isolation is MANDATORY
+
+**This workflow ALWAYS creates a new isolated worktree using `gw add` before any code changes.**
+
+- ✅ **ALWAYS create worktree** - Every autonomous execution starts with `gw add <branch-name>`
+- ✅ **Work in isolation** - All implementation happens in the new worktree, never in user's current directory
+- ✅ **Parallel development** - User can continue working while you implement in isolated environment
+- ❌ **NEVER skip worktree creation** - This is non-negotiable unless user explicitly says "work in current directory"
+
+**Why this matters:**
+- Preserves user's working state
+- Enables true parallel development
+- Provides clean rollback (just remove worktree)
+- Follows gw-tools best practices
 
 ### When to Use This Skill
 
 **Use this skill when:**
 - User requests autonomous feature implementation
 - Task has clear deliverable (feature, fix, refactor)
-- Project uses gw-tools for worktree management
+- Project uses gw-tools for worktree management (REQUIRED)
 - Tests are available to validate correctness
+- User wants work done in parallel/isolation from their current work
 
 **Do NOT use this skill when:**
 - User wants to code alongside you (use interactive mode)
 - Task is exploratory research without clear deliverable
-- Project doesn't use Git or worktrees
+- Project doesn't use Git or gw-tools
 - Changes affect critical production code without tests
+- User explicitly says "work in current directory" or "don't create worktree"
 
 ### Expected Outcomes
 
 **Successful execution produces:**
-- ✅ Isolated worktree with complete implementation
+- ✅ New isolated worktree created with `gw add <branch-name>`
+- ✅ Complete implementation in isolated worktree (user's work untouched)
 - ✅ All tests passing (existing + new if applicable)
 - ✅ Documentation updated (README, CHANGELOG, API docs)
 - ✅ Draft PR with comprehensive description
 - ✅ Clean commit history with conventional commits
+- ✅ User can continue working in parallel during implementation
 
 **If unable to complete:**
 - ⚠️ Partial implementation committed with notes
@@ -86,9 +125,13 @@ This skill enables **autonomous execution** of complete feature development work
 This workflow operates with **high autonomy after validation**:
 
 1. **Phase 0 (Validation)**: Interactive - ask clarifying questions
-2. **Phase 1-6**: Autonomous - execute with continuous self-validation
-3. **Decision points**: Use decision framework, iterate until correct
-4. **Blockers**: Report and deliver partial work with notes
+2. **Phase 1 (Planning)**: Autonomous - analyze and plan approach
+3. **Phase 2 (Worktree Setup)**: 🔴 MANDATORY - Always create isolated worktree with `gw add`
+4. **Phase 3-6**: Autonomous - execute with continuous self-validation in isolated worktree
+5. **Decision points**: Use decision framework, iterate until correct
+6. **Blockers**: Report and deliver partial work with notes
+
+**Non-negotiable requirement:** Phase 2 (worktree creation) must ALWAYS happen before Phase 3 (implementation).
 
 ---
 
@@ -358,14 +401,31 @@ Proceeding with Phase 2: Worktree setup."
 
 ---
 
-## 4. Phase 2: Worktree Setup
+## 4. Phase 2: Worktree Setup (🔴 MANDATORY - ALWAYS DO THIS FIRST)
+
+### 🔴 CRITICAL: This Phase is MANDATORY Before Any Code Changes
+
+**ALWAYS create a new isolated worktree before implementation. NEVER work in the user's current directory.**
+
+This phase MUST be completed before Phase 3 (Implementation). Working in an isolated worktree:
+- ✅ Preserves user's working state
+- ✅ Enables parallel development
+- ✅ Provides clean rollback capability
+- ✅ Follows gw-tools best practices
+
+**Only skip worktree creation if:**
+- User explicitly says "work in current directory"
+- User explicitly says "don't create worktree"
+
+**In all other cases: CREATE THE WORKTREE FIRST.**
 
 ### Objectives
 
 1. **Generate appropriate branch name** - Follow conventions
-2. **Create isolated worktree** - Execute `gw add`
-3. **Install dependencies** - Ensure environment ready
-4. **Validate setup** - Confirm everything works
+2. **🔴 Create isolated worktree** - Execute `gw add <branch-name>` (MANDATORY)
+3. **Navigate to worktree** - Execute `gw cd <branch-name>`
+4. **Install dependencies** - Ensure environment ready
+5. **Validate setup** - Confirm everything works
 
 ### Procedure
 
@@ -464,20 +524,33 @@ gw sync <branch-name>
 ### Setup Checklist
 
 - [ ] Branch name follows conventions
-- [ ] Worktree created successfully
-- [ ] Dependencies installed
+- [ ] 🔴 Worktree created successfully with `gw add`
+- [ ] 🔴 Currently in new worktree directory (verified with `pwd`)
+- [ ] Dependencies installed in worktree
 - [ ] Environment builds/compiles
 - [ ] Configuration files synced
-- [ ] Ready to implement
+- [ ] Ready to implement in isolated environment
+
+**If any of the 🔴 marked items are not checked, STOP and complete Phase 2 before proceeding.**
 
 ---
 
 ## 5. Phase 3: Implementation
 
+### ⚠️ PREREQUISITE: Phase 2 (Worktree Setup) MUST be complete
+
+**Before starting this phase, verify:**
+- ✅ New worktree created with `gw add <branch-name>`
+- ✅ Currently in the new worktree directory (check with `pwd`)
+- ✅ Dependencies installed in worktree
+- ✅ Environment validated (builds/compiles)
+
+**If worktree not created yet, STOP and return to Phase 2.**
+
 ### Objectives
 
 1. **Follow existing patterns** - Consistency with codebase
-2. **Implement incrementally** - Small, focused changes
+2. **Implement incrementally** - Small, focused changes in isolated worktree
 3. **Validate continuously** - Self-check at every step
 4. **Commit logically** - Meaningful commit messages
 
@@ -1012,13 +1085,23 @@ git commit -m "docs(feature): document dark mode toggle
 
 ## 8. Phase 6: PR Creation & Delivery
 
+### 🎯 Final Deliverable: DRAFT Pull Request
+
+**This phase creates a DRAFT PR, not a ready-to-merge PR.**
+
+The PR will be marked as draft to signal:
+- ✅ Implementation complete and tested
+- ✅ Ready for human review
+- ⚠️ Requires user approval before marking "ready for review"
+- ⚠️ Not auto-mergeable - user must review and approve
+
 ### Objectives
 
 1. **Pre-flight validation** - Ensure everything ready
 2. **Push to remote** - Backup work
 3. **Generate PR description** - Comprehensive summary
-4. **Create draft PR** - Ready for human review
-5. **Report completion** - Deliver results to user
+4. **🔴 Create DRAFT PR** - Always use `--draft` flag (MANDATORY)
+5. **Report completion** - Deliver results to user with PR link
 
 ### Procedure
 
@@ -1678,11 +1761,14 @@ Config error?
 - ✓ Plan matches requirements
 - ✓ Approach is sound
 
-**Phase 2:** Environment validated before coding
-- ✓ Worktree created
-- ✓ Dependencies installed
+**Phase 2:** 🔴 Worktree creation validated before ANY coding (MANDATORY)
+- ✓ New worktree created with `gw add <branch-name>`
+- ✓ Currently in worktree directory (verified with `pwd`)
+- ✓ Dependencies installed in worktree
+- ✓ Environment builds/compiles
 
-**Phase 3:** Code validated during implementation
+**Phase 3:** Code validated during implementation (ONLY in worktree)
+- ✓ Working in isolated worktree, not user's directory
 - ✓ Builds after each file
 - ✓ Self-review before commit
 
@@ -1799,6 +1885,16 @@ Should I proceed with [recommended option] or would you prefer [alternative]?"
 - [ ] No blocking errors
 - [ ] Clear to proceed
 
+**🔴 Before Phase 3 (Implementation) - CRITICAL GATE:**
+
+- [ ] Phase 2 complete - worktree created with `gw add`
+- [ ] Currently in worktree directory (run `pwd` to verify)
+- [ ] NOT in user's original directory
+- [ ] Dependencies installed in worktree
+- [ ] Build system works in worktree
+
+**If this gate fails, you MUST return to Phase 2 and create the worktree.**
+
 **Before final delivery (Phase 6):**
 
 - [ ] ALL tests passing
@@ -1823,15 +1919,17 @@ This autonomous workflow enables complete feature delivery through:
 
 1. **✅ Phase 0 (MANDATORY):** Validate understanding upfront through questions
 2. **📋 Phase 1:** Deep analysis and planning
-3. **🔧 Phase 2:** Isolated environment setup
-4. **💻 Phase 3:** Incremental implementation with continuous validation
+3. **🔧 Phase 2 (🔴 MANDATORY):** Create isolated worktree with `gw add` - ALWAYS DO THIS
+4. **💻 Phase 3:** Incremental implementation with continuous validation in isolated worktree
 5. **🧪 Phase 4:** Aggressive iteration until all tests pass
 6. **📚 Phase 5:** Clear, validated documentation
 7. **🚀 Phase 6:** Comprehensive PR delivery
 8. **🧹 Phase 7:** Safe cleanup when appropriate
 
 **Key principles:**
+- 🔴 **ALWAYS create isolated worktree first** (Phase 2 is mandatory)
 - Always ask clarifying questions first (Phase 0)
+- Work in isolation - never affect user's current directory
 - Validate continuously, not just at the end
 - Iterate until correct, no artificial limits
 - Self-review every change immediately
