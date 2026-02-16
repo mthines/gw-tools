@@ -25,6 +25,7 @@ tasks
 .settings/
 *.sublime-workspace
 
+# Testing
 coverage
 
 # IDE - VSCode
