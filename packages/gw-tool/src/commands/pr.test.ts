@@ -88,7 +88,7 @@ Deno.test('pr command - errors on invalid URL format', async () => {
 
 Deno.test('pr command - accepts --name flag with value', async () => {
   // This should fail at gh CLI check (exit 1) but not at parsing
-  const { exitCode, stdout } = await withMockedExit(
+  const { exitCode } = await withMockedExit(
     async () => {
       await executePr(['42', '--name', 'custom-name']);
     },
