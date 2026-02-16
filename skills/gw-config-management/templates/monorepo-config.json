@@ -1,0 +1,36 @@
+{
+  "// Comments": "Configuration for monorepo projects (pnpm/yarn/npm workspaces)",
+
+  "root": "/path/to/your/monorepo.git",
+
+  "defaultBranch": "main",
+
+  "autoCopyFiles": [
+    ".env",
+    "// .env": "Root-level environment variables shared across packages",
+
+    "packages/api/.env",
+    "// packages/api/.env": "API service-specific environment variables",
+
+    "packages/web/.env",
+    "// packages/web/.env": "Web app-specific environment variables",
+
+    "packages/mobile/.env",
+    "// packages/mobile/.env": "Mobile app-specific environment variables",
+
+    "packages/shared/config.local.json",
+    "// packages/shared/config.local.json": "Shared configuration across packages",
+
+    ".vercel/",
+    "// .vercel/": "Vercel monorepo deployment configuration",
+
+    "secrets/",
+    "// secrets/": "Shared secrets and credentials for all packages"
+  ],
+
+  "// IMPORTANT": [
+    "Update paths to match your package names",
+    "Never auto-copy: node_modules/, .pnpm-store/, dist/",
+    "Consider package-specific configs: packages/*/config.local.json"
+  ]
+}
