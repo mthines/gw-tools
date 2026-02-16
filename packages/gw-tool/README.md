@@ -36,36 +36,42 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-2)
       - [Examples](#examples-2)
       - [How It Works](#how-it-works-1)
-    - [update](#update)
+    - [pr](#pr)
+      - [Arguments](#arguments-3)
       - [Options](#options-1)
       - [Examples](#examples-3)
+      - [Requirements](#requirements)
       - [How It Works](#how-it-works-2)
-    - [install-shell](#install-shell)
+    - [update](#update)
       - [Options](#options-2)
       - [Examples](#examples-4)
-    - [root](#root)
-      - [Examples](#examples-5)
       - [How It Works](#how-it-works-3)
-    - [init](#init)
+    - [install-shell](#install-shell)
       - [Options](#options-3)
+      - [Examples](#examples-5)
+    - [root](#root)
+      - [Examples](#examples-6)
+      - [How It Works](#how-it-works-4)
+    - [init](#init)
+      - [Options](#options-4)
       - [Clone Examples](#clone-examples)
       - [Existing Repository Examples](#existing-repository-examples)
       - [Hook Variables](#hook-variables)
       - [Auto-Cleanup Configuration](#auto-cleanup-configuration)
       - [When to Use](#when-to-use)
     - [show-init](#show-init)
-      - [Options](#options-4)
-      - [Examples](#examples-6)
+      - [Options](#options-5)
+      - [Examples](#examples-7)
       - [Output Example](#output-example)
       - [When to Use](#when-to-use-1)
     - [sync](#sync)
-      - [Arguments](#arguments-3)
-      - [Options](#options-5)
-      - [Examples](#examples-7)
-    - [clean](#clean)
+      - [Arguments](#arguments-4)
       - [Options](#options-6)
       - [Examples](#examples-8)
-      - [How It Works](#how-it-works-4)
+    - [clean](#clean)
+      - [Options](#options-7)
+      - [Examples](#examples-9)
+      - [How It Works](#how-it-works-5)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -610,6 +616,75 @@ The `checkout` command intelligently handles four scenarios:
 - **Educational:** Prompts explain what's happening and suggest alternatives
 
 **Use case:** When updating your feature branch with latest changes, you might instinctively try `git checkout main && git pull`. With worktrees, this fails because main is checked out elsewhere. Instead, use `gw update` to update your current branch with main, or use `gw checkout main` to navigate to the main worktree.
+
+### pr
+
+Check out a pull request into a new worktree. This command fetches a PR's branch and creates a worktree for it in one step, making it easy to review, test, or contribute to pull requests.
+
+```bash
+gw pr <pr-number|pr-url>
+```
+
+When you want to review or test a pull request, you typically need to:
+
+1. Find the PR's branch name
+2. Fetch the branch (especially for forks)
+3. Create a worktree for it
+4. Navigate to the worktree
+
+The `gw pr` command does all of this in a single step.
+
+#### Arguments
+
+- `<pr-number|pr-url>`: PR number (e.g., 42) or GitHub PR URL
+
+#### Options
+
+- `--name <name>`: Custom name for the worktree directory (defaults to PR's branch name)
+- `--no-cd`: Don't navigate to the new worktree after creation
+- `-h, --help`: Show help message
+
+#### Examples
+
+```bash
+# Check out PR #42
+gw pr 42
+
+# Check out PR by URL
+gw pr https://github.com/user/repo/pull/42
+
+# Use custom worktree name
+gw pr 42 --name review-feature
+
+# Check out without auto-navigation
+gw pr 42 --no-cd
+```
+
+#### Requirements
+
+- **GitHub CLI (gh)** must be installed and authenticated
+- Install from: https://cli.github.com/
+- After installation, authenticate with: `gh auth login`
+
+#### How It Works
+
+1. **Resolves PR info**: Uses `gh pr view` to get the PR's branch name and fork information
+2. **Validates URL** (if provided): Ensures the PR URL matches the current repository
+3. **Checks for existing worktree**: If the branch is already checked out, offers to navigate there
+4. **Fetches PR branch**: Uses `git fetch origin pull/<number>/head:<branch>` pattern which works for both same-repo and fork PRs
+5. **Creates worktree**: Creates a new worktree with the PR's branch
+6. **Copies files**: Auto-copies files from `autoCopyFiles` config (same as `gw add`)
+7. **Runs hooks**: Executes pre-add and post-add hooks (same as `gw add`)
+8. **Navigates**: Automatically navigates to the new worktree
+
+**Fork Handling:**
+The command automatically handles PRs from forks by using GitHub's `pull/<number>/head` ref pattern. This fetches the PR branch without needing to add the fork as a remote.
+
+**Error Handling:**
+
+- If `gh` is not installed, shows installation instructions
+- If PR is not found, shows helpful error with authentication hint
+- If PR URL is for a different repository, shows clear error message
 
 ### update
 

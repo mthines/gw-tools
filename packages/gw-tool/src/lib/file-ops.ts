@@ -2,9 +2,9 @@
  * File and directory operations for copying secrets
  */
 
-import { dirname, join } from "$std/path";
-import { isDirectory, pathExists } from "./path-resolver.ts";
-import type { CopyResult } from "./types.ts";
+import { dirname, join } from '$std/path';
+import { isDirectory, pathExists } from './path-resolver.ts';
+import type { CopyResult } from './types.ts';
 
 /**
  * Recursively copy a directory and all its contents
@@ -12,10 +12,7 @@ import type { CopyResult } from "./types.ts";
  * @param sourcePath Source directory path
  * @param targetPath Target directory path
  */
-async function copyDirectory(
-  sourcePath: string,
-  targetPath: string,
-): Promise<void> {
+async function copyDirectory(sourcePath: string, targetPath: string): Promise<void> {
   // Ensure target directory exists
   await Deno.mkdir(targetPath, { recursive: true });
 
@@ -44,11 +41,7 @@ async function copyDirectory(
  * @param dryRun If true, don't actually copy, just report what would be copied
  * @returns Result of the copy operation
  */
-async function copyPath(
-  sourcePath: string,
-  targetPath: string,
-  dryRun: boolean = false,
-): Promise<CopyResult> {
+async function copyPath(sourcePath: string, targetPath: string, dryRun: boolean = false): Promise<CopyResult> {
   try {
     const isDir = await isDirectory(sourcePath);
 
@@ -56,9 +49,7 @@ async function copyPath(
       // In dry-run mode, just report what would be copied
       return {
         success: true,
-        message: isDir
-          ? `Would copy directory: ${sourcePath}`
-          : `Would copy file: ${sourcePath}`,
+        message: isDir ? `Would copy directory: ${sourcePath}` : `Would copy file: ${sourcePath}`,
         path: sourcePath,
       };
     }
@@ -106,7 +97,7 @@ export async function copyFiles(
   sourceRoot: string,
   targetRoot: string,
   relativePaths: string[],
-  dryRun: boolean = false,
+  dryRun: boolean = false
 ): Promise<CopyResult[]> {
   const results: CopyResult[] = [];
 
@@ -127,17 +118,12 @@ export async function copyFiles(
     // Attempt to copy (or simulate in dry-run mode)
     const result = await copyPath(sourcePath, targetPath, dryRun);
     // Modify message to show relative path instead of full path
-    const prefix = dryRun ? "Would copy" : "Copied";
+    const prefix = dryRun ? 'Would copy' : 'Copied';
     results.push({
       ...result,
       message: result.success
         ? `${prefix}: ${relativePath}`
-        : `Failed to copy ${relativePath}: ${
-          result.message
-            .split(": ")
-            .slice(1)
-            .join(": ")
-        }`,
+        : `Failed to copy ${relativePath}: ${result.message.split(': ').slice(1).join(': ')}`,
       path: relativePath,
     });
   }

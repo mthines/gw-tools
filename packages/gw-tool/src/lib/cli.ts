@@ -78,6 +78,7 @@ Commands:
   add              Create a new worktree with optional auto-copy
   cd               Navigate to a worktree directory
   checkout, co     Smart git checkout for worktree workflows
+  pr               Check out a pull request into a new worktree
   update           Update current worktree with latest changes from default branch
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository

@@ -5,6 +5,7 @@ Configure gw for monorepos using pnpm, Yarn, or npm workspaces.
 ## Scenario
 
 You have a monorepo with multiple packages:
+
 - Shared environment variables at the root
 - Package-specific configurations
 - Secrets that need to be available across all packages
@@ -122,13 +123,7 @@ npm install
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "apps/api/.env",
-    "apps/web/.env",
-    "libs/shared-config/.env"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "apps/api/.env", "apps/web/.env", "libs/shared-config/.env"]
 }
 ```
 
@@ -136,11 +131,7 @@ npm install
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    "apps/*/.env",
-    "packages/config/.env"
-  ]
+  "autoCopyFiles": [".env", "apps/*/.env", "packages/config/.env"]
 }
 ```
 
@@ -252,6 +243,7 @@ gw cd feat/your-feature
 pnpm install
 
 This automatically copies:
+
 - Root `.env` (shared config)
 - Package-specific `.env` files
 - Vercel deployment configs
@@ -270,7 +262,7 @@ This automatically copies:
 ```json
 {
   "autoCopyFiles": [
-    "packages/api/.env"  // Not "api/.env"
+    "packages/api/.env" // Not "api/.env"
   ]
 }
 ```
@@ -309,4 +301,4 @@ pnpm add react@19
 
 ---
 
-*Part of the [config-management skill](../README.md)*
+_Part of the [config-management skill](../README.md)_

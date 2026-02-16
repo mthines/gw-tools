@@ -1,6 +1,6 @@
 # gw-tools
 
-Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing.
+Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing, enhanced navigation, and autonomous workflows.
 
 ## 🛠️ gw CLI Tool
 

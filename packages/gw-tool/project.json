@@ -87,11 +87,7 @@
     "compile-all": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool/binaries"],
-      "inputs": [
-        "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/deno.json",
-        "{projectRoot}/deno.lock"
-      ],
+      "inputs": ["{projectRoot}/src/**/*.ts", "{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/binaries",

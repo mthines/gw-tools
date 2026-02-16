@@ -5,10 +5,7 @@
 import { parseCopyArgs, showCopyHelp } from '../lib/cli.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
-import {
-  resolveWorktreePath,
-  validatePathExists,
-} from '../lib/path-resolver.ts';
+import { resolveWorktreePath, validatePathExists } from '../lib/path-resolver.ts';
 import * as output from '../lib/output.ts';
 
 /**
@@ -58,9 +55,7 @@ export async function executeCopy(args: string[]): Promise<void> {
     await validatePathExists(sourcePath, 'directory');
   } catch (_error) {
     output.error(`Source worktree not found: ${output.path(sourcePath)}`);
-    console.error(
-      `Make sure '${output.bold(sourceWorktree)}' worktree exists in ${output.path(gitRoot)}\n`,
-    );
+    console.error(`Make sure '${output.bold(sourceWorktree)}' worktree exists in ${output.path(gitRoot)}\n`);
     Deno.exit(1);
   }
 
@@ -68,24 +63,15 @@ export async function executeCopy(args: string[]): Promise<void> {
     await validatePathExists(targetPath, 'directory');
   } catch (_error) {
     output.error(`Target worktree not found: ${output.path(targetPath)}`);
-    console.error(
-      `Make sure '${output.bold(parsed.target)}' worktree exists in ${output.path(gitRoot)}\n`,
-    );
+    console.error(`Make sure '${output.bold(parsed.target)}' worktree exists in ${output.path(gitRoot)}\n`);
     Deno.exit(1);
   }
 
   // 8. Copy files
   const dryRunNotice = parsed.dryRun ? output.dim(' (DRY RUN)') : '';
-  console.log(
-    `Copying from ${output.bold(sourceWorktree)} to ${output.bold(parsed.target)}${dryRunNotice}...\n`,
-  );
+  console.log(`Copying from ${output.bold(sourceWorktree)} to ${output.bold(parsed.target)}${dryRunNotice}...\n`);
 
-  const results = await copyFiles(
-    sourcePath,
-    targetPath,
-    filesToCopy,
-    parsed.dryRun,
-  );
+  const results = await copyFiles(sourcePath, targetPath, filesToCopy, parsed.dryRun);
 
   // 9. Display results
   for (const result of results) {
@@ -102,13 +88,9 @@ export async function executeCopy(args: string[]): Promise<void> {
   const fileWord = successCount === 1 ? 'file' : 'files';
 
   if (successCount === results.length) {
-    output.success(
-      `${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`,
-    );
+    output.success(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
   } else {
-    output.warning(
-      `${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`,
-    );
+    output.warning(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
     Deno.exit(1);
   }
 }

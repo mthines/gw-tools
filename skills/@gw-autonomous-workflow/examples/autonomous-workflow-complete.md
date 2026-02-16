@@ -7,6 +7,7 @@ This example demonstrates a full autonomous workflow execution from start to fin
 **User request:** "Implement dark mode toggle for the app"
 
 **Context:**
+
 - Next.js app with Tailwind CSS
 - No existing theme infrastructure
 - Component library uses standard React patterns
@@ -21,6 +22,7 @@ This example demonstrates a full autonomous workflow execution from start to fin
 Let me understand this requirement before implementation.
 
 Current analysis:
+
 - Project: Next.js 14 app with Tailwind CSS v3.4
 - Tech stack: TypeScript, React 18, App Router
 - Testing: Jest + React Testing Library
@@ -36,6 +38,7 @@ Clarifying questions:
 6. **Components**: All pages or specific sections?
 
 My proposed approach:
+
 - Add React context for theme state
 - Use Tailwind dark: classes
 - Persist to localStorage
@@ -50,6 +53,7 @@ Does this match your vision?
 
 ```markdown
 Yes, that's perfect! A few clarifications:
+
 - Global dark mode is correct
 - localStorage persistence is fine
 - System preference as default: yes
@@ -68,16 +72,17 @@ Yes, that's perfect! A few clarifications:
 ```markdown
 Project structure:
 ├── src/
-│   ├── app/                    # Next.js App Router
-│   │   ├── layout.tsx         # Root layout (inject provider)
-│   │   └── page.tsx           # Home page
-│   ├── components/
-│   │   ├── Navbar.tsx         # Add toggle here
-│   │   └── ui/                # Component library
-│   └── lib/
-│       └── utils.ts           # Utility functions
+│ ├── app/ # Next.js App Router
+│ │ ├── layout.tsx # Root layout (inject provider)
+│ │ └── page.tsx # Home page
+│ ├── components/
+│ │ ├── Navbar.tsx # Add toggle here
+│ │ └── ui/ # Component library
+│ └── lib/
+│ └── utils.ts # Utility functions
 
 Existing patterns discovered:
+
 - Context providers in app/layout.tsx
 - UI components use shadcn/ui patterns
 - TypeScript strict mode enabled
@@ -123,11 +128,13 @@ Changes required:
    - File: `CHANGELOG.md` - Feature entry
 
 Testing strategy:
+
 - Unit tests: Theme context logic (Jest)
 - Component tests: ThemeToggle interactions (RTL)
 - Manual: Visual validation in browser
 
 Documentation:
+
 - README: Usage example
 - CHANGELOG: Feature entry
 - JSDoc: API documentation
@@ -179,7 +186,7 @@ $ gw sync feat/dark-mode-toggle
 
 **File:** `src/contexts/ThemeContext.tsx`
 
-```typescript
+````typescript
 'use client';
 
 import { createContext, useContext, useEffect, useState } from 'react';
@@ -256,9 +263,10 @@ export function useTheme() {
   }
   return context;
 }
-```
+````
 
 **Validation:**
+
 ```bash
 $ pnpm tsc --noEmit
 ✓ No TypeScript errors
@@ -268,6 +276,7 @@ $ pnpm lint src/contexts/ThemeContext.tsx
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/contexts/ThemeContext.tsx
 $ git commit -m "feat(theme): add theme context with persistence"
@@ -281,23 +290,23 @@ $ git commit -m "feat(theme): add theme context with persistence"
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   darkMode: 'class', // Enable class-based dark mode
-  content: [
-    './src/**/*.{js,ts,jsx,tsx,mdx}',
-  ],
+  content: ['./src/**/*.{js,ts,jsx,tsx,mdx}'],
   theme: {
     extend: {},
   },
   plugins: [],
-}
+};
 ```
 
 **Validation:**
+
 ```bash
 $ pnpm build
 ✓ Build successful with dark mode enabled
 ```
 
 **Commit:**
+
 ```bash
 $ git add tailwind.config.js
 $ git commit -m "feat(theme): enable Tailwind dark mode"
@@ -328,6 +337,7 @@ export default function RootLayout({
 ```
 
 **Validation:**
+
 ```bash
 $ pnpm build
 ✓ Build successful
@@ -338,6 +348,7 @@ $ curl http://localhost:3000 | grep ThemeProvider
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/app/layout.tsx
 $ git commit -m "feat(theme): add ThemeProvider to root layout"
@@ -373,6 +384,7 @@ export function ThemeToggle() {
 ```
 
 **Validation:**
+
 ```bash
 $ pnpm tsc --noEmit
 ✓ No errors
@@ -382,6 +394,7 @@ $ pnpm lint src/components/ThemeToggle.tsx
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/components/ThemeToggle.tsx
 $ git commit -m "feat(theme): create theme toggle component"
@@ -408,12 +421,14 @@ export function Navbar() {
 ```
 
 **Validation:**
+
 ```bash
 $ pnpm build
 ✓ Build successful
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/components/Navbar.tsx
 $ git commit -m "feat(theme): add theme toggle to navbar"
@@ -573,6 +588,7 @@ Tests: 1 failed, 5 passed, 6 total
 ```
 
 **Retest:**
+
 ```bash
 $ pnpm test ThemeContext
 PASS  src/contexts/__tests__/ThemeContext.test.tsx
@@ -582,6 +598,7 @@ Tests: 6 passed, 6 total
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/contexts/__tests__/ThemeContext.test.tsx
 $ git commit -m "test(theme): add comprehensive theme context tests"
@@ -637,6 +654,7 @@ describe('ThemeToggle', () => {
 ```
 
 **Run tests:**
+
 ```bash
 $ pnpm test ThemeToggle
 PASS  src/components/__tests__/ThemeToggle.test.tsx
@@ -645,6 +663,7 @@ Tests: 3 passed, 3 total
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/components/__tests__/ThemeToggle.test.tsx
 $ git commit -m "test(theme): add theme toggle component tests"
@@ -676,7 +695,7 @@ Coverage:    92.3% (all files)
 
 **File:** `README.md`
 
-```diff
+````diff
 + ## Dark Mode
 +
 + The app supports system-wide dark mode with manual toggle control.
@@ -710,9 +729,10 @@ Coverage:    92.3% (all files)
 + - **Persistence**: User preference saved to localStorage
 + - **Scope**: Applied globally across all pages
 + - **Flash prevention**: Hydration mismatch handling included
-```
+````
 
 **Commit:**
+
 ```bash
 $ git add README.md
 $ git commit -m "docs(theme): add dark mode usage documentation"
@@ -737,6 +757,7 @@ $ git commit -m "docs(theme): add dark mode usage documentation"
 ```
 
 **Commit:**
+
 ```bash
 $ git add CHANGELOG.md
 $ git commit -m "docs(changelog): add dark mode feature entry"
@@ -839,10 +860,12 @@ Implements dark mode toggle with theme persistence and system preference support
 ## Test Coverage
 
 ```
-File                          | % Stmts | % Branch | % Funcs | % Lines
-------------------------------|---------|----------|---------|--------
-src/contexts/ThemeContext.tsx |  100.00 |   100.00 |  100.00 |  100.00
-src/components/ThemeToggle.tsx|  100.00 |   100.00 |  100.00 |  100.00
+
+| File                           | % Stmts | % Branch | % Funcs | % Lines |
+| ------------------------------ | ------- | -------- | ------- | ------- |
+| src/contexts/ThemeContext.tsx  | 100.00  | 100.00   | 100.00  | 100.00  |
+| src/components/ThemeToggle.tsx | 100.00  | 100.00   | 100.00  | 100.00  |
+
 ```
 
 ## Screenshots
@@ -872,11 +895,13 @@ EOF
 ✅ **Dark mode feature implementation complete!**
 
 **Delivered:**
+
 - Branch: `feat/dark-mode-toggle`
 - Worktree: `/path/to/repo.git/feat/dark-mode-toggle`
 - Draft PR: https://github.com/user/nextjs-app/pull/123
 
 **Summary:**
+
 - Implemented theme context with persistence
 - Created toggle component with accessibility
 - All tests passing (51 tests, +9 new)
@@ -884,12 +909,14 @@ EOF
 - Ready for your review
 
 **Files changed:**
+
 - 5 new files
 - 3 modified files
 - 9 new tests (100% coverage for new code)
 - 8 commits with clear messages
 
 **Next steps:**
+
 1. Review the draft PR
 2. Test locally if desired: `gw cd feat/dark-mode-toggle`
 3. Add screenshots to PR
@@ -907,6 +934,7 @@ After PR is merged, run: `gw remove feat/dark-mode-toggle`
 **Total execution time:** ~45 minutes
 
 **Statistics:**
+
 - 8 commits
 - 5 new files created
 - 3 existing files modified
@@ -916,6 +944,7 @@ After PR is merged, run: `gw remove feat/dark-mode-toggle`
 - Draft PR created
 
 **Validation checkpoints passed:**
+
 - ✅ Phase 0: Requirements validated
 - ✅ Phase 1: Plan validated
 - ✅ Phase 2: Environment validated

@@ -29,11 +29,11 @@ Based on the changes, determine what tests need to be updated or created:
 
 ### Code Files -> Test File Mapping
 
-| Changed File | Test File to Update/Create |
-|--------------|---------------------------|
+| Changed File                         | Test File to Update/Create                |
+| ------------------------------------ | ----------------------------------------- |
 | `packages/gw-tool/src/commands/*.ts` | `packages/gw-tool/src/commands/*.spec.ts` |
-| `packages/gw-tool/src/lib/*.ts` | `packages/gw-tool/src/lib/*.spec.ts` |
-| `packages/gw-tool/src/lib/cli.ts` | `packages/gw-tool/src/lib/cli.spec.ts` |
+| `packages/gw-tool/src/lib/*.ts`      | `packages/gw-tool/src/lib/*.spec.ts`      |
+| `packages/gw-tool/src/lib/cli.ts`    | `packages/gw-tool/src/lib/cli.spec.ts`    |
 
 ### Test Files to Check
 
@@ -58,22 +58,26 @@ Based on the changes, determine what tests need to be updated or created:
 For each changed file, identify what needs testing:
 
 ### New Features
+
 - Create new test files or test suites for new functionality
 - Test the happy path (expected usage)
 - Test edge cases (boundary conditions, empty inputs, etc.)
 - Test error conditions (invalid inputs, missing files, etc.)
 
 ### Modified Features
+
 - Update existing tests that may now be broken
 - Add tests for new parameters or options
 - Update assertions to match new behavior
 - Add tests for new error conditions
 
 ### Bug Fixes
+
 - Add regression tests that would have caught the bug
 - Ensure the fix doesn't break existing functionality
 
 ### Refactoring
+
 - Ensure existing tests still pass
 - Update test implementation if internal structure changed
 - Keep test coverage at the same level or better
@@ -153,6 +157,7 @@ nx e2e gw-tool-e2e
 ## Step 6: Verify Test Quality
 
 Ensure your tests:
+
 - ✅ Actually test the changed functionality
 - ✅ Would fail if the code was broken
 - ✅ Are not testing implementation details
@@ -164,6 +169,7 @@ Ensure your tests:
 ## Output
 
 Provide a summary of:
+
 - Which code files were analyzed
 - Which test files were updated or created
 - What new test cases were added

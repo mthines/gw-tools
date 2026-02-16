@@ -25,10 +25,7 @@
 
   "hooks": {
     "add": {
-      "pre": [
-        "echo 'Creating worktree: {worktree} at {worktreePath}'",
-        "echo 'Branch: {branch}'"
-      ],
+      "pre": ["echo 'Creating worktree: {worktree} at {worktreePath}'", "echo 'Branch: {branch}'"],
       "post": [
         "cd {worktreePath} && pnpm install",
         "cd {worktreePath} && pnpm run db:migrate",

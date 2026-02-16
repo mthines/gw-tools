@@ -13,14 +13,7 @@ import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 export async function executeUnlock(args: string[]): Promise<void> {
   // Check for help flag
   if (args.includes('--help') || args.includes('-h')) {
-    showProxyHelp(
-      'unlock',
-      'unlock',
-      'Unlock a worktree to allow removal',
-      [
-        'gw unlock feat-branch',
-      ],
-    );
+    showProxyHelp('unlock', 'unlock', 'Unlock a worktree to allow removal', ['gw unlock feat-branch']);
     Deno.exit(0);
   }
 

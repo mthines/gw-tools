@@ -119,7 +119,7 @@ function uninstall() {
       const result = spawnSync(binaryPath, ['install-shell', '--remove'], {
         stdio: ['inherit', 'pipe', 'pipe'],
         timeout: 5000,
-        encoding: 'utf8'
+        encoding: 'utf8',
       });
 
       if (result.status === 0) {

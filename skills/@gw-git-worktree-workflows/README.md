@@ -83,4 +83,4 @@ This skill helps with:
 
 ---
 
-*Part of the [gw-tools skills collection](../)*
+_Part of the [gw-tools skills collection](../)_

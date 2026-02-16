@@ -11,11 +11,7 @@ import * as output from './output.ts';
  * @param args Arguments to pass to the git command
  * @param successMessage Optional success message to display (if command succeeds with no output)
  */
-export async function executeGitWorktree(
-  subcommand: string,
-  args: string[],
-  successMessage?: string,
-): Promise<void> {
+export async function executeGitWorktree(subcommand: string, args: string[], successMessage?: string): Promise<void> {
   const gitCmd = ['git', 'worktree', subcommand, ...args];
 
   const gitProcess = new Deno.Command(gitCmd[0], {
@@ -45,12 +41,7 @@ export async function executeGitWorktree(
  * @param description Brief description of what the command does
  * @param examples Array of example usage strings
  */
-export function showProxyHelp(
-  command: string,
-  gitSubcommand: string,
-  description: string,
-  examples: string[],
-): void {
+export function showProxyHelp(command: string, gitSubcommand: string, description: string, examples: string[]): void {
   console.log(`gw ${command} - ${description}
 
 Usage:
@@ -63,7 +54,7 @@ Options:
   -h, --help    Show this help message
 
 Examples:
-${examples.map(ex => `  ${ex}`).join('\n')}
+${examples.map((ex) => `  ${ex}`).join('\n')}
 
 For full git worktree ${gitSubcommand} documentation:
   git worktree ${gitSubcommand} --help

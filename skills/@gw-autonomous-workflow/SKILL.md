@@ -1,21 +1,21 @@
 ---
-name: "@gw-autonomous-workflow"
+name: '@gw-autonomous-workflow'
 description: Autonomous feature development workflow using isolated worktrees. Use this skill to autonomously implement features from task description through tested PR delivery. Handles worktree creation, implementation, testing, iteration, documentation, and PR creation. Triggers on requests for autonomous feature development, end-to-end implementation, or "implement X feature autonomously."
 license: MIT
 metadata:
   author: mthines
-  version: "1.0.0"
-  workflow_type: "autonomous"
-  min_agent_capability: "code_execution,file_editing,git_operations"
+  version: '1.0.0'
+  workflow_type: 'autonomous'
+  min_agent_capability: 'code_execution,file_editing,git_operations'
   phases:
-    - "validation_questions"
-    - "intake_planning"
-    - "worktree_setup"
-    - "implementation"
-    - "testing_iteration"
-    - "documentation"
-    - "pr_creation"
-    - "cleanup"
+    - 'validation_questions'
+    - 'intake_planning'
+    - 'worktree_setup'
+    - 'implementation'
+    - 'testing_iteration'
+    - 'documentation'
+    - 'pr_creation'
+    - 'cleanup'
 ---
 
 # Autonomous Workflow - Complete Feature Delivery
@@ -44,6 +44,7 @@ Execute complete feature development cycles autonomously—from task intake thro
 **This skill ALWAYS creates a new isolated worktree before any code changes.**
 
 Every autonomous execution follows this sequence:
+
 1. Phase 0: Ask questions and validate requirements
 2. Phase 1: Analyze codebase and plan approach
 3. **Phase 2: Create new worktree with `gw add <branch-name>` (MANDATORY)**
@@ -52,6 +53,7 @@ Every autonomous execution follows this sequence:
 **Never skip worktree creation unless user explicitly requests it.**
 
 This ensures:
+
 - User's current work remains untouched
 - True parallel development capability
 - Clean rollback if needed
@@ -83,6 +85,7 @@ This skill enables **autonomous execution** of complete feature development work
 - ❌ **NEVER skip worktree creation** - This is non-negotiable unless user explicitly says "work in current directory"
 
 **Why this matters:**
+
 - Preserves user's working state
 - Enables true parallel development
 - Provides clean rollback (just remove worktree)
@@ -91,6 +94,7 @@ This skill enables **autonomous execution** of complete feature development work
 ### When to Use This Skill
 
 **Use this skill when:**
+
 - User requests autonomous feature implementation
 - Task has clear deliverable (feature, fix, refactor)
 - Project uses gw-tools for worktree management (REQUIRED)
@@ -98,6 +102,7 @@ This skill enables **autonomous execution** of complete feature development work
 - User wants work done in parallel/isolation from their current work
 
 **Do NOT use this skill when:**
+
 - User wants to code alongside you (use interactive mode)
 - Task is exploratory research without clear deliverable
 - Project doesn't use Git or gw-tools
@@ -107,6 +112,7 @@ This skill enables **autonomous execution** of complete feature development work
 ### Expected Outcomes
 
 **Successful execution produces:**
+
 - ✅ New isolated worktree created with `gw add <branch-name>`
 - ✅ Complete implementation in isolated worktree (user's work untouched)
 - ✅ All tests passing (existing + new if applicable)
@@ -116,6 +122,7 @@ This skill enables **autonomous execution** of complete feature development work
 - ✅ User can continue working in parallel during implementation
 
 **If unable to complete:**
+
 - ⚠️ Partial implementation committed with notes
 - ⚠️ Clear explanation of blockers encountered
 - ⚠️ Recommendations for next steps
@@ -155,6 +162,7 @@ This workflow operates with **high autonomy after validation**:
 ## Step 1: Parse User Request
 
 Read the user's request carefully. Identify:
+
 - Primary feature/fix being requested
 - Mentioned technologies, files, or patterns
 - Implied requirements (what's assumed but not stated)
@@ -163,6 +171,7 @@ Read the user's request carefully. Identify:
 ## Step 2: Analyze Codebase Context
 
 Before asking questions, understand the project:
+
 - Project structure (monorepo? single app?)
 - Technology stack (framework, language, tools)
 - Testing setup (unit, integration, e2e?)
@@ -176,18 +185,22 @@ Use tools: nx_workspace, nx_project_details, Read, Glob, Grep
 Ask about:
 
 **Requirements clarity:**
+
 - "Should X feature also handle Y scenario?"
 - "What should happen when Z edge case occurs?"
 
 **Scope boundaries:**
+
 - "Should this include tests/docs/migrations?"
 - "Are we updating existing feature or adding new?"
 
 **Technical decisions:**
+
 - "Prefer approach A (simpler) or B (more flexible)?"
 - "Follow pattern X from file.ts or pattern Y from other.ts?"
 
 **Acceptance criteria:**
+
 - "How will we know this is complete?"
 - "What tests should pass?"
 
@@ -196,6 +209,7 @@ Ask about:
 Summarize your understanding:
 
 "Based on your request, I understand:
+
 1. Goal: [primary objective]
 2. Scope: [what's included/excluded]
 3. Approach: [technical approach]
@@ -203,6 +217,7 @@ Summarize your understanding:
 5. Docs: [documentation updates]
 
 Questions before proceeding:
+
 - [Question 1]
 - [Question 2]
 - [Question 3]
@@ -212,12 +227,14 @@ Does this match your intent?"
 ## Step 5: Get Explicit Confirmation
 
 Wait for user response. Do NOT proceed until:
+
 - ✅ All questions answered
 - ✅ Understanding validated
 - ✅ Scope confirmed
 - ✅ User explicitly says "proceed" or equivalent
 
 If user clarifies/corrects:
+
 - Update your understanding
 - Re-validate if significant changes
 - Confirm again before proceeding
@@ -232,6 +249,7 @@ Agent (Phase 0):
 "Let me understand this requirement before implementation.
 
 Current analysis:
+
 - Project: Next.js app with Tailwind CSS
 - Existing: Light theme only
 - Location: No theme infrastructure found
@@ -246,6 +264,7 @@ Clarifying questions:
 6. **Toggle UI**: Where should the toggle appear (navbar/settings)?
 
 My proposed approach:
+
 - Add theme context provider
 - Use Tailwind dark: classes
 - Save preference to localStorage
@@ -287,6 +306,7 @@ Before leaving Phase 0:
 ## Step 1: Analyze Codebase (Deep Dive)
 
 ### Project Structure
+
 - Identify relevant directories/modules
 - Map dependencies between components
 - Locate configuration files
@@ -294,6 +314,7 @@ Before leaving Phase 0:
 Tools: nx_workspace, nx_project_details, Glob
 
 ### Existing Patterns
+
 - Find similar features already implemented
 - Study code style, naming conventions
 - Understand error handling patterns
@@ -302,12 +323,14 @@ Tools: nx_workspace, nx_project_details, Glob
 Tools: Grep (search for patterns), Read (study implementations)
 
 ### Technology Stack
+
 - Framework version and features
 - Build tools and configuration
 - Testing framework and conventions
 - Documentation format
 
 ### Dependencies
+
 - Required packages already installed?
 - Need to add new dependencies?
 - Version compatibility considerations
@@ -317,6 +340,7 @@ Tools: Grep (search for patterns), Read (study implementations)
 Document your plan:
 
 **Changes Required:**
+
 1. File: `path/to/file1.ts`
    - Add: [specific additions]
    - Modify: [specific changes]
@@ -331,16 +355,19 @@ Document your plan:
    - Exports: [public API]
 
 **Testing Strategy:**
+
 - Unit tests: [what to test]
 - Integration tests: [if applicable]
 - Manual validation: [if applicable]
 
 **Documentation Updates:**
+
 - README.md: [what to add/change]
 - API docs: [if applicable]
 - CHANGELOG: [entry to add]
 
 **Risks & Mitigations:**
+
 - Risk: [potential issue]
   Mitigation: [how to handle]
 
@@ -349,20 +376,24 @@ Document your plan:
 Ask yourself:
 
 **Completeness:**
+
 - Does this plan achieve all requirements from Phase 0?
 - Are edge cases from user questions addressed?
 - Is anything missing?
 
 **Correctness:**
+
 - Does this follow existing project patterns?
 - Are dependencies and imports correct?
 - Will this integrate cleanly?
 
 **Testability:**
+
 - Can this be validated with tests?
 - Are test cases comprehensive?
 
 **Maintainability:**
+
 - Is this approach simple enough?
 - Does it follow project conventions?
 - Will other developers understand this?
@@ -370,6 +401,7 @@ Ask yourself:
 ## Step 4: Iteration Checkpoint
 
 If self-validation reveals issues:
+
 1. Refine the plan
 2. Re-validate
 3. Iterate until plan is solid
@@ -381,6 +413,7 @@ If self-validation reveals issues:
 For complex tasks, briefly summarize plan:
 
 "Implementation plan:
+
 - Modifying 3 files: [list]
 - Adding 1 file: [list]
 - Tests: [strategy]
@@ -408,12 +441,14 @@ Proceeding with Phase 2: Worktree setup."
 **ALWAYS create a new isolated worktree before implementation. NEVER work in the user's current directory.**
 
 This phase MUST be completed before Phase 3 (Implementation). Working in an isolated worktree:
+
 - ✅ Preserves user's working state
 - ✅ Enables parallel development
 - ✅ Provides clean rollback capability
 - ✅ Follows gw-tools best practices
 
 **Only skip worktree creation if:**
+
 - User explicitly says "work in current directory"
 - User explicitly says "don't create worktree"
 
@@ -429,7 +464,7 @@ This phase MUST be completed before Phase 3 (Implementation). Working in an isol
 
 ### Procedure
 
-```markdown
+````markdown
 ## Step 1: Generate Branch Name
 
 Use decision framework (see Section 10):
@@ -437,6 +472,7 @@ Use decision framework (see Section 10):
 **Pattern:** `<type>/<short-description>`
 
 Types:
+
 - `feat/` - New feature
 - `fix/` - Bug fix
 - `refactor/` - Code restructuring
@@ -449,11 +485,14 @@ Example: `feat/dark-mode-toggle`
 ## Step 2: Create Worktree
 
 Execute:
+
 ```bash
 gw add <branch-name>
 ```
+````
 
 **Validation:**
+
 - Command succeeded?
 - Worktree appears in `gw list`?
 - Files present in new directory?
@@ -467,16 +506,19 @@ gw cd <branch-name>
 ```
 
 **Validation:**
+
 - `pwd` shows correct directory?
 - `.git` symlink points to correct location?
 
 ## Step 4: Install Dependencies
 
 Check if dependencies need installation:
+
 - Does `package.json` exist?
 - Is post-add hook configured?
 
 If manual install needed:
+
 ```bash
 npm install
 # or
@@ -486,6 +528,7 @@ yarn install
 ```
 
 **Validation:**
+
 - `node_modules/` directory exists?
 - Key dependencies present?
 - No installation errors?
@@ -493,6 +536,7 @@ yarn install
 ## Step 5: Verify Environment
 
 Run basic checks:
+
 ```bash
 # TypeScript project
 npm run build  # or tsc --noEmit
@@ -505,6 +549,7 @@ npm test -- --listTests  # Just list, don't run yet
 ```
 
 **Validation:**
+
 - No immediate errors?
 - Build system works?
 - Test framework found?
@@ -512,14 +557,17 @@ npm test -- --listTests  # Just list, don't run yet
 ## Step 6: Sync Configuration (If Needed)
 
 If project uses autoCopyFiles:
+
 ```bash
 gw sync <branch-name>
 ```
 
 **Validation:**
+
 - `.env` copied (if configured)?
 - Other config files synced?
-```
+
+````
 
 ### Setup Checklist
 
@@ -591,9 +639,10 @@ npm run build  # or tsc --noEmit
 
 # Does it pass linting?
 npm run lint -- <file-path>
-```
+````
 
 **Self-review questions:**
+
 - Does this match existing patterns?
 - Is naming consistent with codebase?
 - Are imports organized correctly?
@@ -601,6 +650,7 @@ npm run lint -- <file-path>
 - Is this the simplest solution?
 
 ### Iterate if needed:
+
 - Validation failed? Fix immediately
 - Code feels wrong? Refine before proceeding
 - Don't accumulate technical debt
@@ -615,12 +665,14 @@ git commit -m "<type>(<scope>): <description>"
 ```
 
 **Conventional commit format:**
+
 - `feat(ui): add dark mode toggle button`
 - `feat(theme): implement theme context provider`
 - `test(theme): add theme toggle unit tests`
 - `docs(readme): document dark mode feature`
 
 **Commit guidelines:**
+
 - One logical change per commit
 - Clear, descriptive messages
 - Reference issues if applicable
@@ -631,6 +683,7 @@ git commit -m "<type>(<scope>): <description>"
 After every 2-3 files changed:
 
 **Checkpoint validation:**
+
 ```bash
 # Full build
 npm run build
@@ -643,12 +696,14 @@ npm test -- --coverage=false --maxWorkers=1
 ```
 
 **Self-assessment:**
+
 - Is implementation on track?
 - Any deviations from plan?
 - Need to adjust approach?
 
 **Iteration decision:**
 If validation reveals issues:
+
 1. Stop and analyze root cause
 2. Fix the underlying problem
 3. Re-validate
@@ -659,12 +714,14 @@ If validation reveals issues:
 After all implementation changes:
 
 **Final integration validation:**
+
 - All files compile together?
 - No TypeScript/lint errors?
 - Imports resolve correctly?
 - No circular dependencies?
 
 **Manual testing (if applicable):**
+
 - Start dev server
 - Test feature manually
 - Try edge cases from Phase 0
@@ -673,6 +730,7 @@ After all implementation changes:
 ## Step 6: Pre-Testing Commit
 
 Commit all implementation work:
+
 ```bash
 git add .
 git commit -m "feat(scope): implement <feature-name>
@@ -683,7 +741,8 @@ git commit -m "feat(scope): implement <feature-name>
 ```
 
 Now ready for formal testing (Phase 4).
-```
+
+````
 
 ### Implementation Checklist
 
@@ -736,9 +795,10 @@ npm test
 
 # Or specific tests if large codebase
 npm test -- --testPathPattern="relevant"
-```
+````
 
 **Expected outcomes:**
+
 - ✅ All existing tests pass (no regressions)
 - ❌ Some tests fail (expected if changing behavior)
 
@@ -747,12 +807,14 @@ npm test -- --testPathPattern="relevant"
 For each failure:
 
 ### Understand the Failure:
+
 - Read error message completely
 - Identify which assertion failed
 - Understand what was expected vs actual
 - Trace back to root cause
 
 ### Categorize:
+
 1. **Expected failure** - Behavior intentionally changed
    → Update test to match new behavior
 2. **Regression** - Broke existing functionality
@@ -761,6 +823,7 @@ For each failure:
    → Fix test configuration
 
 ### Prioritize:
+
 - Critical failures first (core functionality)
 - Edge cases later
 - Flaky tests last (may be test issue)
@@ -770,29 +833,36 @@ For each failure:
 **Iteration loop (no hard limit):**
 
 ### Iteration 1:
+
 1. Fix most obvious issues
 2. Re-run tests
 3. Validate: Did failures decrease?
 
 ### Iteration 2:
+
 If still failing:
+
 1. Re-analyze root cause (was first fix superficial?)
 2. Try different approach
 3. Re-run tests
 4. Validate: Getting closer?
 
 ### Iteration 3+:
+
 Keep iterating:
+
 1. Consider alternative implementation
 2. Review original plan (was approach wrong?)
 3. Simplify if over-complicated
 4. Ask: What would make tests pass?
 
 **Continue until:**
+
 - ✅ All tests passing, OR
 - ⚠️ Identified blocker requiring user input
 
 **Self-validation questions:**
+
 - Are tests actually validating requirements?
 - Are we testing the right things?
 - Do tests cover edge cases from Phase 0?
@@ -819,18 +889,21 @@ describe('DarkModeToggle', () => {
 ```
 
 **New test requirements:**
+
 - Cover main functionality
 - Cover edge cases discussed in Phase 0
 - Follow existing test patterns
 - Use same testing utilities
 
 **Validate new tests:**
+
 ```bash
 # Run only new tests
 npm test -- --testPathPattern="DarkModeToggle"
 ```
 
 **Self-check:**
+
 - Do new tests pass?
 - Do they actually validate the feature?
 - Are they maintainable?
@@ -843,6 +916,7 @@ For UI changes, use agent-browser:
 Objective: Validate dark mode toggle works correctly
 
 Steps:
+
 1. Start dev server (npm run dev)
 2. Navigate to app (http://localhost:3000)
 3. Locate dark mode toggle
@@ -859,6 +933,7 @@ Steps:
 All tests passing?
 
 **Final checkpoint:**
+
 ```bash
 # Clean test run
 npm run test -- --coverage
@@ -868,6 +943,7 @@ npm run test -- --coverage
 ```
 
 **Self-assessment:**
+
 - All requirements from Phase 0 validated?
 - Edge cases tested?
 - No regressions introduced?
@@ -883,7 +959,8 @@ git commit -m "test(scope): add comprehensive tests for <feature>
 - Integration tests for Y
 - Edge case coverage for Z"
 ```
-```
+
+````
 
 ### Testing Checklist
 
@@ -964,9 +1041,10 @@ function MyComponent() {
 - Respects system preference on first load
 - Persists user preference to localStorage
 - Falls back to light mode if preference unavailable
-```
+````
 
 **Validation:**
+
 - Read example as new user
 - Is it clear how to use the feature?
 - Are code examples correct?
@@ -976,7 +1054,7 @@ function MyComponent() {
 
 Document new APIs:
 
-```typescript
+````typescript
 /**
  * Theme context providing theme state and controls.
  *
@@ -993,9 +1071,10 @@ Document new APIs:
 export function useTheme(): ThemeContextValue {
   // ...
 }
-```
+````
 
 **Validation:**
+
 - Are all public APIs documented?
 - Are examples realistic?
 - Is return type clear?
@@ -1008,19 +1087,23 @@ Add entry following project convention:
 ## [Unreleased]
 
 ### Added
+
 - Dark mode toggle in navigation bar (#123)
   - Respects system preference
   - Persists user choice to localStorage
   - Applies theme globally
 
 ### Changed
+
 - Theme context now exported from `@/contexts/ThemeContext`
 
 ### Fixed
+
 - N/A
 ```
 
 **Validation:**
+
 - Entry describes user-facing changes?
 - Includes relevant issue/PR numbers?
 - Follows existing CHANGELOG format?
@@ -1039,21 +1122,25 @@ Check for other docs needing updates:
 **Critical:** Read your own documentation with fresh eyes:
 
 **Clarity check:**
+
 - Can I understand this without context?
 - Are examples self-contained?
 - Is technical jargon explained?
 
 **Completeness check:**
+
 - Are all new features documented?
 - Are edge cases explained?
 - Are limitations mentioned?
 
 **Accuracy check:**
+
 - Do code examples actually work?
 - Are paths/names correct?
 - Is version info accurate?
 
 **Iteration if needed:**
+
 - Something confusing? Rewrite it
 - Example unclear? Add more context
 - Important detail missing? Add it
@@ -1068,7 +1155,8 @@ git commit -m "docs(feature): document dark mode toggle
 - Update CHANGELOG with new feature
 - Document theme context API"
 ```
-```
+
+````
 
 ### Documentation Checklist
 
@@ -1113,29 +1201,34 @@ Final checks before delivery:
 **All changes committed?**
 ```bash
 git status  # Should show "nothing to commit, working tree clean"
-```
+````
 
 **All tests passing?**
+
 ```bash
 npm test  # Full test suite
 ```
 
 **Builds successfully?**
+
 ```bash
 npm run build  # Production build
 ```
 
 **Linting clean?**
+
 ```bash
 npm run lint  # All lint rules
 ```
 
 **Documentation complete?**
+
 - README updated? ✓
 - CHANGELOG updated? ✓
 - API docs updated? ✓
 
 If ANY check fails:
+
 1. Stop immediately
 2. Fix the issue
 3. Re-validate
@@ -1149,6 +1242,7 @@ git push -u origin <branch-name>
 ```
 
 **Validation:**
+
 - Push succeeded?
 - Branch visible on GitHub/GitLab?
 
@@ -1158,38 +1252,47 @@ Create comprehensive description:
 
 ```markdown
 ## Summary
+
 [High-level overview of what this PR does]
 
 ## Changes
+
 - [User-facing change 1]
 - [User-facing change 2]
 - [Technical change 3]
 
 ## Implementation Details
+
 - Modified `file1.ts`: [what and why]
 - Added `file2.ts`: [purpose]
 - Updated `docs/`: [documentation changes]
 
 ## Testing
+
 - [x] Unit tests pass
 - [x] Integration tests pass
 - [x] Manual testing completed
 - [x] Edge cases validated
 
 ## Test Coverage
+
 [Coverage stats if available]
 
 ## Screenshots (if UI changes)
+
 [Attach screenshots or request user to add]
 
 ## Breaking Changes
+
 [None / List breaking changes and migration path]
 
 ## Related Issues
+
 Closes #[issue-number]
 ```
 
 **Self-review:**
+
 - Does this explain the PR clearly?
 - Would a reviewer understand the context?
 - Are all changes justified?
@@ -1209,6 +1312,7 @@ EOF
 ```
 
 **Example:**
+
 ```bash
 gh pr create \
   --draft \
@@ -1243,6 +1347,7 @@ EOF
 ```
 
 **Validation:**
+
 - PR created successfully?
 - Shows as draft?
 - Description rendered correctly?
@@ -1255,17 +1360,20 @@ Deliver results:
 ✅ **Feature implementation complete!**
 
 **Delivered:**
+
 - Branch: `feat/dark-mode-toggle`
 - Worktree: `/path/to/worktree`
 - Draft PR: https://github.com/user/repo/pull/123
 
 **Summary:**
+
 - Implemented dark mode toggle with theme persistence
 - All tests passing (15 new tests, 100% coverage)
 - Documentation updated (README + CHANGELOG)
 - Ready for your review
 
 **Next steps:**
+
 1. Review the draft PR
 2. Add screenshots if desired
 3. Mark as ready for review when satisfied
@@ -1278,13 +1386,15 @@ Run `gw remove feat/dark-mode-toggle` after PR is merged.
 ## Step 6: Preserve Worktree
 
 **Do NOT remove worktree yet** - user may want to:
+
 - Review changes locally
 - Make adjustments
 - Test manually
 - Add screenshots
 
 Worktree cleanup happens in Phase 7 (optional).
-```
+
+````
 
 ### Delivery Checklist
 
@@ -1321,13 +1431,15 @@ Worktree cleanup happens in Phase 7 (optional).
 
 ```bash
 gh pr view <pr-number> --json state,mergedAt
-```
+````
 
 **Safe to cleanup if:**
+
 - State: MERGED
 - State: CLOSED (and user confirms)
 
 **NOT safe if:**
+
 - State: OPEN
 - User hasn't reviewed yet
 
@@ -1345,6 +1457,7 @@ gw remove <branch-name>
 ```
 
 **Validation:**
+
 - Worktree removed from `gw list`?
 - Directory deleted?
 - Git administrative cleanup done?
@@ -1356,12 +1469,14 @@ gw cd main
 ```
 
 **Validation:**
+
 - In main worktree now?
 - Can continue other work?
 
 ## Step 5: Report Cleanup
 
 "✅ Worktree cleaned up. Disk space reclaimed: ~X MB"
+
 ```
 
 ### Cleanup Checklist
@@ -1381,6 +1496,7 @@ gw cd main
 **Decision tree:**
 
 ```
+
 Is this a new feature?
 ├─ Yes → `feat/<feature-name>`
 └─ No ↓
@@ -1403,6 +1519,7 @@ Is this testing only?
 
 Is this tooling/dependencies?
 └─ Yes → `chore/<tool-name>`
+
 ```
 
 **Examples:**
@@ -1418,6 +1535,7 @@ Is this tooling/dependencies?
 **Decision tree:**
 
 ```
+
 What changed?
 
 Pure functions/utilities?
@@ -1443,6 +1561,7 @@ UI interactions?
 Multiple systems interacting?
 → Integration tests
 → Test: data flow, error propagation
+
 ```
 
 ### Documentation Scope Determination
@@ -1450,6 +1569,7 @@ Multiple systems interacting?
 **Decision tree:**
 
 ```
+
 What's the change?
 
 New user-facing feature?
@@ -1473,6 +1593,7 @@ Bug fix?
 
 Internal refactoring?
 └─ CHANGELOG: Technical note (optional)
+
 ```
 
 ### Iteration vs Delivery Decision
@@ -1480,6 +1601,7 @@ Internal refactoring?
 **When to iterate:**
 
 ```
+
 Tests failing?
 └─ Iterate (fix and retest)
 
@@ -1494,11 +1616,13 @@ Code doesn't follow patterns?
 
 Documentation insufficient?
 └─ Iterate (improve docs)
+
 ```
 
 **When to deliver partial work:**
 
 ```
+
 Blocker requires user input?
 ├─ Commit what's done
 ├─ Document blocker
@@ -1514,7 +1638,8 @@ Fundamental approach wrong?
 ├─ Stop implementation
 ├─ Explain issue to user
 └─ Request new direction
-```
+
+````
 
 **Never stop for:**
 - Test failures (iterate until passing)
@@ -1540,7 +1665,7 @@ git worktree list
 
 # Check if branch already exists
 git branch --list <branch-name>
-```
+````
 
 **Recovery:**
 
@@ -1569,6 +1694,7 @@ Git error?
 **Error:** `npm install` fails
 
 **Diagnosis:**
+
 ```bash
 # Check node version
 node --version
@@ -1610,6 +1736,7 @@ Disk space?
 **Error:** Tests fail after implementation
 
 **Diagnosis:**
+
 ```bash
 # Run single failing test with verbose output
 npm test -- --testPathPattern="failing-test" --verbose
@@ -1624,6 +1751,7 @@ npm test -- --coverage
 
 ```markdown
 ## Iteration 1: Fix Obvious Issues
+
 1. Read error message completely
 2. Identify assertion that failed
 3. Fix most likely cause
@@ -1631,7 +1759,9 @@ npm test -- --coverage
 5. Assess: Better or worse?
 
 ## Iteration 2: Deep Analysis
+
 If still failing:
+
 1. Add console.logs to understand state
 2. Check assumptions about data/types
 3. Verify mocks/stubs are correct
@@ -1639,7 +1769,9 @@ If still failing:
 5. Rerun tests
 
 ## Iteration 3: Alternative Approach
+
 If still failing:
+
 1. Question implementation approach
 2. Review similar code in codebase
 3. Consider simpler solution
@@ -1647,6 +1779,7 @@ If still failing:
 5. Rerun tests
 
 ## Iteration 4+: Systematic Debugging
+
 1. Isolate minimal reproduction
 2. Test each component independently
 3. Verify test itself is correct
@@ -1654,6 +1787,7 @@ If still failing:
 5. Keep iterating until passing
 
 ## If Truly Stuck (rare):
+
 1. Commit working code with failing test
 2. Document exact failure and attempts
 3. Ask user for guidance
@@ -1666,6 +1800,7 @@ If still failing:
 **Error:** Merge conflict when pushing/rebasing
 
 **Diagnosis:**
+
 ```bash
 # Check conflict files
 git status
@@ -1676,21 +1811,25 @@ git diff
 
 **Recovery:**
 
-```markdown
+````markdown
 ## Step 1: Understand Conflicts
+
 - Read both versions (HEAD vs incoming)
 - Understand intent of each change
 - Determine correct resolution
 
 ## Step 2: Resolve Conflicts
+
 ```bash
 # Open conflicted files
 # Edit to resolve conflicts (remove markers)
 # Keep both changes if both needed
 # Choose one if mutually exclusive
 ```
+````
 
 ## Step 3: Test After Resolution
+
 ```bash
 # Ensure code still works
 npm run build
@@ -1698,16 +1837,19 @@ npm test
 ```
 
 ## Step 4: Complete Resolution
+
 ```bash
 git add <resolved-files>
 git commit  # Or git rebase --continue
 ```
 
 ## Step 5: Validate
+
 - All conflicts resolved?
 - Tests still pass?
 - Code makes sense?
-```
+
+````
 
 ### Build Failures
 
@@ -1722,7 +1864,7 @@ npm run build 2>&1 | tee build.log
 npx tsc --noEmit
 
 # Check for missing files
-```
+````
 
 **Recovery:**
 
@@ -1754,33 +1896,40 @@ Config error?
 ### Validation Checkpoints
 
 **Phase 0:** Mandatory validation before any work
+
 - ✓ Requirements understood
 - ✓ User confirmed understanding
 
 **Phase 1:** Plan validated before implementation
+
 - ✓ Plan matches requirements
 - ✓ Approach is sound
 
 **Phase 2:** 🔴 Worktree creation validated before ANY coding (MANDATORY)
+
 - ✓ New worktree created with `gw add <branch-name>`
 - ✓ Currently in worktree directory (verified with `pwd`)
 - ✓ Dependencies installed in worktree
 - ✓ Environment builds/compiles
 
 **Phase 3:** Code validated during implementation (ONLY in worktree)
+
 - ✓ Working in isolated worktree, not user's directory
 - ✓ Builds after each file
 - ✓ Self-review before commit
 
 **Phase 4:** Tests validated before delivery
+
 - ✓ All tests pass
 - ✓ Requirements verified
 
 **Phase 5:** Documentation validated for clarity
+
 - ✓ Read as new user
 - ✓ Examples tested
 
 **Phase 6:** Everything validated before PR
+
 - ✓ All checks passing
 - ✓ Complete and ready
 
@@ -1846,6 +1995,7 @@ gw remove <branch-name> --force
 [Explain the blocker/ambiguity]
 
 **Options I see:**
+
 1. [Option A] - [pros/cons]
 2. [Option B] - [pros/cons]
 3. [Option C] - [pros/cons]
@@ -1905,6 +2055,7 @@ Should I proceed with [recommended option] or would you prefer [alternative]?"
 - [ ] Requirements from Phase 0 met
 
 **If any gate fails:**
+
 1. Stop immediately
 2. Identify root cause
 3. Fix the issue
@@ -1927,6 +2078,7 @@ This autonomous workflow enables complete feature delivery through:
 8. **🧹 Phase 7:** Safe cleanup when appropriate
 
 **Key principles:**
+
 - 🔴 **ALWAYS create isolated worktree first** (Phase 2 is mandatory)
 - Always ask clarifying questions first (Phase 0)
 - Work in isolation - never affect user's current directory
@@ -1937,6 +2089,7 @@ This autonomous workflow enables complete feature delivery through:
 - Stop and ask when truly blocked
 
 **Success metrics:**
+
 - ✅ Requirements fully met
 - ✅ All tests passing
 - ✅ Documentation complete
@@ -1953,4 +2106,4 @@ This autonomous workflow enables complete feature delivery through:
 
 ---
 
-*Part of the [gw-tools skills collection](../README.md)*
+_Part of the [gw-tools skills collection](../README.md)_
