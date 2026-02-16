@@ -200,7 +200,13 @@ async function getCurrentRepo(): Promise<{ owner: string; repo: string } | null>
 async function fetchPrInfo(prNumber: number): Promise<PrInfo | null> {
   try {
     const cmd = new Deno.Command('gh', {
-      args: ['pr', 'view', String(prNumber), '--json', 'number,headRefName,headRepository,headRepositoryOwner,isCrossRepository'],
+      args: [
+        'pr',
+        'view',
+        String(prNumber),
+        '--json',
+        'number,headRefName,headRepository,headRepositoryOwner,isCrossRepository',
+      ],
       stdout: 'piped',
       stderr: 'piped',
     });
@@ -359,12 +365,7 @@ export async function executePr(args: string[]): Promise<void> {
 
     const response = prompt(`Navigate to it? [Y/n]:`);
 
-    if (
-      response === null ||
-      response === '' ||
-      response.toLowerCase() === 'y' ||
-      response.toLowerCase() === 'yes'
-    ) {
+    if (response === null || response === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes') {
       await signalNavigation(existingWorktree.path);
       Deno.exit(0);
     } else {

@@ -66,6 +66,7 @@ Use this skill when you need:
 - ✅ Production-ready code with comprehensive tests
 
 **Do NOT use this skill for:**
+
 - ❌ Interactive coding sessions (use conversational mode instead)
 - ❌ Exploratory research tasks (use explore agent)
 - ❌ Simple one-file changes (no need for full workflow)
@@ -135,22 +136,26 @@ Phase 7: Cleanup (Optional)
 ## 💡 Key Features
 
 ### Upfront Validation
+
 - Asks clarifying questions before any coding
 - Validates understanding with user
 - Confirms scope and acceptance criteria
 
 ### Autonomous Execution
+
 - Executes all phases with minimal intervention
 - Self-validates at every checkpoint
 - Iterates until tests pass (no hard limits)
 
 ### Comprehensive Deliverables
+
 - All tests passing (existing + new)
 - Documentation updated
 - Clean commit history
 - Draft PR ready for review
 
 ### Error Recovery
+
 - Procedures for all failure scenarios
 - Aggressive iteration on test failures
 - Merge conflict resolution
@@ -165,4 +170,4 @@ Phase 7: Cleanup (Optional)
 
 ---
 
-*Part of the [gw-tools skills collection](../)*
+_Part of the [gw-tools skills collection](../)_

@@ -7,8 +7,5 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.local"
-  ]
+  "autoCopyFiles": [".env", ".env.local"]
 }

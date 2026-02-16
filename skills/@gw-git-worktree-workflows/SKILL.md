@@ -849,6 +849,7 @@ gw pr 123 --name review-auth-feature
 ```
 
 The command automatically:
+
 1. Fetches PR information using the GitHub CLI (`gh`)
 2. Fetches the PR branch (works for forks too)
 3. Creates a worktree with the PR's branch name

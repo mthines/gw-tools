@@ -626,6 +626,7 @@ gw pr <pr-number|pr-url>
 ```
 
 When you want to review or test a pull request, you typically need to:
+
 1. Find the PR's branch name
 2. Fetch the branch (especially for forks)
 3. Create a worktree for it
@@ -680,6 +681,7 @@ gw pr 42 --no-cd
 The command automatically handles PRs from forks by using GitHub's `pull/<number>/head` ref pattern. This fetches the PR branch without needing to add the fork as a remote.
 
 **Error Handling:**
+
 - If `gh` is not installed, shows installation instructions
 - If PR is not found, shows helpful error with authentication hint
 - If PR URL is for a different repository, shows clear error message

@@ -5,6 +5,7 @@ Step-by-step guide to configure gw for Next.js applications with Vercel deployme
 ## Scenario
 
 You have a Next.js application deployed on Vercel. When creating new worktrees for features, you need to copy:
+
 - Environment variables (`.env`, `.env.local`)
 - Vercel configuration (`.vercel/`)
 - Any uploaded assets (`public/uploads/`)
@@ -25,6 +26,7 @@ gw init
 ```
 
 Output:
+
 ```
 Repository root detected: /Users/you/projects/nextjs-app.git
 Default branch detected: main
@@ -43,13 +45,7 @@ Or manually edit `.gw/config.json`:
 {
   "root": "/Users/you/projects/nextjs-app.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development",
-    ".vercel/",
-    "public/uploads/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", ".env.development", ".vercel/", "public/uploads/"]
 }
 ```
 
@@ -121,11 +117,7 @@ public/uploads/
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development"
-  ]
+  "autoCopyFiles": [".env", ".env.local", ".env.development"]
 }
 ```
 
@@ -135,11 +127,7 @@ Don't copy `.env.production` - that should only exist in CI/CD.
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "prisma/.env"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "prisma/.env"]
 }
 ```
 
@@ -147,12 +135,7 @@ Don't copy `.env.production` - that should only exist in CI/CD.
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    "apps/web/.vercel/",
-    "apps/admin/.vercel/",
-    "packages/ui/.env"
-  ]
+  "autoCopyFiles": [".env", "apps/web/.vercel/", "apps/admin/.vercel/", "packages/ui/.env"]
 }
 ```
 
@@ -197,12 +180,14 @@ gw remove feat/new-checkout
 **Problem:** `.env.local` exists but wasn't copied
 
 **Check:**
+
 ```bash
 cat .gw/config.json
 # Verify .env.local is in autoCopyFiles
 ```
 
 **Solution:** Add missing file to config:
+
 ```bash
 gw init --auto-copy-files .env,.env.local
 ```
@@ -212,12 +197,14 @@ gw init --auto-copy-files .env,.env.local
 **Problem:** `vercel dev` fails in new worktree
 
 **Check:**
+
 ```bash
 ls -la .vercel/
 # Should contain project.json
 ```
 
 **Solution:** If `.vercel/` wasn't copied, run:
+
 ```bash
 gw sync feat/new-checkout .vercel/
 ```
@@ -231,4 +218,4 @@ gw sync feat/new-checkout .vercel/
 
 ---
 
-*Part of the [config-management skill](../README.md)*
+_Part of the [config-management skill](../README.md)_

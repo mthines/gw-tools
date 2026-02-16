@@ -29,11 +29,11 @@ Based on the changes, determine which documentation files need updates:
 
 ### Code Files -> Documentation Mapping
 
-| Changed File | Documentation to Update |
-|--------------|------------------------|
+| Changed File                         | Documentation to Update                                |
+| ------------------------------------ | ------------------------------------------------------ |
 | `packages/gw-tool/src/commands/*.ts` | README, Skills docs, CLI help text in the command file |
-| `packages/gw-tool/src/lib/*.ts` | README if user-facing behavior changed |
-| `packages/gw-tool/src/lib/cli.ts` | README command reference |
+| `packages/gw-tool/src/lib/*.ts`      | README if user-facing behavior changed                 |
+| `packages/gw-tool/src/lib/cli.ts`    | README command reference                               |
 
 ### Documentation Files to Check
 
@@ -79,6 +79,7 @@ After updating documentation:
 ## Output
 
 Provide a summary of:
+
 - Which files were analyzed
 - Which documentation files were updated
 - What changes were made to each file

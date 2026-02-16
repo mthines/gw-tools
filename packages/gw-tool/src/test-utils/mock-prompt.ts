@@ -13,9 +13,7 @@ export function mockPrompt(responses: (string | null)[]): () => void {
   // @ts-ignore - Intentionally replacing for testing
   globalThis.prompt = (_message?: string, _defaultValue?: string): string | null => {
     if (callIndex >= responses.length) {
-      throw new Error(
-        `Mock prompt called more times than expected. Call ${callIndex + 1}, message: ${_message}`,
-      );
+      throw new Error(`Mock prompt called more times than expected. Call ${callIndex + 1}, message: ${_message}`);
     }
     const response = responses[callIndex++];
     return response;
@@ -30,10 +28,7 @@ export function mockPrompt(responses: (string | null)[]): () => void {
 /**
  * Run a function with prompt() mocked
  */
-export async function withMockedPrompt<T>(
-  responses: (string | null)[],
-  fn: () => Promise<T>,
-): Promise<T> {
+export async function withMockedPrompt<T>(responses: (string | null)[], fn: () => Promise<T>): Promise<T> {
   const restore = mockPrompt(responses);
 
   try {

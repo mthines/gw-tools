@@ -3,7 +3,7 @@
  * Returns the git repository root directory path
  */
 
-import { loadConfig } from "../lib/config.ts";
+import { loadConfig } from '../lib/config.ts';
 
 /**
  * Execute the root command
@@ -12,7 +12,7 @@ import { loadConfig } from "../lib/config.ts";
  */
 export async function executeRoot(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes("--help") || args.includes("-h")) {
+  if (args.includes('--help') || args.includes('-h')) {
     console.log(`Usage: gw root
 
 Get the root directory of the current git repository.
