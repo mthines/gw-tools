@@ -4,7 +4,8 @@
     "jsr:@std/assert@1.0.10": "1.0.10",
     "jsr:@std/cli@1.0.9": "1.0.9",
     "jsr:@std/internal@^1.0.5": "1.0.9",
-    "jsr:@std/path@1.0.8": "1.0.8"
+    "jsr:@std/path@1.0.8": "1.0.8",
+    "jsr:@std/yaml@*": "1.0.11"
   },
   "jsr": {
     "@std/assert@1.0.10": {
@@ -21,6 +22,9 @@
     },
     "@std/path@1.0.8": {
       "integrity": "548fa456bb6a04d3c1a1e7477986b6cffbce95102d0bb447c67c4ee70e0364be"
+    },
+    "@std/yaml@1.0.11": {
+      "integrity": "bd139ce77f2d06cbed3713c8b26d301d2a2e12ecc7986130a268107e212143ee"
     }
   },
   "workspace": {
