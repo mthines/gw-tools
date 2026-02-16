@@ -129,7 +129,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
 
       - name: Run tests
-        run: npx nx run @gw-tools/gw-tool:test
+        run: npx nx run @gw-tools/gw-tool:test:ci
 
       - name: Compile all platform binaries
         run: |
