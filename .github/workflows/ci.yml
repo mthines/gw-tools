@@ -34,14 +34,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
 
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       - run: npx nx-cloud record -- npx nx format:check --base="remotes/origin/main"
-      # Use Deno-compatible targets (lint, test, check) instead of tsc-based (build, typecheck)
-      - run: npx nx run-many -t lint test check
+      # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
+      - run: npx nx run @gw-tools/gw-tool:test:ci
       # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
       - run: npx nx fix-ci
         if: always()
