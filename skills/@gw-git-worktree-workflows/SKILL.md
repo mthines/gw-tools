@@ -202,6 +202,7 @@ Creating worktree: feat/new-feature
 ```
 
 The command:
+
 1. Detects that `feat/new-feature` doesn't exist
 2. Fetches the latest version of `main` from the remote (`origin/main`)
 3. Creates your new branch from the fresh remote ref
@@ -834,25 +835,64 @@ gw add feature-payment-prod --from main
 
 **Scenario:** Reviewing a teammate's PR without disrupting your work
 
+The `gw pr` command simplifies PR review by fetching the PR branch and creating a worktree in one step:
+
 ```bash
-# Create reviewer worktree
+# Check out PR #123 into a worktree (recommended)
+gw pr 123
+
+# Or use the full GitHub URL
+gw pr https://github.com/user/repo/pull/123
+
+# Use a custom worktree name
+gw pr 123 --name review-auth-feature
+```
+
+The command automatically:
+
+1. Fetches PR information using the GitHub CLI (`gh`)
+2. Fetches the PR branch (works for forks too)
+3. Creates a worktree with the PR's branch name
+4. Copies auto-copy files (same as `gw add`)
+5. Navigates to the new worktree
+
+**Requirements:** GitHub CLI (`gh`) must be installed and authenticated (`gh auth login`).
+
+**Manual alternative** (if `gh` is not available):
+
+```bash
+# Manually create reviewer worktree
 gw add review-pr-123 -b pr-123 origin/pr-123
 
 # Navigate and review
 gw cd review-pr-123
-npm install
-npm test
-npm run dev  # Test the changes
+```
 
-# Run code reviews, add comments
+**Review workflow:**
+
+```bash
+# Check out the PR
+gw pr 123
+
+# Install dependencies (if not handled by post-add hook)
+npm install
+
+# Run tests
+npm test
+
+# Start dev server to test manually
+npm run dev
+
+# Make suggestion commits if needed
 git checkout -b pr-123-suggestions
-# Make suggestions...
+# Make changes...
+git push origin pr-123-suggestions
 
 # Return to your work
 gw cd feature-dashboard
 
 # Clean up when done
-gw remove review-pr-123
+gw remove <pr-branch-name>
 ```
 
 **Benefit:** Review code in a real environment without affecting your workspace.
@@ -926,6 +966,7 @@ gw remove feature-abandoned --force
 ```
 
 **Protected branches** (cannot be removed):
+
 - Default branch (typically `main`, configured in `.gw/config.json`)
 - `gw_root` branch (bare repository root)
 - Bare repository worktree
@@ -1404,6 +1445,7 @@ You now understand:
 - ✅ Git worktree fundamentals and when to use them
 - ✅ Creating and managing worktrees with `gw add`
 - ✅ Quick navigation with `gw cd`
+- ✅ Checking out PRs with `gw pr` for code reviews
 - ✅ Common workflow patterns for features, hotfixes, and reviews
 - ✅ Maintenance and cleanup strategies
 - ✅ Troubleshooting common issues
@@ -1412,7 +1454,7 @@ You now understand:
 
 1. Try creating your first worktree with `gw add`
 2. Set up auto-copy configuration (see [config-management skill](../config-management/))
-3. Explore advanced parallel workflows (see [multi-worktree-dev skill](../multi-worktree-dev/))
+3. Explore autonomous workflows (see [autonomous-workflow skill](../autonomous-workflow/))
 
 ### Additional Resources
 

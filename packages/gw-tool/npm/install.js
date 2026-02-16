@@ -5,14 +5,7 @@
  * Downloads the appropriate binary for the current platform
  */
 
-const {
-  existsSync,
-  mkdirSync,
-  chmodSync,
-  openSync,
-  fsyncSync,
-  closeSync,
-} = require('fs');
+const { existsSync, mkdirSync, chmodSync, openSync, fsyncSync, closeSync } = require('fs');
 const { join } = require('path');
 const { arch, platform } = require('os');
 const https = require('https');
@@ -46,7 +39,7 @@ function getBinaryName() {
   if (!os || !cpu) {
     console.error(
       `Unsupported platform: ${platform()}-${arch()}\n` +
-        'Supported platforms: macOS (x64, arm64), Linux (x64, arm64), Windows (x64, arm64)',
+        'Supported platforms: macOS (x64, arm64), Linux (x64, arm64), Windows (x64, arm64)'
     );
     process.exit(1);
   }
@@ -63,39 +56,29 @@ function download(url, dest) {
     const file = createWriteStream(dest);
 
     https
-      .get(
-        url,
-        { headers: { 'User-Agent': 'gw-npm-installer' } },
-        (response) => {
-          // Handle redirects
-          if (response.statusCode === 302 || response.statusCode === 301) {
-            return download(response.headers.location, dest)
-              .then(resolve)
-              .catch(reject);
-          }
+      .get(url, { headers: { 'User-Agent': 'gw-npm-installer' } }, (response) => {
+        // Handle redirects
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          return download(response.headers.location, dest).then(resolve).catch(reject);
+        }
 
-          if (response.statusCode !== 200) {
-            reject(
-              new Error(
-                `Failed to download: ${response.statusCode} ${response.statusMessage}`,
-              ),
-            );
-            return;
-          }
+        if (response.statusCode !== 200) {
+          reject(new Error(`Failed to download: ${response.statusCode} ${response.statusMessage}`));
+          return;
+        }
 
-          response.pipe(file);
+        response.pipe(file);
 
-          file.on('finish', () => {
-            file.close((err) => {
-              if (err) {
-                reject(err);
-              } else {
-                resolve();
-              }
-            });
+        file.on('finish', () => {
+          file.close((err) => {
+            if (err) {
+              reject(err);
+            } else {
+              resolve();
+            }
           });
-        },
-      )
+        });
+      })
       .on('error', (err) => {
         reject(err);
       });
@@ -197,7 +180,7 @@ async function installShellIntegration(binaryPath, retries = 3) {
 
     try {
       child = spawn(binaryPath, ['install-shell'], {
-        stdio: ['inherit', 'inherit', 'pipe'],  // stdin, stdout, stderr
+        stdio: ['inherit', 'inherit', 'pipe'], // stdin, stdout, stderr
       });
     } catch (err) {
       // Catch synchronous spawn errors (e.g., ETXTBSY thrown immediately)

@@ -73,14 +73,10 @@ This directory contains example `.gw/config.json` files for various project type
 - **`autoCopyFiles`** (array of strings, optional): Files/directories to automatically copy when creating worktrees
 
 Example:
+
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "config/database.yml",
-    "public/uploads/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "config/database.yml", "public/uploads/"]
 }
 ```
 
@@ -90,21 +86,20 @@ Example:
 - **`hooks.add.post`** (array of strings, optional): Commands to run after creating a worktree
 
 Available hook variables:
+
 - `{worktree}` - The worktree name
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
 - `{branch}` - The branch name
 
 Example:
+
 ```json
 {
   "hooks": {
     "add": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": [
-        "cd {worktreePath} && pnpm install",
-        "echo 'Worktree {worktree} is ready!'"
-      ]
+      "post": ["cd {worktreePath} && pnpm install", "echo 'Worktree {worktree} is ready!'"]
     }
   }
 }

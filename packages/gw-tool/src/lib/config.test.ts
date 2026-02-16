@@ -2,19 +2,19 @@
  * Tests for config.ts
  */
 
-import { assertEquals, assertRejects } from "$std/assert";
-import { join } from "$std/path";
-import { loadConfig, saveConfig, saveConfigTemplate } from "./config.ts";
-import { GitTestRepo } from "../test-utils/git-test-repo.ts";
+import { assertEquals, assertRejects } from '$std/assert';
+import { join } from '$std/path';
+import { loadConfig, saveConfig, saveConfigTemplate } from './config.ts';
+import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import {
   createMinimalConfig,
   createConfigWithAutoCopy,
   createConfigWithHooks,
   readTestConfig,
   writeTestConfig,
-} from "../test-utils/fixtures.ts";
-import { assertFileExists } from "../test-utils/assertions.ts";
-import { TempCwd } from "../test-utils/temp-env.ts";
+} from '../test-utils/fixtures.ts';
+import { assertFileExists } from '../test-utils/assertions.ts';
+import { TempCwd } from '../test-utils/temp-env.ts';
 
 Deno.test("saveConfig - creates .gw directory if it doesn't exist", async () => {
   const repo = new GitTestRepo();
@@ -24,13 +24,13 @@ Deno.test("saveConfig - creates .gw directory if it doesn't exist", async () => 
     const config = createMinimalConfig(repo.path);
     await saveConfig(repo.path, config);
 
-    await assertFileExists(join(repo.path, ".gw", "config.json"));
+    await assertFileExists(join(repo.path, '.gw', 'config.json'));
   } finally {
     await repo.cleanup();
   }
 });
 
-Deno.test("saveConfig - writes valid JSON", async () => {
+Deno.test('saveConfig - writes valid JSON', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -40,49 +40,45 @@ Deno.test("saveConfig - writes valid JSON", async () => {
 
     const saved = await readTestConfig(repo.path);
     assertEquals(saved.root, repo.path);
-    assertEquals(saved.defaultBranch, "main");
+    assertEquals(saved.defaultBranch, 'main');
     assertEquals(saved.cleanThreshold, 7);
   } finally {
     await repo.cleanup();
   }
 });
 
-Deno.test("saveConfig - preserves autoCopyFiles", async () => {
+Deno.test('saveConfig - preserves autoCopyFiles', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    const config = createConfigWithAutoCopy(repo.path, [".env", "secrets/"]);
+    const config = createConfigWithAutoCopy(repo.path, ['.env', 'secrets/']);
     await saveConfig(repo.path, config);
 
     const saved = await readTestConfig(repo.path);
-    assertEquals(saved.autoCopyFiles, [".env", "secrets/"]);
+    assertEquals(saved.autoCopyFiles, ['.env', 'secrets/']);
   } finally {
     await repo.cleanup();
   }
 });
 
-Deno.test("saveConfig - preserves hooks", async () => {
+Deno.test('saveConfig - preserves hooks', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    const config = createConfigWithHooks(
-      repo.path,
-      ["echo pre-add"],
-      ["echo post-add"],
-    );
+    const config = createConfigWithHooks(repo.path, ['echo pre-add'], ['echo post-add']);
     await saveConfig(repo.path, config);
 
     const saved = await readTestConfig(repo.path);
-    assertEquals(saved.hooks?.add?.pre, ["echo pre-add"]);
-    assertEquals(saved.hooks?.add?.post, ["echo post-add"]);
+    assertEquals(saved.hooks?.add?.pre, ['echo pre-add']);
+    assertEquals(saved.hooks?.add?.post, ['echo post-add']);
   } finally {
     await repo.cleanup();
   }
 });
 
-Deno.test("loadConfig - finds config in current directory", async () => {
+Deno.test('loadConfig - finds config in current directory', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -103,7 +99,7 @@ Deno.test("loadConfig - finds config in current directory", async () => {
   }
 });
 
-Deno.test("loadConfig - walks up directory tree to find config", async () => {
+Deno.test('loadConfig - walks up directory tree to find config', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -112,7 +108,7 @@ Deno.test("loadConfig - walks up directory tree to find config", async () => {
     await writeTestConfig(repo.path, config);
 
     // Create a subdirectory and change to it
-    const subdir = join(repo.path, "subdir", "nested");
+    const subdir = join(repo.path, 'subdir', 'nested');
     await Deno.mkdir(subdir, { recursive: true });
 
     const cwd = new TempCwd(subdir);
@@ -128,7 +124,7 @@ Deno.test("loadConfig - walks up directory tree to find config", async () => {
   }
 });
 
-Deno.test("loadConfig - auto-detects git root if no config exists", async () => {
+Deno.test('loadConfig - auto-detects git root if no config exists', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -139,10 +135,10 @@ Deno.test("loadConfig - auto-detects git root if no config exists", async () => 
       // Config should be auto-created with detected root
       assertEquals(gitRoot, repo.path);
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
+      assertEquals(loaded.defaultBranch, 'main');
 
       // Config file should have been created
-      await assertFileExists(join(repo.path, ".gw", "config.json"));
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
     } finally {
       cwd.restore();
     }
@@ -151,16 +147,12 @@ Deno.test("loadConfig - auto-detects git root if no config exists", async () => 
   }
 });
 
-Deno.test("loadConfig - throws error if not in a git repo and no config", async () => {
-  const tempDir = Deno.makeTempDirSync({ prefix: "gw-test-noconf-" });
+Deno.test('loadConfig - throws error if not in a git repo and no config', async () => {
+  const tempDir = Deno.makeTempDirSync({ prefix: 'gw-test-noconf-' });
   try {
     const cwd = new TempCwd(tempDir);
     try {
-      await assertRejects(
-        () => loadConfig(),
-        Error,
-        "Could not auto-detect git root",
-      );
+      await assertRejects(() => loadConfig(), Error, 'Could not auto-detect git root');
     } finally {
       cwd.restore();
     }
@@ -169,18 +161,15 @@ Deno.test("loadConfig - throws error if not in a git repo and no config", async 
   }
 });
 
-Deno.test("loadConfig - handles config with missing root field", async () => {
+Deno.test('loadConfig - handles config with missing root field', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create config without root field
-    const config = { defaultBranch: "main", cleanThreshold: 7 };
-    await Deno.mkdir(join(repo.path, ".gw"), { recursive: true });
-    await Deno.writeTextFile(
-      join(repo.path, ".gw", "config.json"),
-      JSON.stringify(config, null, 2),
-    );
+    const config = { defaultBranch: 'main', cleanThreshold: 7 };
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), JSON.stringify(config, null, 2));
 
     const cwd = new TempCwd(repo.path);
     try {
@@ -200,7 +189,7 @@ Deno.test("loadConfig - handles config with missing root field", async () => {
   }
 });
 
-Deno.test("loadConfig - validates config structure", async () => {
+Deno.test('loadConfig - validates config structure', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -208,22 +197,15 @@ Deno.test("loadConfig - validates config structure", async () => {
     // Create invalid config (autoCopyFiles as string instead of array)
     const invalidConfig = {
       root: repo.path,
-      defaultBranch: "main",
-      autoCopyFiles: ".env", // Should be array
+      defaultBranch: 'main',
+      autoCopyFiles: '.env', // Should be array
     };
-    await Deno.mkdir(join(repo.path, ".gw"), { recursive: true });
-    await Deno.writeTextFile(
-      join(repo.path, ".gw", "config.json"),
-      JSON.stringify(invalidConfig, null, 2),
-    );
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), JSON.stringify(invalidConfig, null, 2));
 
     const cwd = new TempCwd(repo.path);
     try {
-      await assertRejects(
-        () => loadConfig(),
-        Error,
-        "Invalid configuration file format",
-      );
+      await assertRejects(() => loadConfig(), Error, 'Invalid configuration file format');
     } finally {
       cwd.restore();
     }
@@ -232,7 +214,7 @@ Deno.test("loadConfig - validates config structure", async () => {
   }
 });
 
-Deno.test("loadConfig - parses JSONC with single-line comments", async () => {
+Deno.test('loadConfig - parses JSONC with single-line comments', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -244,17 +226,14 @@ Deno.test("loadConfig - parses JSONC with single-line comments", async () => {
   "defaultBranch": "main",
   "cleanThreshold": 7 // days before cleanup
 }`;
-    await Deno.mkdir(join(repo.path, ".gw"), { recursive: true });
-    await Deno.writeTextFile(
-      join(repo.path, ".gw", "config.json"),
-      jsoncConfig,
-    );
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
+      assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
     } finally {
@@ -265,7 +244,7 @@ Deno.test("loadConfig - parses JSONC with single-line comments", async () => {
   }
 });
 
-Deno.test("loadConfig - parses JSONC with multi-line comments", async () => {
+Deno.test('loadConfig - parses JSONC with multi-line comments', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -280,17 +259,14 @@ Deno.test("loadConfig - parses JSONC with multi-line comments", async () => {
   "defaultBranch": "main",
   "cleanThreshold": 7 /* cleanup threshold */
 }`;
-    await Deno.mkdir(join(repo.path, ".gw"), { recursive: true });
-    await Deno.writeTextFile(
-      join(repo.path, ".gw", "config.json"),
-      jsoncConfig,
-    );
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
+      assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
     } finally {
@@ -301,7 +277,7 @@ Deno.test("loadConfig - parses JSONC with multi-line comments", async () => {
   }
 });
 
-Deno.test("loadConfig - parses JSONC with trailing commas", async () => {
+Deno.test('loadConfig - parses JSONC with trailing commas', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -316,18 +292,15 @@ Deno.test("loadConfig - parses JSONC with trailing commas", async () => {
   ],
   "cleanThreshold": 7,
 }`;
-    await Deno.mkdir(join(repo.path, ".gw"), { recursive: true });
-    await Deno.writeTextFile(
-      join(repo.path, ".gw", "config.json"),
-      jsoncConfig,
-    );
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
-      assertEquals(loaded.autoCopyFiles, [".env", "secrets/"]);
+      assertEquals(loaded.defaultBranch, 'main');
+      assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
     } finally {
@@ -338,29 +311,27 @@ Deno.test("loadConfig - parses JSONC with trailing commas", async () => {
   }
 });
 
-Deno.test("saveConfig - writes clean JSON without comments", async () => {
+Deno.test('saveConfig - writes clean JSON without comments', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create config with all features
-    const config = createConfigWithAutoCopy(repo.path, [".env", "secrets/"]);
+    const config = createConfigWithAutoCopy(repo.path, ['.env', 'secrets/']);
     await saveConfig(repo.path, config);
 
     // Read the raw file content
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify it's clean JSON (no comments)
-    assertEquals(rawContent.includes("//"), false);
-    assertEquals(rawContent.includes("/*"), false);
-    assertEquals(rawContent.includes("*/"), false);
+    assertEquals(rawContent.includes('//'), false);
+    assertEquals(rawContent.includes('/*'), false);
+    assertEquals(rawContent.includes('*/'), false);
 
     // Verify it's valid JSON (not JSONC)
     const parsed = JSON.parse(rawContent);
     assertEquals(parsed.root, repo.path);
-    assertEquals(parsed.autoCopyFiles, [".env", "secrets/"]);
+    assertEquals(parsed.autoCopyFiles, ['.env', 'secrets/']);
   } finally {
     await repo.cleanup();
   }
@@ -370,7 +341,7 @@ Deno.test("saveConfig - writes clean JSON without comments", async () => {
 // saveConfigTemplate Tests
 // ============================================================================
 
-Deno.test("saveConfigTemplate - generates valid JSONC with comments", async () => {
+Deno.test('saveConfigTemplate - generates valid JSONC with comments', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -379,20 +350,18 @@ Deno.test("saveConfigTemplate - generates valid JSONC with comments", async () =
     await saveConfigTemplate(repo.path, config);
 
     // Read the raw file content
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify it has comments
-    assertEquals(rawContent.includes("//"), true);
-    assertEquals(rawContent.includes("gw Configuration File"), true);
-    assertEquals(rawContent.includes("Documentation:"), true);
+    assertEquals(rawContent.includes('//'), true);
+    assertEquals(rawContent.includes('gw Configuration File'), true);
+    assertEquals(rawContent.includes('Documentation:'), true);
   } finally {
     await repo.cleanup();
   }
 });
 
-Deno.test("saveConfigTemplate - template is parseable by loadConfig", async () => {
+Deno.test('saveConfigTemplate - template is parseable by loadConfig', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -404,7 +373,7 @@ Deno.test("saveConfigTemplate - template is parseable by loadConfig", async () =
     try {
       const { config: loaded, gitRoot } = await loadConfig();
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
+      assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
     } finally {
@@ -415,17 +384,15 @@ Deno.test("saveConfigTemplate - template is parseable by loadConfig", async () =
   }
 });
 
-Deno.test("saveConfigTemplate - shows active autoCopyFiles uncommented", async () => {
+Deno.test('saveConfigTemplate - shows active autoCopyFiles uncommented', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    const config = createConfigWithAutoCopy(repo.path, [".env", "secrets/"]);
+    const config = createConfigWithAutoCopy(repo.path, ['.env', 'secrets/']);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify autoCopyFiles section is uncommented
     assertEquals(rawContent.includes('"autoCopyFiles": ['), true);
@@ -436,7 +403,7 @@ Deno.test("saveConfigTemplate - shows active autoCopyFiles uncommented", async (
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded } = await loadConfig();
-      assertEquals(loaded.autoCopyFiles, [".env", "secrets/"]);
+      assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
     } finally {
       cwd.restore();
     }
@@ -445,7 +412,7 @@ Deno.test("saveConfigTemplate - shows active autoCopyFiles uncommented", async (
   }
 });
 
-Deno.test("saveConfigTemplate - shows inactive autoCopyFiles as commented examples", async () => {
+Deno.test('saveConfigTemplate - shows inactive autoCopyFiles as commented examples', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -453,9 +420,7 @@ Deno.test("saveConfigTemplate - shows inactive autoCopyFiles as commented exampl
     const config = createMinimalConfig(repo.path);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify autoCopyFiles section is commented
     assertEquals(rawContent.includes('// "autoCopyFiles": ['), true);
@@ -466,21 +431,15 @@ Deno.test("saveConfigTemplate - shows inactive autoCopyFiles as commented exampl
   }
 });
 
-Deno.test("saveConfigTemplate - shows active hooks uncommented", async () => {
+Deno.test('saveConfigTemplate - shows active hooks uncommented', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    const config = createConfigWithHooks(
-      repo.path,
-      ["echo pre-add"],
-      ["cd {worktreePath} && npm install"],
-    );
+    const config = createConfigWithHooks(repo.path, ['echo pre-add'], ['cd {worktreePath} && npm install']);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify hooks section is uncommented
     assertEquals(rawContent.includes('"hooks": {'), true);
@@ -494,8 +453,8 @@ Deno.test("saveConfigTemplate - shows active hooks uncommented", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded } = await loadConfig();
-      assertEquals(loaded.hooks?.add?.pre, ["echo pre-add"]);
-      assertEquals(loaded.hooks?.add?.post, ["cd {worktreePath} && npm install"]);
+      assertEquals(loaded.hooks?.add?.pre, ['echo pre-add']);
+      assertEquals(loaded.hooks?.add?.post, ['cd {worktreePath} && npm install']);
     } finally {
       cwd.restore();
     }
@@ -504,7 +463,7 @@ Deno.test("saveConfigTemplate - shows active hooks uncommented", async () => {
   }
 });
 
-Deno.test("saveConfigTemplate - shows inactive hooks as commented examples", async () => {
+Deno.test('saveConfigTemplate - shows inactive hooks as commented examples', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -512,9 +471,7 @@ Deno.test("saveConfigTemplate - shows inactive hooks as commented examples", asy
     const config = createMinimalConfig(repo.path);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify hooks section is commented
     assertEquals(rawContent.includes('// "hooks": {'), true);
@@ -529,19 +486,17 @@ Deno.test("saveConfigTemplate - shows inactive hooks as commented examples", asy
   }
 });
 
-Deno.test("saveConfigTemplate - includes advanced options when configured", async () => {
+Deno.test('saveConfigTemplate - includes advanced options when configured', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const config = createMinimalConfig(repo.path);
     config.autoClean = true;
-    config.updateStrategy = "rebase";
+    config.updateStrategy = 'rebase';
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify advanced options are uncommented
     assertEquals(rawContent.includes('"autoClean": true'), true);
@@ -552,7 +507,7 @@ Deno.test("saveConfigTemplate - includes advanced options when configured", asyn
     try {
       const { config: loaded } = await loadConfig();
       assertEquals(loaded.autoClean, true);
-      assertEquals(loaded.updateStrategy, "rebase");
+      assertEquals(loaded.updateStrategy, 'rebase');
     } finally {
       cwd.restore();
     }
@@ -561,7 +516,7 @@ Deno.test("saveConfigTemplate - includes advanced options when configured", asyn
   }
 });
 
-Deno.test("saveConfigTemplate - shows commented examples for unconfigured advanced options", async () => {
+Deno.test('saveConfigTemplate - shows commented examples for unconfigured advanced options', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -569,9 +524,7 @@ Deno.test("saveConfigTemplate - shows commented examples for unconfigured advanc
     const config = createMinimalConfig(repo.path);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify advanced options are commented
     assertEquals(rawContent.includes('// "autoClean": false'), true);
@@ -582,21 +535,21 @@ Deno.test("saveConfigTemplate - shows commented examples for unconfigured advanc
   }
 });
 
-Deno.test("saveConfigTemplate - preserves all config values", async () => {
+Deno.test('saveConfigTemplate - preserves all config values', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create a config with all features enabled
-    const config = createConfigWithAutoCopy(repo.path, [".env", ".env.local", "secrets/"]);
+    const config = createConfigWithAutoCopy(repo.path, ['.env', '.env.local', 'secrets/']);
     config.hooks = {
       add: {
-        pre: ["echo Creating {worktree}"],
-        post: ["cd {worktreePath} && npm install", "cd {worktreePath} && npm run build"],
+        pre: ['echo Creating {worktree}'],
+        post: ['cd {worktreePath} && npm install', 'cd {worktreePath} && npm run build'],
       },
     };
     config.autoClean = true;
-    config.updateStrategy = "rebase";
+    config.updateStrategy = 'rebase';
     config.cleanThreshold = 14;
 
     await saveConfigTemplate(repo.path, config);
@@ -606,16 +559,13 @@ Deno.test("saveConfigTemplate - preserves all config values", async () => {
     try {
       const { config: loaded } = await loadConfig();
       assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, "main");
+      assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 14);
-      assertEquals(loaded.autoCopyFiles, [".env", ".env.local", "secrets/"]);
-      assertEquals(loaded.hooks?.add?.pre, ["echo Creating {worktree}"]);
-      assertEquals(loaded.hooks?.add?.post, [
-        "cd {worktreePath} && npm install",
-        "cd {worktreePath} && npm run build",
-      ]);
+      assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
+      assertEquals(loaded.hooks?.add?.pre, ['echo Creating {worktree}']);
+      assertEquals(loaded.hooks?.add?.post, ['cd {worktreePath} && npm install', 'cd {worktreePath} && npm run build']);
       assertEquals(loaded.autoClean, true);
-      assertEquals(loaded.updateStrategy, "rebase");
+      assertEquals(loaded.updateStrategy, 'rebase');
     } finally {
       cwd.restore();
     }
@@ -624,7 +574,7 @@ Deno.test("saveConfigTemplate - preserves all config values", async () => {
   }
 });
 
-Deno.test("saveConfigTemplate - includes section headers and documentation", async () => {
+Deno.test('saveConfigTemplate - includes section headers and documentation', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -632,20 +582,18 @@ Deno.test("saveConfigTemplate - includes section headers and documentation", asy
     const config = createMinimalConfig(repo.path);
     await saveConfigTemplate(repo.path, config);
 
-    const rawContent = await Deno.readTextFile(
-      join(repo.path, ".gw", "config.json"),
-    );
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify section headers
-    assertEquals(rawContent.includes("Core Settings"), true);
-    assertEquals(rawContent.includes("Auto-Copy Files"), true);
-    assertEquals(rawContent.includes("Hooks"), true);
-    assertEquals(rawContent.includes("Advanced Options"), true);
+    assertEquals(rawContent.includes('Core Settings'), true);
+    assertEquals(rawContent.includes('Auto-Copy Files'), true);
+    assertEquals(rawContent.includes('Hooks'), true);
+    assertEquals(rawContent.includes('Advanced Options'), true);
 
     // Verify documentation elements
-    assertEquals(rawContent.includes("Documentation: https://github.com/mthines/gw-tools"), true);
-    assertEquals(rawContent.includes("All fields except"), true);
-    assertEquals(rawContent.includes("Internal fields (managed automatically)"), true);
+    assertEquals(rawContent.includes('Documentation: https://github.com/mthines/gw-tools'), true);
+    assertEquals(rawContent.includes('All fields except'), true);
+    assertEquals(rawContent.includes('Internal fields (managed automatically)'), true);
   } finally {
     await repo.cleanup();
   }

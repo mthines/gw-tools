@@ -5,6 +5,7 @@ Working on multiple features simultaneously without losing focus or context.
 ## Scenario
 
 You're a full-stack developer working on two features for an e-commerce application:
+
 - **Feature A:** New payment gateway integration (backend focus)
 - **Feature B:** Product recommendation UI (frontend focus)
 
@@ -137,15 +138,15 @@ gh pr create --base main --head feature-recommendations --title "Add product rec
 
 ## Benefits of Parallel Development
 
-| Traditional Approach | Worktree Approach |
-|---------------------|-------------------|
-| Stop Feature B dev server | Both servers run simultaneously |
-| Commit or stash Feature B | Both features have uncommitted work |
-| Switch to Feature A branch | Navigate with `gw cd feature-a` |
-| Wait for IDE reindexing | IDE already indexed both |
-| npm install (again) | Each has its own node_modules |
-| Restart Feature A dev server | Never stopped |
-| Context loss and mental overhead | Seamless context preservation |
+| Traditional Approach             | Worktree Approach                   |
+| -------------------------------- | ----------------------------------- |
+| Stop Feature B dev server        | Both servers run simultaneously     |
+| Commit or stash Feature B        | Both features have uncommitted work |
+| Switch to Feature A branch       | Navigate with `gw cd feature-a`     |
+| Wait for IDE reindexing          | IDE already indexed both            |
+| npm install (again)              | Each has its own node_modules       |
+| Restart Feature A dev server     | Never stopped                       |
+| Context loss and mental overhead | Seamless context preservation       |
 
 ---
 
@@ -172,8 +173,8 @@ Use `Cmd+Tab` (Mac) or `Alt+Tab` (Windows/Linux) to switch between editor window
 ```json
 {
   "folders": [
-    {"name": "Payment Gateway", "path": "../feature-payment-gateway"},
-    {"name": "Recommendations", "path": "../feature-recommendations"}
+    { "name": "Payment Gateway", "path": "../feature-payment-gateway" },
+    { "name": "Recommendations", "path": "../feature-recommendations" }
   ]
 }
 ```
@@ -183,6 +184,7 @@ Use `Cmd+Tab` (Mac) or `Alt+Tab` (Windows/Linux) to switch between editor window
 Use terminal multiplexers for easy switching:
 
 **tmux:**
+
 ```bash
 # Create sessions for each feature
 tmux new -s payment
@@ -198,6 +200,7 @@ tmux attach -t recommendations
 ```
 
 **iTerm2 / Windows Terminal:**
+
 - Use named tabs for each worktree
 - Split panes to view both simultaneously
 
@@ -231,16 +234,16 @@ PORT=3002
 
 **Problem:** Both features modify the same database
 
-**Solution:** Use separate databases or Docker containers (see [multi-worktree-dev skill](../../multi-worktree-dev/))
+**Solution:** Use separate databases or Docker containers (see [autonomous-workflow examples](../../autonomous-workflow/examples/))
 
 ---
 
 ## Next Steps
 
 - Learn about [Testing Multiple Versions](./testing-multiple-versions.md)
-- Explore [Advanced Multi-Worktree Development](../../multi-worktree-dev/)
+- Explore [Autonomous Workflow](../../autonomous-workflow/)
 - Set up [Configuration Management](../../config-management/)
 
 ---
 
-*Part of the [git-worktree-workflows skill](../README.md)*
+_Part of the [git-worktree-workflows skill](../README.md)_

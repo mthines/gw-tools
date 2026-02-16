@@ -5,6 +5,7 @@ Testing compatibility across different environments, versions, or configurations
 ## Scenario
 
 You're releasing a new library feature and need to ensure compatibility with:
+
 - Node.js 18 LTS
 - Node.js 20 LTS
 - Node.js 22 (latest)
@@ -218,12 +219,12 @@ $ npx playwright test --project webkit
 
 ## Benefits
 
-| Sequential Testing | Parallel Testing with Worktrees |
-|-------------------|----------------------------------|
-| 3 tests × 3m = 9m total | 3 tests running simultaneously = ~3m total |
-| Switch Node versions repeatedly | Each environment stays configured |
-| npm install multiple times | Install once per worktree |
-| Risk of version mix-ups | Complete isolation |
+| Sequential Testing              | Parallel Testing with Worktrees            |
+| ------------------------------- | ------------------------------------------ |
+| 3 tests × 3m = 9m total         | 3 tests running simultaneously = ~3m total |
+| Switch Node versions repeatedly | Each environment stays configured          |
+| npm install multiple times      | Install once per worktree                  |
+| Risk of version mix-ups         | Complete isolation                         |
 
 **Time savings:** ~66% faster for 3 environments
 
@@ -271,9 +272,9 @@ While worktrees are great for local testing, use CI/CD (GitHub Actions, etc.) fo
 
 ## Next Steps
 
-- Explore [Multi-Worktree Development](../../multi-worktree-dev/) for advanced parallel workflows
+- Explore [Autonomous Workflow](../../autonomous-workflow/) for end-to-end feature development
 - Set up [Configuration Management](../../config-management/) for environment-specific configs
 
 ---
 
-*Part of the [git-worktree-workflows skill](../README.md)*
+_Part of the [git-worktree-workflows skill](../README.md)_

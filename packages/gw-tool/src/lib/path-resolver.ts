@@ -2,7 +2,7 @@
  * Path resolution and validation utilities
  */
 
-import { join, normalize, resolve } from "$std/path";
+import { join, normalize, resolve } from '$std/path';
 
 /**
  * Resolve a worktree path relative to a repository root
@@ -15,10 +15,7 @@ import { join, normalize, resolve } from "$std/path";
  * @param worktreeName Worktree name (relative) or full path (absolute)
  * @returns Absolute path to the worktree
  */
-export function resolveWorktreePath(
-  repoPath: string,
-  worktreeName: string,
-): string {
+export function resolveWorktreePath(repoPath: string, worktreeName: string): string {
   // If the worktree name is already an absolute path starting with the repo prefix,
   // just return it normalized
   if (worktreeName.startsWith(repoPath)) {
@@ -27,7 +24,7 @@ export function resolveWorktreePath(
 
   // If it's an absolute path but not within our repo, return it as-is
   // (user might be specifying a different location)
-  if (worktreeName.startsWith("/") || worktreeName.match(/^[A-Za-z]:\\/)) {
+  if (worktreeName.startsWith('/') || worktreeName.match(/^[A-Za-z]:\\/)) {
     return normalize(worktreeName);
   }
 
@@ -42,25 +39,20 @@ export function resolveWorktreePath(
  * @param expectedType Expected type: "file" or "directory"
  * @throws Error if path doesn't exist or is wrong type
  */
-export async function validatePathExists(
-  path: string,
-  expectedType: "file" | "directory",
-): Promise<void> {
+export async function validatePathExists(path: string, expectedType: 'file' | 'directory'): Promise<void> {
   try {
     const stat = await Deno.stat(path);
 
-    if (expectedType === "file" && !stat.isFile) {
+    if (expectedType === 'file' && !stat.isFile) {
       throw new Error(`Path exists but is not a file: ${path}`);
     }
 
-    if (expectedType === "directory" && !stat.isDirectory) {
+    if (expectedType === 'directory' && !stat.isDirectory) {
       throw new Error(`Path exists but is not a directory: ${path}`);
     }
   } catch (error) {
     if (error instanceof Deno.errors.NotFound) {
-      throw new Error(
-        `${expectedType === "file" ? "File" : "Directory"} not found: ${path}`,
-      );
+      throw new Error(`${expectedType === 'file' ? 'File' : 'Directory'} not found: ${path}`);
     }
     throw error;
   }
@@ -124,7 +116,7 @@ export async function findGitRoot(startPath?: string): Promise<string> {
 
   // Walk up the directory tree looking for .git or bare repo markers
   while (true) {
-    const gitPath = join(currentPath, ".git");
+    const gitPath = join(currentPath, '.git');
 
     // Check for .git file/directory
     if (await pathExists(gitPath)) {
@@ -144,19 +136,19 @@ export async function findGitRoot(startPath?: string): Promise<string> {
           // Bare: /path/to/repo.git/worktrees/name
           // Non-bare: /path/to/repo/.git/worktrees/name
 
-          if (gitDir.includes("/.git/worktrees/")) {
+          if (gitDir.includes('/.git/worktrees/')) {
             // Non-bare repository
             // Go up from .git/worktrees/name to .git, then to repo root
-            const dotGitDir = resolve(gitDir, "../..");
-            return resolve(dotGitDir, "..");
+            const dotGitDir = resolve(gitDir, '../..');
+            return resolve(dotGitDir, '..');
           } else {
             // Bare repository - gitdir is directly under repo root
             // Go up from worktrees/name to repo root
-            return resolve(gitDir, "../..");
+            return resolve(gitDir, '../..');
           }
         }
         // Fallback if we can't parse the file
-        return resolve(currentPath, "..");
+        return resolve(currentPath, '..');
       } else {
         // This is a regular git repo - .git is a directory
         return currentPath;
@@ -165,16 +157,16 @@ export async function findGitRoot(startPath?: string): Promise<string> {
 
     // Check if this is a bare repository by looking for git metadata files
     // Bare repos have HEAD, config, refs/, and objects/ directly in the repo dir
-    const headPath = join(currentPath, "HEAD");
-    const configPath = join(currentPath, "config");
-    const refsPath = join(currentPath, "refs");
-    const objectsPath = join(currentPath, "objects");
+    const headPath = join(currentPath, 'HEAD');
+    const configPath = join(currentPath, 'config');
+    const refsPath = join(currentPath, 'refs');
+    const objectsPath = join(currentPath, 'objects');
 
     if (
-      await pathExists(headPath) &&
-      await pathExists(configPath) &&
-      await pathExists(refsPath) &&
-      await pathExists(objectsPath)
+      (await pathExists(headPath)) &&
+      (await pathExists(configPath)) &&
+      (await pathExists(refsPath)) &&
+      (await pathExists(objectsPath))
     ) {
       // This is a bare repository
       return currentPath;
@@ -182,22 +174,16 @@ export async function findGitRoot(startPath?: string): Promise<string> {
 
     // Additional heuristic: check if directory name ends with .git
     // Many bare repos follow this convention (e.g., repo.git)
-    if (
-      currentPath.endsWith(".git") &&
-      await pathExists(headPath) &&
-      await pathExists(configPath)
-    ) {
+    if (currentPath.endsWith('.git') && (await pathExists(headPath)) && (await pathExists(configPath))) {
       // Likely a bare repository with minimal checks
       return currentPath;
     }
 
-    const parentPath = resolve(currentPath, "..");
+    const parentPath = resolve(currentPath, '..');
 
     // If we've reached the root without finding .git
     if (parentPath === currentPath) {
-      throw new Error(
-        "Not in a git repository. Please run this command from within a git repository.",
-      );
+      throw new Error('Not in a git repository. Please run this command from within a git repository.');
     }
 
     currentPath = parentPath;

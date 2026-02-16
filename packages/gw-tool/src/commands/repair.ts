@@ -13,15 +13,10 @@ import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 export async function executeRepair(args: string[]): Promise<void> {
   // Check for help flag
   if (args.includes('--help') || args.includes('-h')) {
-    showProxyHelp(
-      'repair',
-      'repair',
-      'Repair worktree administrative files',
-      [
-        'gw repair',
-        'gw repair /path/to/worktree',
-      ],
-    );
+    showProxyHelp('repair', 'repair', 'Repair worktree administrative files', [
+      'gw repair',
+      'gw repair /path/to/worktree',
+    ]);
     Deno.exit(0);
   }
 

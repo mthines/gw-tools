@@ -105,6 +105,7 @@ The `gw add` command follows a **remote-first approach** when creating new branc
 **Remote-First Design:**
 
 When you create a new branch (e.g., `gw add feat/new-feature`), gw:
+
 1. Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
 2. Creates your new branch from the fresh remote ref
 3. Sets up tracking to your new branch's remote counterpart (e.g., `origin/feat/new-feature`)
@@ -120,17 +121,19 @@ When you create a new branch (e.g., `gw add feat/new-feature`), gw:
 
 The command has intelligent fallback behavior based on how you use it:
 
-| Command | Fetch Behavior | Fallback |
-|---------|----------------|----------|
-| `gw add feat/new` | Fetches `origin/main` | Falls back to local `main` with warning |
-| `gw add feat/new --from develop` | Fetches `origin/develop` | **No fallback** - exits with error |
+| Command                          | Fetch Behavior           | Fallback                                |
+| -------------------------------- | ------------------------ | --------------------------------------- |
+| `gw add feat/new`                | Fetches `origin/main`    | Falls back to local `main` with warning |
+| `gw add feat/new --from develop` | Fetches `origin/develop` | **No fallback** - exits with error      |
 
 **When `--from` is specified**, gw assumes you need that exact source and requires a successful remote fetch. If the fetch fails, you'll get:
+
 - Clear error message about why the fetch failed
 - Troubleshooting steps (check network, verify branch exists, check auth)
 - Alternative command suggestions
 
 **When using default branch** (no `--from`), gw allows local fallback for offline development or when no remote is configured. You'll see:
+
 - Warning that remote fetch failed
 - Explanation that start point may not be current
 - Note that this is acceptable for offline work
@@ -1114,7 +1117,7 @@ You now understand:
 
 1. Configure gw for your project using a [template](./templates/)
 2. Read project-specific examples ([Next.js](./examples/nextjs-setup.md), [Monorepo](./examples/monorepo-setup.md))
-3. Explore [advanced parallel development](../multi-worktree-dev/)
+3. Explore [autonomous workflow](../autonomous-workflow/)
 
 ---
 

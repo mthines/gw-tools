@@ -23,9 +23,7 @@
 
   "hooks": {
     "add": {
-      "post": [
-        "cd {worktreePath} && pnpm install"
-      ]
+      "post": ["cd {worktreePath} && pnpm install"]
     }
   }
 }

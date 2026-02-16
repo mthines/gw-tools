@@ -22,6 +22,7 @@ import { executeUnlock } from './commands/unlock.ts';
 import { executeRepair } from './commands/repair.ts';
 import { executeClean } from './commands/clean.ts';
 import { executeShowInit } from './commands/show-init.ts';
+import { executePr } from './commands/pr.ts';
 import * as output from './lib/output.ts';
 
 /**
@@ -49,6 +50,7 @@ const COMMANDS = {
   repair: executeRepair,
   clean: executeClean,
   'show-init': executeShowInit,
+  pr: executePr,
 };
 
 if (import.meta.main) {

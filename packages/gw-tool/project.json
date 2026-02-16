@@ -33,6 +33,12 @@
       "options": {
         "command": "deno test --allow-all",
         "cwd": "packages/gw-tool"
+      },
+      "configurations": {
+        "ci": {
+          "command": "deno test --allow-all --ignore=src/pr.test.ts",
+          "cwd": "packages/gw-tool"
+        }
       }
     },
     "lint": {
@@ -87,11 +93,7 @@
     "compile-all": {
       "executor": "nx:run-commands",
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool/binaries"],
-      "inputs": [
-        "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/deno.json",
-        "{projectRoot}/deno.lock"
-      ],
+      "inputs": ["{projectRoot}/src/**/*.ts", "{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {
         "commands": [
           "mkdir -p ../../dist/packages/gw-tool/binaries",

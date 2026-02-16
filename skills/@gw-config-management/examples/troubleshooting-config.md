@@ -97,11 +97,7 @@ gw init --auto-copy-files .env,.env.local,secrets/
 {
   "root": "/path/to/repo.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "secrets/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "secrets/"]
 }
 ```
 
@@ -191,8 +187,8 @@ ls -la $(cat .gw/config.json | grep root | cut -d'"' -f4)
 ```jsonc
 {
   "autoCopyFiles": [
-    ".env",           // ✓ Relative to worktree root
-    "config/.env"     // ✓ Relative path
+    ".env", // ✓ Relative to worktree root
+    "config/.env" // ✓ Relative path
   ]
 }
 ```
@@ -202,7 +198,7 @@ Not:
 ```jsonc
 {
   "autoCopyFiles": [
-    "/Users/you/repo/.env"  // ✗ Absolute path
+    "/Users/you/repo/.env" // ✗ Absolute path
   ]
 }
 ```
@@ -223,7 +219,7 @@ gw init --root $(git rev-parse --show-toplevel)
 {
   "autoCopyFiles": [
     ".env",
-    "secrets/api-key.json"  // Make sure path is correct
+    "secrets/api-key.json" // Make sure path is correct
   ]
 }
 ```
@@ -266,6 +262,7 @@ gw init --root $(gw root)
 **Solution C: Check directory structure**
 
 Expected structure:
+
 ```
 repo.git/           # Root (or repo/)
 ├── main/           # Main worktree
@@ -366,6 +363,7 @@ git push
 ```
 
 Add to `.gitignore`:
+
 ```
 .gw/config.local.json
 ```
@@ -373,10 +371,12 @@ Add to `.gitignore`:
 **Solution C: Document expected files**
 
 In README:
+
 ```markdown
 ## Required Local Files
 
 Before using gw, ensure you have:
+
 - `.env` - Copy from `.env.example`
 - `secrets/api-key.json` - Get from team lead
 ```
@@ -443,4 +443,4 @@ done
 
 ---
 
-*Part of the [config-management skill](../README.md)*
+_Part of the [config-management skill](../README.md)_

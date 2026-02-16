@@ -5,6 +5,7 @@ Configure gw for monorepos using pnpm, Yarn, or npm workspaces.
 ## Scenario
 
 You have a monorepo with multiple packages:
+
 - Shared environment variables at the root
 - Package-specific configurations
 - Secrets that need to be available across all packages
@@ -123,13 +124,7 @@ npm install
 
 ```jsonc
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "apps/api/.env",
-    "apps/web/.env",
-    "libs/shared-config/.env"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "apps/api/.env", "apps/web/.env", "libs/shared-config/.env"]
 }
 ```
 
@@ -137,11 +132,7 @@ npm install
 
 ```jsonc
 {
-  "autoCopyFiles": [
-    ".env",
-    "apps/*/.env",
-    "packages/config/.env"
-  ]
+  "autoCopyFiles": [".env", "apps/*/.env", "packages/config/.env"]
 }
 ```
 
@@ -253,6 +244,7 @@ gw cd feat/your-feature
 pnpm install
 
 This automatically copies:
+
 - Root `.env` (shared config)
 - Package-specific `.env` files
 - Vercel deployment configs
@@ -271,7 +263,7 @@ This automatically copies:
 ```jsonc
 {
   "autoCopyFiles": [
-    "packages/api/.env"  // Not "api/.env"
+    "packages/api/.env" // Not "api/.env"
   ]
 }
 ```
@@ -306,8 +298,8 @@ pnpm add react@19
 ## Next Steps
 
 - See [Troubleshooting Guide](./troubleshooting-config.md) for more issues
-- Check [multi-worktree-dev skill](../../multi-worktree-dev/) for advanced parallel development
+- Check [autonomous-workflow skill](../../autonomous-workflow/) for autonomous feature development
 
 ---
 
-*Part of the [config-management skill](../README.md)*
+_Part of the [config-management skill](../README.md)_

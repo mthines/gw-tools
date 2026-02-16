@@ -17,6 +17,7 @@ npx skills add mthines/gw-tools/git-worktree-workflows
 ```
 
 **Learn:**
+
 - Git worktree fundamentals and best practices
 - Creating and managing worktrees with `gw`
 - Quick navigation with `gw cd`
@@ -36,6 +37,7 @@ npx skills add mthines/gw-tools/config-management
 ```
 
 **Learn:**
+
 - Understanding `.gw/config.json` structure
 - Auto-copy strategies for different project types
 - Configuration templates for Next.js, Node.js APIs, monorepos, and more
@@ -46,22 +48,23 @@ npx skills add mthines/gw-tools/config-management
 
 ---
 
-### 3. [Multi-Worktree Development](./multi-worktree-dev/)
+### 3. [Autonomous Workflow](./autonomous-workflow/)
 
-Advanced patterns for developing across multiple worktrees simultaneously.
+Execute complete feature development cycles autonomously using isolated worktrees.
 
 ```bash
-npx skills add mthines/gw-tools/multi-worktree-dev
+npx skills add mthines/gw-tools/autonomous-workflow
 ```
 
-**Learn:**
-- Managing dependencies across worktrees
-- Parallel development and testing workflows
-- Database and service management strategies
-- File synchronization patterns
-- Performance optimization
+**Capabilities:**
 
-**Best for:** Power users, teams working on multiple features simultaneously, testing across versions
+- Autonomous feature implementation from requirements to PR
+- Worktree creation and environment setup
+- Continuous testing and iteration
+- Documentation generation
+- Draft PR creation with comprehensive descriptions
+
+**Best for:** AI agents executing end-to-end feature development, autonomous task completion, production-ready deliverables
 
 ---
 
@@ -84,8 +87,8 @@ npx skills add mthines/gw-tools/git-worktree-workflows
 # When setting up gw for a project
 npx skills add mthines/gw-tools/config-management
 
-# For advanced parallel development
-npx skills add mthines/gw-tools/multi-worktree-dev
+# For autonomous feature development
+npx skills add mthines/gw-tools/autonomous-workflow
 ```
 
 Or install all skills at once:
@@ -100,7 +103,7 @@ Once installed, your AI agent will have access to the skill knowledge. Simply as
 
 - "Help me set up a worktree workflow for parallel feature development"
 - "Configure gw for a Next.js project with Vercel"
-- "How do I share node_modules across worktrees to save disk space?"
+- "Implement dark mode toggle autonomously"
 
 ---
 
@@ -121,7 +124,7 @@ We recommend following this learning path:
 
 1. **Start with git-worktree-workflows** - Build a solid foundation in Git worktrees and basic gw usage
 2. **Add config-management** - Optimize gw for your specific project type and team
-3. **Explore multi-worktree-dev** - Level up with advanced parallel development techniques
+3. **Use autonomous-workflow** - Enable autonomous end-to-end feature development
 
 ---
 
@@ -174,4 +177,4 @@ These skills are licensed under the MIT License - see the [LICENSE](../LICENSE) 
 
 ---
 
-*Made with ❤️ for the Git worktree community*
+_Made with ❤️ for the Git worktree community_

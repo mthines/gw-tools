@@ -11,6 +11,8 @@ node_modules
 tasks
 
 .gw
+
+# Envs
 .env
 .env*
 
@@ -23,6 +25,7 @@ tasks
 .settings/
 *.sublime-workspace
 
+# Testing
 coverage
 
 # IDE - VSCode

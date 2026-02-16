@@ -12,19 +12,11 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development",
-    ".vercel/",
-    "public/uploads/"
-  ],
+  "autoCopyFiles": [".env", ".env.local", ".env.development", ".vercel/", "public/uploads/"],
 
   "hooks": {
     "add": {
-      "post": [
-        "cd {worktreePath} && pnpm install"
-      ]
+      "post": ["cd {worktreePath} && pnpm install"]
     }
   }
 }

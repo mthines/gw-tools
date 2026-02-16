@@ -1,0 +1,358 @@
+name: Release
+
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    # Only run if CI workflow succeeded
+    if: github.event.workflow_run.conclusion == 'success'
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - id: check
+        run: |
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [[ "$COMMIT_MSG" =~ ^chore\(gw\):\ release\ v ]]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "::notice::Skipping - this is a release commit"
+          else
+            # Check if gw-tool files were changed
+            LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+            if [ -z "$LAST_TAG" ]; then
+              CHANGED=$(git diff --name-only HEAD~1 -- packages/gw-tool/src/ packages/gw-tool/deno.json)
+            else
+              CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/gw-tool/src/ packages/gw-tool/deno.json)
+            fi
+
+            if [ -z "$CHANGED" ]; then
+              echo "should_release=false" >> $GITHUB_OUTPUT
+              echo "::notice::Skipping - no gw-tool changes since last release"
+            else
+              echo "should_release=true" >> $GITHUB_OUTPUT
+            fi
+          fi
+
+  determine-version:
+    runs-on: ubuntu-latest
+    needs: check-release
+    if: needs.check-release.outputs.should_release == 'true'
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      changelog: ${{ steps.version.outputs.changelog }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 0
+
+      - id: version
+        run: |
+          # Get last tag
+          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+          echo "Last tag: ${LAST_TAG:-none}"
+
+          # Get commits since last tag (gw-tool changes only)
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          else
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          fi
+
+          # Determine bump type from conventional commits
+          BUMP_TYPE="patch"
+          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            BUMP_TYPE="minor"
+          fi
+          echo "Bump type: $BUMP_TYPE"
+
+          # Calculate new version
+          CURRENT=$(node -p "require('./packages/gw-tool/npm/package.json').version")
+          IFS='.' read -ra V <<< "$CURRENT"
+
+          case "$BUMP_TYPE" in
+            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
+            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
+            patch) V[2]=$((V[2] + 1)) ;;
+          esac
+
+          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "::notice::Releasing v$NEW_VERSION ($BUMP_TYPE bump from $CURRENT)"
+
+          # Generate changelog
+          {
+            echo "changelog<<CHANGELOG_EOF"
+            if [ -z "$LAST_TAG" ]; then
+              git log --pretty=format:"* %s (%h)" --no-merges -- packages/gw-tool/
+            else
+              git log "$LAST_TAG"..HEAD --pretty=format:"* %s (%h)" --no-merges -- packages/gw-tool/
+            fi
+            echo ""
+            echo "CHANGELOG_EOF"
+          } >> $GITHUB_OUTPUT
+
+  build:
+    runs-on: ubuntu-latest
+    needs: determine-version
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        run: npx nx run @gw-tools/gw-tool:test:ci
+
+      - name: Compile all platform binaries
+        run: |
+          mkdir -p dist/packages/gw-tool/binaries
+
+          # Linux (native on ubuntu runner)
+          deno compile --allow-all --no-check --no-npm \
+            --target x86_64-unknown-linux-gnu \
+            --output dist/packages/gw-tool/binaries/gw-linux-x64 \
+            packages/gw-tool/src/main.ts
+
+          deno compile --allow-all --no-check --no-npm \
+            --target aarch64-unknown-linux-gnu \
+            --output dist/packages/gw-tool/binaries/gw-linux-arm64 \
+            packages/gw-tool/src/main.ts
+
+          # macOS (cross-compile)
+          deno compile --allow-all --no-check --no-npm \
+            --target x86_64-apple-darwin \
+            --output dist/packages/gw-tool/binaries/gw-macos-x64 \
+            packages/gw-tool/src/main.ts
+
+          deno compile --allow-all --no-check --no-npm \
+            --target aarch64-apple-darwin \
+            --output dist/packages/gw-tool/binaries/gw-macos-arm64 \
+            packages/gw-tool/src/main.ts
+
+          # Windows (cross-compile)
+          deno compile --allow-all --no-check --no-npm \
+            --target x86_64-pc-windows-msvc \
+            --output dist/packages/gw-tool/binaries/gw-windows-x64.exe \
+            packages/gw-tool/src/main.ts
+
+          ls -la dist/packages/gw-tool/binaries/
+
+      - name: Prepare npm package
+        run: npx nx run gw-tool:npm-pack
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/packages/gw-tool/
+          retention-days: 1
+
+  release:
+    runs-on: ubuntu-latest
+    needs: [determine-version, build]
+    permissions:
+      contents: write
+    env:
+      NEW_VERSION: ${{ needs.determine-version.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          token: ${{ secrets.GH_PAT }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/packages/gw-tool
+
+      - name: Configure git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Update version and create release commit
+        run: |
+          cd packages/gw-tool/npm
+          npm version $NEW_VERSION --no-git-tag-version
+          cd -
+
+          git add packages/gw-tool/npm/package.json
+          git commit -m "chore(gw): release v$NEW_VERSION"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+          git push origin main
+          git push origin "v$NEW_VERSION"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CHANGELOG: ${{ needs.determine-version.outputs.changelog }}
+        run: |
+          gh release create "v$NEW_VERSION" \
+            --title "v$NEW_VERSION" \
+            --notes "$CHANGELOG" \
+            dist/packages/gw-tool/binaries/*
+
+  homebrew:
+    runs-on: ubuntu-latest
+    needs: [determine-version, release]
+    env:
+      NEW_VERSION: ${{ needs.determine-version.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: mthines/homebrew-gw-tools
+          token: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          path: homebrew-tap
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/packages/gw-tool
+
+      - name: Update Homebrew formula
+        run: |
+          # Calculate SHA256 hashes
+          MACOS_ARM64=$(sha256sum dist/packages/gw-tool/binaries/gw-macos-arm64 | cut -d' ' -f1)
+          MACOS_X64=$(sha256sum dist/packages/gw-tool/binaries/gw-macos-x64 | cut -d' ' -f1)
+          LINUX_ARM64=$(sha256sum dist/packages/gw-tool/binaries/gw-linux-arm64 | cut -d' ' -f1)
+          LINUX_X64=$(sha256sum dist/packages/gw-tool/binaries/gw-linux-x64 | cut -d' ' -f1)
+
+          F="homebrew-tap/Formula/gw.rb"
+
+          # Update version
+          sed -i "s|version \"[^\"]*\"|version \"$NEW_VERSION\"|g" "$F"
+
+          # Update download URLs
+          sed -i "s|/v[^/]*/gw-|/v$NEW_VERSION/gw-|g" "$F"
+
+          # Update SHA256 hashes (order: arm64, x64, linux-arm64, linux-x64)
+          perl -i -pe '
+            BEGIN { $c = 0; }
+            if (/sha256 "/) {
+              $c++;
+              s/sha256 "[^"]*"/sha256 "'"$MACOS_ARM64"'"/ if $c == 1;
+              s/sha256 "[^"]*"/sha256 "'"$MACOS_X64"'"/ if $c == 2;
+              s/sha256 "[^"]*"/sha256 "'"$LINUX_ARM64"'"/ if $c == 3;
+              s/sha256 "[^"]*"/sha256 "'"$LINUX_X64"'"/ if $c == 4;
+            }
+          ' "$F"
+
+      - name: Commit and push
+        working-directory: homebrew-tap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/gw.rb
+          git commit -m "gw: update to v$NEW_VERSION"
+          git push origin main
+
+  npm-publish:
+    runs-on: ubuntu-latest
+    needs: [determine-version, release]
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/packages/gw-tool
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Publish to npm
+        working-directory: dist/packages/gw-tool/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public
+
+  aur:
+    runs-on: ubuntu-latest
+    needs: [determine-version, release]
+    continue-on-error: true
+    env:
+      NEW_VERSION: ${{ needs.determine-version.outputs.new_version }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: release-artifacts
+          path: dist/packages/gw-tool
+
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.AUR_SSH_PRIVATE_KEY }}
+        continue-on-error: true
+
+      - name: Update AUR package
+        if: env.SSH_AUTH_SOCK != ''
+        run: |
+          ssh-keyscan -t ed25519 aur.archlinux.org >> ~/.ssh/known_hosts
+
+          git clone ssh://aur@aur.archlinux.org/gw-tools.git aur-pkg
+          cd aur-pkg
+
+          X64=$(sha256sum ../dist/packages/gw-tool/binaries/gw-linux-x64 | cut -d' ' -f1)
+          ARM64=$(sha256sum ../dist/packages/gw-tool/binaries/gw-linux-arm64 | cut -d' ' -f1)
+
+          # Generate PKGBUILD from template
+          sed "s/VERSION_PLACEHOLDER/$NEW_VERSION/g" ../packages/gw-tool/PKGBUILD.template | \
+            sed "s/X64_SHA256_PLACEHOLDER/$X64/g" | \
+            sed "s/ARM64_SHA256_PLACEHOLDER/$ARM64/g" > PKGBUILD
+
+          # Generate .SRCINFO
+          cat > .SRCINFO << EOF
+          pkgbase = gw-tools
+          	pkgdesc = Git worktree manager - Streamline your multi-branch development workflow
+          	pkgver = $NEW_VERSION
+          	pkgrel = 1
+          	url = https://github.com/mthines/gw-tools
+          	arch = x86_64
+          	arch = aarch64
+          	license = MIT
+          	provides = gw
+          	conflicts = gw
+          	source_x86_64 = gw-tools-$NEW_VERSION-x64::https://github.com/mthines/gw-tools/releases/download/v$NEW_VERSION/gw-linux-x64
+          	sha256sums_x86_64 = $X64
+          	source_aarch64 = gw-tools-$NEW_VERSION-arm64::https://github.com/mthines/gw-tools/releases/download/v$NEW_VERSION/gw-linux-arm64
+          	sha256sums_aarch64 = $ARM64
+
+          pkgname = gw-tools
+          EOF
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add PKGBUILD .SRCINFO
+          git commit -m "Update to v$NEW_VERSION"
+          git push

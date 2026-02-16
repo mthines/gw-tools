@@ -60,6 +60,7 @@ Done! Navigate with: gw cd hotfix-login
 ```
 
 **What happened:**
+
 - New directory created: `~/projects/myapp.git/hotfix-login/`
 - New branch created: `hotfix-login` based on `main`
 - Your original work in `main` worktree is untouched
@@ -137,6 +138,7 @@ $ gw list
 ## Expected Outcome
 
 You've successfully:
+
 - ✅ Created your first Git worktree
 - ✅ Worked on a hotfix without interrupting feature development
 - ✅ Navigated between worktrees seamlessly
@@ -204,7 +206,7 @@ Now that you understand the basics:
 
 1. **Configure auto-copy** - Set up automatic file copying with the [config-management skill](../../config-management/)
 2. **Learn parallel development** - See [Parallel Development Example](./parallel-development.md)
-3. **Explore advanced workflows** - Check out the [multi-worktree-dev skill](../../multi-worktree-dev/)
+3. **Explore autonomous workflows** - Check out the [autonomous-workflow skill](../../autonomous-workflow/)
 
 ---
 
@@ -219,4 +221,4 @@ Now that you understand the basics:
 
 ---
 
-*Part of the [git-worktree-workflows skill](../README.md)*
+_Part of the [git-worktree-workflows skill](../README.md)_

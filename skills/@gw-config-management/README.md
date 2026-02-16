@@ -92,23 +92,27 @@ vim .gw/config.json
 ## 🔗 Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Learn worktree basics first
-- [multi-worktree-dev](../multi-worktree-dev/) - Advanced parallel development patterns
+- [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
 
 ## 💬 Common Configuration Patterns
 
 ### Next.js Projects
+
 - Copy: `.env*`, `.vercel/`, `public/uploads/`
 - Skip: `.next/`, `node_modules/`
 
 ### Node.js APIs
+
 - Copy: `.env`, `ssl/`, `keys/`, `secrets/`
 - Skip: `node_modules/`, `dist/`, `build/`
 
 ### Monorepos
+
 - Copy: Root `.env`, workspace configs, shared secrets
 - Skip: Individual `node_modules/`, build outputs
 
 ### React SPAs
+
 - Copy: `.env`, `.env.local`, `public/config.json`
 - Skip: `build/`, `dist/`, `node_modules/`
 
@@ -121,4 +125,4 @@ vim .gw/config.json
 
 ---
 
-*Part of the [gw-tools skills collection](../)*
+_Part of the [gw-tools skills collection](../)_

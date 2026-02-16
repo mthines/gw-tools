@@ -5,6 +5,7 @@ Step-by-step guide to configure gw for Next.js applications with Vercel deployme
 ## Scenario
 
 You have a Next.js application deployed on Vercel. When creating new worktrees for features, you need to copy:
+
 - Environment variables (`.env`, `.env.local`)
 - Vercel configuration (`.vercel/`)
 - Any uploaded assets (`public/uploads/`)
@@ -25,6 +26,7 @@ gw init
 ```
 
 Output:
+
 ```
 Repository root detected: /Users/you/projects/nextjs-app.git
 Default branch detected: main
@@ -45,11 +47,11 @@ Or manually edit `.gw/config.json`:
   "defaultBranch": "main",
   // Environment and deployment configs
   "autoCopyFiles": [
-    ".env",              // Base environment variables
-    ".env.local",        // Local overrides
-    ".env.development",  // Dev environment
-    ".vercel/",          // Vercel deployment config
-    "public/uploads/",   // User-generated content
+    ".env", // Base environment variables
+    ".env.local", // Local overrides
+    ".env.development", // Dev environment
+    ".vercel/", // Vercel deployment config
+    "public/uploads/", // User-generated content
   ],
 }
 ```
@@ -125,7 +127,7 @@ public/uploads/
   "autoCopyFiles": [
     ".env",
     ".env.local",
-    ".env.development",  // trailing comma OK
+    ".env.development", // trailing comma OK
   ],
 }
 ```
@@ -139,7 +141,7 @@ Don't copy `.env.production` - that should only exist in CI/CD.
   "autoCopyFiles": [
     ".env",
     ".env.local",
-    "prisma/.env",  // Prisma database config
+    "prisma/.env", // Prisma database config
   ],
 }
 ```
@@ -150,9 +152,9 @@ Don't copy `.env.production` - that should only exist in CI/CD.
 {
   "autoCopyFiles": [
     ".env",
-    "apps/web/.vercel/",     // Web app deployment config
-    "apps/admin/.vercel/",   // Admin app deployment config
-    "packages/ui/.env",      // UI package variables
+    "apps/web/.vercel/", // Web app deployment config
+    "apps/admin/.vercel/", // Admin app deployment config
+    "packages/ui/.env", // UI package variables
   ],
 }
 ```
@@ -198,12 +200,14 @@ gw remove feat/new-checkout
 **Problem:** `.env.local` exists but wasn't copied
 
 **Check:**
+
 ```bash
 cat .gw/config.json
 # Verify .env.local is in autoCopyFiles
 ```
 
 **Solution:** Add missing file to config:
+
 ```bash
 gw init --auto-copy-files .env,.env.local
 ```
@@ -213,12 +217,14 @@ gw init --auto-copy-files .env,.env.local
 **Problem:** `vercel dev` fails in new worktree
 
 **Check:**
+
 ```bash
 ls -la .vercel/
 # Should contain project.json
 ```
 
 **Solution:** If `.vercel/` wasn't copied, run:
+
 ```bash
 gw sync feat/new-checkout .vercel/
 ```
@@ -232,4 +238,4 @@ gw sync feat/new-checkout .vercel/
 
 ---
 
-*Part of the [config-management skill](../README.md)*
+_Part of the [config-management skill](../README.md)_

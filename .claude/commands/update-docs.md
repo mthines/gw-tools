@@ -29,11 +29,11 @@ Based on the changes, determine which documentation files need updates:
 
 ### Code Files -> Documentation Mapping
 
-| Changed File | Documentation to Update |
-|--------------|------------------------|
+| Changed File                         | Documentation to Update                                |
+| ------------------------------------ | ------------------------------------------------------ |
 | `packages/gw-tool/src/commands/*.ts` | README, Skills docs, CLI help text in the command file |
-| `packages/gw-tool/src/lib/*.ts` | README if user-facing behavior changed |
-| `packages/gw-tool/src/lib/cli.ts` | README command reference |
+| `packages/gw-tool/src/lib/*.ts`      | README if user-facing behavior changed                 |
+| `packages/gw-tool/src/lib/cli.ts`    | README command reference                               |
 
 ### Documentation Files to Check
 
@@ -45,7 +45,7 @@ Based on the changes, determine which documentation files need updates:
 2. **Skills Documentation**:
    - `skills/config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
-   - `skills/multi-worktree-dev/SKILL.md` - Multi-worktree development features
+   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features
 
 3. **CLI Help Text**: Update `showXxxHelp()` functions in command files
 
@@ -79,6 +79,7 @@ After updating documentation:
 ## Output
 
 Provide a summary of:
+
 - Which files were analyzed
 - Which documentation files were updated
 - What changes were made to each file
