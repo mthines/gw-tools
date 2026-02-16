@@ -12,19 +12,11 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.test",
-    "config/test-database.json",
-    "cypress.env.json"
-  ],
+  "autoCopyFiles": [".env", ".env.test", "config/test-database.json", "cypress.env.json"],
 
   "hooks": {
     "add": {
-      "pre": [
-        "echo 'Validating repository state...'",
-        "git fetch origin"
-      ],
+      "pre": ["echo 'Validating repository state...'", "git fetch origin"],
       "post": [
         "cd {worktreePath} && npm install",
         "cd {worktreePath} && npm run db:test:setup",

@@ -23,14 +23,14 @@ export async function executeInstallShell(args: string[]): Promise<void> {
 
   // Parse --name flag
   let commandName = 'gw';
-  const nameIndex = args.findIndex(arg => arg === '--name' || arg === '-n');
+  const nameIndex = args.findIndex((arg) => arg === '--name' || arg === '-n');
   if (nameIndex !== -1 && nameIndex + 1 < args.length) {
     commandName = args[nameIndex + 1];
   }
 
   // Parse --command flag (actual command to run, e.g., for aliases)
   let actualCommand: string | undefined;
-  const commandIndex = args.findIndex(arg => arg === '--command' || arg === '-c');
+  const commandIndex = args.findIndex((arg) => arg === '--command' || arg === '-c');
   if (commandIndex !== -1 && commandIndex + 1 < args.length) {
     actualCommand = args[commandIndex + 1];
   }
@@ -105,12 +105,11 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
 
     if (shellName !== 'fish') {
       // Check for old inline format (multi-line function in config file)
-      const hasOldFormat = content.includes('# gw-tools shell integration') &&
-                           content.includes('gw() {');
+      const hasOldFormat = content.includes('# gw-tools shell integration') && content.includes('gw() {');
 
       // Check for new format (just source line)
-      const hasNewFormat = content.includes('# gw-tools shell integration') &&
-                           content.includes('source ~/.gw/shell/integration');
+      const hasNewFormat =
+        content.includes('# gw-tools shell integration') && content.includes('source ~/.gw/shell/integration');
 
       if (hasOldFormat && !hasNewFormat) {
         needsMigration = true;
@@ -144,9 +143,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
           await Deno.stat(scriptFile);
           if (!quiet) {
             output.success('Shell integration already installed!');
-            console.log(
-              `Restart your shell or run: ${output.bold(`source ${configFile}`)}`,
-            );
+            console.log(`Restart your shell or run: ${output.bold(`source ${configFile}`)}`);
           }
           return;
         } catch {
@@ -190,11 +187,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
     let message = '';
     if (error instanceof Error) {
       message = error.message;
-    } else if (
-      typeof error === 'object' &&
-      error !== null &&
-      'message' in error
-    ) {
+    } else if (typeof error === 'object' && error !== null && 'message' in error) {
       message = String((error as any).message);
     } else {
       message = String(error);
@@ -235,11 +228,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
     let message = '';
     if (error instanceof Error) {
       message = error.message;
-    } else if (
-      typeof error === 'object' &&
-      error !== null &&
-      'message' in error
-    ) {
+    } else if (typeof error === 'object' && error !== null && 'message' in error) {
       message = String((error as any).message);
     } else {
       message = String(error);
@@ -304,8 +293,10 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 
       for (const line of lines) {
         // Match both old format and new format with command name
-        if (line.includes('# gw-tools shell integration') &&
-            (line.includes(`(${commandName})`) || !line.includes('('))) {
+        if (
+          line.includes('# gw-tools shell integration') &&
+          (line.includes(`(${commandName})`) || !line.includes('('))
+        ) {
           foundIntegration = true;
           skipNext = true;
           continue;
@@ -327,11 +318,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
         let message = '';
         if (error instanceof Error) {
           message = error.message;
-        } else if (
-          typeof error === 'object' &&
-          error !== null &&
-          'message' in error
-        ) {
+        } else if (typeof error === 'object' && error !== null && 'message' in error) {
           message = String((error as any).message);
         } else {
           message = String(error);

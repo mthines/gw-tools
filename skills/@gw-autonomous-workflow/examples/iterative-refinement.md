@@ -37,6 +37,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit) {
 **Self-review checkpoint:**
 
 Questions to ask:
+
 - ✓ Does it compile?
 - ✓ Does it follow existing patterns?
 - ❌ Is this the simplest solution? **No - hardcoded single retry**
@@ -72,7 +73,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit) {
 
       // Don't retry on last attempt
       if (attempt < MAX_RETRIES - 1) {
-        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+        await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY));
       }
     }
   }
@@ -84,6 +85,7 @@ export async function fetchAPI(endpoint: string, options: RequestInit) {
 **Self-review checkpoint:**
 
 Questions:
+
 - ✓ Does it compile? **Yes**
 - ✓ Handles multiple retries? **Yes**
 - ✓ Has delay between retries? **Yes**
@@ -120,15 +122,8 @@ function isRetryableError(error: Error, status?: number): boolean {
   return true;
 }
 
-export async function fetchAPI(
-  endpoint: string,
-  options: FetchOptions = {}
-): Promise<any> {
-  const {
-    maxRetries = MAX_RETRIES,
-    retryDelay = INITIAL_RETRY_DELAY,
-    ...fetchOptions
-  } = options;
+export async function fetchAPI(endpoint: string, options: FetchOptions = {}): Promise<any> {
+  const { maxRetries = MAX_RETRIES, retryDelay = INITIAL_RETRY_DELAY, ...fetchOptions } = options;
 
   const url = `${API_BASE}${endpoint}`;
   let lastError: Error;
@@ -156,7 +151,7 @@ export async function fetchAPI(
       if (attempt < maxRetries - 1) {
         // Exponential backoff: delay * (2 ^ attempt)
         const delay = retryDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -168,6 +163,7 @@ export async function fetchAPI(
 **Self-review checkpoint:**
 
 Questions:
+
 - ✓ Does it compile? **Yes**
 - ✓ Exponential backoff? **Yes**
 - ✓ Configurable? **Yes**
@@ -186,7 +182,8 @@ Questions:
 // src/lib/__tests__/api-client.test.ts
 describe('fetchAPI retry logic', () => {
   it('should retry on network errors', async () => {
-    const mockFetch = jest.fn()
+    const mockFetch = jest
+      .fn()
       .mockRejectedValueOnce(new Error('Network error'))
       .mockRejectedValueOnce(new Error('Network error'))
       .mockResolvedValueOnce({
@@ -203,13 +200,12 @@ describe('fetchAPI retry logic', () => {
   });
 
   it('should not retry on 404 errors', async () => {
-    const mockFetch = jest.fn()
-      .mockResolvedValue({
-        ok: false,
-        status: 404,
-        statusText: 'Not Found',
-        json: async () => ({}),
-      });
+    const mockFetch = jest.fn().mockResolvedValue({
+      ok: false,
+      status: 404,
+      statusText: 'Not Found',
+      json: async () => ({}),
+    });
 
     global.fetch = mockFetch;
 
@@ -221,6 +217,7 @@ describe('fetchAPI retry logic', () => {
 ```
 
 **Run tests:**
+
 ```bash
 $ pnpm test api-client
 FAIL  src/lib/__tests__/api-client.test.ts
@@ -239,22 +236,16 @@ FAIL  src/lib/__tests__/api-client.test.ts
 **Fix (Iteration 5):**
 
 ```typescript
-export async function fetchAPI(
-  endpoint: string,
-  options: FetchOptions = {}
-): Promise<any> {
-  const {
-    maxRetries = MAX_RETRIES,
-    retryDelay = INITIAL_RETRY_DELAY,
-    ...fetchOptions
-  } = options;
+export async function fetchAPI(endpoint: string, options: FetchOptions = {}): Promise<any> {
+  const { maxRetries = MAX_RETRIES, retryDelay = INITIAL_RETRY_DELAY, ...fetchOptions } = options;
 
   const url = `${API_BASE}${endpoint}`;
   let lastError: Error;
   let lastStatus: number | undefined;
 
   // Initial attempt + retries = maxRetries total attempts
-  for (let attempt = 0; attempt <= maxRetries; attempt++) {  // Changed < to <=
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    // Changed < to <=
     try {
       const response = await fetch(url, fetchOptions);
       lastStatus = response.status;
@@ -272,9 +263,10 @@ export async function fetchAPI(
       }
 
       // Don't delay after last attempt
-      if (attempt < maxRetries) {  // Changed condition
+      if (attempt < maxRetries) {
+        // Changed condition
         const delay = retryDelay * Math.pow(2, attempt);
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
     }
   }
@@ -284,6 +276,7 @@ export async function fetchAPI(
 ```
 
 **Retest:**
+
 ```bash
 $ pnpm test api-client
 PASS  src/lib/__tests__/api-client.test.ts
@@ -293,6 +286,7 @@ Tests: 2 passed, 2 total
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/lib/api-client.ts
 $ git commit -m "feat(api): add retry logic with exponential backoff
@@ -308,6 +302,7 @@ $ git commit -m "feat(api): add retry logic with exponential backoff
 ### Summary of Refinement Process
 
 **Iterations:**
+
 1. Initial draft → Self-review revealed inadequate retry logic
 2. Multiple retries → Self-review revealed missing edge cases
 3. Better edge cases → Self-review confirmed ready to test
@@ -367,6 +362,7 @@ export function SignupForm() {
 ```
 
 **Self-review:**
+
 - ✓ Validates email format
 - ❌ When does validation happen? **Only on submit - poor UX**
 - ❌ Error message helpful? **"Invalid email" is vague**
@@ -456,6 +452,7 @@ export function SignupForm() {
 ```
 
 **Self-review:**
+
 - ✓ Validates on blur
 - ✓ Shows errors while typing (after touched)
 - ✓ Helpful error messages
@@ -470,6 +467,7 @@ export function SignupForm() {
 ### Iteration 3 (Match Design System)
 
 **Check existing components:**
+
 ```bash
 $ grep -r "className.*input" src/components/ui/
 src/components/ui/Input.tsx: className="border rounded px-3 py-2"
@@ -552,6 +550,7 @@ export function SignupForm() {
 ```
 
 **Self-review:**
+
 - ✓ Uses design system Input component
 - ✓ Consistent with other forms
 - ✓ Shows success state when valid
@@ -615,6 +614,7 @@ describe('SignupForm email validation', () => {
 ```
 
 **Run tests:**
+
 ```bash
 $ pnpm test SignupForm
 PASS  src/components/__tests__/SignupForm.test.tsx
@@ -623,6 +623,7 @@ Tests: 3 passed, 3 total
 ```
 
 **Commit:**
+
 ```bash
 $ git add src/components/SignupForm.tsx src/components/__tests__/SignupForm.test.tsx
 $ git commit -m "feat(signup): add email validation with progressive feedback
@@ -639,12 +640,14 @@ $ git commit -m "feat(signup): add email validation with progressive feedback
 ### Summary of Refinement
 
 **Iterations:**
+
 1. Basic validation → Improved UX with better timing
 2. Better UX → Matched design system patterns
 3. Design system → Added comprehensive tests
 4. Tests passing → Committed
 
 **Improvements made through self-review:**
+
 - Validation timing (submit-only → blur → live)
 - Error messages (vague → specific)
 - Accessibility (none → full aria support)
@@ -658,6 +661,7 @@ $ git commit -m "feat(signup): add email validation with progressive feedback
 ### 1. Self-Review Checkpoints
 
 After each change, ask:
+
 - Does it compile/build?
 - Does it follow existing patterns?
 - Are edge cases handled?
@@ -680,6 +684,7 @@ Check how similar features are implemented. Consistency > cleverness.
 ### 5. Progressive Enhancement
 
 Start simple, add sophistication through iteration:
+
 1. Make it work
 2. Make it right (refine logic)
 3. Make it match patterns (consistency)
@@ -728,6 +733,7 @@ Total cost: Low (clean code, no rework, happy users)
 ## When to Stop Iterating
 
 **Stop when:**
+
 - ✅ Self-review checklist passes
 - ✅ Tests pass
 - ✅ Code matches project patterns
@@ -735,11 +741,13 @@ Total cost: Low (clean code, no rework, happy users)
 - ✅ No obvious improvements
 
 **Don't stop because:**
+
 - ❌ "It's good enough" (it's not if you have doubts)
 - ❌ "I've tried 3 times" (no arbitrary limits)
 - ❌ "Tests are too hard to write" (refactor to make testable)
 
 **Exception - stop and ask user if:**
+
 - Fundamental approach is wrong
 - Requirements were misunderstood
 - External blocker encountered

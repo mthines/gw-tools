@@ -3,18 +3,18 @@
  * Smart git checkout wrapper that works well with worktrees
  */
 
-import { listWorktrees } from "../lib/git-utils.ts";
-import { signalNavigation } from "../lib/shell-navigation.ts";
-import * as output from "../lib/output.ts";
+import { listWorktrees } from '../lib/git-utils.ts';
+import { signalNavigation } from '../lib/shell-navigation.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Check if a branch exists locally
  */
 async function branchExistsLocally(branchName: string): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["rev-parse", "--verify", branchName],
-    stdout: "null",
-    stderr: "null",
+  const cmd = new Deno.Command('git', {
+    args: ['rev-parse', '--verify', branchName],
+    stdout: 'null',
+    stderr: 'null',
   });
   const result = await cmd.output();
   return result.code === 0;
@@ -23,14 +23,11 @@ async function branchExistsLocally(branchName: string): Promise<boolean> {
 /**
  * Check if a branch exists on remote
  */
-async function branchExistsOnRemote(
-  branchName: string,
-  remoteName = "origin",
-): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["rev-parse", "--verify", `${remoteName}/${branchName}`],
-    stdout: "null",
-    stderr: "null",
+async function branchExistsOnRemote(branchName: string, remoteName = 'origin'): Promise<boolean> {
+  const cmd = new Deno.Command('git', {
+    args: ['rev-parse', '--verify', `${remoteName}/${branchName}`],
+    stdout: 'null',
+    stderr: 'null',
   });
   const result = await cmd.output();
   return result.code === 0;
@@ -40,10 +37,10 @@ async function branchExistsOnRemote(
  * Get current branch name
  */
 async function getCurrentBranch(): Promise<string | null> {
-  const cmd = new Deno.Command("git", {
-    args: ["branch", "--show-current"],
-    stdout: "piped",
-    stderr: "piped",
+  const cmd = new Deno.Command('git', {
+    args: ['branch', '--show-current'],
+    stdout: 'piped',
+    stderr: 'piped',
   });
 
   const { code, stdout } = await cmd.output();
@@ -59,10 +56,10 @@ async function getCurrentBranch(): Promise<string | null> {
  * Checkout a branch in the current worktree
  */
 async function checkoutBranch(branchName: string): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["checkout", branchName],
-    stdout: "inherit",
-    stderr: "inherit",
+  const cmd = new Deno.Command('git', {
+    args: ['checkout', branchName],
+    stdout: 'inherit',
+    stderr: 'inherit',
   });
 
   const { code } = await cmd.output();
@@ -124,7 +121,7 @@ Tips:
  */
 export async function executeCheckout(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes("--help") || args.includes("-h") || args.length === 0) {
+  if (args.includes('--help') || args.includes('-h') || args.length === 0) {
     showCheckoutHelp();
     Deno.exit(args.length === 0 ? 1 : 0);
   }
@@ -146,13 +143,11 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
   if (worktreeWithBranch) {
     // Case 2: Branch is checked out in another worktree - navigate to it
-    console.log("");
-    output.info(
-      `Branch ${output.bold(branchName)} is checked out in another worktree:`,
-    );
+    console.log('');
+    output.info(`Branch ${output.bold(branchName)} is checked out in another worktree:`);
     console.log(`  ${output.path(worktreeWithBranch.path)}`);
-    console.log("");
-    console.log("Navigating there...");
+    console.log('');
+    console.log('Navigating there...');
 
     await signalNavigation(worktreeWithBranch.path);
     Deno.exit(0);
@@ -180,48 +175,39 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
   if (existsOnRemote) {
     // Case 3: Branch exists on remote but not locally - prompt to create worktree
-    console.log("");
-    output.info(
-      `Branch ${output.bold(branchName)} exists on remote but not locally.`,
-    );
-    console.log("");
+    console.log('');
+    output.info(`Branch ${output.bold(branchName)} exists on remote but not locally.`);
+    console.log('');
 
-    const response = prompt(
-      `Create a new worktree for it? [Y/n]:`,
-    );
+    const response = prompt(`Create a new worktree for it? [Y/n]:`);
 
-    if (
-      response === null || response === "" || response.toLowerCase() === "y" ||
-      response.toLowerCase() === "yes"
-    ) {
-      console.log("");
+    if (response === null || response === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes') {
+      console.log('');
       console.log(`Running: ${output.dim(`gw add ${branchName}`)}`);
-      console.log("");
+      console.log('');
 
       // Execute gw add
       const addCmd = new Deno.Command(Deno.execPath(), {
-        args: ["run", "--allow-all", Deno.mainModule, "add", branchName],
-        stdout: "inherit",
-        stderr: "inherit",
+        args: ['run', '--allow-all', Deno.mainModule, 'add', branchName],
+        stdout: 'inherit',
+        stderr: 'inherit',
       });
 
       const { code } = await addCmd.output();
       Deno.exit(code);
     } else {
-      console.log("");
-      output.info("Operation cancelled.");
+      console.log('');
+      output.info('Operation cancelled.');
       Deno.exit(0);
     }
   }
 
   // Case 4: Branch doesn't exist anywhere
-  console.log("");
+  console.log('');
   output.error(`Branch '${branchName}' not found locally or on remote.`);
-  console.log("");
-  console.log("Did you mean to:");
-  console.log(
-    `  ${output.bold(`gw add ${branchName}`)} - Create a new worktree with a new branch`,
-  );
-  console.log("");
+  console.log('');
+  console.log('Did you mean to:');
+  console.log(`  ${output.bold(`gw add ${branchName}`)} - Create a new worktree with a new branch`);
+  console.log('');
   Deno.exit(1);
 }

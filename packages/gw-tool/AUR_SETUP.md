@@ -86,10 +86,12 @@ Once set up, the `release.sh` script will automatically:
 ## Troubleshooting
 
 ### "Failed to clone AUR repository"
+
 - Check SSH key is properly configured: `ssh -T aur@aur.archlinux.org`
 - Ensure the package exists on AUR (do initial submission first)
 
 ### "makepkg not found"
+
 - Install makepkg: `sudo pacman -S base-devel` (on Arch)
 - On non-Arch systems, the script will skip AUR updates
 

@@ -2,12 +2,12 @@
  * Tests for prune command
  */
 
-import { assertEquals } from "$std/assert";
-import { getCurrentWorktreePath, listWorktrees } from "../lib/git-utils.ts";
-import { GitTestRepo } from "../test-utils/git-test-repo.ts";
-import { join } from "$std/path";
+import { assertEquals } from '$std/assert';
+import { getCurrentWorktreePath, listWorktrees } from '../lib/git-utils.ts';
+import { GitTestRepo } from '../test-utils/git-test-repo.ts';
+import { join } from '$std/path';
 
-Deno.test("getCurrentWorktreePath - should return empty string when not in a worktree", async () => {
+Deno.test('getCurrentWorktreePath - should return empty string when not in a worktree', async () => {
   const testRepo = new GitTestRepo();
   try {
     await testRepo.initBare();
@@ -21,7 +21,7 @@ Deno.test("getCurrentWorktreePath - should return empty string when not in a wor
 
       // Should return empty string instead of throwing
       const path = await getCurrentWorktreePath();
-      assertEquals(path, "");
+      assertEquals(path, '');
     } finally {
       // Restore original cwd
       Deno.chdir(originalCwd);
@@ -31,7 +31,7 @@ Deno.test("getCurrentWorktreePath - should return empty string when not in a wor
   }
 });
 
-Deno.test("getCurrentWorktreePath - should return path when in a worktree", async () => {
+Deno.test('getCurrentWorktreePath - should return path when in a worktree', async () => {
   const testRepo = new GitTestRepo();
   try {
     await testRepo.init();
@@ -55,7 +55,7 @@ Deno.test("getCurrentWorktreePath - should return path when in a worktree", asyn
   }
 });
 
-Deno.test("listWorktrees should work from bare repo", async () => {
+Deno.test('listWorktrees should work from bare repo', async () => {
   // This verifies that worktree operations work from a bare repo root,
   // which is the scenario described in the bug report
 
@@ -73,7 +73,7 @@ Deno.test("listWorktrees should work from bare repo", async () => {
 
       // Get current path from bare repo - should return empty string (not an error)
       const currentPath = await getCurrentWorktreePath();
-      assertEquals(currentPath, "");
+      assertEquals(currentPath, '');
 
       // List worktrees - should work from bare repo without errors
       const worktrees = await listWorktrees();

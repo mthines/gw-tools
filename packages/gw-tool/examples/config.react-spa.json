@@ -11,19 +11,11 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development",
-    "public/uploads/",
-    "public/images/"
-  ],
+  "autoCopyFiles": [".env", ".env.local", ".env.development", "public/uploads/", "public/images/"],
 
   "hooks": {
     "add": {
-      "post": [
-        "cd {worktreePath} && npm install"
-      ]
+      "post": ["cd {worktreePath} && npm install"]
     }
   }
 }
