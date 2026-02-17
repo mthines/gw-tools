@@ -14,12 +14,12 @@
 
   // Files/directories to automatically copy when creating new worktrees
   "autoCopyFiles": [
-    ".env",              // Main environment variables (DATABASE_URL, API keys, etc.)
-    ".env.local",        // Local development overrides (not committed to git)
-    ".env.development",  // Development-specific environment variables
-    ".vercel/",          // Vercel project configuration and deployment settings
-    "public/uploads/",   // User-uploaded files (if applicable)
-  ],
+    ".env", // Main environment variables (DATABASE_URL, API keys, etc.)
+    ".env.local", // Local development overrides (not committed to git)
+    ".env.development", // Development-specific environment variables
+    ".vercel/", // Vercel project configuration and deployment settings
+    "public/uploads/" // User-uploaded files (if applicable)
+  ]
 
   // ============================================================================
   // SETUP INSTRUCTIONS

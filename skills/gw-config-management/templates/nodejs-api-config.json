@@ -14,12 +14,12 @@
 
   // Files/directories to automatically copy when creating new worktrees
   "autoCopyFiles": [
-    ".env",             // Environment variables (DATABASE_URL, JWT_SECRET, API_KEYS)
-    "ssl/",             // SSL certificates and private keys for HTTPS
-    "keys/",            // JWT signing keys, encryption keys, service account keys
-    "secrets/",         // API secrets, service credentials, third-party tokens
-    "config/local.json", // Local configuration overrides (ports, debug settings)
-  ],
+    ".env", // Environment variables (DATABASE_URL, JWT_SECRET, API_KEYS)
+    "ssl/", // SSL certificates and private keys for HTTPS
+    "keys/", // JWT signing keys, encryption keys, service account keys
+    "secrets/", // API secrets, service credentials, third-party tokens
+    "config/local.json" // Local configuration overrides (ports, debug settings)
+  ]
 
   // ============================================================================
   // SETUP INSTRUCTIONS

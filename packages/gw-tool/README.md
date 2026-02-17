@@ -315,13 +315,13 @@ gw init --root /path/to/your/repo.git
   "hooks": {
     "add": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": ["pnpm install", "echo 'Setup complete!'"]
-    }
+      "post": ["pnpm install", "echo 'Setup complete!'"],
+    },
   },
   "cleanThreshold": 7,
   "autoClean": true,
   "updateStrategy": "merge",
-  "lastAutoCleanTime": 1706371200000,  // trailing comma OK
+  "lastAutoCleanTime": 1706371200000, // trailing comma OK
 }
 ```
 

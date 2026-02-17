@@ -14,12 +14,12 @@
 
   // Files/directories to automatically copy when creating new worktrees
   "autoCopyFiles": [
-    ".env",              // Build-time environment variables (REACT_APP_API_URL, etc.)
-    ".env.local",        // Local development overrides (local API endpoints, feature flags)
-    ".env.development",  // Development-specific variables
+    ".env", // Build-time environment variables (REACT_APP_API_URL, etc.)
+    ".env.local", // Local development overrides (local API endpoints, feature flags)
+    ".env.development", // Development-specific variables
     "public/config.json", // Runtime configuration (loaded by app at startup)
-    "public/uploads/",   // User-uploaded assets or test data
-  ],
+    "public/uploads/" // User-uploaded assets or test data
+  ]
 
   // ============================================================================
   // SETUP INSTRUCTIONS

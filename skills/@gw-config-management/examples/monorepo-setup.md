@@ -70,13 +70,13 @@ gw init --auto-copy-files \
   "defaultBranch": "main",
   // Copy environment files for all workspaces
   "autoCopyFiles": [
-    ".env",                                  // Root env
-    "packages/api/.env",                     // API service env
-    "packages/api/secrets/",                 // API secrets
-    "packages/web/.env",                     // Web app env
-    "packages/web/.vercel/",                 // Deployment config
-    "apps/mobile/.env",                      // Mobile app env
-    "apps/mobile/google-services.json",      // Firebase config
+    ".env", // Root env
+    "packages/api/.env", // API service env
+    "packages/api/secrets/", // API secrets
+    "packages/web/.env", // Web app env
+    "packages/web/.vercel/", // Deployment config
+    "apps/mobile/.env", // Mobile app env
+    "apps/mobile/google-services.json", // Firebase config
   ],
 }
 ```
@@ -124,7 +124,7 @@ npm install
 
 ```jsonc
 {
-  "autoCopyFiles": [".env", ".env.local", "apps/api/.env", "apps/web/.env", "libs/shared-config/.env"]
+  "autoCopyFiles": [".env", ".env.local", "apps/api/.env", "apps/web/.env", "libs/shared-config/.env"],
 }
 ```
 
@@ -132,7 +132,7 @@ npm install
 
 ```jsonc
 {
-  "autoCopyFiles": [".env", "apps/*/.env", "packages/config/.env"]
+  "autoCopyFiles": [".env", "apps/*/.env", "packages/config/.env"],
 }
 ```
 
@@ -150,8 +150,8 @@ npm install
     "apps/web/.vercel/",
     "apps/mobile/.env",
     "apps/mobile/google-services.json",
-    "apps/mobile/ios/GoogleService-Info.plist"
-  ]
+    "apps/mobile/ios/GoogleService-Info.plist",
+  ],
 }
 ```
 
@@ -263,8 +263,8 @@ This automatically copies:
 ```jsonc
 {
   "autoCopyFiles": [
-    "packages/api/.env" // Not "api/.env"
-  ]
+    "packages/api/.env", // Not "api/.env"
+  ],
 }
 ```
 

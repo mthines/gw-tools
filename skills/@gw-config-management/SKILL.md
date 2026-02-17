@@ -241,9 +241,9 @@ If no configuration exists:
   "defaultBranch": "main",
   // Auto-copy these files to new worktrees
   "autoCopyFiles": [".env", ".env.local", "secrets/", "config/local.json"],
-  "updateStrategy": "merge",  // or "rebase"
+  "updateStrategy": "merge", // or "rebase"
   "cleanThreshold": 7,
-  "autoClean": true,  // trailing comma OK
+  "autoClean": true, // trailing comma OK
 }
 ```
 

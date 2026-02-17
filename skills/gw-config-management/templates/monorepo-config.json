@@ -15,14 +15,14 @@
   // Files/directories to automatically copy when creating new worktrees
   // Update paths to match your package names
   "autoCopyFiles": [
-    ".env",                            // Root-level environment variables shared across packages
-    "packages/api/.env",               // API service-specific environment variables
-    "packages/web/.env",               // Web app-specific environment variables
-    "packages/mobile/.env",            // Mobile app-specific environment variables
+    ".env", // Root-level environment variables shared across packages
+    "packages/api/.env", // API service-specific environment variables
+    "packages/web/.env", // Web app-specific environment variables
+    "packages/mobile/.env", // Mobile app-specific environment variables
     "packages/shared/config.local.json", // Shared configuration across packages
-    ".vercel/",                        // Vercel monorepo deployment configuration
-    "secrets/",                        // Shared secrets and credentials for all packages
-  ],
+    ".vercel/", // Vercel monorepo deployment configuration
+    "secrets/" // Shared secrets and credentials for all packages
+  ]
 
   // ============================================================================
   // SETUP INSTRUCTIONS

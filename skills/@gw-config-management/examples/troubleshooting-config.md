@@ -97,7 +97,7 @@ gw init --auto-copy-files .env,.env.local,secrets/
 {
   "root": "/path/to/repo.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [".env", ".env.local", "secrets/"]
+  "autoCopyFiles": [".env", ".env.local", "secrets/"],
 }
 ```
 
@@ -155,7 +155,7 @@ gw sync --from main feature-x .env
 
 ```jsonc
 {
-  "defaultBranch": "main"
+  "defaultBranch": "main",
 }
 ```
 
@@ -188,8 +188,8 @@ ls -la $(cat .gw/config.json | grep root | cut -d'"' -f4)
 {
   "autoCopyFiles": [
     ".env", // ✓ Relative to worktree root
-    "config/.env" // ✓ Relative path
-  ]
+    "config/.env", // ✓ Relative path
+  ],
 }
 ```
 
@@ -198,8 +198,8 @@ Not:
 ```jsonc
 {
   "autoCopyFiles": [
-    "/Users/you/repo/.env" // ✗ Absolute path
-  ]
+    "/Users/you/repo/.env", // ✗ Absolute path
+  ],
 }
 ```
 
@@ -219,8 +219,8 @@ gw init --root $(git rev-parse --show-toplevel)
 {
   "autoCopyFiles": [
     ".env",
-    "secrets/api-key.json" // Make sure path is correct
-  ]
+    "secrets/api-key.json", // Make sure path is correct
+  ],
 }
 ```
 
