@@ -36,7 +36,7 @@
       },
       "configurations": {
         "ci": {
-          "command": "deno test --allow-all --ignore=src/pr.test.ts",
+          "command": "deno test --allow-all --ignore=src/commands/pr.test.ts",
           "cwd": "packages/gw-tool"
         }
       }
