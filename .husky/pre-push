@@ -1,0 +1,23 @@
+#!/usr/bin/env sh
+
+# Get the default branch (main or master)
+DEFAULT_BRANCH=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | cut -d':' -f2 | tr -d ' ' || echo "main")
+
+# Format changed files using Nx
+echo "Running nx format:write for changed files..."
+npx nx format:write --base="origin/${DEFAULT_BRANCH}" --head=HEAD
+
+# Check if there are any uncommitted changes after formatting
+if ! git diff --quiet; then
+  echo ""
+  echo "ERROR: Formatting changes were made by nx format:write."
+  echo "Please commit these changes before pushing:"
+  echo ""
+  git diff --name-only
+  echo ""
+  echo "Run: git add -A && git commit --amend --no-edit"
+  echo "Or:  git add -A && git commit -m 'chore: format code'"
+  exit 1
+fi
+
+echo "Formatting check passed!"
