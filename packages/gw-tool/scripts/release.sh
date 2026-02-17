@@ -141,9 +141,8 @@ echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
 
 # Confirm release
 echo -e "\n${YELLOW}About to release version $NEW_VERSION${NC}"
-read -p "Continue? (y/n) " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+read -p "Continue? (Y/n) " -r
+if [[ $REPLY =~ ^[Nn]$ ]]; then
   echo "Release cancelled"
   exit 1
 fi
