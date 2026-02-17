@@ -1,36 +1,35 @@
 {
-  "// Comments": "Configuration for monorepo projects (pnpm/yarn/npm workspaces)",
+  // ============================================================================
+  // gw Configuration Template: Monorepo (pnpm/yarn/npm workspaces)
+  // ============================================================================
+  // Documentation: https://github.com/mthines/gw-tools
+  // ============================================================================
 
+  // Absolute path to repository root (parent directory containing all worktrees)
+  // UPDATE THIS to match your project path
   "root": "/path/to/your/monorepo.git",
 
+  // Source worktree to copy files from (usually 'main' or 'develop')
   "defaultBranch": "main",
 
+  // Files/directories to automatically copy when creating new worktrees
+  // Update paths to match your package names
   "autoCopyFiles": [
-    ".env",
-    "// .env": "Root-level environment variables shared across packages",
-
-    "packages/api/.env",
-    "// packages/api/.env": "API service-specific environment variables",
-
-    "packages/web/.env",
-    "// packages/web/.env": "Web app-specific environment variables",
-
-    "packages/mobile/.env",
-    "// packages/mobile/.env": "Mobile app-specific environment variables",
-
-    "packages/shared/config.local.json",
-    "// packages/shared/config.local.json": "Shared configuration across packages",
-
-    ".vercel/",
-    "// .vercel/": "Vercel monorepo deployment configuration",
-
-    "secrets/",
-    "// secrets/": "Shared secrets and credentials for all packages"
+    ".env",                            // Root-level environment variables shared across packages
+    "packages/api/.env",               // API service-specific environment variables
+    "packages/web/.env",               // Web app-specific environment variables
+    "packages/mobile/.env",            // Mobile app-specific environment variables
+    "packages/shared/config.local.json", // Shared configuration across packages
+    ".vercel/",                        // Vercel monorepo deployment configuration
+    "secrets/",                        // Shared secrets and credentials for all packages
   ],
 
-  "// IMPORTANT": [
-    "Update paths to match your package names",
-    "Never auto-copy: node_modules/, .pnpm-store/, dist/",
-    "Consider package-specific configs: packages/*/config.local.json"
-  ]
+  // ============================================================================
+  // SETUP INSTRUCTIONS
+  // ============================================================================
+  // 1. Update 'root' to match your actual repository path
+  // 2. Update package paths to match your monorepo structure
+  // 3. Never auto-copy: node_modules/, .pnpm-store/, dist/
+  // 4. Consider package-specific configs: packages/*/config.local.json
+  // ============================================================================
 }

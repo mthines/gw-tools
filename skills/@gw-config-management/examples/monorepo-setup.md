@@ -64,7 +64,7 @@ gw init --auto-copy-files \
 
 `.gw/config.json`:
 
-```jsoncc
+```jsonc
 {
   "root": "/Users/you/projects/my-monorepo.git",
   "defaultBranch": "main",

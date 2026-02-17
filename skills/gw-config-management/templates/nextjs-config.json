@@ -1,46 +1,41 @@
 {
-  "// Comments": "Configuration for Next.js projects with Vercel deployment",
+  // ============================================================================
+  // gw Configuration Template: Next.js with Vercel
+  // ============================================================================
+  // Documentation: https://github.com/mthines/gw-tools
+  // ============================================================================
 
+  // Absolute path to repository root (parent directory containing all worktrees)
+  // UPDATE THIS to match your project path
   "root": "/path/to/your/nextjs-app.git",
-  "// root": "Absolute path to repository root (parent directory containing all worktrees). Update this to match your project path.",
 
+  // Source worktree to copy files from (usually 'main' or 'develop')
   "defaultBranch": "main",
-  "// defaultBranch": "Source worktree to copy files from. Usually 'main' or 'develop'.",
 
+  // Files/directories to automatically copy when creating new worktrees
   "autoCopyFiles": [
-    ".env",
-    "// .env": "Main environment variables (DATABASE_URL, API keys, etc.)",
-
-    ".env.local",
-    "// .env.local": "Local development overrides (not committed to git)",
-
-    ".env.development",
-    "// .env.development": "Development-specific environment variables",
-
-    ".vercel/",
-    "// .vercel/": "Vercel project configuration and deployment settings",
-
-    "public/uploads/",
-    "// public/uploads/": "User-uploaded files (if applicable to your project)",
-
-    "components/ui/.vercel/",
-    "// components/ui/.vercel/": "Component-specific Vercel settings (if using Vercel for specific components)"
+    ".env",              // Main environment variables (DATABASE_URL, API keys, etc.)
+    ".env.local",        // Local development overrides (not committed to git)
+    ".env.development",  // Development-specific environment variables
+    ".vercel/",          // Vercel project configuration and deployment settings
+    "public/uploads/",   // User-uploaded files (if applicable)
   ],
 
-  "// IMPORTANT NOTES": [
-    "1. Update 'root' to match your actual repository path",
-    "2. Remove any auto-copy patterns not relevant to your project",
-    "3. Add additional files your project needs (ssl/, keys/, etc.)",
-    "4. Never auto-copy: node_modules/, .next/, dist/, build/",
-    "5. Commit this file to version control for team consistency"
-  ],
-
-  "// OPTIONAL FILES TO CONSIDER": [
-    ".env.production (production environment variables)",
-    ".env.test (test environment variables)",
-    "next.config.local.js (local Next.js config overrides)",
-    "public/config.json (runtime configuration)",
-    "ssl/ (SSL certificates for local HTTPS)",
-    "prisma/.env (Prisma-specific environment variables)"
-  ]
+  // ============================================================================
+  // SETUP INSTRUCTIONS
+  // ============================================================================
+  // 1. Update 'root' to match your actual repository path
+  // 2. Remove any auto-copy patterns not relevant to your project
+  // 3. Add additional files your project needs (ssl/, keys/, etc.)
+  // 4. Never auto-copy: node_modules/, .next/, dist/, build/
+  // 5. Commit this file to version control for team consistency
+  //
+  // OPTIONAL FILES TO CONSIDER:
+  // - .env.production (production environment variables)
+  // - .env.test (test environment variables)
+  // - next.config.local.js (local Next.js config overrides)
+  // - public/config.json (runtime configuration)
+  // - ssl/ (SSL certificates for local HTTPS)
+  // - prisma/.env (Prisma-specific environment variables)
+  // ============================================================================
 }

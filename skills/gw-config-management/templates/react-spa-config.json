@@ -1,31 +1,32 @@
 {
-  "// Comments": "Configuration for React SPA (Single Page Application) projects",
+  // ============================================================================
+  // gw Configuration Template: React SPA (Single Page Application)
+  // ============================================================================
+  // Documentation: https://github.com/mthines/gw-tools
+  // ============================================================================
 
+  // Absolute path to repository root (parent directory containing all worktrees)
+  // UPDATE THIS to match your project path
   "root": "/path/to/your/react-app.git",
 
+  // Source worktree to copy files from (usually 'main' or 'develop')
   "defaultBranch": "main",
 
+  // Files/directories to automatically copy when creating new worktrees
   "autoCopyFiles": [
-    ".env",
-    "// .env": "Build-time environment variables (REACT_APP_API_URL, etc.)",
-
-    ".env.local",
-    "// .env.local": "Local development overrides (local API endpoints, feature flags)",
-
-    ".env.development",
-    "// .env.development": "Development-specific variables",
-
-    "public/config.json",
-    "// public/config.json": "Runtime configuration (loaded by app at startup)",
-
-    "public/uploads/",
-    "// public/uploads/": "User-uploaded assets or test data"
+    ".env",              // Build-time environment variables (REACT_APP_API_URL, etc.)
+    ".env.local",        // Local development overrides (local API endpoints, feature flags)
+    ".env.development",  // Development-specific variables
+    "public/config.json", // Runtime configuration (loaded by app at startup)
+    "public/uploads/",   // User-uploaded assets or test data
   ],
 
-  "// IMPORTANT": [
-    "Update 'root' to match your path",
-    "Never auto-copy: node_modules/, build/, dist/",
-    "For Vite: use .env.local instead of REACT_APP_ prefix",
-    "Consider adding: .env.production, ssl/, cypress.env.json"
-  ]
+  // ============================================================================
+  // SETUP INSTRUCTIONS
+  // ============================================================================
+  // 1. Update 'root' to match your path
+  // 2. Never auto-copy: node_modules/, build/, dist/
+  // 3. For Vite: use .env.local instead of REACT_APP_ prefix
+  // 4. Consider adding: .env.production, ssl/, cypress.env.json
+  // ============================================================================
 }
