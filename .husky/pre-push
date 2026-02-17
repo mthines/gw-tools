@@ -10,14 +10,12 @@ npx nx format:write --base="origin/${DEFAULT_BRANCH}" --head=HEAD
 # Check if there are any uncommitted changes after formatting
 if ! git diff --quiet; then
   echo ""
-  echo "ERROR: Formatting changes were made by nx format:write."
-  echo "Please commit these changes before pushing:"
-  echo ""
+  echo "Formatting changes detected. Auto-committing..."
   git diff --name-only
   echo ""
-  echo "Run: git add -A && git commit --amend --no-edit"
-  echo "Or:  git add -A && git commit -m 'chore: format code'"
-  exit 1
+  git add -A
+  git commit -m "chore: autofix"
+  echo "Auto-committed formatting changes."
 fi
 
 echo "Formatting check passed!"
