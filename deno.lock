@@ -63,6 +63,7 @@
         "npm:@vitest/coverage-v8@4.0.9",
         "npm:@vitest/ui@4.0.9",
         "npm:eslint@8.57",
+        "npm:husky@^9.1.7",
         "npm:jest-environment-node@^30.0.2",
         "npm:jest-util@^30.0.2",
         "npm:jest@^30.0.2",
