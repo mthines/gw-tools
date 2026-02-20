@@ -1,4 +1,14 @@
-# gw-tools
+```
+  ██████   ██      ██
+ ██        ██      ██
+ ██   ███  ██  ██  ██
+ ██    ██   ██ ██ ██                          --- Git Worktree Tools ---
+  ██████     ██  ██
+ _____ ___   ___  _             A CLI for managing Git worktrees with automatic file syncing, 
+|_   _/ _ \ / _ \| |                  enhanced navigation, and autonomous workflows.
+  | || (_) | (_) | |__
+  |_| \___/ \___/|____|    
+```
 
 Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing, enhanced navigation, and autonomous workflows.
 
@@ -9,6 +19,8 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 - Create worktrees with automatic file copying (`.env`, secrets, configs)
 - Quick navigation with `gw cd` and smart partial matching
 - Proxy commands for `git worktree` operations with enhanced output
+
+[-> See docs <-](packages/gw-tool/README.md)
 
 ### Installation
 
