@@ -57,7 +57,13 @@ export async function executeCopy(args: string[]): Promise<void> {
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
   const targetPath = resolveWorktreePath(gitRoot, target);
 
-  // 7. Validate paths exist
+  // 7. Prevent syncing to self
+  if (sourcePath === targetPath) {
+    output.error(`Cannot sync worktree to itself (source and target are both '${sourceWorktree}')`);
+    Deno.exit(1);
+  }
+
+  // 8. Validate paths exist
   try {
     await validatePathExists(sourcePath, 'directory');
   } catch (_error) {
@@ -74,13 +80,13 @@ export async function executeCopy(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  // 8. Copy files
+  // 9. Copy files
   const dryRunNotice = parsed.dryRun ? output.dim(' (DRY RUN)') : '';
   console.log(`Copying from ${output.bold(sourceWorktree)} to ${output.bold(target)}${dryRunNotice}...\n`);
 
   const results = await copyFiles(sourcePath, targetPath, filesToCopy, parsed.dryRun);
 
-  // 9. Display results
+  // 10. Display results
   for (const result of results) {
     if (result.success) {
       console.log(`  ${output.checkmark()} ${result.message}`);
@@ -89,7 +95,7 @@ export async function executeCopy(args: string[]): Promise<void> {
     }
   }
 
-  // 10. Summary
+  // 11. Summary
   const successCount = results.filter((r) => r.success).length;
   const verb = parsed.dryRun ? 'Would copy' : 'Copied';
   const fileWord = successCount === 1 ? 'file' : 'files';

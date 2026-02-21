@@ -143,3 +143,32 @@ Deno.test('sync command - syncs with --from and no explicit target (uses current
     await repo.cleanup();
   }
 });
+
+Deno.test('sync command - errors when trying to sync worktree to itself', async () => {
+  const { repo, mainPath } = await setupBareRepoWithWorktrees();
+  try {
+    await Deno.writeTextFile(join(mainPath, '.env'), 'SECRET=abc');
+
+    const config = createConfig(repo.path, ['.env']);
+    await writeTestConfig(repo.path, config);
+
+    // cd into main worktree and try to sync without args (source=main, target=main)
+    const cwd = new TempCwd(mainPath);
+    try {
+      const { exitCode, stderr } = await withMockedExit(() => executeCopy([]), {
+        captureOutput: true,
+      });
+
+      if (exitCode !== 1) {
+        throw new Error(`Expected exit code 1, got ${exitCode}`);
+      }
+      if (!stderr?.includes('Cannot sync worktree to itself')) {
+        throw new Error(`Expected error about syncing to self, got: ${stderr}`);
+      }
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
