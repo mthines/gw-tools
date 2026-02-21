@@ -686,6 +686,7 @@ When you explicitly specify a source branch with `--from`, `gw` requires a succe
 
 - **With `--from <branch>`**: Fetch failure causes the command to exit with an error
 - **Without `--from` (default branch)**: Fetch failure shows a warning but allows the operation using the local branch
+- **Existing branches**: Fetch failure shows a warning but allows the operation using the local branch
 
 ### Diagnostic Commands
 
