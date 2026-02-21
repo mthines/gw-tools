@@ -186,9 +186,11 @@ gw add feature-test --force
 
 ### Remote Fetch Behavior
 
-When creating a new branch, `gw add` follows a **remote-first approach** to ensure your work starts from the latest code:
+`gw add` follows a **remote-first approach** to ensure your worktree uses the latest code. This applies to both **new** and **existing** branches.
 
-**What's happening under the hood:**
+#### Creating New Branches
+
+When creating a new branch, the command fetches the latest source branch from remote:
 
 ```bash
 $ gw add feat/new-feature
@@ -208,13 +210,30 @@ The command:
 3. Creates your new branch from the fresh remote ref
 4. Sets up tracking to `origin/feat/new-feature` for easy pushing
 
+#### Using Existing Branches
+
+When creating a worktree for an existing branch, the command fetches the latest version of that branch:
+
+```bash
+$ gw add feat/existing-feature
+
+Branch feat/existing-feature exists, fetching latest from remote...
+✓ Fetched successfully from remote
+Using origin/feat/existing-feature (latest from remote)
+
+Creating worktree: feat/existing-feature
+```
+
+This ensures that even when checking out an existing branch, you get the latest commits that may have been pushed by teammates or from other machines.
+
 **Why this matters:**
 
-- **Prevents conflicts**: Your branch starts from the latest remote code, not an outdated local branch
-- **Ensures fresh code**: You're building on the most recent changes from your team
+- **Prevents conflicts**: Your worktree uses the latest remote code, not an outdated local branch
+- **Ensures fresh code**: You're working with the most recent changes from your team
 - **Reduces merge pain**: Fewer surprises when you eventually merge back to main
+- **Syncs across machines**: Changes pushed from another machine are automatically pulled
 
-**Offline/fallback behavior:**
+#### Offline/Fallback Behavior
 
 When remote fetch fails (network issues, offline work, no remote configured), behavior depends on the context:
 
@@ -233,6 +252,18 @@ This is acceptable for offline development or when remote is unavailable.
 Creating from main (local branch)
 
 Creating worktree: feat/offline
+```
+
+```bash
+# Existing branch: Warns but allows local fallback
+$ gw add feat/existing-offline
+
+Branch feat/existing-offline exists, fetching latest from remote...
+
+⚠ WARNING Could not fetch from remote
+Using local branch. It may not be up-to-date with remote.
+
+Creating worktree: feat/existing-offline
 ```
 
 ```bash
@@ -261,8 +292,9 @@ Options:
 
 **Key difference: `--from` requires freshness**
 
-- **Without `--from`**: Uses default branch with fallback to local (offline support)
-- **With `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
+- **New branches without `--from`**: Uses default branch with fallback to local (offline support)
+- **New branches with `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
+- **Existing branches**: Fetches latest with fallback to local (offline support)
 
 ### Navigating to Existing Worktrees
 
