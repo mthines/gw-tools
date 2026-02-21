@@ -85,9 +85,20 @@ export async function executeCd(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
+  // If multiple matches, check for a single exact branch match
+  let resolved = matches;
   if (matches.length > 1) {
+    const exactMatches = matches.filter(
+      (wt) => wt.branch.toLowerCase() === pattern.toLowerCase()
+    );
+    if (exactMatches.length === 1) {
+      resolved = exactMatches;
+    }
+  }
+
+  if (resolved.length > 1) {
     output.error(`Multiple worktrees match "${pattern}":`);
-    matches.forEach((wt) => {
+    resolved.forEach((wt) => {
       console.error(`  ${wt.branch || '(detached)'} -> ${wt.path}`);
     });
     console.error('\nPlease be more specific.');
@@ -95,7 +106,7 @@ export async function executeCd(args: string[]): Promise<void> {
   }
 
   // Output the path to stdout (only thing that goes to stdout)
-  console.log(matches[0].path);
+  console.log(resolved[0].path);
 }
 
 /**
@@ -118,8 +129,9 @@ Description:
   Designed to be used with the 'cd' command in a subshell.
 
   The command searches all worktrees and matches against both the branch
-  name and the worktree path. If multiple matches are found, it will
-  error and show all matches so you can be more specific.
+  name and the worktree path. If multiple matches are found, an exact
+  branch name match is preferred. Otherwise, it will error and show all
+  matches so you can be more specific.
 
 Examples:
   # Navigate to a worktree by exact name
