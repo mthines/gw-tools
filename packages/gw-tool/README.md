@@ -355,16 +355,20 @@ gw add <worktree-name> [files...]
 This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
 
 **Branch Creation Behavior:**
-When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
+When creating a new worktree, `gw add` automatically fetches the latest version from the remote to ensure your worktree uses fresh code. For new branches, it fetches the source branch (defaultBranch or `--from` branch). For existing branches, it fetches the latest version of that branch.
 
 **Remote-First Fetch Approach:**
 
-The `gw add` command follows a remote-first approach when creating new branches:
+The `gw add` command follows a remote-first approach for all branches:
 
-1. **What happens**: When you create a new branch (e.g., `gw add feat/new-feature`), the command:
-   - Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
-   - Creates your new branch from the fresh remote ref (e.g., `origin/main`)
-   - Sets up tracking to `origin/feat/new-feature` for easy pushing
+1. **What happens**: When you run `gw add`, the command:
+   - **For new branches** (e.g., `gw add feat/new-feature`):
+     - Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
+     - Creates your new branch from the fresh remote ref (e.g., `origin/main`)
+     - Sets up tracking to `origin/feat/new-feature` for easy pushing
+   - **For existing branches** (e.g., `gw add feat/existing-feature`):
+     - Fetches the latest version of the branch from the remote (e.g., `origin/feat/existing-feature`)
+     - Creates the worktree using the fresh remote ref
 
 2. **Why it matters**: This ensures your new branch starts from the latest remote code, not from a potentially outdated local branch. This prevents:
    - Merge conflicts from missing recent changes
@@ -374,13 +378,14 @@ The `gw add` command follows a remote-first approach when creating new branches:
 3. **Network failure handling**:
    - **With `--from <branch>`**: Requires successful remote fetch. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command exits with a detailed error message and troubleshooting steps. This ensures you're working with fresh code when you explicitly specify a source.
    - **Without `--from` (default branch)**: Warns about fetch failures but allows creation using the local branch as a fallback. This supports offline development or when no remote is configured.
+   - **Existing branches**: Warns about fetch failures but allows creation using the local branch as a fallback.
 
-4. **Offline development**: When working offline or when remote fetch fails for the default branch, the command falls back to using the local branch with a clear warning. This allows you to continue working without network access while being aware that your start point may not be current.
+4. **Offline development**: When working offline or when remote fetch fails, the command falls back to using the local branch with a clear warning. This allows you to continue working without network access while being aware that your start point may not be current.
 
 **Network Failure Handling:**
 
 - When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're working with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
-- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
+- When no `--from` is specified (using default branch), when using an existing branch, or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
 
 **Upstream Tracking:**
 When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.

@@ -234,19 +234,22 @@ Configuration:
   gw init --auto-copy-files .env,secrets/
 
 Network Behavior:
-  When creating a new branch, gw add fetches the latest version from the remote
-  to ensure your branch starts from fresh code. This prevents conflicts and
-  ensures you're working with up-to-date code.
+  gw add always fetches the latest version from the remote to ensure your
+  worktree uses fresh code. This applies to both new and existing branches.
 
-  Without --from flag:
+  For new branches (without --from flag):
     - Fetches from remote (e.g., origin/main)
     - Falls back to local branch if fetch fails (offline support)
 
-  With --from flag:
+  For new branches (with --from flag):
     - Requires successful fetch from remote (ensures fresh code)
     - Exits with error if fetch fails (network issues, auth problems)
 
-  Remote fetch ensures your new branch is based on the latest remote code,
+  For existing branches:
+    - Fetches the latest version of the branch from remote
+    - Falls back to local branch if fetch fails (offline support)
+
+  Remote fetch ensures your worktree is based on the latest remote code,
   not an outdated local branch.
 
 Hooks:
@@ -514,9 +517,35 @@ export async function executeAdd(args: string[]): Promise<void> {
         Deno.exit(1);
       }
     } else {
-      // Branch exists - explicitly pass it to git to avoid git inferring from path basename
-      // Without this, "gw add test/foo" would make git use basename "foo" as branch name
-      startPoint = parsed.worktreeName;
+      // Branch exists - fetch the latest version from remote before creating worktree
+      console.log(`Branch ${output.bold(parsed.worktreeName)} exists, fetching latest from remote...`);
+
+      try {
+        const { startPoint: fetchedStartPoint, fetchSucceeded, message } = await fetchAndGetStartPoint(parsed.worktreeName);
+
+        if (fetchSucceeded) {
+          // Use the remote ref to ensure we get the latest
+          startPoint = fetchedStartPoint;
+          console.log(output.dim('✓ Fetched successfully from remote'));
+          if (message) {
+            console.log(output.dim(message));
+          }
+          console.log(`Using ${output.bold(startPoint)} (latest from remote)`);
+          console.log('');
+        } else {
+          // Fetch failed - use local branch with warning
+          startPoint = parsed.worktreeName;
+          console.log('');
+          output.warning(message || 'Could not fetch from remote');
+          console.log(output.dim('Using local branch. It may not be up-to-date with remote.'));
+          console.log('');
+        }
+      } catch {
+        // Error during fetch - fall back to local branch
+        startPoint = parsed.worktreeName;
+        output.warning('Could not fetch from remote, using local branch');
+        console.log('');
+      }
     }
   }
 
