@@ -129,8 +129,9 @@ Description:
   Designed to be used with the 'cd' command in a subshell.
 
   The command searches all worktrees and matches against both the branch
-  name and the worktree path. If multiple matches are found, it will
-  error and show all matches so you can be more specific.
+  name and the worktree path. If multiple matches are found, an exact
+  branch name match is preferred. Otherwise, it will error and show all
+  matches so you can be more specific.
 
 Examples:
   # Navigate to a worktree by exact name
