@@ -49,7 +49,7 @@ export interface CopyOptions {
   /** Source worktree name */
   from?: string;
   /** Target worktree name */
-  target: string;
+  target?: string;
   /** List of file/directory paths to copy */
   files: string[];
   /** Show help */

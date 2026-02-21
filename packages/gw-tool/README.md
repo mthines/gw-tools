@@ -1110,12 +1110,12 @@ Use `gw show-init` to:
 Sync files and directories between worktrees, preserving directory structure.
 
 ```bash
-gw sync [options] <target-worktree> [files...]
+gw sync [options] [target-worktree] [files...]
 ```
 
 #### Arguments
 
-- `<target-worktree>`: Name or full path of the target worktree
+- `[target-worktree]`: Name or full path of the target worktree. If omitted, defaults to the current worktree
 - `[files...]`: One or more files or directories to sync (paths relative to worktree root). If omitted, uses `autoCopyFiles` from `.gw/config.json`
 
 #### Options
@@ -1127,7 +1127,10 @@ gw sync [options] <target-worktree> [files...]
 #### Examples
 
 ```bash
-# Sync autoCopyFiles from config (if configured)
+# Sync autoCopyFiles to current worktree (if inside a worktree)
+gw sync
+
+# Sync autoCopyFiles from config to a specific target
 gw sync feat-branch
 
 # Sync .env file from main to feat-branch

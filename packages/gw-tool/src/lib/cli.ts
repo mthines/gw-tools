@@ -107,6 +107,7 @@ Examples:
   gw checkout main
   gw co feature-x
   gw sync feat-branch .env components/agents/.env
+  gw sync                                           (sync autoCopyFiles to current worktree)
   gw list
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
@@ -137,7 +138,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
   return {
     help: parsed.help as boolean,
     from: parsed.from as string | undefined,
-    target: target as string,
+    target: target as string | undefined,
     files: files as string[],
     dryRun: parsed['dry-run'] as boolean | undefined,
   };
@@ -151,11 +152,12 @@ export function showCopyHelp(): void {
 gw sync - Sync files/directories between worktrees
 
 Usage:
-  gw sync [options] <target-worktree> [files...]
+  gw sync [options] [target-worktree] [files...]
 
 Arguments:
-  <target-worktree>    Name or full path of the target worktree directory
+  [target-worktree]    Name or full path of the target worktree directory
                        Can be relative (e.g., feat-branch) or absolute path
+                       If omitted, defaults to the current worktree
 
   [files...]           One or more files or directories to sync
                        Paths are relative to the worktree root
@@ -175,7 +177,10 @@ Description:
   files are created automatically if needed.
 
 Examples:
-  # Sync autoCopyFiles from config (if configured)
+  # Sync autoCopyFiles to current worktree (if inside a worktree)
+  gw sync
+
+  # Sync autoCopyFiles from config to a specific target
   gw sync feat-branch
 
   # Sync .env file from main to feat-branch
