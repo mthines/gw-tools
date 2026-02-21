@@ -521,7 +521,11 @@ export async function executeAdd(args: string[]): Promise<void> {
       console.log(`Branch ${output.bold(parsed.worktreeName)} exists, fetching latest from remote...`);
 
       try {
-        const { startPoint: fetchedStartPoint, fetchSucceeded, message } = await fetchAndGetStartPoint(parsed.worktreeName);
+        const {
+          startPoint: fetchedStartPoint,
+          fetchSucceeded,
+          message,
+        } = await fetchAndGetStartPoint(parsed.worktreeName);
 
         if (fetchSucceeded) {
           // Use the remote ref to ensure we get the latest
