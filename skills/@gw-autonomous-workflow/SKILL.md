@@ -1680,7 +1680,7 @@ Permission error?
 
 Disk space issue?
 ├─ Run: df -h
-├─ Clean up: gw prune --clean
+├─ Clean up: gw prune
 └─ Retry after space freed
 
 Git error?
