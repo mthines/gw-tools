@@ -563,7 +563,10 @@ Deno.test('saveConfigTemplate - preserves all config values', async () => {
       assertEquals(loaded.cleanThreshold, 14);
       assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
       assertEquals(loaded.hooks?.checkout?.pre, ['echo Creating {worktree}']);
-      assertEquals(loaded.hooks?.checkout?.post, ['cd {worktreePath} && npm install', 'cd {worktreePath} && npm run build']);
+      assertEquals(loaded.hooks?.checkout?.post, [
+        'cd {worktreePath} && npm install',
+        'cd {worktreePath} && npm run build',
+      ]);
       assertEquals(loaded.autoClean, true);
       assertEquals(loaded.updateStrategy, 'rebase');
     } finally {

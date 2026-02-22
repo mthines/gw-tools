@@ -172,7 +172,9 @@ export async function loadConfig(): Promise<{
       // Save migrated config and notify user if migrations were applied
       if (migrated && migratedData.root) {
         await saveConfig(migratedData.root, migratedData);
-        console.log(`Config automatically updated (${appliedMigrations.length} migration${appliedMigrations.length > 1 ? 's' : ''} applied)\n`);
+        console.log(
+          `Config automatically updated (${appliedMigrations.length} migration${appliedMigrations.length > 1 ? 's' : ''} applied)\n`
+        );
       }
 
       // If config has root, use it

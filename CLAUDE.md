@@ -48,11 +48,13 @@ The `.gw/config.json` file uses a versioned migration system for schema changes.
 ### Adding a New Migration
 
 1. **Increment the version** in `packages/gw-tool/src/lib/config-migrations.ts`:
+
    ```typescript
    export const CURRENT_CONFIG_VERSION = 2; // was 1
    ```
 
 2. **Add a migration** to the `MIGRATIONS` array:
+
    ```typescript
    {
      version: 2,
