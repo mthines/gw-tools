@@ -1,0 +1,34 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Release gw-tool",
+      "type": "shell",
+      "command": "nx",
+      "args": ["run", "gw-tool:release"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    },
+    {
+      "label": "Release gw-tool (specific version)",
+      "type": "shell",
+      "command": "./packages/gw-tool/scripts/release.sh",
+      "args": ["--version", "${input:releaseVersion}"],
+      "problemMatcher": [],
+      "presentation": {
+        "reveal": "always",
+        "panel": "new"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "releaseVersion",
+      "type": "promptString",
+      "description": "Enter the version to release (e.g., 1.0.0 or 1.0.0-beta.1)"
+    }
+  ]
+}

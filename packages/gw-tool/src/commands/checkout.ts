@@ -383,19 +383,23 @@ export async function executeCheckout(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  // Check 3: Path exists but is NOT a valid worktree (leftover directory)
+  // Check 3: Path exists but is NOT a valid worktree (leftover directory or unrelated file)
   try {
     const stat = await Deno.stat(worktreePath);
     if (stat.isDirectory || stat.isFile) {
-      // Path exists but isn't a valid worktree - automatically clean up
+      // Path exists but isn't a valid worktree - error out to avoid accidental deletion
       console.log('');
-      output.warning(`Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`);
-      console.log(`This can happen if a previous worktree creation was interrupted.`);
-      console.log(`Automatically removing and continuing...`);
-
-      await Deno.remove(worktreePath, { recursive: true });
-      output.success('Removed successfully.');
+      output.error(`Path ${output.bold(worktreePath)} already exists but is not a git worktree.`);
       console.log('');
+      console.log('This could be:');
+      console.log('  - A leftover directory from an interrupted worktree creation');
+      console.log('  - An unrelated directory that happens to have the same name');
+      console.log('');
+      console.log('To resolve this, you can either:');
+      console.log(`  1. Remove the directory manually: ${output.bold(`rm -rf "${worktreePath}"`)}`);
+      console.log(`  2. Use a different worktree name: ${output.bold(`gw checkout ${parsed.worktreeName}-new`)}`);
+      console.log('');
+      Deno.exit(1);
     }
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) {
