@@ -1013,11 +1013,11 @@ gw clean --force
 
 **Cleanup strategies:**
 
-| Command                              | When to Use                                       |
-| ------------------------------------ | ------------------------------------------------- |
-| `gw clean`                           | Clean up all finished work regardless of age      |
-| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)          |
-| `gw prune --clean`                   | Aggressive cleanup with default branch protection |
+| Command                              | When to Use                                  |
+| ------------------------------------ | -------------------------------------------- |
+| `gw clean`                           | Clean up all finished work regardless of age |
+| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)     |
+| `gw prune`                           | Full cleanup (worktrees + orphan branches)   |
 
 **Configure the threshold:**
 
@@ -1081,70 +1081,79 @@ Type 'yes' to confirm: yes
 SUCCESS: Removed 2 worktree(s)
 ```
 
-### Cleanup Strategies: `gw clean` vs `gw prune --clean`
+### Cleanup Strategies: `gw clean` vs `gw prune`
 
 The gw tool provides two complementary cleanup commands for different scenarios:
 
-**Age-based Cleanup: `gw clean`**
+**Worktree Cleanup: `gw clean`**
 
-- Removes worktrees **older than configured threshold** (default: 7 days)
-- Good for regular maintenance
-- Respects safety checks (no uncommitted changes, no unpushed commits)
+- Removes worktrees with no uncommitted changes or unpushed commits
+- By default removes ALL safe worktrees (use `--use-autoclean-threshold` for age-based)
+- Good for cleaning up finished work
 - Configurable via `.gw/config.json`
 
 ```bash
-# Regular maintenance (weekly)
+# Clean up all finished work
 gw clean --dry-run  # Preview
-gw clean            # Remove old worktrees
+gw clean            # Remove safe worktrees
+
+# Age-based maintenance
+gw clean --use-autoclean-threshold --dry-run  # Preview old worktrees
+gw clean --use-autoclean-threshold            # Remove old worktrees
 ```
 
-**Complete Cleanup: `gw prune --clean`**
+**Full Cleanup: `gw prune`**
 
-- Removes **ALL clean worktrees** (regardless of age)
+- Removes **ALL clean worktrees AND orphan branches** (branches without worktrees)
 - First runs `git worktree prune` to clean up administrative data
-- Protects default branch and current worktree
-- Good for aggressive cleanup before archiving or when disk space is critical
+- Protects default branch, gw_root, and current worktree
+- Protects branches with unpushed commits
+- Good for complete cleanup when finishing a project phase
 
 ```bash
-# Aggressive cleanup (before vacation, archiving)
-gw prune --clean --dry-run  # Preview
-gw prune --clean            # Remove all clean worktrees
+# Full cleanup (worktrees + orphan branches)
+gw prune --dry-run       # Preview what would be removed
+gw prune                 # Remove worktrees and orphan branches
+gw prune --no-branches   # Skip branch cleanup (worktrees only)
+gw prune --stale-only    # Git passthrough (only metadata cleanup)
 ```
 
 **Comparison:**
-| Feature | `gw clean` | `gw prune --clean` |
+| Feature | `gw clean` | `gw prune` |
 |---------|-----------|-------------------|
-| Age-based | Yes (configurable) | No (removes all clean) |
+| Removes worktrees | Yes | Yes |
+| Removes orphan branches | No | Yes |
 | Safety checks | Yes | Yes |
 | Protects default branch | No | Yes |
 | Runs `git worktree prune` | No | Yes |
-| Use case | Regular maintenance | Aggressive cleanup |
+| Use case | Worktree cleanup | Full cleanup |
 
 **When to use which:**
 
 Use `gw clean`:
 
-- Weekly/monthly maintenance to remove stale worktrees
-- When you want to keep recent worktrees but clean up old ones
+- Weekly/monthly maintenance to remove finished worktrees
+- When you want to keep branches for future reference
 - As part of automated cleanup routines
 
-Use `gw prune --clean`:
+Use `gw prune`:
 
 - Before archiving a project or taking a break
-- When you need to free up disk space quickly
-- To reset to a minimal worktree setup (just main branch + current work)
+- When you want to clean up both worktrees AND orphan branches
+- To reset to a minimal setup (just main branch + current work)
 - After completing a major milestone or release
+- When you've used `gw remove` and left branches behind
 
 **Example workflow:**
 
 ```bash
-# Regular maintenance (weekly)
-gw clean --dry-run  # Preview old worktrees
+# Regular maintenance (weekly) - worktrees only
+gw clean --dry-run  # Preview safe worktrees
 gw clean            # Remove if ok
 
-# Major cleanup (quarterly or before breaks)
-gw prune --clean --dry-run  # Preview all clean worktrees
-gw prune --clean            # Remove all clean worktrees
+# Major cleanup (quarterly or before breaks) - full cleanup
+gw prune --dry-run  # Preview worktrees AND orphan branches
+gw prune            # Remove both worktrees and orphan branches
 ```
 
 ### Pruning Stale Worktree References
@@ -1157,7 +1166,10 @@ $ gw list
 /projects/myapp.git/main      abc123f [main]
 /projects/myapp.git/deleted   def456a [feature] (prunable)
 
-# Clean up stale references
+# Clean up stale references only (metadata cleanup)
+gw prune --stale-only
+
+# Or full cleanup (also removes orphan branches)
 gw prune
 
 # Confirm

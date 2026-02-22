@@ -1155,7 +1155,8 @@ The clean command:
 | `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
 | `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
-| `gw prune --clean`                   | No (all worktrees) | No                   | Git's native cleanup (no gw safety) |
+| `gw prune`                           | No (all worktrees) | Yes                  | Full cleanup (worktrees + branches) |
+| `gw prune --stale-only`              | N/A                | N/A                  | Git passthrough (metadata only)     |
 
 **Safety Features:**
 
@@ -1251,13 +1252,13 @@ gw mv feat-branch ../new-location
 
 #### prune
 
-Clean up worktree administrative data and optionally remove clean worktrees.
+Clean up worktrees and orphan branches. By default, performs full cleanup (removes clean worktrees AND deletes orphan branches).
 
-**Standard Mode** (without `--clean`):
-Wraps `git worktree prune` to clean up administrative files for deleted worktrees.
+**Default Mode (full cleanup):**
+Removes worktrees that are safe to delete (no uncommitted changes, no unpushed commits) AND deletes orphan branches (branches without associated worktrees).
 
-**Clean Mode** (with `--clean`):
-First runs `git worktree prune`, then removes ALL worktrees that have no uncommitted changes, no staged files, and no unpushed commits. This is similar to default `gw clean` behavior but with additional protections for the default branch.
+**Stale-Only Mode** (with `--stale-only`):
+Git passthrough - only cleans up administrative files for deleted worktrees. Does not remove worktrees or branches.
 
 ```bash
 gw prune [options]
@@ -1265,42 +1266,47 @@ gw prune [options]
 
 **Options:**
 
-- `--clean` - Enable clean mode (remove clean worktrees)
+- `--stale-only` - Git passthrough mode (only metadata cleanup)
+- `--no-branches` - Skip orphan branch cleanup (worktrees only)
 - `-n, --dry-run` - Preview what would be removed
 - `-f, --force` - Skip confirmation prompt
 - `-v, --verbose` - Show detailed output
 - `-h, --help` - Show help
 
-**Safety Features** (in clean mode):
+**Safety Features:**
 
 - Default branch is protected (configured in `.gw/config.json`)
 - gw_root branch is protected (bare repository root)
 - Current worktree cannot be removed
 - Bare repository is never removed
-- Confirmation prompt before removal (defaults to yes, just press Enter to confirm)
+- Branches with unpushed commits are protected
+- Confirmation prompt before removal (defaults to yes)
 
 **Examples:**
 
 ```bash
-# Standard prune (cleanup administrative data)
-gw prune
-gw prune --verbose
+# Full cleanup (default) - removes worktrees AND orphan branches
+gw prune                     # Remove clean worktrees and orphan branches
+gw prune --dry-run           # Preview what would be removed
+gw prune --force             # Skip confirmation
+gw prune --verbose           # Show detailed output
 
-# Clean mode (remove clean worktrees)
-gw prune --clean              # Remove all clean worktrees (with prompt)
-gw prune --clean --dry-run    # Preview what would be removed
-gw prune --clean --force      # Remove without confirmation
-gw prune --clean --verbose    # Show detailed output
+# Skip branch cleanup
+gw prune --no-branches       # Only clean worktrees, keep branches
+
+# Git passthrough (stale-only)
+gw prune --stale-only        # Only clean git metadata (like git worktree prune)
 ```
 
 **Comparison with `gw clean`:**
-| Feature | `gw clean` | `gw clean --use-autoclean-threshold` | `gw prune --clean` |
+| Feature | `gw clean` | `gw clean --use-autoclean-threshold` | `gw prune` |
 |---------|-----------|-------------------------------------|-------------------|
 | Age-based | No (all worktrees) | Yes (configurable threshold) | No (removes all clean) |
 | Safety checks | Yes | Yes | Yes |
 | Protects default branch | No | No | Yes |
+| Deletes orphan branches | No | No | Yes |
 | Runs `git worktree prune` | No | No | Yes |
-| Use case | Clean up finished work | Regular maintenance | Aggressive cleanup |
+| Use case | Clean up finished work | Regular maintenance | Full cleanup |
 
 #### lock
 

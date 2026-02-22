@@ -453,6 +453,85 @@ export async function mergeBranch(
 }
 
 /**
+ * List all local branches
+ * @returns Array of branch names (without refs/heads/ prefix)
+ */
+export async function listLocalBranches(): Promise<string[]> {
+  const cmd = new Deno.Command('git', {
+    args: ['for-each-ref', '--format=%(refname:short)', 'refs/heads/'],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const errorMsg = new TextDecoder().decode(stderr);
+    throw new Error(`Failed to list branches: ${errorMsg}`);
+  }
+
+  const output = new TextDecoder().decode(stdout).trim();
+  if (!output) return [];
+
+  return output.split('\n').filter((b) => b.length > 0);
+}
+
+/**
+ * Delete a local branch
+ * @param branchName Branch to delete
+ * @param force If true, use -D (force delete), otherwise use -d
+ */
+export async function deleteBranch(branchName: string, force = false): Promise<void> {
+  const cmd = new Deno.Command('git', {
+    args: ['branch', force ? '-D' : '-d', branchName],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const errorMsg = new TextDecoder().decode(stderr).trim();
+    throw new Error(`Failed to delete branch '${branchName}': ${errorMsg}`);
+  }
+}
+
+/**
+ * Check if a branch has unpushed commits (without needing a worktree path)
+ * @param branchName Branch name to check
+ * @returns true if branch has unpushed commits or no tracking branch
+ */
+export async function hasBranchUnpushedCommits(branchName: string): Promise<boolean> {
+  // First check if there's a remote tracking branch
+  const trackingCmd = new Deno.Command('git', {
+    args: ['rev-parse', '--abbrev-ref', `${branchName}@{u}`],
+    stdout: 'piped',
+    stderr: 'null',
+  });
+
+  const trackingResult = await trackingCmd.output();
+  if (trackingResult.code !== 0) {
+    // No upstream branch - consider as "unpushed" (local-only branch)
+    return true;
+  }
+
+  const upstream = new TextDecoder().decode(trackingResult.stdout).trim();
+
+  // Check for commits ahead of upstream
+  const revListCmd = new Deno.Command('git', {
+    args: ['rev-list', `${upstream}..${branchName}`, '--count'],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout } = await revListCmd.output();
+  if (code !== 0) return true; // Treat error as "has unpushed" for safety
+
+  const count = parseInt(new TextDecoder().decode(stdout).trim(), 10);
+  return count > 0;
+}
+
+/**
  * Rebase current branch onto a branch
  * @param worktreePath Path to the worktree
  * @param sourceBranch Branch to rebase onto

@@ -90,7 +90,7 @@ Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository
   remove, rm       Remove a worktree from the repository
   move, mv         Move a worktree to a new location
-  prune            Clean up worktree data; --clean removes all clean worktrees
+  prune            Full cleanup: remove clean worktrees and orphan branches
   lock             Lock a worktree to prevent removal
   unlock           Unlock a worktree to allow removal
   repair           Repair worktree administrative files
