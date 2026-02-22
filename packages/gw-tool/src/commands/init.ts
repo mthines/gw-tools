@@ -54,8 +54,8 @@ interface ParsedInitArgs {
   root?: string;
   defaultBranch?: string;
   autoCopyFiles?: string[];
-  preAddHooks?: string[];
-  postAddHooks?: string[];
+  preCheckoutHooks?: string[];
+  postCheckoutHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
   updateStrategy?: 'merge' | 'rebase';
@@ -89,14 +89,16 @@ function parseInitArgs(args: string[]): ParsedInitArgs {
       // Split comma-separated list
       const filesArg = args[++i];
       result.autoCopyFiles = filesArg.split(',').map((f) => f.trim());
-    } else if (arg === '--pre-add' && i + 1 < args.length) {
-      // Add to pre-add hooks array (can be specified multiple times)
-      if (!result.preAddHooks) result.preAddHooks = [];
-      result.preAddHooks.push(args[++i]);
-    } else if (arg === '--post-add' && i + 1 < args.length) {
-      // Add to post-add hooks array (can be specified multiple times)
-      if (!result.postAddHooks) result.postAddHooks = [];
-      result.postAddHooks.push(args[++i]);
+    } else if ((arg === '--pre-checkout' || arg === '--pre-add') && i + 1 < args.length) {
+      // Add to pre-checkout hooks array (can be specified multiple times)
+      // --pre-add is kept for backwards compatibility
+      if (!result.preCheckoutHooks) result.preCheckoutHooks = [];
+      result.preCheckoutHooks.push(args[++i]);
+    } else if ((arg === '--post-checkout' || arg === '--post-add') && i + 1 < args.length) {
+      // Add to post-checkout hooks array (can be specified multiple times)
+      // --post-add is kept for backwards compatibility
+      if (!result.postCheckoutHooks) result.postCheckoutHooks = [];
+      result.postCheckoutHooks.push(args[++i]);
     } else if (arg === '--clean-threshold' && i + 1 < args.length) {
       const value = parseInt(args[++i], 10);
       if (!isNaN(value) && value >= 0) {
@@ -268,8 +270,8 @@ async function isAlreadyInitialized(): Promise<{ initialized: boolean; gitRoot?:
 function promptForConfig(): {
   defaultBranch?: string;
   autoCopyFiles?: string[];
-  preAddHooks?: string[];
-  postAddHooks?: string[];
+  preCheckoutHooks?: string[];
+  postCheckoutHooks?: string[];
   cleanThreshold?: number;
   autoClean?: boolean;
   updateStrategy?: 'merge' | 'rebase';
@@ -284,8 +286,8 @@ function promptForConfig(): {
   const config: {
     defaultBranch?: string;
     autoCopyFiles?: string[];
-    preAddHooks?: string[];
-    postAddHooks?: string[];
+    preCheckoutHooks?: string[];
+    postCheckoutHooks?: string[];
     cleanThreshold?: number;
     autoClean?: boolean;
     updateStrategy?: 'merge' | 'rebase';
@@ -311,41 +313,41 @@ function promptForConfig(): {
     }
   }
 
-  // Pre-add hooks
+  // Pre-checkout hooks
   console.log();
-  const wantPreHooks = prompt(`Do you want to add pre-add hooks? (y/n) [${output.dim('n')}]: `);
+  const wantPreHooks = prompt(`Do you want to add pre-checkout hooks? (y/n) [${output.dim('n')}]: `);
   if (wantPreHooks?.toLowerCase() === 'y' || wantPreHooks?.toLowerCase() === 'yes') {
     console.log(output.dim('  Enter commands to run before creating worktrees'));
     console.log(output.dim('  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}'));
     const preHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Pre-add hook ${hookNum} (leave blank to finish): `);
+      const hookInput = prompt(`  Pre-checkout hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       preHooks.push(hookInput.trim());
       hookNum++;
     }
     if (preHooks.length > 0) {
-      config.preAddHooks = preHooks;
+      config.preCheckoutHooks = preHooks;
     }
   }
 
-  // Post-add hooks
+  // Post-checkout hooks
   console.log();
-  const wantPostHooks = prompt(`Do you want to add post-add hooks? (y/n) [${output.dim('n')}]: `);
+  const wantPostHooks = prompt(`Do you want to add post-checkout hooks? (y/n) [${output.dim('n')}]: `);
   if (wantPostHooks?.toLowerCase() === 'y' || wantPostHooks?.toLowerCase() === 'yes') {
     console.log(output.dim('  Enter commands to run after creating worktrees'));
     console.log(output.dim('  Variables: {worktree}, {worktreePath}, {gitRoot}, {branch}'));
     const postHooks: string[] = [];
     let hookNum = 1;
     while (true) {
-      const hookInput = prompt(`  Post-add hook ${hookNum} (leave blank to finish): `);
+      const hookInput = prompt(`  Post-checkout hook ${hookNum} (leave blank to finish): `);
       if (!hookInput || !hookInput.trim()) break;
       postHooks.push(hookInput.trim());
       hookNum++;
     }
     if (postHooks.length > 0) {
-      config.postAddHooks = postHooks;
+      config.postCheckoutHooks = postHooks;
     }
   }
 
@@ -401,10 +403,10 @@ Options:
   --root <path>                   Specify the git repository root path (optional, auto-detects if not provided)
   --default-source <name>         Set the default source worktree (default: "main")
   --auto-copy-files <files>       Comma-separated list of files to auto-copy
-                                  when creating new worktrees with 'gw add'
-  --pre-add <command>             Command to run before 'gw add' creates a worktree
+                                  when creating new worktrees with 'gw checkout'
+  --pre-checkout <command>        Command to run before 'gw checkout' creates a worktree
                                   (can be specified multiple times for multiple hooks)
-  --post-add <command>            Command to run after 'gw add' creates a worktree
+  --post-checkout <command>       Command to run after 'gw checkout' creates a worktree
                                   (can be specified multiple times for multiple hooks)
   --clean-threshold <days>        Number of days before worktrees are considered
                                   stale for 'gw clean' (default: 7)
@@ -447,14 +449,14 @@ Existing Repository Examples:
   # Initialize with custom default source (auto-detects root)
   gw init --default-source master
 
-  # Initialize with post-add hook to install dependencies
-  gw init --post-add "cd {worktreePath} && pnpm install"
+  # Initialize with post-checkout hook to install dependencies
+  gw init --post-checkout "cd {worktreePath} && pnpm install"
 
-  # Initialize with pre-add validation hook
-  gw init --pre-add "echo 'Creating worktree: {worktree}'"
+  # Initialize with pre-checkout validation hook
+  gw init --pre-checkout "echo 'Creating worktree: {worktree}'"
 
   # Initialize with multiple hooks
-  gw init --pre-add "echo 'Starting...'" --post-add "cd {worktreePath} && pnpm install" --post-add "echo 'Done!'"
+  gw init --pre-checkout "echo 'Starting...'" --post-checkout "cd {worktreePath} && pnpm install" --post-checkout "echo 'Done!'"
 
   # Initialize with explicit repository root
   gw init --root /Users/username/Workspace/repo.git
@@ -463,7 +465,7 @@ Existing Repository Examples:
   gw init --update-strategy rebase
 
   # Initialize with all options
-  gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/ --post-add "cd {worktreePath} && pnpm install" --update-strategy merge
+  gw init --root /Users/username/Workspace/repo.git --default-source master --auto-copy-files .env,secrets/ --post-checkout "cd {worktreePath} && pnpm install" --update-strategy merge
 
   # Interactive mode with explicit root
   gw init --interactive --root /Users/username/Workspace/repo.git
@@ -488,15 +490,15 @@ function buildConfigFromArgs(parsed: ParsedInitArgs): Partial<Config> {
   }
 
   // Add hooks if provided
-  if (parsed.preAddHooks || parsed.postAddHooks) {
+  if (parsed.preCheckoutHooks || parsed.postCheckoutHooks) {
     config.hooks = {
-      add: {},
+      checkout: {},
     };
-    if (parsed.preAddHooks && parsed.preAddHooks.length > 0) {
-      config.hooks.add!.pre = parsed.preAddHooks;
+    if (parsed.preCheckoutHooks && parsed.preCheckoutHooks.length > 0) {
+      config.hooks.checkout!.pre = parsed.preCheckoutHooks;
     }
-    if (parsed.postAddHooks && parsed.postAddHooks.length > 0) {
-      config.hooks.add!.post = parsed.postAddHooks;
+    if (parsed.postCheckoutHooks && parsed.postCheckoutHooks.length > 0) {
+      config.hooks.checkout!.post = parsed.postCheckoutHooks;
     }
   }
 
@@ -566,11 +568,11 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       if (interactiveConfig.autoCopyFiles && !parsed.autoCopyFiles) {
         parsed.autoCopyFiles = interactiveConfig.autoCopyFiles;
       }
-      if (interactiveConfig.preAddHooks && !parsed.preAddHooks) {
-        parsed.preAddHooks = interactiveConfig.preAddHooks;
+      if (interactiveConfig.preCheckoutHooks && !parsed.preCheckoutHooks) {
+        parsed.preCheckoutHooks = interactiveConfig.preCheckoutHooks;
       }
-      if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
-        parsed.postAddHooks = interactiveConfig.postAddHooks;
+      if (interactiveConfig.postCheckoutHooks && !parsed.postCheckoutHooks) {
+        parsed.postCheckoutHooks = interactiveConfig.postCheckoutHooks;
       }
       if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
         parsed.cleanThreshold = interactiveConfig.cleanThreshold;
@@ -756,11 +758,11 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     if (interactiveConfig.autoCopyFiles && !parsed.autoCopyFiles) {
       parsed.autoCopyFiles = interactiveConfig.autoCopyFiles;
     }
-    if (interactiveConfig.preAddHooks && !parsed.preAddHooks) {
-      parsed.preAddHooks = interactiveConfig.preAddHooks;
+    if (interactiveConfig.preCheckoutHooks && !parsed.preCheckoutHooks) {
+      parsed.preCheckoutHooks = interactiveConfig.preCheckoutHooks;
     }
-    if (interactiveConfig.postAddHooks && !parsed.postAddHooks) {
-      parsed.postAddHooks = interactiveConfig.postAddHooks;
+    if (interactiveConfig.postCheckoutHooks && !parsed.postCheckoutHooks) {
+      parsed.postCheckoutHooks = interactiveConfig.postCheckoutHooks;
     }
     if (interactiveConfig.cleanThreshold !== undefined && parsed.cleanThreshold === undefined) {
       parsed.cleanThreshold = interactiveConfig.cleanThreshold;
@@ -786,15 +788,15 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   }
 
   // Add hooks if provided
-  if (parsed.preAddHooks || parsed.postAddHooks) {
+  if (parsed.preCheckoutHooks || parsed.postCheckoutHooks) {
     config.hooks = {
-      add: {},
+      checkout: {},
     };
-    if (parsed.preAddHooks && parsed.preAddHooks.length > 0) {
-      config.hooks.add!.pre = parsed.preAddHooks;
+    if (parsed.preCheckoutHooks && parsed.preCheckoutHooks.length > 0) {
+      config.hooks.checkout!.pre = parsed.preCheckoutHooks;
     }
-    if (parsed.postAddHooks && parsed.postAddHooks.length > 0) {
-      config.hooks.add!.post = parsed.postAddHooks;
+    if (parsed.postCheckoutHooks && parsed.postCheckoutHooks.length > 0) {
+      config.hooks.checkout!.post = parsed.postCheckoutHooks;
     }
   }
 
@@ -823,11 +825,11 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     if (config.autoCopyFiles) {
       console.log(`  Auto-copy files: ${output.dim(config.autoCopyFiles.join(', '))}`);
     }
-    if (config.hooks?.add?.pre) {
-      console.log(`  Pre-add hooks: ${output.dim(config.hooks.add.pre.length.toString())} command(s)`);
+    if (config.hooks?.checkout?.pre) {
+      console.log(`  Pre-checkout hooks: ${output.dim(config.hooks.checkout.pre.length.toString())} command(s)`);
     }
-    if (config.hooks?.add?.post) {
-      console.log(`  Post-add hooks: ${output.dim(config.hooks.add.post.length.toString())} command(s)`);
+    if (config.hooks?.checkout?.post) {
+      console.log(`  Post-checkout hooks: ${output.dim(config.hooks.checkout.post.length.toString())} command(s)`);
     }
     if (config.cleanThreshold !== undefined) {
       console.log(`  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`);

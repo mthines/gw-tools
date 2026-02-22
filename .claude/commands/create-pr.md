@@ -74,11 +74,15 @@ Fill in the template at `.github/pull_request_template.md`:
 - Documentation updates
 - Config additions with defaults
 
-## Step 4: Create Draft PR
+## Step 4: Push Branch and Create Draft PR
 
-Always create as **draft** using GitHub CLI:
+First push the branch to the remote (required for `gh pr create`), then create as **draft**:
 
 ```bash
+# Push the branch first (tracking is already configured by gw add)
+git push
+
+# Create the draft PR
 gh pr create --draft \
   --title "type(scope): brief description" \
   --body "$(cat <<'EOF'
@@ -225,3 +229,4 @@ Updates installation instructions to include shell integration setup steps.
 - **Too many changes?** Group related items, focus on user impact
 - **Unsure about breaking?** Ask: "Do users need to change their code/config?"
 - **Multi-package changes?** Group by package in the Changes section
+- **Always push first!** `gh pr create` requires the branch to exist on the remote. When using `gw add`, tracking is pre-configured so `git push` works without `-u`

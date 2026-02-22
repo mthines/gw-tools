@@ -7,6 +7,7 @@ import { join, resolve } from '$std/path';
 import { parse as parseJsonc } from '$std/jsonc';
 import type { Config } from './types.ts';
 import { findGitRoot, pathExists } from './path-resolver.ts';
+import { runMigrations, CURRENT_CONFIG_VERSION } from './config-migrations.ts';
 
 const CONFIG_DIR_NAME = '.gw';
 const CONFIG_FILE_NAME = 'config.json';
@@ -74,6 +75,7 @@ async function ensureConfigDir(dir: string): Promise<void> {
  */
 function createDefaultConfig(): Config {
   return {
+    configVersion: CURRENT_CONFIG_VERSION,
     defaultBranch: 'main',
     cleanThreshold: 7,
   };
@@ -158,16 +160,30 @@ export async function loadConfig(): Promise<{
     // Config file exists, load it
     try {
       const content = await Deno.readTextFile(configPath);
-      const data = parseJsonc(content);
+      const rawData = parseJsonc(content) as Record<string, unknown>;
 
-      if (!validateConfig(data)) {
+      // Run migrations if needed
+      const { config: migratedData, migrated, appliedMigrations } = runMigrations(rawData);
+
+      if (!validateConfig(migratedData)) {
         throw new Error('Invalid configuration file format');
       }
 
-      // If config has root, use it
-      if (data.root) {
-        return { config: data, gitRoot: data.root };
+      // Save migrated config and notify user if migrations were applied
+      if (migrated && migratedData.root) {
+        await saveConfig(migratedData.root, migratedData);
+        console.log(
+          `Config automatically updated (${appliedMigrations.length} migration${appliedMigrations.length > 1 ? 's' : ''} applied)\n`
+        );
       }
+
+      // If config has root, use it
+      if (migratedData.root) {
+        return { config: migratedData, gitRoot: migratedData.root };
+      }
+
+      // Alias for the rest of the function
+      const data = migratedData;
 
       // Config exists but no root - try auto-detection and update config
       try {
@@ -304,21 +320,21 @@ function generateConfigTemplate(config: Config): string {
     // Active hooks configuration
     lines.push('  "hooks": {');
 
-    if (config.hooks.add) {
-      lines.push('    "add": {');
+    if (config.hooks.checkout) {
+      lines.push('    "checkout": {');
 
-      const preHooks = config.hooks.add.pre;
+      const preHooks = config.hooks.checkout.pre;
       if (preHooks && preHooks.length > 0) {
         lines.push('      "pre": [');
         preHooks.forEach((cmd, index) => {
           const comma = index < preHooks.length - 1 ? ',' : '';
           lines.push(`        ${JSON.stringify(cmd)}${comma}`);
         });
-        const hasPost = config.hooks.add.post && config.hooks.add.post.length > 0;
+        const hasPost = config.hooks.checkout.post && config.hooks.checkout.post.length > 0;
         lines.push(`      ]${hasPost ? ',' : ''}`);
       }
 
-      const postHooks = config.hooks.add.post;
+      const postHooks = config.hooks.checkout.post;
       if (postHooks && postHooks.length > 0) {
         lines.push('      "post": [');
         postHooks.forEach((cmd, index) => {
@@ -335,7 +351,7 @@ function generateConfigTemplate(config: Config): string {
   } else {
     // Show commented examples
     lines.push('  // "hooks": {');
-    lines.push('  //   "add": {');
+    lines.push('  //   "checkout": {');
     lines.push('  //     "pre": [');
     lines.push('  //       "echo \'Creating worktree: {worktree}\'"');
     lines.push('  //     ],');

@@ -75,9 +75,8 @@ Usage:
   gw --help
 
 Commands:
-  add              Create a new worktree with optional auto-copy
+  checkout, co     Create a new worktree or switch branches (alias: add)
   cd               Navigate to a worktree directory
-  checkout, co     Smart git checkout for worktree workflows
   pr               Check out a pull request into a new worktree
   update           Update current worktree with latest changes from default branch
   sync             Sync files/directories between worktrees
@@ -91,7 +90,7 @@ Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository
   remove, rm       Remove a worktree from the repository
   move, mv         Move a worktree to a new location
-  prune            Clean up worktree data; --clean removes all clean worktrees
+  prune            Full cleanup: remove clean worktrees and orphan branches
   lock             Lock a worktree to prevent removal
   unlock           Unlock a worktree to allow removal
   repair           Repair worktree administrative files
@@ -101,12 +100,12 @@ Options:
   -v, --version    Show version information
 
 Examples:
-  gw add feat-branch
-  gw add feat-branch -b my-branch
+  gw checkout feat/new-feature
+  gw co feat-branch -b my-branch
   gw cd feat-branch
-  gw checkout main
-  gw co feature-x
+  gw add feat-branch           # 'add' works as an alias for checkout
   gw sync feat-branch .env components/agents/.env
+  gw sync                                           (sync autoCopyFiles to current worktree)
   gw list
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
@@ -137,7 +136,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
   return {
     help: parsed.help as boolean,
     from: parsed.from as string | undefined,
-    target: target as string,
+    target: target as string | undefined,
     files: files as string[],
     dryRun: parsed['dry-run'] as boolean | undefined,
   };
@@ -151,11 +150,12 @@ export function showCopyHelp(): void {
 gw sync - Sync files/directories between worktrees
 
 Usage:
-  gw sync [options] <target-worktree> [files...]
+  gw sync [options] [target-worktree] [files...]
 
 Arguments:
-  <target-worktree>    Name or full path of the target worktree directory
+  [target-worktree]    Name or full path of the target worktree directory
                        Can be relative (e.g., feat-branch) or absolute path
+                       If omitted, defaults to the current worktree
 
   [files...]           One or more files or directories to sync
                        Paths are relative to the worktree root
@@ -175,7 +175,10 @@ Description:
   files are created automatically if needed.
 
 Examples:
-  # Sync autoCopyFiles from config (if configured)
+  # Sync autoCopyFiles to current worktree (if inside a worktree)
+  gw sync
+
+  # Sync autoCopyFiles from config to a specific target
   gw sync feat-branch
 
   # Sync .env file from main to feat-branch

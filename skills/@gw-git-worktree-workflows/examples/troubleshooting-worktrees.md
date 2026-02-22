@@ -321,8 +321,8 @@ $ gw add feature-x -b feature-x origin/feature-x
 # Remove directory
 $ rm -rf /projects/repo.git/feature-x
 
-# Remove Git reference
-$ gw prune
+# Remove Git reference (metadata only)
+$ gw prune --stale-only
 ```
 
 ---
@@ -459,7 +459,7 @@ ls: cannot access 'deleted': No such file or directory
 **Solution: Prune stale references**
 
 ```bash
-$ gw prune
+$ gw prune --stale-only
 
 # Verify
 $ gw list

@@ -16,14 +16,16 @@ export interface CommandHooks {
  * Hooks configuration for various gw commands
  */
 export interface HooksConfig {
-  /** Hooks for the add command */
-  add?: CommandHooks;
+  /** Hooks for the checkout command */
+  checkout?: CommandHooks;
 }
 
 /**
  * Per-repository configuration stored at .gw/config.json
  */
 export interface Config {
+  /** Config schema version for migrations (managed automatically) */
+  configVersion?: number;
   /** Absolute path to the git repository root */
   root?: string;
   /** Default source worktree name (e.g., "main", "master") */
@@ -49,7 +51,7 @@ export interface CopyOptions {
   /** Source worktree name */
   from?: string;
   /** Target worktree name */
-  target: string;
+  target?: string;
   /** List of file/directory paths to copy */
   files: string[];
   /** Show help */
