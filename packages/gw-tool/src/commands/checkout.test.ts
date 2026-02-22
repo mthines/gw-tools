@@ -345,7 +345,11 @@ Deno.test('checkout command - sets up tracking for truly new branches', async ()
       const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
 
       // Should be tracking the new branch name
-      assertEquals(tracking, 'refs/heads/new-feature-branch-tracking', 'New branch should track origin/new-feature-branch-tracking');
+      assertEquals(
+        tracking,
+        'refs/heads/new-feature-branch-tracking',
+        'New branch should track origin/new-feature-branch-tracking'
+      );
 
       const remoteCmd = new Deno.Command('git', {
         args: ['-C', worktreePath, 'config', 'branch.new-feature-branch-tracking.remote'],
