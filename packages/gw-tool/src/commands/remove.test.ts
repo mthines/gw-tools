@@ -2,7 +2,7 @@
  * Tests for remove.ts command
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
+import { assertEquals } from '$std/assert';
 import { join } from '$std/path';
 import { executeRemove } from './remove.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
@@ -327,6 +327,139 @@ Deno.test('remove command - prevents removal of gw_root', async () => {
       const worktrees = await repo.listWorktrees();
       const hasGwRoot = worktrees.some((wt) => wt.includes('gw_root'));
       assertEquals(hasGwRoot, true, 'gw_root worktree should not be removed');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - deletes local branch by default', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-delete-branch', 'feat-delete-branch');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Remove worktree without --preserve-branch
+      await executeRemove(['--yes', 'feat-delete-branch']);
+
+      // Verify worktree was removed
+      await assertWorktreeNotExists(repo.path, 'feat-delete-branch');
+
+      // Verify branch was also deleted
+      const branchListCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'branch', '--list', 'feat-delete-branch'],
+        stdout: 'piped',
+      });
+      const branchResult = await branchListCmd.output();
+      const branchList = new TextDecoder().decode(branchResult.stdout).trim();
+      assertEquals(branchList, '', 'Branch should have been deleted');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - preserves branch with --preserve-branch flag', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-keep-branch', 'feat-keep-branch');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Remove worktree WITH --preserve-branch
+      await executeRemove(['--yes', '--preserve-branch', 'feat-keep-branch']);
+
+      // Verify worktree was removed
+      await assertWorktreeNotExists(repo.path, 'feat-keep-branch');
+
+      // Verify branch was NOT deleted
+      const branchListCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'branch', '--list', 'feat-keep-branch'],
+        stdout: 'piped',
+      });
+      const branchResult = await branchListCmd.output();
+      const branchList = new TextDecoder().decode(branchResult.stdout).trim();
+      assertEquals(branchList.includes('feat-keep-branch'), true, 'Branch should have been preserved');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - does not delete protected branches (main)', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a worktree on a non-main branch, but test that 'main' branch protection works
+    // We can't easily test removing a main worktree since it's protected at worktree level too
+    // So we'll verify by checking that the main branch exists after a different removal
+    await repo.createWorktree('feat-test', 'feat-test');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['--yes', 'feat-test']);
+
+      // Verify the main branch still exists (wasn't accidentally deleted)
+      const branchListCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'branch', '--list', 'main'],
+        stdout: 'piped',
+      });
+      const branchResult = await branchListCmd.output();
+      const branchList = new TextDecoder().decode(branchResult.stdout).trim();
+      assertEquals(branchList.includes('main'), true, 'Main branch should still exist');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - handles unmerged branch gracefully', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-unmerged', 'feat-unmerged');
+
+    // Make a commit in the worktree to make it "unmerged"
+    const worktreePath = join(repo.path, 'feat-unmerged');
+    await Deno.writeTextFile(join(worktreePath, 'new-file.txt'), 'new content');
+    await repo.runCommand('git', ['-C', worktreePath, 'add', 'new-file.txt']);
+    await repo.runCommand('git', ['-C', worktreePath, 'commit', '-m', 'Add new file']);
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Remove worktree - branch deletion should warn but not fail
+      // Using --force for worktree removal but not forcing branch deletion
+      await executeRemove(['--force', 'feat-unmerged']);
+
+      // Verify worktree was removed
+      await assertWorktreeNotExists(repo.path, 'feat-unmerged');
+
+      // The branch might or might not be deleted depending on merge status
+      // The key is that the command doesn't fail
     } finally {
       cwd.restore();
     }

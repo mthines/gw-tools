@@ -992,14 +992,26 @@ gw remove experiment-new-architecture
 **Safe removal:**
 
 ```bash
-# Remove worktree (commits must be pushed or merged)
+# Remove worktree AND delete the local branch (default)
 gw remove feature-completed
 
-# Force removal (even with unpushed commits)
+# Remove worktree but KEEP the local branch
+gw remove feature-completed --preserve-branch
+
+# Force removal (even with unpushed commits) and force branch deletion
 gw remove feature-abandoned --force
 ```
 
-**Protected branches** (cannot be removed):
+**Branch cleanup (default behavior):**
+
+By default, `gw remove` also deletes the local branch after removing the worktree. This prevents orphaned branches from accumulating:
+
+- Uses safe delete (`git branch -d`) which warns if branch has unmerged commits
+- Use `--preserve-branch` to keep the local branch
+- Use `--force` to force delete unmerged branches
+- Protected branches (main, master, defaultBranch, gw_root) are never deleted
+
+**Protected worktrees** (cannot be removed):
 
 - Default branch (typically `main`, configured in `.gw/config.json`)
 - `gw_root` branch (bare repository root)
@@ -1009,7 +1021,8 @@ gw remove feature-abandoned --force
 
 - Working directory is deleted
 - Worktree reference removed from Git
-- Branch remains in repository (can still be checked out elsewhere)
+- Local branch is deleted (unless `--preserve-branch` is used)
+- Remote branch is NOT affected (must be deleted separately if needed)
 
 ### Cleaning Up Stale Worktrees
 

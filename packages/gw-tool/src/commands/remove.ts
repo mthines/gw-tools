@@ -4,9 +4,15 @@
  */
 
 import { resolve } from '$std/path';
-import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+import { executeGitWorktree } from '../lib/git-proxy.ts';
 import { loadConfig } from '../lib/config.ts';
-import { listWorktrees, hasUncommittedChanges, hasUnpushedCommits } from '../lib/git-utils.ts';
+import {
+  listWorktrees,
+  hasUncommittedChanges,
+  hasUnpushedCommits,
+  deleteLocalBranch,
+  isBranchCheckedOutElsewhere,
+} from '../lib/git-utils.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import * as output from '../lib/output.ts';
 
@@ -34,10 +40,18 @@ Usage:
 
 This command wraps 'git worktree remove' and provides smart confirmation prompts.
 
+Branch Cleanup:
+  By default, gw remove also deletes the local branch associated with the worktree.
+  This prevents orphaned branches from accumulating.
+
+  - Uses safe delete (git branch -d) which warns if branch has unmerged commits
+  - Protected branches (defaultBranch, main, master) are never deleted
+  - Use --preserve-branch to keep the local branch after removing the worktree
+
 Prompting Behavior:
   - If the worktree is clean (no uncommitted changes, all commits pushed): removes immediately
   - If the worktree has uncommitted changes or unpushed commits: prompts for confirmation
-  - If --force is provided: skips all prompts and forces removal
+  - If --force is provided: skips all prompts and forces removal (including branch deletion)
   - If --yes is provided: skips confirmation prompt
 
 If you remove the worktree you're currently in:
@@ -47,17 +61,19 @@ If you remove the worktree you're currently in:
 
 Options:
   All 'git worktree remove' options are supported
-  --yes, -y     Skip confirmation prompt (but still prompts if worktree is dirty unless --force is also used)
-  --force, -f   Force removal even if worktree is dirty or locked (never prompts)
-  -h, --help    Show this help message
+  --preserve-branch   Keep the local branch after removing the worktree
+  --yes, -y           Skip confirmation prompt (but still prompts if worktree is dirty unless --force is also used)
+  --force, -f         Force removal even if worktree is dirty or locked (also forces branch deletion)
+  -h, --help          Show this help message
 
 Examples:
-  gw remove feat-branch              # Removes if clean, prompts if dirty
-  gw remove --yes feat-branch        # Skips confirmation, but prompts if dirty without --force
-  gw remove -y feat-branch           # Same as --yes
-  gw remove --force feat-branch      # Force removal, never prompts
-  gw remove -f feat-branch           # Same as --force (short form)
-  gw rm feat-branch                  # Short alias
+  gw remove feat-branch                    # Remove worktree AND delete local branch
+  gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
+  gw remove --yes feat-branch              # Skips confirmation, but prompts if dirty without --force
+  gw remove -y feat-branch                 # Same as --yes
+  gw remove --force feat-branch            # Force removal and branch deletion, never prompts
+  gw remove -f feat-branch                 # Same as --force (short form)
+  gw rm feat-branch                        # Short alias
 
 For full git worktree remove documentation:
   git worktree remove --help
@@ -80,10 +96,14 @@ For full git worktree remove documentation:
     Deno.exit(1);
   }
 
+  // Check for --preserve-branch flag
+  const preserveBranch = args.includes('--preserve-branch');
+
   // Check if we're currently inside the worktree being removed
   const cwd = Deno.cwd();
   let isRemovingCurrentWorktree = false;
   let worktreePath: string | undefined;
+  let worktreeBranch: string | undefined;
   let isValidWorktree = false;
   let isLeftoverDirectory = false;
 
@@ -124,6 +144,7 @@ For full git worktree remove documentation:
       }
 
       worktreePath = exactMatch.path;
+      worktreeBranch = exactMatch.branch;
       isValidWorktree = true;
       isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);
     } else {
@@ -295,20 +316,55 @@ For full git worktree remove documentation:
     try {
       const { gitRoot } = await loadConfig();
       Deno.chdir(gitRoot);
-    } catch (error) {
+    } catch {
       // If we can't get git root, continue anyway
       // The git command might still work
     }
   }
 
-  // Filter out --yes/-y flags before passing to git (git doesn't recognize them)
-  const filteredArgs = args.filter((arg) => arg !== '--yes' && arg !== '-y');
+  // Filter out gw-specific flags before passing to git (git doesn't recognize them)
+  const filteredArgs = args.filter((arg) => arg !== '--yes' && arg !== '-y' && arg !== '--preserve-branch');
 
   const successMessage = worktreeName
     ? `Worktree ${output.bold(`"${worktreeName}"`)} removed successfully`
     : 'Worktree removed successfully';
 
   await executeGitWorktree('remove', filteredArgs, successMessage);
+
+  // Delete the local branch unless --preserve-branch is set
+  if (!preserveBranch && worktreeBranch && isValidWorktree) {
+    // Get config to check protected branches
+    const { config } = await loadConfig();
+    const defaultBranch = config.defaultBranch || 'main';
+
+    // List of protected branches that should never be deleted
+    const protectedBranches = new Set([defaultBranch, 'main', 'master', 'gw_root']);
+
+    if (protectedBranches.has(worktreeBranch)) {
+      // Don't delete protected branches (silently skip)
+    } else {
+      // Check if branch is checked out in another worktree
+      const isCheckedOutElsewhere = await isBranchCheckedOutElsewhere(worktreeBranch);
+
+      if (isCheckedOutElsewhere) {
+        output.warning(`Branch ${output.bold(worktreeBranch)} is checked out in another worktree, keeping it.`);
+      } else {
+        // Use -D (force) if --force flag was provided, otherwise use -d (safe)
+        const hasForceFlag = args.includes('--force') || args.includes('-f');
+        const deleteResult = await deleteLocalBranch(worktreeBranch, hasForceFlag);
+
+        if (deleteResult.success) {
+          output.success(`Deleted branch ${output.bold(`"${worktreeBranch}"`)}`);
+        } else {
+          // Show warning but don't fail - worktree was already removed
+          output.warning(`Could not delete branch: ${deleteResult.message}`);
+          if (!hasForceFlag && deleteResult.message?.includes('not fully merged')) {
+            console.log(`  Use ${output.bold('gw remove --force')} to force delete the branch.`);
+          }
+        }
+      }
+    }
+  }
 
   // If we removed the current worktree, show a helpful message
   if (isRemovingCurrentWorktree) {

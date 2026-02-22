@@ -398,6 +398,8 @@ export async function executeAdd(args: string[]): Promise<void> {
   // Check if branch exists and auto-create if needed
   const gitArgs = [...parsed.gitArgs];
   let startPoint: string | undefined;
+  let isNewBranch = false; // Track if we're creating a truly new branch (not local, not remote-only)
+  let needsTrackingSetup = false; // Track if we need to set up tracking (new branches AND remote-only branches)
 
   // If user specified -b or -B, check for ref conflicts since they're creating a new branch
   if (hasBranchFlag(gitArgs)) {
@@ -467,6 +469,10 @@ export async function executeAdd(args: string[]): Promise<void> {
         `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(sourceBranch)}...`
       );
       console.log(output.dim('Fetching latest from remote to ensure fresh start point...'));
+
+      // Mark as new branch - we need to set up tracking for this
+      isNewBranch = true;
+      needsTrackingSetup = true;
 
       try {
         const { startPoint: fetchedStartPoint, fetchSucceeded, message } = await fetchAndGetStartPoint(sourceBranch);
@@ -551,6 +557,7 @@ export async function executeAdd(args: string[]): Promise<void> {
             // Create local branch from remote with -b flag
             startPoint = fetchedStartPoint;
             gitArgs.unshift('-b', parsed.worktreeName);
+            needsTrackingSetup = true; // Need to set up tracking for remote-only branches
             console.log(output.dim('✓ Fetched successfully from remote'));
             if (message) {
               console.log(output.dim(message));
@@ -562,6 +569,7 @@ export async function executeAdd(args: string[]): Promise<void> {
             // Try using origin/branch directly with -b flag
             startPoint = `origin/${parsed.worktreeName}`;
             gitArgs.unshift('-b', parsed.worktreeName);
+            needsTrackingSetup = true; // Need to set up tracking for remote-only branches
             console.log('');
             output.warning(message || 'Could not fetch from remote');
             console.log(output.dim(`Using cached remote ref ${startPoint}. It may not be up-to-date.`));
@@ -571,6 +579,7 @@ export async function executeAdd(args: string[]): Promise<void> {
           // Error during fetch - try using cached remote ref
           startPoint = `origin/${parsed.worktreeName}`;
           gitArgs.unshift('-b', parsed.worktreeName);
+          needsTrackingSetup = true; // Need to set up tracking for remote-only branches
           output.warning('Could not fetch from remote, using cached remote ref');
           console.log('');
         }
@@ -598,11 +607,11 @@ export async function executeAdd(args: string[]): Promise<void> {
     Deno.exit(code);
   }
 
-  // Set up correct upstream tracking if we auto-created a new branch
-  // When creating a branch from a remote-tracking branch (e.g., origin/main),
-  // git automatically sets tracking to that branch. We need to change it to
-  // track the new branch name instead (e.g., origin/feat/new-feature).
-  if (startPoint) {
+  // Set up correct upstream tracking for new branches AND remote-only branches
+  // - For local branches: keep existing tracking (don't overwrite)
+  // - For remote-only branches: explicitly set tracking (git doesn't always do it reliably)
+  // - For new branches: set tracking to origin/<new-branch-name> so push works without -u
+  if (needsTrackingSetup && startPoint) {
     const configRemoteCmd = new Deno.Command('git', {
       args: ['-C', worktreePath, 'config', `branch.${branchName}.remote`, 'origin'],
       stdout: 'null',

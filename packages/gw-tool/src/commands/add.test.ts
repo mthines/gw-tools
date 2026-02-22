@@ -2,7 +2,7 @@
  * Tests for add.ts command - the most critical command
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
+import { assertEquals } from '$std/assert';
 import { join } from '$std/path';
 import { executeAdd } from './add.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
@@ -891,11 +891,148 @@ Deno.test('add command - creates local tracking branch from remote-only branch',
 
       // Should have the "Remote only commit" as HEAD
       assertEquals(lastCommit.includes('Remote only commit'), true, 'Should have the remote commit');
+
+      // Verify tracking is set up correctly for the remote-only branch
+      const remoteCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.remote-only-branch.remote'],
+        stdout: 'piped',
+      });
+      const remoteResult = await remoteCmd.output();
+      assertEquals(
+        new TextDecoder().decode(remoteResult.stdout).trim(),
+        'origin',
+        'Remote-only branch should have remote set to origin'
+      );
+
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.remote-only-branch.merge'],
+        stdout: 'piped',
+      });
+      const mergeResult = await mergeCmd.output();
+      assertEquals(
+        new TextDecoder().decode(mergeResult.stdout).trim(),
+        'refs/heads/remote-only-branch',
+        'Remote-only branch should track origin/remote-only-branch'
+      );
     } finally {
       cwd.restore();
     }
   } finally {
     await remoteRepo.cleanup();
     await localRepo.cleanup();
+  }
+});
+
+Deno.test('add command - does NOT overwrite tracking for existing local branches', async () => {
+  // This test verifies the fix: when a local branch exists with existing tracking,
+  // gw add should NOT overwrite that tracking configuration
+  const remoteRepo = new GitTestRepo();
+  const localRepo = new GitTestRepo();
+
+  try {
+    // Initialize the "remote" repository (bare)
+    await remoteRepo.initBare();
+
+    // Initialize local repo and add remote
+    await localRepo.init();
+    await localRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], localRepo.path);
+
+    // Push main to remote first
+    await localRepo.runCommand('git', ['push', '-u', 'origin', 'main'], localRepo.path);
+
+    // Create a local branch with tracking already set up
+    await localRepo.createBranch('existing-tracked');
+
+    // Set up tracking to origin/main (simulating an existing tracked branch)
+    await localRepo.runCommand(
+      'git',
+      ['config', 'branch.existing-tracked.remote', 'origin'],
+      localRepo.path
+    );
+    await localRepo.runCommand(
+      'git',
+      ['config', 'branch.existing-tracked.merge', 'refs/heads/main'],
+      localRepo.path
+    );
+
+    const config = createMinimalConfig(localRepo.path);
+    await writeTestConfig(localRepo.path, config);
+
+    const cwd = new TempCwd(localRepo.path);
+    try {
+      await executeAdd(['existing-tracked']);
+
+      // Verify worktree was created
+      await assertWorktreeExists(localRepo.path, 'existing-tracked');
+
+      // Verify tracking was NOT overwritten - should still track main, not existing-tracked
+      const worktreePath = join(localRepo.path, 'existing-tracked');
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.existing-tracked.merge'],
+        stdout: 'piped',
+      });
+      const mergeResult = await mergeCmd.output();
+      const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
+
+      // Should still be tracking main, NOT existing-tracked
+      assertEquals(
+        tracking,
+        'refs/heads/main',
+        'Existing tracking should NOT be overwritten - should still track main'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await remoteRepo.cleanup();
+    await localRepo.cleanup();
+  }
+});
+
+Deno.test('add command - sets up tracking for truly new branches', async () => {
+  // This test verifies that new branches DO get tracking set up
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeAdd(['new-feature-branch']);
+
+      // Verify worktree was created
+      await assertWorktreeExists(repo.path, 'new-feature-branch');
+
+      // Verify tracking was set up to track the new branch name
+      const worktreePath = join(repo.path, 'new-feature-branch');
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.new-feature-branch.merge'],
+        stdout: 'piped',
+      });
+      const mergeResult = await mergeCmd.output();
+      const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
+
+      // Should be tracking the new branch name
+      assertEquals(
+        tracking,
+        'refs/heads/new-feature-branch',
+        'New branch should track origin/new-feature-branch'
+      );
+
+      const remoteCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.new-feature-branch.remote'],
+        stdout: 'piped',
+      });
+      const remoteResult = await remoteCmd.output();
+      const remote = new TextDecoder().decode(remoteResult.stdout).trim();
+
+      assertEquals(remote, 'origin', 'New branch should have remote set to origin');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
   }
 });

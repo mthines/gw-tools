@@ -1252,7 +1252,7 @@ gw list -v               # Verbose output
 
 #### remove (rm)
 
-Remove a worktree from the repository.
+Remove a worktree from the repository. By default, also deletes the local branch to prevent orphaned branches.
 
 ```bash
 gw remove <worktree>
@@ -1260,7 +1260,16 @@ gw remove <worktree>
 gw rm <worktree>
 ```
 
-**Protected Branches:**
+**Branch Cleanup:**
+
+By default, `gw remove` deletes the local branch after removing the worktree:
+
+- Uses safe delete (`git branch -d`) which warns if branch has unmerged commits
+- Use `--preserve-branch` to keep the local branch
+- Use `--force` to force delete unmerged branches
+- Protected branches (main, master, defaultBranch, gw_root) are never deleted
+
+**Protected Worktrees:**
 
 The following worktrees are protected and cannot be removed:
 
@@ -1271,9 +1280,10 @@ The following worktrees are protected and cannot be removed:
 **Examples:**
 
 ```bash
-gw remove feat-branch           # Remove a worktree
-gw remove --force feat-branch   # Force remove even if dirty
-gw rm feat-branch               # Using alias
+gw remove feat-branch                    # Remove worktree AND delete local branch
+gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
+gw remove --force feat-branch            # Force remove worktree and force delete branch
+gw rm feat-branch                        # Using alias
 ```
 
 #### move (mv)

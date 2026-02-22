@@ -535,3 +535,64 @@ export async function rebaseBranch(
     message: errorMsg,
   };
 }
+
+/**
+ * Check if a branch is checked out in another worktree
+ * @param branchName Branch name to check
+ * @returns True if branch is checked out in another worktree
+ */
+export async function isBranchCheckedOutElsewhere(branchName: string): Promise<boolean> {
+  const worktrees = await listWorktrees();
+  // Filter out bare repos and check if any other worktree has this branch
+  return worktrees.some((wt) => !wt.bare && wt.branch === branchName);
+}
+
+/**
+ * Delete a local branch
+ * @param branchName Branch name to delete
+ * @param force Use -D instead of -d (force delete even if unmerged)
+ * @returns Result with success status and message
+ */
+export async function deleteLocalBranch(
+  branchName: string,
+  force = false
+): Promise<{ success: boolean; message?: string }> {
+  const flag = force ? '-D' : '-d';
+  const cmd = new Deno.Command('git', {
+    args: ['branch', flag, branchName],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+  const output = new TextDecoder().decode(stdout).trim();
+  const errorOutput = new TextDecoder().decode(stderr).trim();
+
+  if (code === 0) {
+    return { success: true, message: output };
+  }
+
+  // Parse common error cases
+  if (errorOutput.includes('not fully merged')) {
+    return {
+      success: false,
+      message: `Branch '${branchName}' is not fully merged. Use --force to delete anyway.`,
+    };
+  }
+
+  if (errorOutput.includes('checked out')) {
+    return {
+      success: false,
+      message: `Cannot delete branch '${branchName}' - it is checked out in another worktree.`,
+    };
+  }
+
+  if (errorOutput.includes('not found')) {
+    return {
+      success: false,
+      message: `Branch '${branchName}' not found.`,
+    };
+  }
+
+  return { success: false, message: errorOutput || 'Failed to delete branch' };
+}
