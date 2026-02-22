@@ -7,8 +7,8 @@
  * --no-branches: Skip branch cleanup
  */
 
-import { executeGitWorktree } from "../lib/git-proxy.ts";
-import { loadConfig } from "../lib/config.ts";
+import { executeGitWorktree } from '../lib/git-proxy.ts';
+import { loadConfig } from '../lib/config.ts';
 import {
   deleteBranch,
   getCurrentWorktreePath,
@@ -20,8 +20,8 @@ import {
   pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
-} from "../lib/git-utils.ts";
-import * as output from "../lib/output.ts";
+} from '../lib/git-utils.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Parsed arguments for prune command
@@ -71,17 +71,17 @@ function parsePruneArgs(args: string[]): PruneArgs {
   };
 
   for (const arg of args) {
-    if (arg === "--help" || arg === "-h") {
+    if (arg === '--help' || arg === '-h') {
       result.help = true;
-    } else if (arg === "--stale-only") {
+    } else if (arg === '--stale-only') {
       result.staleOnly = true;
-    } else if (arg === "--no-branches") {
+    } else if (arg === '--no-branches') {
       result.noBranches = true;
-    } else if (arg === "--dry-run" || arg === "-n") {
+    } else if (arg === '--dry-run' || arg === '-n') {
       result.dryRun = true;
-    } else if (arg === "--force" || arg === "-f") {
+    } else if (arg === '--force' || arg === '-f') {
       result.force = true;
-    } else if (arg === "--verbose" || arg === "-v") {
+    } else if (arg === '--verbose' || arg === '-v') {
       result.verbose = true;
     } else {
       // Pass other args to git (only used in stale-only mode)
@@ -147,19 +147,18 @@ For full git worktree prune documentation:
  */
 async function confirm(message: string): Promise<boolean> {
   console.log(`\n${message}`);
-  console.log(output.dim("[Y/n]: "));
+  console.log(output.dim('[Y/n]: '));
 
   const buf = new Uint8Array(1024);
   const n = await Deno.stdin.read(buf);
 
   if (!n) return true; // Default to yes
 
-  const response = new TextDecoder().decode(buf.subarray(0, n)).trim()
-    .toLowerCase();
+  const response = new TextDecoder().decode(buf.subarray(0, n)).trim().toLowerCase();
 
   // Accept empty string (just enter), yes, y as confirmation
   // Accept no, n as rejection
-  if (response === "" || response === "yes" || response === "y") {
+  if (response === '' || response === 'yes' || response === 'y') {
     return true;
   }
 
@@ -171,13 +170,13 @@ async function confirm(message: string): Promise<boolean> {
  */
 async function runGitWorktreePrune(verbose: boolean): Promise<void> {
   if (verbose) {
-    output.info("Running git worktree prune...");
+    output.info('Running git worktree prune...');
   }
 
   await pruneWorktrees(!verbose); // verbose = show output
 
   if (verbose) {
-    output.success("Pruning complete");
+    output.success('Pruning complete');
   }
 }
 
@@ -189,7 +188,7 @@ async function analyzeWorktrees(
   options: {
     currentPath: string;
     defaultBranch: string;
-  },
+  }
 ): Promise<CleanableWorktree[]> {
   const analyzed: CleanableWorktree[] = [];
 
@@ -202,7 +201,7 @@ async function analyzeWorktrees(
     // Only check if current when we have a currentPath (i.e., we're in a worktree)
     const isCurrent = options.currentPath && wt.path === options.currentPath;
     const isDefaultBranch = wt.branch === options.defaultBranch;
-    const isGwRoot = wt.branch === "gw_root";
+    const isGwRoot = wt.branch === 'gw_root';
     const hasUncommitted = await hasUncommittedChanges(wt.path);
     const hasUnpushed = await hasUnpushedCommits(wt.path);
 
@@ -212,19 +211,19 @@ async function analyzeWorktrees(
 
     if (isCurrent) {
       canClean = false;
-      reason = "current worktree (cannot remove)";
+      reason = 'current worktree (cannot remove)';
     } else if (isDefaultBranch) {
       canClean = false;
-      reason = "default branch (protected)";
+      reason = 'default branch (protected)';
     } else if (isGwRoot) {
       canClean = false;
-      reason = "gw_root (protected)";
+      reason = 'gw_root (protected)';
     } else if (hasUncommitted) {
       canClean = false;
-      reason = "has uncommitted changes";
+      reason = 'has uncommitted changes';
     } else if (hasUnpushed) {
       canClean = false;
-      reason = "has unpushed commits";
+      reason = 'has unpushed commits';
     }
 
     analyzed.push({
@@ -242,14 +241,9 @@ async function analyzeWorktrees(
 /**
  * Find orphan branches (branches without worktrees)
  */
-async function findOrphanBranches(
-  worktrees: WorktreeInfo[],
-  defaultBranch: string,
-): Promise<OrphanBranch[]> {
+async function findOrphanBranches(worktrees: WorktreeInfo[], defaultBranch: string): Promise<OrphanBranch[]> {
   const allBranches = await listLocalBranches();
-  const worktreeBranches = new Set(
-    worktrees.map((wt) => wt.branch).filter(Boolean),
-  );
+  const worktreeBranches = new Set(worktrees.map((wt) => wt.branch).filter(Boolean));
 
   const orphans: OrphanBranch[] = [];
 
@@ -260,7 +254,7 @@ async function findOrphanBranches(
     }
 
     // Skip protected branches
-    if (branch === defaultBranch || branch === "gw_root") {
+    if (branch === defaultBranch || branch === 'gw_root') {
       continue;
     }
 
@@ -271,7 +265,7 @@ async function findOrphanBranches(
 
     if (hasUnpushed) {
       canDelete = false;
-      reason = "has unpushed commits";
+      reason = 'has unpushed commits';
     }
 
     orphans.push({
@@ -289,18 +283,15 @@ async function findOrphanBranches(
  * Display worktrees that will be removed
  */
 function displayCleanable(worktrees: CleanableWorktree[]): void {
-  console.log(`${output.bold("Worktrees to remove:")}\n`);
+  console.log(`${output.bold('Worktrees to remove:')}\n`);
   for (const wt of worktrees) {
     const statusFlags = [];
-    if (wt.hasUncommitted) statusFlags.push(output.dim("uncommitted"));
-    if (wt.hasUnpushed) statusFlags.push(output.dim("unpushed"));
-    const status = statusFlags.length > 0
-      ? ` ${output.dim("[")}${statusFlags.join(", ")}${output.dim("]")}`
-      : " [clean]";
+    if (wt.hasUncommitted) statusFlags.push(output.dim('uncommitted'));
+    if (wt.hasUnpushed) statusFlags.push(output.dim('unpushed'));
+    const status =
+      statusFlags.length > 0 ? ` ${output.dim('[')}${statusFlags.join(', ')}${output.dim(']')}` : ' [clean]';
 
-    console.log(
-      `  ${output.errorSymbol()} ${output.path(wt.branch || wt.path)}${status}`,
-    );
+    console.log(`  ${output.errorSymbol()} ${output.path(wt.branch || wt.path)}${status}`);
   }
   console.log();
 }
@@ -309,12 +300,10 @@ function displayCleanable(worktrees: CleanableWorktree[]): void {
  * Display worktrees that are protected/skipped
  */
 function displaySkipped(worktrees: CleanableWorktree[]): void {
-  console.log(`${output.bold("Protected worktrees:")}\n`);
+  console.log(`${output.bold('Protected worktrees:')}\n`);
   for (const wt of worktrees) {
     console.log(
-      `  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)} - ${
-        output.dim(wt.reason || "unknown")
-      }`,
+      `  ${output.warningSymbol()} ${output.path(wt.branch || wt.path)} - ${output.dim(wt.reason || 'unknown')}`
     );
   }
   console.log();
@@ -328,7 +317,7 @@ function displayOrphanBranches(branches: OrphanBranch[]): void {
   const protected_ = branches.filter((b) => !b.canDelete);
 
   if (toDelete.length > 0) {
-    console.log(`${output.bold("Orphan branches to delete:")}\n`);
+    console.log(`${output.bold('Orphan branches to delete:')}\n`);
     for (const branch of toDelete) {
       console.log(`  ${output.errorSymbol()} ${output.path(branch.name)}`);
     }
@@ -336,12 +325,10 @@ function displayOrphanBranches(branches: OrphanBranch[]): void {
   }
 
   if (protected_.length > 0) {
-    console.log(`${output.bold("Protected orphan branches:")}\n`);
+    console.log(`${output.bold('Protected orphan branches:')}\n`);
     for (const branch of protected_) {
       console.log(
-        `  ${output.warningSymbol()} ${output.path(branch.name)} - ${
-          output.dim(branch.reason || "unknown")
-        }`,
+        `  ${output.warningSymbol()} ${output.path(branch.name)} - ${output.dim(branch.reason || 'unknown')}`
       );
     }
     console.log();
@@ -351,10 +338,7 @@ function displayOrphanBranches(branches: OrphanBranch[]): void {
 /**
  * Remove worktrees with error handling
  */
-async function removeWorktrees(
-  worktrees: CleanableWorktree[],
-  verbose: boolean,
-): Promise<void> {
+async function removeWorktrees(worktrees: CleanableWorktree[], verbose: boolean): Promise<void> {
   console.log();
   const results: Array<{
     worktree: CleanableWorktree;
@@ -376,9 +360,7 @@ async function removeWorktrees(
       const message = error instanceof Error ? error.message : String(error);
       results.push({ worktree: wt, success: false, error: message });
       if (verbose) {
-        console.log(
-          `  ${output.errorSymbol()} Failed: ${output.dim(message)}\n`,
-        );
+        console.log(`  ${output.errorSymbol()} Failed: ${output.dim(message)}\n`);
       }
     }
   }
@@ -393,14 +375,10 @@ async function removeWorktrees(
   }
   if (failed > 0) {
     output.error(`Failed to remove ${failed} worktree(s)`);
-    console.log("\nFailed worktrees:");
+    console.log('\nFailed worktrees:');
     for (const result of results.filter((r) => !r.success)) {
-      console.log(
-        `  ${output.errorSymbol()} ${
-          output.path(result.worktree.branch || result.worktree.path)
-        }`,
-      );
-      console.log(`    ${output.dim(result.error || "unknown error")}`);
+      console.log(`  ${output.errorSymbol()} ${output.path(result.worktree.branch || result.worktree.path)}`);
+      console.log(`    ${output.dim(result.error || 'unknown error')}`);
     }
     console.log();
   }
@@ -409,10 +387,7 @@ async function removeWorktrees(
 /**
  * Delete orphan branches with error handling
  */
-async function deleteOrphanBranches(
-  branches: OrphanBranch[],
-  verbose: boolean,
-): Promise<void> {
+async function deleteOrphanBranches(branches: OrphanBranch[], verbose: boolean): Promise<void> {
   const toDelete = branches.filter((b) => b.canDelete);
   if (toDelete.length === 0) return;
 
@@ -436,9 +411,7 @@ async function deleteOrphanBranches(
       const message = error instanceof Error ? error.message : String(error);
       results.push({ branch, success: false, error: message });
       if (verbose) {
-        console.log(
-          `  ${output.errorSymbol()} Failed: ${output.dim(message)}\n`,
-        );
+        console.log(`  ${output.errorSymbol()} Failed: ${output.dim(message)}\n`);
       }
     }
   }
@@ -452,12 +425,10 @@ async function deleteOrphanBranches(
   }
   if (failed > 0) {
     output.error(`Failed to delete ${failed} branch(es)`);
-    console.log("\nFailed branches:");
+    console.log('\nFailed branches:');
     for (const result of results.filter((r) => !r.success)) {
-      console.log(
-        `  ${output.errorSymbol()} ${output.path(result.branch.name)}`,
-      );
-      console.log(`    ${output.dim(result.error || "unknown error")}`);
+      console.log(`  ${output.errorSymbol()} ${output.path(result.branch.name)}`);
+      console.log(`    ${output.dim(result.error || 'unknown error')}`);
     }
     console.log();
   }
@@ -469,7 +440,7 @@ async function deleteOrphanBranches(
 async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
   // Load config for defaultBranch
   const { config } = await loadConfig();
-  const defaultBranch = config.defaultBranch ?? "main";
+  const defaultBranch = config.defaultBranch ?? 'main';
 
   // Run git worktree prune first
   await runGitWorktreePrune(parsed.verbose);
@@ -478,7 +449,7 @@ async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
   const currentPath = await getCurrentWorktreePath();
 
   // List and analyze all worktrees
-  output.info("Analyzing worktrees and branches...");
+  output.info('Analyzing worktrees and branches...');
   const worktrees = await listWorktrees();
   const analyzed = await analyzeWorktrees(worktrees, {
     currentPath,
@@ -486,9 +457,7 @@ async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
   });
 
   // Find orphan branches (unless --no-branches)
-  const orphanBranches = parsed.noBranches
-    ? []
-    : await findOrphanBranches(worktrees, defaultBranch);
+  const orphanBranches = parsed.noBranches ? [] : await findOrphanBranches(worktrees, defaultBranch);
 
   // Separate cleanable from protected
   const toClean = analyzed.filter((wt) => wt.canClean);
@@ -497,13 +466,11 @@ async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
   // Check if there's anything to do
   const branchesToDelete = orphanBranches.filter((b) => b.canDelete);
   if (toClean.length === 0 && branchesToDelete.length === 0) {
-    output.success("Nothing to clean");
+    output.success('Nothing to clean');
     if (toSkip.length > 0) {
       displaySkipped(toSkip);
     }
-    if (
-      orphanBranches.length > 0 && orphanBranches.every((b) => !b.canDelete)
-    ) {
+    if (orphanBranches.length > 0 && orphanBranches.every((b) => !b.canDelete)) {
       displayOrphanBranches(orphanBranches);
     }
     Deno.exit(0);
@@ -522,7 +489,7 @@ async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
 
   // Exit early for dry-run
   if (parsed.dryRun) {
-    output.info("Dry run complete - nothing was removed");
+    output.info('Dry run complete - nothing was removed');
     Deno.exit(0);
   }
 
@@ -537,9 +504,9 @@ async function executeFullCleanup(parsed: PruneArgs): Promise<void> {
 
   // Confirm with user (unless force)
   if (!parsed.force) {
-    const confirmed = await confirm(`Remove ${parts.join(" and ")}?`);
+    const confirmed = await confirm(`Remove ${parts.join(' and ')}?`);
     if (!confirmed) {
-      console.log("\nCancelled.\n");
+      console.log('\nCancelled.\n');
       Deno.exit(0);
     }
   }
@@ -570,11 +537,7 @@ export async function executePrune(args: string[]): Promise<void> {
 
   // Stale-only mode: proxy to git (preserve original git behavior)
   if (parsed.staleOnly) {
-    await executeGitWorktree(
-      "prune",
-      parsed.gitArgs,
-      "Worktree information cleaned up",
-    );
+    await executeGitWorktree('prune', parsed.gitArgs, 'Worktree information cleaned up');
     return;
   }
 

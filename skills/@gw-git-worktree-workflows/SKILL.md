@@ -1013,11 +1013,11 @@ gw clean --force
 
 **Cleanup strategies:**
 
-| Command                              | When to Use                                       |
-| ------------------------------------ | ------------------------------------------------- |
-| `gw clean`                           | Clean up all finished work regardless of age      |
-| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)          |
-| `gw prune`                           | Full cleanup (worktrees + orphan branches)        |
+| Command                              | When to Use                                  |
+| ------------------------------------ | -------------------------------------------- |
+| `gw clean`                           | Clean up all finished work regardless of age |
+| `gw clean --use-autoclean-threshold` | Regular maintenance (only old worktrees)     |
+| `gw prune`                           | Full cleanup (worktrees + orphan branches)   |
 
 **Configure the threshold:**
 
