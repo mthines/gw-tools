@@ -437,6 +437,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // === Check if we're creating a new branch and handle ref conflicts ===
   const gitArgs = [...parsed.gitArgs];
   let startPoint: string | undefined;
+  let needsTrackingSetup = false; // Track if we need to set up tracking (new branches AND remote-only branches)
 
   // Determine if we're creating a new branch
   const explicitCreate = hasBranchFlag(gitArgs);
@@ -482,6 +483,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
         startPoint = fetchedStartPoint;
         gitArgs.unshift('-b', parsed.worktreeName);
+        needsTrackingSetup = true; // New branch needs tracking setup
 
         if (fetchSucceeded) {
           console.log(output.dim('✓ Fetched successfully from remote'));
@@ -562,11 +564,11 @@ export async function executeCheckout(args: string[]): Promise<void> {
     Deno.exit(code);
   }
 
-  // Set up correct upstream tracking if we auto-created a new branch
-  // When creating a branch from a remote-tracking branch (e.g., origin/main),
-  // git automatically sets tracking to that branch. We need to change it to
-  // track the new branch name instead (e.g., origin/feat/new-feature).
-  if (startPoint) {
+  // Set up correct upstream tracking for new branches AND remote-only branches
+  // - For local branches: keep existing tracking (don't overwrite)
+  // - For remote-only branches: explicitly set tracking (git doesn't always do it reliably)
+  // - For new branches: set tracking to origin/<new-branch-name> so push works without -u
+  if (needsTrackingSetup && startPoint) {
     const configRemoteCmd = new Deno.Command('git', {
       args: ['-C', worktreePath, 'config', `branch.${branchName}.remote`, 'origin'],
       stdout: 'null',

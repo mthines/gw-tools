@@ -186,9 +186,11 @@ gw add feature-test --force
 
 ### Remote Fetch Behavior
 
-When creating a new branch, `gw add` follows a **remote-first approach** to ensure your work starts from the latest code:
+`gw add` intelligently handles different branch scenarios to ensure proper worktree creation.
 
-**What's happening under the hood:**
+#### Creating New Branches
+
+When creating a new branch, the command fetches the latest source branch from remote:
 
 ```bash
 $ gw add feat/new-feature
@@ -203,18 +205,48 @@ Creating worktree: feat/new-feature
 
 The command:
 
-1. Detects that `feat/new-feature` doesn't exist
+1. Detects that `feat/new-feature` doesn't exist locally or on remote
 2. Fetches the latest version of `main` from the remote (`origin/main`)
 3. Creates your new branch from the fresh remote ref
 4. Sets up tracking to `origin/feat/new-feature` for easy pushing
 
+#### Using Local Branches
+
+When a branch already exists locally, the command uses it directly:
+
+```bash
+$ gw add feat/existing-feature
+
+Using existing local branch feat/existing-feature
+
+Creating worktree: feat/existing-feature
+```
+
+This is fast and straightforward - no network required.
+
+#### Using Remote-Only Branches
+
+When a branch exists only on remote (not locally), the command fetches it and creates a local tracking branch:
+
+```bash
+$ gw add feat/remote-feature
+
+Branch feat/remote-feature exists on remote, fetching...
+✓ Fetched successfully from remote
+Creating local branch from origin/feat/remote-feature
+
+Creating worktree: feat/remote-feature
+```
+
+This creates a proper local branch that tracks the remote, so `git push` and `git pull` work correctly.
+
 **Why this matters:**
 
-- **Prevents conflicts**: Your branch starts from the latest remote code, not an outdated local branch
-- **Ensures fresh code**: You're building on the most recent changes from your team
-- **Reduces merge pain**: Fewer surprises when you eventually merge back to main
+- **Local branches**: Fast checkout, no network needed
+- **Remote-only branches**: Proper tracking setup, no detached HEAD issues
+- **New branches**: Fresh start from latest remote code
 
-**Offline/fallback behavior:**
+#### Offline/Fallback Behavior
 
 When remote fetch fails (network issues, offline work, no remote configured), behavior depends on the context:
 
@@ -261,8 +293,10 @@ Options:
 
 **Key difference: `--from` requires freshness**
 
-- **Without `--from`**: Uses default branch with fallback to local (offline support)
-- **With `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
+- **Local branches**: Uses local branch directly (no fetch needed)
+- **Remote-only branches**: Fetches and creates local tracking branch
+- **New branches without `--from`**: Uses default branch with fallback to local (offline support)
+- **New branches with `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
 
 ### Navigating to Existing Worktrees
 
@@ -958,14 +992,26 @@ gw remove experiment-new-architecture
 **Safe removal:**
 
 ```bash
-# Remove worktree (commits must be pushed or merged)
+# Remove worktree AND delete the local branch (default)
 gw remove feature-completed
 
-# Force removal (even with unpushed commits)
+# Remove worktree but KEEP the local branch
+gw remove feature-completed --preserve-branch
+
+# Force removal (even with unpushed commits) and force branch deletion
 gw remove feature-abandoned --force
 ```
 
-**Protected branches** (cannot be removed):
+**Branch cleanup (default behavior):**
+
+By default, `gw remove` also deletes the local branch after removing the worktree. This prevents orphaned branches from accumulating:
+
+- Uses safe delete (`git branch -d`) which warns if branch has unmerged commits
+- Use `--preserve-branch` to keep the local branch
+- Use `--force` to force delete unmerged branches
+- Protected branches (main, master, defaultBranch, gw_root) are never deleted
+
+**Protected worktrees** (cannot be removed):
 
 - Default branch (typically `main`, configured in `.gw/config.json`)
 - `gw_root` branch (bare repository root)
@@ -975,7 +1021,8 @@ gw remove feature-abandoned --force
 
 - Working directory is deleted
 - Worktree reference removed from Git
-- Branch remains in repository (can still be checked out elsewhere)
+- Local branch is deleted (unless `--preserve-branch` is used)
+- Remote branch is NOT affected (must be deleted separately if needed)
 
 ### Cleaning Up Stale Worktrees
 

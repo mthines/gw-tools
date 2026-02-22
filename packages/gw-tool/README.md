@@ -366,30 +366,27 @@ If `autoCopyFiles` is configured, those files are automatically copied when crea
 **Branch Creation Behavior:**
 When creating a new worktree without specifying an existing branch, `gw checkout` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
 
-**Remote-First Fetch Approach:**
+**Branch Handling:**
+`gw checkout` intelligently handles different branch scenarios:
 
-The `gw checkout` command follows a remote-first approach when creating new branches:
+1. **Local branches**: If the branch already exists locally, it's used directly. No network access required.
 
-1. **What happens**: When you create a new branch (e.g., `gw add feat/new-feature`), the command:
-   - Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
-   - Creates your new branch from the fresh remote ref (e.g., `origin/main`)
-   - Sets up tracking to `origin/feat/new-feature` for easy pushing
+2. **Remote-only branches**: If the branch exists only on remote (e.g., `origin/feat/something`), `gw checkout` fetches it and creates a proper local tracking branch. This ensures `git push` and `git pull` work correctly.
 
-2. **Why it matters**: This ensures your new branch starts from the latest remote code, not from a potentially outdated local branch. This prevents:
-   - Merge conflicts from missing recent changes
-   - Building features on old code
-   - Divergent histories that are hard to reconcile
+3. **New branches**: If the branch doesn't exist anywhere, it's created from the source branch (defaultBranch or `--from` branch) after fetching the latest from remote.
 
-3. **Network failure handling**:
-   - **With `--from <branch>`**: Requires successful remote fetch. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command exits with a detailed error message and troubleshooting steps. This ensures you're working with fresh code when you explicitly specify a source.
-   - **Without `--from` (default branch)**: Warns about fetch failures but allows creation using the local branch as a fallback. This supports offline development or when no remote is configured.
+**Network Behavior:**
 
-4. **Offline development**: When working offline or when remote fetch fails for the default branch, the command falls back to using the local branch with a clear warning. This allows you to continue working without network access while being aware that your start point may not be current.
+- **New branches without `--from`**: Fetches defaultBranch from remote, falls back to local if fetch fails (offline support)
+- **New branches with `--from`**: Requires successful remote fetch, exits on failure (ensures fresh code)
+- **Local branches**: Used directly without network access
+- **Remote-only branches**: Fetches and creates local tracking branch, uses cached remote ref if fetch fails
 
 **Network Failure Handling:**
 
 - When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're working with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
-- When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
+- For local branches, no network is required.
+- For remote-only branches or new branches without `--from`, fetch failures trigger a warning but allow creation using local/cached refs.
 
 **Upstream Tracking:**
 When `gw checkout` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
@@ -1209,7 +1206,7 @@ gw list -v               # Verbose output
 
 #### remove (rm)
 
-Remove a worktree from the repository.
+Remove a worktree from the repository. By default, also deletes the local branch to prevent orphaned branches.
 
 ```bash
 gw remove <worktree>
@@ -1217,7 +1214,16 @@ gw remove <worktree>
 gw rm <worktree>
 ```
 
-**Protected Branches:**
+**Branch Cleanup:**
+
+By default, `gw remove` deletes the local branch after removing the worktree:
+
+- Uses safe delete (`git branch -d`) which warns if branch has unmerged commits
+- Use `--preserve-branch` to keep the local branch
+- Use `--force` to force delete unmerged branches
+- Protected branches (main, master, defaultBranch, gw_root) are never deleted
+
+**Protected Worktrees:**
 
 The following worktrees are protected and cannot be removed:
 
@@ -1228,9 +1234,10 @@ The following worktrees are protected and cannot be removed:
 **Examples:**
 
 ```bash
-gw remove feat-branch           # Remove a worktree
-gw remove --force feat-branch   # Force remove even if dirty
-gw rm feat-branch               # Using alias
+gw remove feat-branch                    # Remove worktree AND delete local branch
+gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
+gw remove --force feat-branch            # Force remove worktree and force delete branch
+gw rm feat-branch                        # Using alias
 ```
 
 #### move (mv)
