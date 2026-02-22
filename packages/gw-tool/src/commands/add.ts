@@ -398,7 +398,6 @@ export async function executeAdd(args: string[]): Promise<void> {
   // Check if branch exists and auto-create if needed
   const gitArgs = [...parsed.gitArgs];
   let startPoint: string | undefined;
-  let isNewBranch = false; // Track if we're creating a truly new branch (not local, not remote-only)
   let needsTrackingSetup = false; // Track if we need to set up tracking (new branches AND remote-only branches)
 
   // If user specified -b or -B, check for ref conflicts since they're creating a new branch
@@ -471,7 +470,6 @@ export async function executeAdd(args: string[]): Promise<void> {
       console.log(output.dim('Fetching latest from remote to ensure fresh start point...'));
 
       // Mark as new branch - we need to set up tracking for this
-      isNewBranch = true;
       needsTrackingSetup = true;
 
       try {
