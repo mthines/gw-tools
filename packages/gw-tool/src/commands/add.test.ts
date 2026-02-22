@@ -944,16 +944,8 @@ Deno.test('add command - does NOT overwrite tracking for existing local branches
     await localRepo.createBranch('existing-tracked');
 
     // Set up tracking to origin/main (simulating an existing tracked branch)
-    await localRepo.runCommand(
-      'git',
-      ['config', 'branch.existing-tracked.remote', 'origin'],
-      localRepo.path
-    );
-    await localRepo.runCommand(
-      'git',
-      ['config', 'branch.existing-tracked.merge', 'refs/heads/main'],
-      localRepo.path
-    );
+    await localRepo.runCommand('git', ['config', 'branch.existing-tracked.remote', 'origin'], localRepo.path);
+    await localRepo.runCommand('git', ['config', 'branch.existing-tracked.merge', 'refs/heads/main'], localRepo.path);
 
     const config = createMinimalConfig(localRepo.path);
     await writeTestConfig(localRepo.path, config);
@@ -1015,11 +1007,7 @@ Deno.test('add command - sets up tracking for truly new branches', async () => {
       const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
 
       // Should be tracking the new branch name
-      assertEquals(
-        tracking,
-        'refs/heads/new-feature-branch',
-        'New branch should track origin/new-feature-branch'
-      );
+      assertEquals(tracking, 'refs/heads/new-feature-branch', 'New branch should track origin/new-feature-branch');
 
       const remoteCmd = new Deno.Command('git', {
         args: ['-C', worktreePath, 'config', 'branch.new-feature-branch.remote'],
