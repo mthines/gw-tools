@@ -141,6 +141,11 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "./packages/gw-tool/scripts/release.sh"
+      },
+      "configurations": {
+        "version": {
+          "command": "./packages/gw-tool/scripts/release.sh --version {args.version}"
+        }
       }
     },
     "publish-jsr": {
