@@ -186,7 +186,7 @@ gw add feature-test --force
 
 ### Remote Fetch Behavior
 
-`gw add` follows a **remote-first approach** to ensure your worktree uses the latest code. This applies to both **new** and **existing** branches.
+`gw add` intelligently handles different branch scenarios to ensure proper worktree creation.
 
 #### Creating New Branches
 
@@ -205,33 +205,46 @@ Creating worktree: feat/new-feature
 
 The command:
 
-1. Detects that `feat/new-feature` doesn't exist
+1. Detects that `feat/new-feature` doesn't exist locally or on remote
 2. Fetches the latest version of `main` from the remote (`origin/main`)
 3. Creates your new branch from the fresh remote ref
 4. Sets up tracking to `origin/feat/new-feature` for easy pushing
 
-#### Using Existing Branches
+#### Using Local Branches
 
-When creating a worktree for an existing branch, the command fetches the latest version of that branch:
+When a branch already exists locally, the command uses it directly:
 
 ```bash
 $ gw add feat/existing-feature
 
-Branch feat/existing-feature exists, fetching latest from remote...
-✓ Fetched successfully from remote
-Using origin/feat/existing-feature (latest from remote)
+Using existing local branch feat/existing-feature
 
 Creating worktree: feat/existing-feature
 ```
 
-This ensures that even when checking out an existing branch, you get the latest commits that may have been pushed by teammates or from other machines.
+This is fast and straightforward - no network required.
+
+#### Using Remote-Only Branches
+
+When a branch exists only on remote (not locally), the command fetches it and creates a local tracking branch:
+
+```bash
+$ gw add feat/remote-feature
+
+Branch feat/remote-feature exists on remote, fetching...
+✓ Fetched successfully from remote
+Creating local branch from origin/feat/remote-feature
+
+Creating worktree: feat/remote-feature
+```
+
+This creates a proper local branch that tracks the remote, so `git push` and `git pull` work correctly.
 
 **Why this matters:**
 
-- **Prevents conflicts**: Your worktree uses the latest remote code, not an outdated local branch
-- **Ensures fresh code**: You're working with the most recent changes from your team
-- **Reduces merge pain**: Fewer surprises when you eventually merge back to main
-- **Syncs across machines**: Changes pushed from another machine are automatically pulled
+- **Local branches**: Fast checkout, no network needed
+- **Remote-only branches**: Proper tracking setup, no detached HEAD issues
+- **New branches**: Fresh start from latest remote code
 
 #### Offline/Fallback Behavior
 
@@ -252,18 +265,6 @@ This is acceptable for offline development or when remote is unavailable.
 Creating from main (local branch)
 
 Creating worktree: feat/offline
-```
-
-```bash
-# Existing branch: Warns but allows local fallback
-$ gw add feat/existing-offline
-
-Branch feat/existing-offline exists, fetching latest from remote...
-
-⚠ WARNING Could not fetch from remote
-Using local branch. It may not be up-to-date with remote.
-
-Creating worktree: feat/existing-offline
 ```
 
 ```bash
@@ -292,9 +293,10 @@ Options:
 
 **Key difference: `--from` requires freshness**
 
+- **Local branches**: Uses local branch directly (no fetch needed)
+- **Remote-only branches**: Fetches and creates local tracking branch
 - **New branches without `--from`**: Uses default branch with fallback to local (offline support)
 - **New branches with `--from`**: Requires successful remote fetch (ensures explicit source is fresh)
-- **Existing branches**: Fetches latest with fallback to local (offline support)
 
 ### Navigating to Existing Worktrees
 
