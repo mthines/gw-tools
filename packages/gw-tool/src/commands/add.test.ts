@@ -767,21 +767,20 @@ Deno.test('add command - --from works with branch names containing slashes', asy
   }
 });
 
-Deno.test('add command - fetches existing branch from remote before creating worktree', async () => {
-  // This test verifies that when an existing branch is used, the command
-  // attempts to fetch the latest from remote (and gracefully falls back to local
-  // when no remote is configured, as in this test setup)
+Deno.test('add command - uses local branch directly when it exists', async () => {
+  // This test verifies that when a local branch exists, the command
+  // uses it directly without trying to fetch
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    // Create a branch first
+    // Create a local branch
     await repo.createBranch('existing-branch');
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
 
-    // Capture console output to verify fetch attempt
+    // Capture console output to verify behavior
     const originalLog = console.log;
     const logs: string[] = [];
     console.log = (...args: unknown[]) => {
@@ -795,9 +794,9 @@ Deno.test('add command - fetches existing branch from remote before creating wor
       // Verify worktree was created
       await assertWorktreeExists(repo.path, 'existing-branch');
 
-      // Verify the fetch was attempted (message about existing branch)
-      const hasFetchMessage = logs.some((log) => log.includes('exists, fetching latest from remote'));
-      assertEquals(hasFetchMessage, true, 'Should indicate fetching for existing branch');
+      // Verify it used the local branch directly (no fetch attempt)
+      const hasLocalMessage = logs.some((log) => log.includes('Using existing local branch'));
+      assertEquals(hasLocalMessage, true, 'Should indicate using existing local branch');
     } finally {
       cwd.restore();
       console.log = originalLog;
@@ -835,8 +834,8 @@ Deno.test('add command - gracefully handles offline fallback for existing branch
   }
 });
 
-Deno.test('add command - uses remote ref when fetch succeeds for existing branch', async () => {
-  // Set up a repo with a remote to test successful fetch case
+Deno.test('add command - creates local tracking branch from remote-only branch', async () => {
+  // Set up a repo with a remote to test remote-only branch case
   const remoteRepo = new GitTestRepo();
   const localRepo = new GitTestRepo();
 
@@ -848,37 +847,41 @@ Deno.test('add command - uses remote ref when fetch succeeds for existing branch
     await localRepo.init();
     await localRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], localRepo.path);
 
-    // Create a branch and push to remote
-    await localRepo.createBranch('feature-branch');
-    await localRepo.runCommand('git', ['push', 'origin', 'feature-branch'], localRepo.path);
+    // Push main to remote first
+    await localRepo.runCommand('git', ['push', '-u', 'origin', 'main'], localRepo.path);
 
-    // Make a commit on the remote (simulate remote changes)
-    // First, clone the bare repo to make changes
+    // Create a branch on remote only (via a clone, then delete local branch)
     const cloneDir = Deno.makeTempDirSync({ prefix: 'gw-test-clone-' });
     try {
       await localRepo.runCommand('git', ['clone', remoteRepo.path, cloneDir]);
-      await localRepo.runCommand('git', ['-C', cloneDir, 'checkout', 'feature-branch']);
       await localRepo.runCommand('git', ['-C', cloneDir, 'config', 'user.email', 'test@example.com']);
       await localRepo.runCommand('git', ['-C', cloneDir, 'config', 'user.name', 'Test User']);
       await localRepo.runCommand('git', ['-C', cloneDir, 'config', 'commit.gpgsign', 'false']);
-      await localRepo.runCommand('git', ['-C', cloneDir, 'commit', '--allow-empty', '-m', 'Remote commit']);
-      await localRepo.runCommand('git', ['-C', cloneDir, 'push', 'origin', 'feature-branch']);
+      await localRepo.runCommand('git', ['-C', cloneDir, 'checkout', '-b', 'remote-only-branch']);
+      await localRepo.runCommand('git', ['-C', cloneDir, 'commit', '--allow-empty', '-m', 'Remote only commit']);
+      await localRepo.runCommand('git', ['-C', cloneDir, 'push', 'origin', 'remote-only-branch']);
     } finally {
       await Deno.remove(cloneDir, { recursive: true });
     }
+
+    // Fetch to update remote tracking refs (so we know about origin/remote-only-branch)
+    await localRepo.runCommand('git', ['fetch', 'origin'], localRepo.path);
 
     const config = createMinimalConfig(localRepo.path);
     await writeTestConfig(localRepo.path, config);
 
     const cwd = new TempCwd(localRepo.path);
     try {
-      await executeAdd(['feature-branch']);
+      await executeAdd(['remote-only-branch']);
 
       // Verify worktree was created
-      await assertWorktreeExists(localRepo.path, 'feature-branch');
+      await assertWorktreeExists(localRepo.path, 'remote-only-branch');
 
-      // Verify the worktree has the remote commit (fetch succeeded)
-      const worktreePath = join(localRepo.path, 'feature-branch');
+      // Verify local branch was created
+      await assertBranchExists(localRepo.path, 'remote-only-branch');
+
+      // Verify the worktree has the remote commit
+      const worktreePath = join(localRepo.path, 'remote-only-branch');
       const logCmd = new Deno.Command('git', {
         args: ['-C', worktreePath, 'log', '--oneline', '-1'],
         stdout: 'piped',
@@ -886,8 +889,8 @@ Deno.test('add command - uses remote ref when fetch succeeds for existing branch
       const logResult = await logCmd.output();
       const lastCommit = new TextDecoder().decode(logResult.stdout).trim();
 
-      // Should have the "Remote commit" as HEAD
-      assertEquals(lastCommit.includes('Remote commit'), true, 'Should have fetched the remote commit');
+      // Should have the "Remote only commit" as HEAD
+      assertEquals(lastCommit.includes('Remote only commit'), true, 'Should have the remote commit');
     } finally {
       cwd.restore();
     }

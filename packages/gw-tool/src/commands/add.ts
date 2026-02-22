@@ -13,26 +13,37 @@ import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
 
 /**
- * Check if a branch exists (locally or remotely)
+ * Check if a branch exists locally
  */
-async function branchExists(branchName: string): Promise<boolean> {
-  // Check local branch
+async function localBranchExists(branchName: string): Promise<boolean> {
   const localCheck = new Deno.Command('git', {
-    args: ['rev-parse', '--verify', branchName],
+    args: ['rev-parse', '--verify', `refs/heads/${branchName}`],
     stdout: 'null',
     stderr: 'null',
   });
   const localResult = await localCheck.output();
-  if (localResult.code === 0) return true;
+  return localResult.code === 0;
+}
 
-  // Check remote branch
+/**
+ * Check if a branch exists on remote
+ */
+async function remoteBranchExists(branchName: string, remoteName = 'origin'): Promise<boolean> {
   const remoteCheck = new Deno.Command('git', {
-    args: ['rev-parse', '--verify', `origin/${branchName}`],
+    args: ['rev-parse', '--verify', `refs/remotes/${remoteName}/${branchName}`],
     stdout: 'null',
     stderr: 'null',
   });
   const remoteResult = await remoteCheck.output();
   return remoteResult.code === 0;
+}
+
+/**
+ * Check if a branch exists (locally or remotely)
+ */
+async function branchExists(branchName: string): Promise<boolean> {
+  if (await localBranchExists(branchName)) return true;
+  return await remoteBranchExists(branchName);
 }
 
 /**
@@ -234,23 +245,22 @@ Configuration:
   gw init --auto-copy-files .env,secrets/
 
 Network Behavior:
-  gw add always fetches the latest version from the remote to ensure your
-  worktree uses fresh code. This applies to both new and existing branches.
+  gw add fetches from remote to ensure your worktree uses fresh code.
 
   For new branches (without --from flag):
-    - Fetches from remote (e.g., origin/main)
+    - Fetches defaultBranch from remote (e.g., origin/main)
     - Falls back to local branch if fetch fails (offline support)
 
   For new branches (with --from flag):
     - Requires successful fetch from remote (ensures fresh code)
     - Exits with error if fetch fails (network issues, auth problems)
 
-  For existing branches:
-    - Fetches the latest version of the branch from remote
-    - Falls back to local branch if fetch fails (offline support)
+  For local branches:
+    - Uses the existing local branch directly
 
-  Remote fetch ensures your worktree is based on the latest remote code,
-  not an outdated local branch.
+  For remote-only branches:
+    - Fetches the branch and creates a local tracking branch
+    - Falls back to cached remote ref if fetch fails
 
 Hooks:
   Pre-add and post-add hooks can be configured to run before and after
@@ -517,38 +527,53 @@ export async function executeAdd(args: string[]): Promise<void> {
         Deno.exit(1);
       }
     } else {
-      // Branch exists - fetch the latest version from remote before creating worktree
-      console.log(`Branch ${output.bold(parsed.worktreeName)} exists, fetching latest from remote...`);
+      // Branch exists somewhere - check if it's local or remote-only
+      const isLocal = await localBranchExists(parsed.worktreeName);
 
-      try {
-        const {
-          startPoint: fetchedStartPoint,
-          fetchSucceeded,
-          message,
-        } = await fetchAndGetStartPoint(parsed.worktreeName);
+      if (isLocal) {
+        // Local branch exists - just use it directly
+        // Git worktree add will checkout the existing local branch
+        startPoint = parsed.worktreeName;
+        console.log(`Using existing local branch ${output.bold(parsed.worktreeName)}`);
+        console.log('');
+      } else {
+        // Branch exists only on remote - fetch and create local tracking branch
+        console.log(`Branch ${output.bold(parsed.worktreeName)} exists on remote, fetching...`);
 
-        if (fetchSucceeded) {
-          // Use the remote ref to ensure we get the latest
-          startPoint = fetchedStartPoint;
-          console.log(output.dim('✓ Fetched successfully from remote'));
-          if (message) {
-            console.log(output.dim(message));
+        try {
+          const {
+            startPoint: fetchedStartPoint,
+            fetchSucceeded,
+            message,
+          } = await fetchAndGetStartPoint(parsed.worktreeName);
+
+          if (fetchSucceeded) {
+            // Create local branch from remote with -b flag
+            startPoint = fetchedStartPoint;
+            gitArgs.unshift('-b', parsed.worktreeName);
+            console.log(output.dim('✓ Fetched successfully from remote'));
+            if (message) {
+              console.log(output.dim(message));
+            }
+            console.log(`Creating local branch from ${output.bold(startPoint)}`);
+            console.log('');
+          } else {
+            // Fetch failed but we know the remote branch exists
+            // Try using origin/branch directly with -b flag
+            startPoint = `origin/${parsed.worktreeName}`;
+            gitArgs.unshift('-b', parsed.worktreeName);
+            console.log('');
+            output.warning(message || 'Could not fetch from remote');
+            console.log(output.dim(`Using cached remote ref ${startPoint}. It may not be up-to-date.`));
+            console.log('');
           }
-          console.log(`Using ${output.bold(startPoint)} (latest from remote)`);
-          console.log('');
-        } else {
-          // Fetch failed - use local branch with warning
-          startPoint = parsed.worktreeName;
-          console.log('');
-          output.warning(message || 'Could not fetch from remote');
-          console.log(output.dim('Using local branch. It may not be up-to-date with remote.'));
+        } catch {
+          // Error during fetch - try using cached remote ref
+          startPoint = `origin/${parsed.worktreeName}`;
+          gitArgs.unshift('-b', parsed.worktreeName);
+          output.warning('Could not fetch from remote, using cached remote ref');
           console.log('');
         }
-      } catch {
-        // Error during fetch - fall back to local branch
-        startPoint = parsed.worktreeName;
-        output.warning('Could not fetch from remote, using local branch');
-        console.log('');
       }
     }
   }
