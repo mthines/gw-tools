@@ -32,22 +32,22 @@ export function createConfigWithAutoCopy(root: string, files: string[]): Config 
 /**
  * Create a config with hooks
  */
-export function createConfigWithHooks(root: string, preAdd?: string[], postAdd?: string[]): Config {
+export function createConfigWithHooks(root: string, preCheckout?: string[], postCheckout?: string[]): Config {
   const config: Config = {
     root,
     defaultBranch: 'main',
     cleanThreshold: 7,
   };
 
-  if (preAdd || postAdd) {
+  if (preCheckout || postCheckout) {
     config.hooks = {
-      add: {},
+      checkout: {},
     };
-    if (preAdd) {
-      config.hooks.add!.pre = preAdd;
+    if (preCheckout) {
+      config.hooks.checkout!.pre = preCheckout;
     }
-    if (postAdd) {
-      config.hooks.add!.post = postAdd;
+    if (postCheckout) {
+      config.hooks.checkout!.post = postCheckout;
     }
   }
 

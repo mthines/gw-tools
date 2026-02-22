@@ -67,12 +67,12 @@ Deno.test('saveConfig - preserves hooks', async () => {
   try {
     await repo.init();
 
-    const config = createConfigWithHooks(repo.path, ['echo pre-add'], ['echo post-add']);
+    const config = createConfigWithHooks(repo.path, ['echo pre-checkout'], ['echo post-checkout']);
     await saveConfig(repo.path, config);
 
     const saved = await readTestConfig(repo.path);
-    assertEquals(saved.hooks?.add?.pre, ['echo pre-add']);
-    assertEquals(saved.hooks?.add?.post, ['echo post-add']);
+    assertEquals(saved.hooks?.checkout?.pre, ['echo pre-checkout']);
+    assertEquals(saved.hooks?.checkout?.post, ['echo post-checkout']);
   } finally {
     await repo.cleanup();
   }
@@ -436,16 +436,16 @@ Deno.test('saveConfigTemplate - shows active hooks uncommented', async () => {
   try {
     await repo.init();
 
-    const config = createConfigWithHooks(repo.path, ['echo pre-add'], ['cd {worktreePath} && npm install']);
+    const config = createConfigWithHooks(repo.path, ['echo pre-checkout'], ['cd {worktreePath} && npm install']);
     await saveConfigTemplate(repo.path, config);
 
     const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
 
     // Verify hooks section is uncommented
     assertEquals(rawContent.includes('"hooks": {'), true);
-    assertEquals(rawContent.includes('"add": {'), true);
+    assertEquals(rawContent.includes('"checkout": {'), true);
     assertEquals(rawContent.includes('"pre": ['), true);
-    assertEquals(rawContent.includes('"echo pre-add"'), true);
+    assertEquals(rawContent.includes('"echo pre-checkout"'), true);
     assertEquals(rawContent.includes('"post": ['), true);
     assertEquals(rawContent.includes('cd {worktreePath} && npm install'), true);
 
@@ -453,8 +453,8 @@ Deno.test('saveConfigTemplate - shows active hooks uncommented', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded } = await loadConfig();
-      assertEquals(loaded.hooks?.add?.pre, ['echo pre-add']);
-      assertEquals(loaded.hooks?.add?.post, ['cd {worktreePath} && npm install']);
+      assertEquals(loaded.hooks?.checkout?.pre, ['echo pre-checkout']);
+      assertEquals(loaded.hooks?.checkout?.post, ['cd {worktreePath} && npm install']);
     } finally {
       cwd.restore();
     }
@@ -475,7 +475,7 @@ Deno.test('saveConfigTemplate - shows inactive hooks as commented examples', asy
 
     // Verify hooks section is commented
     assertEquals(rawContent.includes('// "hooks": {'), true);
-    assertEquals(rawContent.includes('//   "add": {'), true);
+    assertEquals(rawContent.includes('//   "checkout": {'), true);
     assertEquals(rawContent.includes('//     "pre": ['), true);
     assertEquals(rawContent.includes('//     "post": ['), true);
     assertEquals(rawContent.includes('Available variables:'), true);
@@ -543,7 +543,7 @@ Deno.test('saveConfigTemplate - preserves all config values', async () => {
     // Create a config with all features enabled
     const config = createConfigWithAutoCopy(repo.path, ['.env', '.env.local', 'secrets/']);
     config.hooks = {
-      add: {
+      checkout: {
         pre: ['echo Creating {worktree}'],
         post: ['cd {worktreePath} && npm install', 'cd {worktreePath} && npm run build'],
       },
@@ -562,8 +562,11 @@ Deno.test('saveConfigTemplate - preserves all config values', async () => {
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 14);
       assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
-      assertEquals(loaded.hooks?.add?.pre, ['echo Creating {worktree}']);
-      assertEquals(loaded.hooks?.add?.post, ['cd {worktreePath} && npm install', 'cd {worktreePath} && npm run build']);
+      assertEquals(loaded.hooks?.checkout?.pre, ['echo Creating {worktree}']);
+      assertEquals(loaded.hooks?.checkout?.post, [
+        'cd {worktreePath} && npm install',
+        'cd {worktreePath} && npm run build',
+      ]);
       assertEquals(loaded.autoClean, true);
       assertEquals(loaded.updateStrategy, 'rebase');
     } finally {

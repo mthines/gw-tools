@@ -2,6 +2,33 @@
 
 set -e
 
+# Check if Docker is running (required for Linux cross-compilation)
+if ! docker info > /dev/null 2>&1; then
+  echo -e "\033[0;31m❌ Error: Docker is not running. Docker is required for Linux cross-compilation.\033[0m"
+  echo -e "\033[0;31m   Please start Docker and try again.\033[0m"
+  exit 1
+fi
+
+# Parse arguments
+EXPLICIT_VERSION=""
+while [[ $# -gt 0 ]]; do
+  case $1 in
+    --version)
+      EXPLICIT_VERSION="$2"
+      shift 2
+      ;;
+    -v)
+      EXPLICIT_VERSION="$2"
+      shift 2
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: release.sh [--version <version>]"
+      exit 1
+      ;;
+  esac
+done
+
 # Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -55,6 +82,22 @@ fi
 CURRENT_VERSION=$(node -p "require('$PACKAGE_DIR/npm/package.json').version")
 echo -e "Current version: ${YELLOW}$CURRENT_VERSION${NC}"
 
+# If explicit version provided, use it and skip analysis
+if [ -n "$EXPLICIT_VERSION" ]; then
+  NEW_VERSION="$EXPLICIT_VERSION"
+  echo -e "Using explicit version: ${GREEN}$NEW_VERSION${NC}"
+
+  # Check if version looks like a prerelease
+  if [[ "$NEW_VERSION" == *"-"* ]]; then
+    IS_PRERELEASE=true
+    # Extract prerelease tag (e.g., "beta" from "1.0.0-beta.1")
+    PRERELEASE_TAG=$(echo "$NEW_VERSION" | sed -E 's/.*-([^.]+)\..*/\1/')
+  fi
+
+  # Still need LAST_TAG for changelog generation
+  LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+fi
+
 # Run tests and checks
 echo -e "\n${BLUE}🧪 Running tests and checks...${NC}"
 nx run @gw-tools/gw-tool:test
@@ -71,73 +114,76 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Analyze commits to determine version bump
-echo -e "\n${BLUE}📝 Analyzing commits since last release...${NC}"
+# Calculate version (skip if explicit version provided)
+if [ -z "$EXPLICIT_VERSION" ]; then
+  # Analyze commits to determine version bump
+  echo -e "\n${BLUE}📝 Analyzing commits since last release...${NC}"
 
-# Get commits since last tag (only tags for this package)
-LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
-if [ -z "$LAST_TAG" ]; then
-  echo "No previous tags found, this will be the first release"
-  COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/gw-tool/)
-else
-  echo "Last tag: $LAST_TAG"
-  COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
-fi
-
-# Determine version bump based on conventional commits
-BUMP_TYPE="patch"
-
-if echo "$COMMITS" | grep -q "^BREAKING CHANGE:\|^feat!:\|^fix!:"; then
-  BUMP_TYPE="major"
-elif echo "$COMMITS" | grep -q "^feat:"; then
-  BUMP_TYPE="minor"
-fi
-
-echo -e "Bump type: ${GREEN}$BUMP_TYPE${NC}"
-
-# Calculate new version
-# Strip any existing pre-release suffix from current version
-BASE_CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed -E 's/-.*$//')
-IFS='.' read -ra VERSION_PARTS <<< "$BASE_CURRENT_VERSION"
-MAJOR="${VERSION_PARTS[0]}"
-MINOR="${VERSION_PARTS[1]}"
-PATCH="${VERSION_PARTS[2]}"
-
-case "$BUMP_TYPE" in
-  major)
-    MAJOR=$((MAJOR + 1))
-    MINOR=0
-    PATCH=0
-    ;;
-  minor)
-    MINOR=$((MINOR + 1))
-    PATCH=0
-    ;;
-  patch)
-    PATCH=$((PATCH + 1))
-    ;;
-esac
-
-if [ "$IS_PRERELEASE" = true ]; then
-  # Find the latest beta tag for this base version
-  BASE_VERSION="$MAJOR.$MINOR.$PATCH"
-  LATEST_BETA=$(git tag -l "v$BASE_VERSION-$PRERELEASE_TAG.*" --sort=-version:refname | head -n 1)
-
-  if [ -z "$LATEST_BETA" ]; then
-    # First beta for this version
-    PRERELEASE_NUMBER=1
+  # Get commits since last tag (only tags for this package)
+  LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+  if [ -z "$LAST_TAG" ]; then
+    echo "No previous tags found, this will be the first release"
+    COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/gw-tool/)
   else
-    # Extract and increment the beta number
-    PRERELEASE_NUMBER=$(echo "$LATEST_BETA" | sed -E "s/.*-$PRERELEASE_TAG\.([0-9]+)/\1/")
-    PRERELEASE_NUMBER=$((PRERELEASE_NUMBER + 1))
+    echo "Last tag: $LAST_TAG"
+    COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
   fi
 
-  NEW_VERSION="$BASE_VERSION-$PRERELEASE_TAG.$PRERELEASE_NUMBER"
-else
-  NEW_VERSION="$MAJOR.$MINOR.$PATCH"
-fi
+  # Determine version bump based on conventional commits
+  BUMP_TYPE="patch"
 
-echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
+  if echo "$COMMITS" | grep -q "^BREAKING CHANGE:\|^feat!:\|^fix!:"; then
+    BUMP_TYPE="major"
+  elif echo "$COMMITS" | grep -q "^feat:"; then
+    BUMP_TYPE="minor"
+  fi
+
+  echo -e "Bump type: ${GREEN}$BUMP_TYPE${NC}"
+
+  # Calculate new version
+  # Strip any existing pre-release suffix from current version
+  BASE_CURRENT_VERSION=$(echo "$CURRENT_VERSION" | sed -E 's/-.*$//')
+  IFS='.' read -ra VERSION_PARTS <<< "$BASE_CURRENT_VERSION"
+  MAJOR="${VERSION_PARTS[0]}"
+  MINOR="${VERSION_PARTS[1]}"
+  PATCH="${VERSION_PARTS[2]}"
+
+  case "$BUMP_TYPE" in
+    major)
+      MAJOR=$((MAJOR + 1))
+      MINOR=0
+      PATCH=0
+      ;;
+    minor)
+      MINOR=$((MINOR + 1))
+      PATCH=0
+      ;;
+    patch)
+      PATCH=$((PATCH + 1))
+      ;;
+  esac
+
+  if [ "$IS_PRERELEASE" = true ]; then
+    # Find the latest beta tag for this base version
+    BASE_VERSION="$MAJOR.$MINOR.$PATCH"
+    LATEST_BETA=$(git tag -l "v$BASE_VERSION-$PRERELEASE_TAG.*" --sort=-version:refname | head -n 1)
+
+    if [ -z "$LATEST_BETA" ]; then
+      # First beta for this version
+      PRERELEASE_NUMBER=1
+    else
+      # Extract and increment the beta number
+      PRERELEASE_NUMBER=$(echo "$LATEST_BETA" | sed -E "s/.*-$PRERELEASE_TAG\.([0-9]+)/\1/")
+      PRERELEASE_NUMBER=$((PRERELEASE_NUMBER + 1))
+    fi
+
+    NEW_VERSION="$BASE_VERSION-$PRERELEASE_TAG.$PRERELEASE_NUMBER"
+  else
+    NEW_VERSION="$MAJOR.$MINOR.$PATCH"
+  fi
+
+  echo -e "New version: ${GREEN}$NEW_VERSION${NC}"
+fi
 
 # Confirm release
 echo -e "\n${YELLOW}About to release version $NEW_VERSION${NC}"

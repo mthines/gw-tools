@@ -83,9 +83,9 @@ Deno.test('show-init command - generates init command with hooks', async () => {
       root: repo.path,
       defaultBranch: 'main',
       hooks: {
-        add: {
-          pre: ["echo 'Pre-add hook'"],
-          post: ['pnpm install', "echo 'Post-add hook'"],
+        checkout: {
+          pre: ["echo 'Pre-checkout hook'"],
+          post: ['pnpm install', "echo 'Post-checkout hook'"],
         },
       },
       cleanThreshold: 7,
@@ -160,7 +160,7 @@ Deno.test('show-init command - generates complete init command with all options'
       defaultBranch: 'develop',
       autoCopyFiles: ['.env', 'secrets/'],
       hooks: {
-        add: {
+        checkout: {
           pre: ["echo 'Starting'"],
           post: ['pnpm install'],
         },

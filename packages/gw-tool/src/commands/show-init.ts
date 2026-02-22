@@ -82,13 +82,14 @@ function generateInitCommand(
     defaultBranch?: string;
     autoCopyFiles?: string[];
     hooks?: {
-      add?: {
+      checkout?: {
         pre?: string[];
         post?: string[];
       };
     };
     cleanThreshold?: number;
     autoClean?: boolean;
+    updateStrategy?: 'merge' | 'rebase';
   },
   remoteUrl?: string | null
 ): string {
@@ -113,17 +114,17 @@ function generateInitCommand(
     parts.push(`--auto-copy-files ${escapeShellArg(filesArg)}`);
   }
 
-  // Add pre-add hooks
-  if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
-    for (const hook of config.hooks.add.pre) {
-      parts.push(`--pre-add ${escapeShellArg(hook)}`);
+  // Add pre-checkout hooks
+  if (config.hooks?.checkout?.pre && config.hooks.checkout.pre.length > 0) {
+    for (const hook of config.hooks.checkout.pre) {
+      parts.push(`--pre-checkout ${escapeShellArg(hook)}`);
     }
   }
 
-  // Add post-add hooks
-  if (config.hooks?.add?.post && config.hooks.add.post.length > 0) {
-    for (const hook of config.hooks.add.post) {
-      parts.push(`--post-add ${escapeShellArg(hook)}`);
+  // Add post-checkout hooks
+  if (config.hooks?.checkout?.post && config.hooks.checkout.post.length > 0) {
+    for (const hook of config.hooks.checkout.post) {
+      parts.push(`--post-checkout ${escapeShellArg(hook)}`);
     }
   }
 
@@ -135,6 +136,11 @@ function generateInitCommand(
   // Add auto-clean if enabled
   if (config.autoClean) {
     parts.push('--auto-clean');
+  }
+
+  // Add update strategy if not default (merge)
+  if (config.updateStrategy && config.updateStrategy !== 'merge') {
+    parts.push(`--update-strategy ${config.updateStrategy}`);
   }
 
   return parts.join(' ');
