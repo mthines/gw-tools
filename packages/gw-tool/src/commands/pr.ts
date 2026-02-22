@@ -424,17 +424,17 @@ export async function executePr(args: string[]): Promise<void> {
   }
 
   // Execute pre-add hooks (abort on failure)
-  if (config.hooks?.add?.pre && config.hooks.add.pre.length > 0) {
+  if (config.hooks?.checkout?.pre && config.hooks.checkout.pre.length > 0) {
     const { allSuccessful } = await executeHooks(
-      config.hooks.add.pre,
+      config.hooks.checkout.pre,
       gitRoot,
       hookVariables,
-      'pre-add',
+      'pre-checkout',
       true // abort on failure
     );
 
     if (!allSuccessful) {
-      output.error('Pre-add hook failed. Aborting worktree creation.');
+      output.error('Pre-checkout hook failed. Aborting worktree creation.');
       Deno.exit(1);
     }
   }
@@ -535,18 +535,18 @@ export async function executePr(args: string[]): Promise<void> {
     }
   }
 
-  // Execute post-add hooks (warn but don't abort on failure)
-  if (config.hooks?.add?.post && config.hooks.add.post.length > 0) {
+  // Execute post-checkout hooks (warn but don't abort on failure)
+  if (config.hooks?.checkout?.post && config.hooks.checkout.post.length > 0) {
     const { allSuccessful } = await executeHooks(
-      config.hooks.add.post,
+      config.hooks.checkout.post,
       worktreePath,
       hookVariables,
-      'post-add',
+      'post-checkout',
       false // don't abort on failure, just warn
     );
 
     if (!allSuccessful) {
-      output.warning('One or more post-add hooks failed');
+      output.warning('One or more post-checkout hooks failed');
     }
   }
 

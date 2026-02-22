@@ -111,7 +111,7 @@ Deno.test('init command - configures pre-add hooks', async () => {
       await executeInit(['--pre-add', "echo 'Starting...'"]);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.add?.pre, ["echo 'Starting...'"]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Starting...'"]);
     } finally {
       cwd.restore();
     }
@@ -130,7 +130,7 @@ Deno.test('init command - configures post-add hooks', async () => {
       await executeInit(['--post-add', 'cd {worktreePath} && pnpm install']);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.add?.post, ['cd {worktreePath} && pnpm install']);
+      assertEquals(config.hooks?.checkout?.post, ['cd {worktreePath} && pnpm install']);
     } finally {
       cwd.restore();
     }
@@ -156,8 +156,8 @@ Deno.test('init command - configures multiple hooks', async () => {
       ]);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.add?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
-      assertEquals(config.hooks?.add?.post, ["echo 'Post-hook 1'"]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
+      assertEquals(config.hooks?.checkout?.post, ["echo 'Post-hook 1'"]);
     } finally {
       cwd.restore();
     }
@@ -228,8 +228,8 @@ Deno.test('init command - configures all options together', async () => {
       const config = await readTestConfig(repo.path);
       assertEquals(config.defaultBranch, 'develop');
       assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
-      assertEquals(config.hooks?.add?.pre, ["echo 'Pre'"]);
-      assertEquals(config.hooks?.add?.post, ["echo 'Post'"]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre'"]);
+      assertEquals(config.hooks?.checkout?.post, ["echo 'Post'"]);
       assertEquals(config.cleanThreshold, 21);
       assertEquals(config.autoClean, true);
     } finally {
@@ -356,8 +356,8 @@ Deno.test('init command - interactive mode with custom values', async () => {
       const config = await readTestConfig(repo.path);
       assertEquals(config.defaultBranch, 'develop');
       assertEquals(config.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
-      assertEquals(config.hooks?.add?.pre, undefined);
-      assertEquals(config.hooks?.add?.post, ['pnpm install']);
+      assertEquals(config.hooks?.checkout?.pre, undefined);
+      assertEquals(config.hooks?.checkout?.post, ['pnpm install']);
       assertEquals(config.cleanThreshold, 14);
       assertEquals(config.autoClean, true);
       assertEquals(config.updateStrategy, 'rebase');
@@ -395,8 +395,8 @@ Deno.test('init command - interactive mode with multiple hooks', async () => {
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.add?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
-      assertEquals(config.hooks?.add?.post, ['cd {worktreePath} && pnpm install', "echo 'Done!'"]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
+      assertEquals(config.hooks?.checkout?.post, ['cd {worktreePath} && pnpm install', "echo 'Done!'"]);
     } finally {
       cwd.restore();
     }
@@ -509,7 +509,7 @@ Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", asy
 
       const config = await readTestConfig(repo.path);
       assertEquals(config.autoCopyFiles, ['.env']);
-      assertEquals(config.hooks?.add?.post, ['pnpm install']);
+      assertEquals(config.hooks?.checkout?.post, ['pnpm install']);
       assertEquals(config.autoClean, true);
     } finally {
       cwd.restore();
@@ -696,7 +696,7 @@ Deno.test('init command - clone mode with configuration options', async () => {
       const config = await readTestConfig(clonedRepoPath);
 
       assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
-      assertEquals(config.hooks?.add?.post, ['echo "installed"']);
+      assertEquals(config.hooks?.checkout?.post, ['echo "installed"']);
       assertEquals(config.cleanThreshold, 14);
     } finally {
       cwd.restore();

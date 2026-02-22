@@ -35,6 +35,69 @@ When adding, changing, or removing features in the gw CLI tool, always update th
 4. **Help text:**
    - Update CLI help text in `packages/gw-tool/src/lib/cli.ts`
 
+## Config Migration System
+
+The `.gw/config.json` file uses a versioned migration system for schema changes. When the config structure changes, add a migration instead of backwards compatibility code.
+
+### How It Works
+
+1. Config files have a `configVersion` field (defaults to 0 if missing)
+2. On load, `loadConfig()` runs migrations from current version to `CURRENT_CONFIG_VERSION`
+3. If migrations were applied, the config is automatically saved
+
+### Adding a New Migration
+
+1. **Increment the version** in `packages/gw-tool/src/lib/config-migrations.ts`:
+   ```typescript
+   export const CURRENT_CONFIG_VERSION = 2; // was 1
+   ```
+
+2. **Add a migration** to the `MIGRATIONS` array:
+   ```typescript
+   {
+     version: 2,
+     description: 'Rename oldField to newField',
+     migrate: (config) => {
+       if (config.oldField !== undefined) {
+         config.newField = config.oldField;
+         delete config.oldField;
+       }
+       config.configVersion = 2;
+       return config;
+     },
+   }
+   ```
+
+3. **Update types** in `packages/gw-tool/src/lib/types.ts` to reflect the new schema
+
+4. **Remove old field handling** from commands - migrations handle backwards compat
+
+### Migration Guidelines
+
+- Migrations run in order from config's version to current
+- Always set `config.configVersion` at the end of your migration
+- Handle missing fields gracefully (check `!== undefined`)
+- Delete old fields after migrating to keep config clean
+- Add tests for migrations in `config-migrations.test.ts`
+
+### Example: hooks.add -> hooks.checkout Migration
+
+```typescript
+{
+  version: 1,
+  description: 'Rename hooks.add to hooks.checkout (command rename)',
+  migrate: (config) => {
+    const hooks = config.hooks as Record<string, unknown> | undefined;
+    if (hooks?.add && !hooks?.checkout) {
+      hooks.checkout = hooks.add;
+      delete hooks.add;
+    }
+    config.configVersion = 1;
+    return config;
+  },
+}
+```
+
 ## Autonomous Workflow Guidelines
 
 When the user requests autonomous feature development or end-to-end implementation:

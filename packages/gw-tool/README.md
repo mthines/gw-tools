@@ -22,7 +22,7 @@ A command-line tool for managing git worktrees, built with Deno.
     - [Example Configuration](#example-configuration)
     - [Configuration Options](#configuration-options)
   - [Commands](#commands)
-    - [add](#add)
+    - [checkout (add, co)](#checkout)
       - [Arguments](#arguments)
       - [Options](#options)
       - [Examples](#examples)
@@ -32,10 +32,6 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments-1)
       - [Examples](#examples-1)
       - [How It Works](#how-it-works)
-    - [checkout](#checkout)
-      - [Arguments](#arguments-2)
-      - [Examples](#examples-2)
-      - [How It Works](#how-it-works-1)
     - [pr](#pr)
       - [Arguments](#arguments-3)
       - [Options](#options-1)
@@ -124,7 +120,7 @@ gw cd feat/new-feature
 
 ```bash
 # Configure gw in an existing repository
-gw init --auto-copy-files .env,secrets/ --post-add "pnpm install"
+gw init --auto-copy-files .env,secrets/ --post-checkout "pnpm install"
 
 # Create worktrees - files are copied automatically, dependencies installed
 gw add feat/another-feature
@@ -165,7 +161,7 @@ Once installed, your AI agent can:
 
 ## Initial Setup: Secrets in the Default Branch
 
-**Important:** Before using `gw add` with auto-copy, ensure your secrets and environment files exist in your `defaultBranch` worktree (typically `main`). This worktree is the **source** from which files are copied to new worktrees.
+**Important:** Before using `gw checkout` with auto-copy, ensure your secrets and environment files exist in your `defaultBranch` worktree (typically `main`). This worktree is the **source** from which files are copied to new worktrees.
 
 ### First-Time Setup Flow
 
@@ -203,7 +199,7 @@ gw add feat/new-feature
 # Clone with configuration in one command
 gw init git@github.com:user/repo.git \
   --auto-copy-files .env,secrets/ \
-  --post-add "pnpm install"
+  --post-checkout "pnpm install"
 
 # Then set up secrets in main worktree as shown above
 cd repo.git/main
@@ -213,7 +209,7 @@ cp .env.example .env
 
 ### Why This Matters
 
-- **`gw add`** copies files **from** your `defaultBranch` worktree **to** the new worktree
+- **`gw checkout`** copies files **from** your `defaultBranch` worktree **to** the new worktree
 - **`gw sync`** also uses `defaultBranch` as the source (unless `--from` is specified)
 - **Auto-clean** will **never** remove the `defaultBranch` worktree, ensuring your source files are always available
 - If secrets don't exist in `defaultBranch`, they won't be copied to new worktrees
@@ -313,7 +309,7 @@ gw init --root /path/to/your/repo.git
   // Auto-copy these files when creating new worktrees
   "autoCopyFiles": [".env", "components/agents/.env", "components/ui/.vercel/"],
   "hooks": {
-    "add": {
+    "checkout": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
       "post": ["pnpm install", "echo 'Setup complete!'"],
     },
@@ -333,33 +329,46 @@ gw init --root /path/to/your/repo.git
 
 - **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
 - **defaultBranch**: Default source worktree name (optional, defaults to "main")
-- **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw add` (optional, only set via `gw init --auto-copy-files`)
-- **hooks**: Command hooks configuration (optional, set via `gw init --pre-add` and `--post-add`)
-  - **hooks.add.pre**: Array of commands to run before creating a worktree
-  - **hooks.add.post**: Array of commands to run after creating a worktree
+- **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw checkout` (optional, only set via `gw init --auto-copy-files`)
+- **hooks**: Command hooks configuration (optional, set via `gw init --pre-checkout` and `--post-checkout`)
+  - **hooks.checkout.pre**: Array of commands to run before creating a worktree
+  - **hooks.checkout.post**: Array of commands to run after creating a worktree
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
-- **autoClean**: Prompt to remove stale worktrees when running `gw add` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
+- **autoClean**: Prompt to remove stale worktrees when running `gw checkout` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
 - **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
 ## Commands
 
-### add
+### checkout
 
-Create a new git worktree with optional automatic file copying.
+Create a new git worktree, switch to an existing branch, or navigate to a worktree where a branch is checked out. This is the primary command for working with branches in a worktree workflow.
+
+**Aliases:** `co`, `add` (for backwards compatibility)
 
 ```bash
-gw add <worktree-name> [files...]
+gw checkout <branch-name> [files...]
+# or use aliases
+gw co <branch-name>
+gw add <branch-name>  # backwards-compatible alias
 ```
 
-This command wraps `git worktree add` and optionally copies files to the new worktree. If `autoCopyFiles` is configured, those files are automatically copied. You can override this by specifying files as arguments.
+This unified command handles all branch operations in a worktree workflow:
+
+1. **Branch exists locally, not checked out:** Creates a worktree for it
+2. **Branch is checked out in another worktree:** Navigates to that worktree
+3. **Branch exists on remote only:** Prompts to create a worktree for it
+4. **Branch doesn't exist:** Creates a new branch from the default branch and a worktree for it
+5. **Already on the branch:** Shows "Already on branch" message
+
+If `autoCopyFiles` is configured, those files are automatically copied when creating new worktrees. You can override this by specifying files as arguments.
 
 **Branch Creation Behavior:**
-When creating a new worktree without specifying an existing branch, `gw add` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
+When creating a new worktree without specifying an existing branch, `gw checkout` automatically fetches the latest version of your default branch (e.g., `main`) from the remote (e.g., `origin/main`) to ensure your new branch is based on the most recent code. You can override this with the `--from <branch>` option to create a branch from a different source branch instead.
 
 **Remote-First Fetch Approach:**
 
-The `gw add` command follows a remote-first approach when creating new branches:
+The `gw checkout` command follows a remote-first approach when creating new branches:
 
 1. **What happens**: When you create a new branch (e.g., `gw add feat/new-feature`), the command:
    - Fetches the latest version of the source branch from the remote (e.g., `origin/main`)
@@ -383,7 +392,7 @@ The `gw add` command follows a remote-first approach when creating new branches:
 - When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow creation using the local branch.
 
 **Upstream Tracking:**
-When `gw add` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
+When `gw checkout` creates a new branch, it automatically configures the branch to track `origin/<branch-name>` (e.g., `origin/feat/my-feature`). This means `git push` will push to the correct remote branch without needing to specify `-u origin <branch>` on first push.
 
 **Git Ref Conflict Detection:**
 The command automatically detects and prevents Git ref naming conflicts. For example, you cannot have both a branch named `test` and `test/foo` because Git stores branches as files in `.git/refs/heads/`, and `test` cannot be both a file and a directory. If a conflict is detected, you'll receive a helpful error message with suggestions for resolving it.
@@ -396,7 +405,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 
 #### Arguments
 
-- `<worktree-name>`: Name or path for the new worktree
+- `<branch-name>`: Branch name to checkout or create
 - `[files...]`: Optional files to copy (overrides `autoCopyFiles` config)
 
 #### Options
@@ -416,35 +425,46 @@ All `git worktree add` options are supported:
 #### Examples
 
 ```bash
-# Create worktree (auto-copies files if autoCopyFiles is configured)
+# Create worktree for new branch (auto-copies files if autoCopyFiles is configured)
 # Automatically navigates to new worktree
-gw add feat/new-feature
+gw checkout feat/new-feature
+gw co feat/new-feature  # Using alias
+
+# Navigate to worktree where main is already checked out
+gw checkout main
+# Output: Branch main is checked out in another worktree:
+#   /path/to/repo/main
+#
+# Navigating there...
 
 # Create worktree without navigating to it
-gw add feat/new-feature --no-cd
+gw checkout feat/new-feature --no-cd
 
 # Create worktree from a different branch instead of defaultBranch
-gw add feat/new-feature --from develop
+gw checkout feat/new-feature --from develop
 
 # Create child feature branch from parent feature branch
-gw add feat/child-feature --from feat/parent-feature
+gw checkout feat/child-feature --from feat/parent-feature
 
 # Create worktree with new branch
-gw add feat/new-feature -b my-branch
+gw checkout feat/new-feature -b my-branch
 
 # Create worktree and copy specific files (overrides config)
-gw add feat/new-feature .env secrets/
+gw checkout feat/new-feature .env secrets/
 
 # Force create even if branch exists elsewhere
-gw add feat/bugfix -f
+gw checkout feat/bugfix -f
 
-# If worktree already exists, prompts to navigate to it
-gw add feat/existing-branch
-# Output: Worktree feat/existing-branch already exists at:
-#   /path/to/repo/feat/existing-branch
+# Create worktree for remote branch (prompts)
+gw checkout remote-feature
+# Output: Branch remote-feature exists on remote but not locally.
 #
-# Navigate to it? [Y/n]:
-# (Press Enter to navigate, or 'n' to cancel)
+# Create a new worktree for it? [Y/n]:
+# (If yes, creates the worktree)
+
+# Already on the branch
+gw checkout current-branch
+# Output: Already on 'current-branch'
 ```
 
 #### Auto-Copy Configuration
@@ -465,21 +485,21 @@ This creates:
 }
 ```
 
-Now every time you run `gw add`, these files will be automatically copied from your default source worktree (usually `main`) to the new worktree.
+Now every time you run `gw checkout`, these files will be automatically copied from your default source worktree (usually `main`) to the new worktree.
 
 #### Hooks
 
-You can configure pre-add and post-add hooks to run commands before and after worktree creation. This is useful for:
+You can configure pre-checkout and post-checkout hooks to run commands before and after worktree creation. This is useful for:
 
-- **Pre-add hooks**: Running validation scripts, checking prerequisites
-- **Post-add hooks**: Installing dependencies, setting up the environment
+- **Pre-checkout hooks**: Running validation scripts, checking prerequisites
+- **Post-checkout hooks**: Installing dependencies, setting up the environment
 
 ```bash
-# Configure a post-add hook to install dependencies
-gw init --post-add "pnpm install"
+# Configure a post-checkout hook to install dependencies
+gw init --post-checkout "pnpm install"
 
 # Configure multiple hooks
-gw init --pre-add "echo 'Creating: {worktree}'" --post-add "pnpm install" --post-add "echo 'Done!'"
+gw init --pre-checkout "echo 'Creating: {worktree}'" --post-checkout "pnpm install" --post-checkout "echo 'Done!'"
 ```
 
 **Hook Variables:**
@@ -493,17 +513,17 @@ Hooks support variable substitution:
 
 **Hook Behavior:**
 
-- **Pre-add hooks** run before the worktree is created (in the git root directory). If any pre-add hook fails, the worktree creation is aborted.
-- **Post-add hooks** run after the worktree is created and files are copied (in the new worktree directory). If a post-add hook fails, a warning is shown but the worktree creation is considered successful.
+- **Pre-checkout hooks** run before the worktree is created (in the git root directory). If any pre-checkout hook fails, the worktree creation is aborted.
+- **Post-checkout hooks** run after the worktree is created and files are copied (in the new worktree directory). If a post-checkout hook fails, a warning is shown but the worktree creation is considered successful.
 
 **Example: Auto-install dependencies**
 
 ```bash
 # One-time setup
-gw init --auto-copy-files .env --post-add "pnpm install"
+gw init --auto-copy-files .env --post-checkout "pnpm install"
 
 # Now when you create a worktree:
-gw add feat/new-feature
+gw checkout feat/new-feature
 # 1. Creates the worktree
 # 2. Copies .env file
 # 3. Runs pnpm install in the new worktree
@@ -546,79 +566,6 @@ The `cd` command integrates with your shell through an automatically installed f
 3. All other `gw` commands pass through normally
 
 **Note**: Shell integration is automatically installed when you install via npm. If needed, you can manually install or remove it using `gw install-shell`.
-
-### checkout
-
-Smart git checkout wrapper that provides an intuitive experience for working with worktrees. The command automatically handles scenarios that would normally cause errors with standard `git checkout`.
-
-```bash
-gw checkout <branch>
-# or use the alias
-gw co <branch>
-```
-
-When you're working with worktrees, you cannot checkout the same branch in multiple worktrees. The `gw checkout` command solves this by detecting when a branch is already checked out elsewhere and navigating you to that worktree instead of showing an error.
-
-#### Arguments
-
-- `<branch>`: Branch name to checkout
-
-#### Examples
-
-```bash
-# Checkout a local branch (if not checked out elsewhere)
-gw checkout feature-x
-gw co feature-x  # Using alias
-
-# Navigate to worktree where main is already checked out
-gw checkout main
-# Output: Branch main is checked out in another worktree:
-#   /path/to/repo/main
-#
-# Navigating there...
-
-# Create worktree for remote branch (prompts)
-gw checkout remote-feature
-# Output: Branch remote-feature exists on remote but not locally.
-#
-# Create a new worktree for it? [Y/n]:
-# (If yes, runs: gw add remote-feature)
-
-# Already on the branch
-gw checkout current-branch
-# Output: Already on 'current-branch'
-```
-
-#### How It Works
-
-The `checkout` command intelligently handles four scenarios:
-
-1. **Branch exists locally and isn't checked out anywhere:**
-   - Performs standard `git checkout <branch>` in the current worktree
-
-2. **Branch is already checked out in another worktree:**
-   - Automatically navigates to that worktree (like `gw cd`)
-   - Shows you where the branch is located
-
-3. **Branch exists on remote but not locally:**
-   - Prompts you to create a new worktree for it
-   - If you confirm, runs `gw add <branch>` which:
-     - Creates the worktree
-     - Copies auto-copy files
-     - Navigates to the new worktree
-
-4. **Branch doesn't exist anywhere:**
-   - Shows a helpful error message
-   - Suggests using `gw add <branch>` to create a new branch
-
-**Why use this instead of `git checkout`?**
-
-- **No more confusing errors:** Instead of "fatal: 'main' is already checked out at '/path/to/main'", it just takes you there
-- **Reduces mental overhead:** You don't need to remember which branches are where
-- **Teaches worktree workflows:** The messages guide you toward the right action
-- **Educational:** Prompts explain what's happening and suggest alternatives
-
-**Use case:** When updating your feature branch with latest changes, you might instinctively try `git checkout main && git pull`. With worktrees, this fails because main is checked out elsewhere. Instead, use `gw update` to update your current branch with main, or use `gw checkout main` to navigate to the main worktree.
 
 ### pr
 
@@ -676,8 +623,8 @@ gw pr 42 --no-cd
 3. **Checks for existing worktree**: If the branch is already checked out, offers to navigate there
 4. **Fetches PR branch**: Uses `git fetch origin pull/<number>/head:<branch>` pattern which works for both same-repo and fork PRs
 5. **Creates worktree**: Creates a new worktree with the PR's branch
-6. **Copies files**: Auto-copies files from `autoCopyFiles` config (same as `gw add`)
-7. **Runs hooks**: Executes pre-add and post-add hooks (same as `gw add`)
+6. **Copies files**: Auto-copies files from `autoCopyFiles` config (same as `gw checkout`)
+7. **Runs hooks**: Executes pre-checkout and post-checkout hooks (same as `gw checkout`)
 8. **Navigates**: Automatically navigates to the new worktree
 
 **Fork Handling:**
@@ -786,7 +733,7 @@ Shell integration provides:
 
 - **Navigation support**: `gw cd <worktree>` navigates directly to worktrees
 - **Real-time streaming**: Command output streams as it's generated (no buffering)
-- **Auto-navigation**: Automatically navigate after `gw add` and `gw remove` operations
+- **Auto-navigation**: Automatically navigate after `gw checkout` and `gw remove` operations
 - **Multi-alias support**: Install for different command names (e.g., `gw-dev` for development)
 
 ```bash
@@ -884,11 +831,11 @@ gw init [repository-url] [directory] [options]
 - `-i, --interactive`: Interactively prompt for configuration options
 - `--root <path>`: Specify the git repository root path (optional, auto-detects if not provided)
 - `--default-source <name>`: Set the default source worktree (default: "main")
-- `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw add`
-- `--pre-add <command>`: Command to run before `gw add` creates a worktree (can be specified multiple times)
-- `--post-add <command>`: Command to run after `gw add` creates a worktree (can be specified multiple times)
+- `--auto-copy-files <files>`: Comma-separated list of files to auto-copy when creating worktrees with `gw checkout`
+- `--pre-checkout <command>`: Command to run before `gw checkout` creates a worktree (can be specified multiple times)
+- `--post-checkout <command>`: Command to run after `gw checkout` creates a worktree (can be specified multiple times)
 - `--clean-threshold <days>`: Number of days before worktrees are considered stale for `gw clean` (default: 7)
-- `--auto-clean`: Enable automatic cleanup of stale worktrees (runs on `gw add` and `gw list` with 24-hour cooldown)
+- `--auto-clean`: Enable automatic cleanup of stale worktrees (runs on `gw checkout` and `gw list` with 24-hour cooldown)
 - `--update-strategy <strategy>`: Set default update strategy: 'merge' or 'rebase' (default: merge)
 - `-h, --help`: Show help message
 
@@ -901,7 +848,7 @@ Clone a repository and automatically set it up with gw configuration. **This is 
 gw init git@github.com:user/repo.git --interactive
 # Prompts for:
 # - Auto-copy files (.env, secrets/, etc.)
-# - Pre-add and post-add hooks (pnpm install, etc.)
+# - Pre-checkout and post-checkout hooks (pnpm install, etc.)
 # - Clean threshold
 # - Update strategy
 # Then automatically creates the main worktree and navigates to the repo
@@ -909,7 +856,7 @@ gw init git@github.com:user/repo.git --interactive
 # Clone with configuration in one command (non-interactive)
 gw init git@github.com:user/repo.git \
   --auto-copy-files .env,secrets/ \
-  --post-add "pnpm install"
+  --post-checkout "pnpm install"
 
 # Clone into specific directory
 gw init git@github.com:user/repo.git my-project --interactive
@@ -934,7 +881,7 @@ gw init git@github.com:user/repo.git
 
 - No need to manually run `git clone --bare` or `git worktree add`
 - Configuration is set up immediately
-- Ready to use `gw add` right away
+- Ready to use `gw checkout` right away
 
 **Notes:**
 
@@ -958,13 +905,13 @@ gw init
 gw init --auto-copy-files .env,secrets/
 
 # Initialize with post-add hook to install dependencies
-gw init --post-add "pnpm install"
+gw init --post-checkout "pnpm install"
 
 # Initialize with pre-add validation hook
-gw init --pre-add "echo 'Creating worktree: {worktree}'"
+gw init --pre-checkout "echo 'Creating worktree: {worktree}'"
 
 # Initialize with multiple hooks
-gw init --pre-add "echo 'Starting...'" --post-add "pnpm install" --post-add "echo 'Done!'"
+gw init --pre-checkout "echo 'Starting...'" --post-checkout "pnpm install" --post-checkout "echo 'Done!'"
 
 # Initialize with custom default source
 gw init --default-source master
@@ -979,7 +926,7 @@ gw init --clean-threshold 14
 gw init --update-strategy rebase
 
 # Full configuration example
-gw init --auto-copy-files .env,secrets/ --post-add "pnpm install" --clean-threshold 14 --update-strategy merge
+gw init --auto-copy-files .env,secrets/ --post-checkout "pnpm install" --clean-threshold 14 --update-strategy merge
 
 # Show help
 gw init --help
@@ -1006,12 +953,12 @@ gw init --auto-clean
 gw init --auto-clean --clean-threshold 14
 
 # Enable with other options
-gw init --auto-clean --auto-copy-files .env --post-add "pnpm install"
+gw init --auto-clean --auto-copy-files .env --post-checkout "pnpm install"
 ```
 
 **How it works:**
 
-- Prompts after `gw add` and `gw list` commands when stale worktrees are detected
+- Prompts after `gw checkout` and `gw list` commands when stale worktrees are detected
 - Only prompts once per 24 hours (cooldown)
 - **Never removes the `defaultBranch` worktree** - it's protected as the source for file syncing
 - Checks for worktrees older than `cleanThreshold` with:
@@ -1081,7 +1028,7 @@ If your `.gw/config.json` contains:
   "defaultBranch": "main",
   "autoCopyFiles": [".env", "secrets/"],
   "hooks": {
-    "add": {
+    "checkout": {
       "post": ["pnpm install"]
     }
   },
@@ -1093,7 +1040,7 @@ If your `.gw/config.json` contains:
 Then `gw show-init` will output:
 
 ```bash
-gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-add 'pnpm install' --update-strategy rebase
+gw init --root /Users/username/Workspace/repo.git --auto-copy-files .env,secrets/ --post-checkout 'pnpm install' --update-strategy rebase
 ```
 
 #### When to Use
@@ -1438,7 +1385,7 @@ gw cd feat/new-feature
 ```bash
 # One-time setup: Configure auto-copy files and hooks
 gw init --auto-copy-files .env,components/agents/.env,components/ui/.vercel/ \
-  --post-add "pnpm install"
+  --post-checkout "pnpm install"
 
 # From within any worktree of your repository
 # Create a new worktree with auto-copy and hooks
@@ -1661,7 +1608,7 @@ packages/gw-tool/
 │   ├── main.ts              # CLI entry point and command dispatcher
 │   ├── index.ts             # Public API exports
 │   ├── commands/            # Command implementations
-│   │   ├── add.ts           # Add command (create worktree with auto-copy)
+│   │   ├── checkout.ts      # Checkout command (create worktree, switch branches, navigate)
 │   │   ├── copy.ts          # Sync command (sync files between worktrees)
 │   │   ├── init.ts          # Init command
 │   │   ├── root.ts          # Root command
@@ -1696,7 +1643,7 @@ packages/gw-tool/
 
 There are two types of commands you can add:
 
-#### Custom Commands (like `add`, `copy`)
+#### Custom Commands (like `checkout`, `sync`)
 
 For commands with custom logic, follow the pattern used by existing commands:
 
