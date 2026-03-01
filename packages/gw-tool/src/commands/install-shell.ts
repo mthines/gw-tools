@@ -372,7 +372,7 @@ ${commandName}() {
       cd "$git_root"
     fi
     return $exit_code
-  elif [[ "$1" == "add" ]]; then
+  elif [[ "$1" == "add" || "$1" == "checkout" || "$1" == "co" || "$1" == "pr" || "$1" == "init" ]]; then
     # Execute the command (output streams in real-time)
     ${cmdPrefix} "$@"
     local exit_code=$?
@@ -422,7 +422,7 @@ ${commandName}() {
       cd "$git_root"
     fi
     return $exit_code
-  elif [[ "$1" == "add" ]]; then
+  elif [[ "$1" == "add" || "$1" == "checkout" || "$1" == "co" || "$1" == "pr" || "$1" == "init" ]]; then
     # Execute the command (output streams in real-time)
     ${cmdPrefix} "$@"
     local exit_code=$?
@@ -472,7 +472,7 @@ function ${commandName}
             cd $git_root
         end
         return $exit_code
-    else if test "$argv[1]" = "add"
+    else if test "$argv[1]" = "add" -o "$argv[1]" = "checkout" -o "$argv[1]" = "co" -o "$argv[1]" = "pr" -o "$argv[1]" = "init"
         # Execute the command (output streams in real-time)
         ${cmdPrefix} $argv
         set -l exit_code $status

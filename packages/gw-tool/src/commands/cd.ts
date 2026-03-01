@@ -4,6 +4,7 @@
  */
 
 import * as output from '../lib/output.ts';
+import { listWorktrees } from '../lib/git-utils.ts';
 
 /**
  * Execute the cd command
@@ -27,49 +28,12 @@ export async function executeCd(args: string[]): Promise<void> {
   }
 
   // Get list of worktrees from git
-  const gitCmd = new Deno.Command('git', {
-    args: ['worktree', 'list', '--porcelain'],
-    stdout: 'piped',
-    stderr: 'piped',
-  });
-
-  const { code, stdout, stderr } = await gitCmd.output();
-
-  if (code !== 0) {
-    const errorMsg = new TextDecoder().decode(stderr);
-    output.error(`Failed to get worktree list: ${errorMsg}`);
+  let worktrees: Array<{ path: string; branch: string }>;
+  try {
+    worktrees = await listWorktrees();
+  } catch (err) {
+    output.error(`Failed to get worktree list: ${err instanceof Error ? err.message : String(err)}`);
     Deno.exit(1);
-  }
-
-  // Parse worktree list
-  const outputText = new TextDecoder().decode(stdout);
-  const lines = outputText.trim().split('\n');
-  const worktrees: Array<{ path: string; branch: string }> = [];
-
-  let currentWorktree: { path?: string; branch?: string } = {};
-
-  for (const line of lines) {
-    if (line.startsWith('worktree ')) {
-      currentWorktree.path = line.substring('worktree '.length);
-    } else if (line.startsWith('branch ')) {
-      currentWorktree.branch = line.substring('branch '.length).split('/').pop() || '';
-    } else if (line === '') {
-      if (currentWorktree.path) {
-        worktrees.push({
-          path: currentWorktree.path,
-          branch: currentWorktree.branch || '',
-        });
-      }
-      currentWorktree = {};
-    }
-  }
-
-  // Handle last worktree if no trailing newline
-  if (currentWorktree.path) {
-    worktrees.push({
-      path: currentWorktree.path,
-      branch: currentWorktree.branch || '',
-    });
   }
 
   // Find matching worktrees
