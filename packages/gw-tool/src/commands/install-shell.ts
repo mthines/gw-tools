@@ -343,7 +343,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 /**
  * Get zsh shell function
  */
-function getZshFunction(commandName = 'gw', actualCommand?: string): string {
+export function getZshFunction(commandName = 'gw', actualCommand?: string): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 
@@ -393,7 +393,7 @@ ${commandName}() {
 /**
  * Get bash shell function
  */
-function getBashFunction(commandName = 'gw', actualCommand?: string): string {
+export function getBashFunction(commandName = 'gw', actualCommand?: string): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 
@@ -443,7 +443,7 @@ ${commandName}() {
 /**
  * Get fish shell function
  */
-function getFishFunction(commandName = 'gw', actualCommand?: string): string {
+export function getFishFunction(commandName = 'gw', actualCommand?: string): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 

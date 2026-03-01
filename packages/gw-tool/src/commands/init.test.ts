@@ -11,6 +11,7 @@ import { readTestConfig } from '../test-utils/fixtures.ts';
 import { assertFileExists, assertDirExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 Deno.test('init command - creates config with auto-detected root', async () => {
   const repo = new GitTestRepo();
@@ -837,4 +838,12 @@ Deno.test('init command - interactive mode exits when URL prompt is skipped', as
   } finally {
     await Deno.remove(tempDir, { recursive: true }).catch(() => {});
   }
+});
+
+// =============================================================================
+// Shell integration navigation tests
+// =============================================================================
+
+Deno.test('init - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('init');
 });

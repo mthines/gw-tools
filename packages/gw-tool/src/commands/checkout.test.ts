@@ -10,6 +10,7 @@ import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 Deno.test('checkout command - shows help with --help', async () => {
   const { exitCode } = await withMockedExit(async () => {
@@ -365,4 +366,20 @@ Deno.test('checkout command - sets up tracking for truly new branches', async ()
   } finally {
     await repo.cleanup();
   }
+});
+
+// =============================================================================
+// Shell integration navigation tests
+// =============================================================================
+
+Deno.test('checkout - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('checkout');
+});
+
+Deno.test('co - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('co');
+});
+
+Deno.test('add - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('add');
 });

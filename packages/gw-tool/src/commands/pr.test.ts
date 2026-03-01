@@ -5,6 +5,7 @@
 import { assertEquals } from '$std/assert';
 import { executePr } from './pr.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 // =============================================================================
 // Help flag tests
@@ -167,4 +168,12 @@ Deno.test('pr command - accepts large PR number', async () => {
   });
 
   assertEquals(exitCode, 1);
+});
+
+// =============================================================================
+// Shell integration navigation tests
+// =============================================================================
+
+Deno.test('pr - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('pr');
 });

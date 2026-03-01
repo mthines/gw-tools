@@ -10,6 +10,7 @@ import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { assertPathNotExists, assertWorktreeNotExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { assertShellRemoveNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 Deno.test('remove command - removes worktree with --yes flag', async () => {
   const repo = new GitTestRepo();
@@ -466,4 +467,16 @@ Deno.test('remove command - handles unmerged branch gracefully', async () => {
   } finally {
     await repo.cleanup();
   }
+});
+
+// =============================================================================
+// Shell integration navigation tests
+// =============================================================================
+
+Deno.test('remove - shell integration navigates to git root after removal', async () => {
+  await assertShellRemoveNavigationWorks('remove');
+});
+
+Deno.test('rm - shell integration navigates to git root after removal', async () => {
+  await assertShellRemoveNavigationWorks('rm');
 });
