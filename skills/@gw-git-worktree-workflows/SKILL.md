@@ -312,7 +312,7 @@ Navigate to it? [Y/n]:
 # Press Enter to navigate (default: Yes), or 'n' to cancel
 ```
 
-This is convenient when you're not sure if you've already created a worktree for a branch. Requires shell integration to be installed (`gw install-shell`).
+This is convenient when you're not sure if you've already created a worktree for a branch. Requires shell integration (`eval "$(gw install-shell)"` in your shell config).
 
 ### Auto-Copying Files
 
@@ -522,8 +522,9 @@ gw cd feature-auth
 gw cd main
 pwd  # Should show path to main worktree
 
-# If not working, reinstall shell integration
-gw install-shell
+# If not working, ensure shell integration is in your config
+# Add to ~/.zshrc or ~/.bashrc:
+eval "$(gw install-shell)"
 ```
 
 **Shell integration features:**
@@ -534,12 +535,12 @@ gw install-shell
 
 **For development aliases:**
 
-If you're developing gw-tools locally, you can install shell integration for a development command:
+If you're developing gw-tools locally, you can set up shell integration for a development command:
 
 ```bash
-# Install for development (replace with your actual path)
-gw install-shell --name gw-dev \
-  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
+# Add to ~/.zshrc or ~/.bashrc (replace with your actual path)
+eval "$(gw install-shell --name gw-dev \
+  --command 'deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts')"
 
 # Then use it with full integration
 gw-dev add feat-branch  # Output streams in real-time!
@@ -1460,13 +1461,12 @@ gw add feature-x-copy -b feature-x-copy --force
 **Solution:**
 
 ```bash
-# For regular gw installation
-gw install-shell
+# For regular gw installation, add to ~/.zshrc or ~/.bashrc:
+eval "$(gw install-shell)"
 
-# For development aliases, remove any existing alias first
-# Then install with --command flag
-gw install-shell --name gw-dev \
-  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
+# For development aliases, add to ~/.zshrc or ~/.bashrc:
+eval "$(gw install-shell --name gw-dev \
+  --command 'deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts')"
 
 # Reload your shell
 source ~/.zshrc  # or ~/.bashrc

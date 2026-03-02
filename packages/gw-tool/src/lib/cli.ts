@@ -82,7 +82,7 @@ Commands:
   sync             Sync files/directories between worktrees
   init             Initialize gw configuration for a repository
   show-init        Generate a 'gw init' command from current configuration
-  install-shell    Install shell integration for gw cd (auto-runs on npm install)
+  install-shell    Output shell integration code (use with eval)
   root             Get the root directory of the current git repository
   clean            Remove safe worktrees (use --use-autoclean-threshold for age-based)
 

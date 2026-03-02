@@ -18,47 +18,57 @@ function manualRemoval() {
   const shell = process.env.SHELL || '';
   const shellName = shell.split('/').pop() || '';
 
-  let configFile;
-  let scriptFile;
   let removed = false;
 
-  if (shellName === 'zsh') {
-    configFile = join(home, '.zshrc');
-    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
-  } else if (shellName === 'bash') {
-    configFile = join(home, '.bashrc');
-    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
-  } else if (shellName === 'fish') {
-    scriptFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
-    configFile = null; // Fish doesn't need config file cleanup
-  } else {
-    console.log('  Could not detect shell for manual cleanup');
-    return false;
-  }
+  // Remove legacy integration script files
+  const legacyFiles = [
+    join(home, '.gw', 'shell', 'integration.zsh'),
+    join(home, '.gw', 'shell', 'integration.bash'),
+    join(home, '.config', 'fish', 'functions', 'gw.fish'),
+  ];
 
-  // Remove the integration script file
-  if (existsSync(scriptFile)) {
-    try {
-      unlinkSync(scriptFile);
-      console.log(`  Removed: ${scriptFile}`);
-      removed = true;
-    } catch (error) {
-      console.log(`  Could not remove: ${scriptFile}`);
+  for (const scriptFile of legacyFiles) {
+    if (existsSync(scriptFile)) {
+      try {
+        unlinkSync(scriptFile);
+        console.log(`  Removed: ${scriptFile}`);
+        removed = true;
+      } catch (error) {
+        console.log(`  Could not remove: ${scriptFile}`);
+      }
     }
   }
 
-  // Remove source line from config file (for bash/zsh)
-  if (configFile && existsSync(configFile)) {
+  // Determine config files to clean up
+  const configFiles = [];
+  if (shellName === 'zsh') {
+    configFiles.push(join(home, '.zshrc'));
+  } else if (shellName === 'bash') {
+    configFiles.push(join(home, '.bashrc'));
+  } else if (shellName === 'fish') {
+    configFiles.push(join(home, '.config', 'fish', 'config.fish'));
+  } else {
+    // Try all common config files
+    configFiles.push(join(home, '.zshrc'));
+    configFiles.push(join(home, '.bashrc'));
+    configFiles.push(join(home, '.config', 'fish', 'config.fish'));
+  }
+
+  for (const configFile of configFiles) {
+    if (!existsSync(configFile)) continue;
+
     try {
       const content = readFileSync(configFile, 'utf8');
       const lines = content.split('\n');
       const filtered = [];
       let skipNext = false;
+      let fileModified = false;
 
       for (const line of lines) {
+        // Remove old format: comment + source line
         if (line.includes('# gw-tools shell integration')) {
           skipNext = true;
-          removed = true;
+          fileModified = true;
           continue;
         }
         if (skipNext && line.includes('source ~/.gw/shell/integration')) {
@@ -66,12 +76,20 @@ function manualRemoval() {
           continue;
         }
         skipNext = false;
+
+        // Remove new eval-based format and fish source format
+        if (line.includes('gw install-shell')) {
+          fileModified = true;
+          continue;
+        }
+
         filtered.push(line);
       }
 
-      if (removed) {
+      if (fileModified) {
         writeFileSync(configFile, filtered.join('\n'));
         console.log(`  Updated: ${configFile}`);
+        removed = true;
       }
     } catch (error) {
       console.log(`  Could not update: ${configFile}`);
