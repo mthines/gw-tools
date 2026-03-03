@@ -2,8 +2,6 @@
  * Utilities for temporarily modifying environment during tests
  */
 
-import { join } from '$std/path';
-
 /**
  * Save and restore environment variables for tests
  */

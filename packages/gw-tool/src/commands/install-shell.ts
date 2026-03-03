@@ -99,7 +99,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
   }
 
   // Check if already installed and migrate old format if needed
-  let needsMigration = false;
+  let _needsMigration = false;
   try {
     const content = await Deno.readTextFile(configFile);
 
@@ -112,7 +112,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
         content.includes('# gw-tools shell integration') && content.includes('source ~/.gw/shell/integration');
 
       if (hasOldFormat && !hasNewFormat) {
-        needsMigration = true;
+        _needsMigration = true;
         if (!quiet) {
           console.log('Migrating old installation format...');
         }
@@ -188,7 +188,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
     if (error instanceof Error) {
       message = error.message;
     } else if (typeof error === 'object' && error !== null && 'message' in error) {
-      message = String((error as any).message);
+      message = String((error as { message: unknown }).message);
     } else {
       message = String(error);
     }
@@ -229,7 +229,7 @@ async function installShellIntegration(quiet: boolean, commandName = 'gw', actua
     if (error instanceof Error) {
       message = error.message;
     } else if (typeof error === 'object' && error !== null && 'message' in error) {
-      message = String((error as any).message);
+      message = String((error as { message: unknown }).message);
     } else {
       message = String(error);
     }
@@ -319,7 +319,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
         if (error instanceof Error) {
           message = error.message;
         } else if (typeof error === 'object' && error !== null && 'message' in error) {
-          message = String((error as any).message);
+          message = String((error as { message: unknown }).message);
         } else {
           message = String(error);
         }
