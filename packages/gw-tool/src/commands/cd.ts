@@ -53,9 +53,7 @@ export async function executeCd(args: string[]): Promise<void> {
   // If multiple matches, check for a single exact branch match
   let resolved = matches;
   if (matches.length > 1) {
-    const exactMatches = matches.filter(
-      (wt) => wt.branch.toLowerCase() === pattern.toLowerCase()
-    );
+    const exactMatches = matches.filter((wt) => wt.branch.toLowerCase() === pattern.toLowerCase());
     if (exactMatches.length === 1) {
       resolved = exactMatches;
     }
