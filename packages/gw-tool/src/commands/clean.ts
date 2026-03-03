@@ -145,7 +145,7 @@ export async function executeClean(args: string[]): Promise<void> {
   // This ensures we only see worktrees that actually exist on disk
   try {
     await pruneWorktrees(true); // silent = true
-  } catch (error) {
+  } catch {
     // Don't fail the entire command if prune fails
     // Just continue with whatever worktrees git can list
     console.error(output.dim('Warning: Failed to prune worktree metadata'));

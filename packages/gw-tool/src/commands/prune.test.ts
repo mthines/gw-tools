@@ -192,7 +192,7 @@ Deno.test('worktree cleanup - should identify clean worktrees', async () => {
       Deno.chdir(testRepo.path);
 
       // Create a clean worktree
-      const cleanWtPath = await testRepo.createWorktree('clean-wt', 'clean-branch');
+      await testRepo.createWorktree('clean-wt', 'clean-branch');
 
       // Create a worktree with uncommitted changes
       const dirtyWtPath = await testRepo.createWorktree('dirty-wt', 'dirty-branch');
