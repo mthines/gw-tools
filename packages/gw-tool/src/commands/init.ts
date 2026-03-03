@@ -712,7 +712,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
             console.log(`  ${output.bold(`source ${shellConfigFile}`)}`);
           }
           console.log();
-        } catch (_error) {
+        } catch {
           output.warning('Shell integration setup failed.');
           console.log(`You can install it manually later with: ${output.bold('gw install-shell')}\n`);
         }

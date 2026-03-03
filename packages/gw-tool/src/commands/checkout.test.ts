@@ -155,7 +155,7 @@ Deno.test('checkout command - prompts to create worktree for remote branch (yes)
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedPrompt(['y'], async () => {
+      await withMockedPrompt(['y'], async () => {
         return await withMockedExit(async () => {
           await executeCheckout(['remote-feature']);
         });
