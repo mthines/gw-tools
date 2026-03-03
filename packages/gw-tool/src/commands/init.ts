@@ -11,39 +11,7 @@ import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import { executeInstallShell } from './install-shell.ts';
-
-/**
- * Check if shell integration is installed
- */
-async function isShellIntegrationInstalled(): Promise<boolean> {
-  const shell = Deno.env.get('SHELL') || '';
-  const shellName = shell.split('/').pop() || '';
-  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
-
-  if (!home) {
-    return false;
-  }
-
-  let scriptFile: string;
-
-  if (shellName === 'zsh') {
-    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
-  } else if (shellName === 'bash') {
-    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
-  } else if (shellName === 'fish') {
-    scriptFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
-  } else {
-    // Unsupported shell
-    return false;
-  }
-
-  try {
-    await Deno.stat(scriptFile);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
  * Parsed init command arguments
