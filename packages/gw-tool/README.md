@@ -234,7 +234,7 @@ gw sync feat-existing-branch .env
 - **Auto-copy files**: Configure once, automatically copy `.env`, secrets, and config files to every new worktree
 - **Hooks support**: Run commands before/after worktree creation (install dependencies, validate setup, etc.)
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
-- **Automatic shell integration**: Shell function installs automatically on npm install for seamless `gw cd` navigation
+- **Automatic shell integration**: Eval-based shell integration keeps `gw cd` navigation always up-to-date
 - **Auto-configured per repository**: Each repository gets its own local config file, automatically created on first use
 - **Dry-run mode**: Preview what would be copied without making changes
 - **Standalone binary**: Compiles to a single executable with no runtime dependencies
@@ -556,13 +556,13 @@ gw cd api
 
 #### How It Works
 
-The `cd` command integrates with your shell through an automatically installed function (see [install-shell](#install-shell)). When you run `gw cd <worktree>`:
+The `cd` command integrates with your shell through an eval-based function (see [install-shell](#install-shell)). When you run `gw cd <worktree>`:
 
 1. The command finds the matching worktree path
 2. The shell function intercepts the call and navigates you there
 3. All other `gw` commands pass through normally
 
-**Note**: Shell integration is automatically installed when you install via npm. If needed, you can manually install or remove it using `gw install-shell`.
+**Note**: Shell integration is set up automatically when you install via npm. You can also add it manually by adding `eval "$(gw install-shell)"` to your shell config.
 
 ### pr
 
@@ -722,9 +722,7 @@ If not configured, defaults to "main" branch and "merge" strategy.
 
 ### install-shell
 
-Install or remove shell integration for the `gw cd` command and enable real-time streaming output. This is automatically run during `npm install`, but can be run manually if needed.
-
-The installation creates an integration script in `~/.gw/shell/` and adds a single line to your shell configuration to source it, keeping your shell config clean and minimal.
+Output shell integration code for the `gw cd` command and enable real-time streaming output. The shell code is always generated from the current binary, so updates happen automatically.
 
 Shell integration provides:
 
@@ -734,42 +732,44 @@ Shell integration provides:
 - **Multi-alias support**: Install for different command names (e.g., `gw-dev` for development)
 
 ```bash
-gw install-shell [options]
+# Add to ~/.zshrc or ~/.bashrc
+eval "$(gw install-shell)"
+
+# Add to ~/.config/fish/config.fish
+gw install-shell | source
 ```
 
 #### Options
 
-- `--name, -n NAME`: Install under a different command name (default: `gw`)
+- `--name, -n NAME`: Output for a different command name (default: `gw`)
 - `--command, -c CMD`: Actual command to run (use with `--name` for aliases/dev)
-- `--remove`: Remove shell integration
-- `--quiet, -q`: Suppress output messages
+- `--remove`: Remove shell integration from config files
+- `--quiet, -q`: Suppress output messages (for `--remove`)
 - `-h, --help`: Show help message
 
 #### Examples
 
 ```bash
-# Install shell integration (usually not needed - auto-installed)
+# Preview the shell function output
 gw install-shell
 
-# Install for development (with Deno)
-# Note: Remove any 'alias gw-dev=...' from .zshrc first!
-gw install-shell --name gw-dev \
-  --command "deno run --allow-all ~/path/to/gw-tools/packages/gw-tool/src/main.ts"
+# Add to your shell config (zsh/bash)
+echo 'eval "$(gw install-shell)"' >> ~/.zshrc
 
-# Remove shell integration for 'gw-dev'
-gw install-shell --name gw-dev --remove
+# Add for development (with Deno)
+echo 'eval "$(gw install-shell --name gw-dev --command \"deno run --allow-all ~/path/to/main.ts\")"' >> ~/.zshrc
 
-# Install quietly (for automation)
-gw install-shell --quiet
+# Remove shell integration (legacy files + eval lines)
+gw install-shell --remove
 ```
 
 **Supported Shells:**
 
-- **Zsh** (~/.zshrc sources ~/.gw/shell/integration[-NAME].zsh)
-- **Bash** (~/.bashrc sources ~/.gw/shell/integration[-NAME].bash)
-- **Fish** (~/.config/fish/functions/[NAME].fish)
+- **Zsh**: `eval "$(gw install-shell)"` in `~/.zshrc`
+- **Bash**: `eval "$(gw install-shell)"` in `~/.bashrc`
+- **Fish**: `gw install-shell | source` in `~/.config/fish/config.fish`
 
-The command is idempotent - running it multiple times won't create duplicate entries. It will also automatically migrate old inline installations to the new format.
+The `--remove` flag cleans up both the new eval-based format and any legacy file-based installations.
 
 ### root
 

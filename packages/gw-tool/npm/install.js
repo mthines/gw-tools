@@ -134,10 +134,10 @@ async function install() {
     // Try to install shell integration, but don't fail if it errors
     console.log('\n⚙️  Setting up shell integration...');
     try {
-      await installShellIntegration(binaryPath);
+      installShellIntegration();
     } catch (error) {
       console.log('  Shell integration setup encountered an issue.');
-      console.log('  You can install it manually later with: gw install-shell');
+      console.log('  You can add it manually: eval \'"$(gw install-shell)"\' in your shell config');
     }
 
     console.log('\nRun "gw --help" to get started.');
@@ -154,79 +154,62 @@ async function install() {
 }
 
 /**
- * Install shell integration
+ * Install shell integration by appending eval line to shell config
  */
-async function installShellIntegration(binaryPath, retries = 3) {
-  const { spawn } = require('child_process');
+function installShellIntegration() {
+  const { existsSync: fsExists, readFileSync: fsRead, writeFileSync: fsWrite, mkdirSync: fsMkdir } = require('fs');
 
-  // Check environment before attempting shell integration
-  const hasRequiredEnv = process.env.HOME || process.env.USERPROFILE;
-  const hasShell = process.env.SHELL;
+  const home = process.env.HOME || process.env.USERPROFILE;
+  const shell = process.env.SHELL || '';
+  const shellName = shell.split('/').pop() || '';
 
-  if (!hasRequiredEnv) {
+  if (!home) {
     console.log('  Skipping shell integration: HOME environment variable not set');
-    console.log('  Run "gw install-shell" manually after installation');
+    console.log('  Add eval \'"$(gw install-shell)"\' to your shell config manually');
     return;
   }
 
-  if (!hasShell) {
+  if (!shellName) {
     console.log('  Skipping shell integration: SHELL environment variable not set');
-    console.log('  Run "gw install-shell" manually after installation');
+    console.log('  Add eval \'"$(gw install-shell)"\' to your shell config manually');
     return;
   }
 
-  return new Promise((resolve) => {
-    let child;
+  let configFile;
+  let evalLine;
 
-    try {
-      child = spawn(binaryPath, ['install-shell'], {
-        stdio: ['inherit', 'inherit', 'pipe'], // stdin, stdout, stderr
-      });
-    } catch (err) {
-      // Catch synchronous spawn errors (e.g., ETXTBSY thrown immediately)
-      if (err.code === 'ETXTBSY' && retries > 0) {
-        setTimeout(() => {
-          installShellIntegration(binaryPath, retries - 1).then(resolve);
-        }, 200);
-        return;
-      }
-      console.log('  Shell integration setup encountered an issue.');
-      console.log('  You can install it manually later with: gw install-shell');
-      resolve();
+  if (shellName === 'zsh') {
+    configFile = join(home, '.zshrc');
+    evalLine = 'eval "$(gw install-shell)"';
+  } else if (shellName === 'bash') {
+    configFile = join(home, '.bashrc');
+    evalLine = 'eval "$(gw install-shell)"';
+  } else if (shellName === 'fish') {
+    const configDir = join(home, '.config', 'fish');
+    if (!fsExists(configDir)) {
+      fsMkdir(configDir, { recursive: true });
+    }
+    configFile = join(configDir, 'config.fish');
+    evalLine = 'gw install-shell | source';
+  } else {
+    console.log(`  Unsupported shell: ${shellName}`);
+    console.log('  Add eval \'"$(gw install-shell)"\' to your shell config manually');
+    return;
+  }
+
+  // Check if already present
+  if (fsExists(configFile)) {
+    const content = fsRead(configFile, 'utf8');
+    if (content.includes('gw install-shell')) {
+      console.log('✓ Shell integration already configured!');
       return;
     }
+  }
 
-    let stderrOutput = '';
-    child.stderr.on('data', (data) => {
-      stderrOutput += data.toString();
-      // Also display it immediately
-      process.stderr.write(data);
-    });
-
-    child.on('close', (code) => {
-      if (code === 0) {
-        console.log('✓ Shell integration installed!');
-      } else {
-        console.log('  Shell integration failed with exit code:', code);
-        if (stderrOutput) {
-          console.log('  Error:', stderrOutput.trim());
-        }
-        console.log('  You can install it manually later with: gw install-shell');
-      }
-      resolve();
-    });
-
-    child.on('error', async (err) => {
-      // Retry on ETXTBSY (text file busy) error
-      if (err.code === 'ETXTBSY' && retries > 0) {
-        await new Promise((r) => setTimeout(r, 200));
-        return installShellIntegration(binaryPath, retries - 1).then(resolve);
-      }
-      console.log('  Shell integration setup encountered an issue.');
-      console.log('  You can install it manually later with: gw install-shell');
-      resolve();
-    });
-  });
+  // Append eval line
+  fsWrite(configFile, '\n' + evalLine + '\n', { flag: 'a' });
+  console.log(`✓ Shell integration added to ${configFile}`);
+  console.log('  Restart your terminal or source your shell config to activate.');
 }
 
 // Run installation

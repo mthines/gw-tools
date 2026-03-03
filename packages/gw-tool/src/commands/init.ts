@@ -10,7 +10,6 @@ import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
-import { executeInstallShell } from './install-shell.ts';
 
 /**
  * Check if shell integration is installed
@@ -24,21 +23,41 @@ async function isShellIntegrationInstalled(): Promise<boolean> {
     return false;
   }
 
-  let scriptFile: string;
-
+  // Check for new eval-based format in shell config
+  let configFile: string;
   if (shellName === 'zsh') {
-    scriptFile = join(home, '.gw', 'shell', 'integration.zsh');
+    configFile = join(home, '.zshrc');
   } else if (shellName === 'bash') {
-    scriptFile = join(home, '.gw', 'shell', 'integration.bash');
+    configFile = join(home, '.bashrc');
   } else if (shellName === 'fish') {
-    scriptFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
+    configFile = join(home, '.config', 'fish', 'config.fish');
   } else {
-    // Unsupported shell
     return false;
   }
 
   try {
-    await Deno.stat(scriptFile);
+    const content = await Deno.readTextFile(configFile);
+    if (content.includes('gw install-shell')) {
+      return true;
+    }
+  } catch {
+    // File doesn't exist
+  }
+
+  // Check for legacy file-based format
+  let legacyFile: string;
+  if (shellName === 'zsh') {
+    legacyFile = join(home, '.gw', 'shell', 'integration.zsh');
+  } else if (shellName === 'bash') {
+    legacyFile = join(home, '.gw', 'shell', 'integration.bash');
+  } else if (shellName === 'fish') {
+    legacyFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
+  } else {
+    return false;
+  }
+
+  try {
+    await Deno.stat(legacyFile);
     return true;
   } catch {
     return false;
@@ -651,7 +670,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       console.log(output.dim('Shell integration is not installed.'));
       console.log(output.dim('This enables automatic navigation with "gw cd" and "gw init".\n'));
 
-      const response = prompt('Would you like to install shell integration now? (Y/n): ');
+      const response = prompt('Would you like to set up shell integration? (Y/n): ');
 
       // Default to yes if user just presses Enter
       const shouldInstall =
@@ -660,27 +679,48 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       if (shouldInstall && response?.toLowerCase() !== 'n' && response?.toLowerCase() !== 'no') {
         console.log();
         try {
-          await executeInstallShell(['--quiet']);
-          output.success('Shell integration installed!');
+          const shellEnv = Deno.env.get('SHELL') || '';
+          const detectedShell = shellEnv.split('/').pop() || '';
+          const homeDir = Deno.env.get('HOME') || '';
+
+          let shellConfigFile: string;
+          let evalLine: string;
+
+          if (detectedShell === 'zsh') {
+            shellConfigFile = join(homeDir, '.zshrc');
+            evalLine = 'eval "$(gw install-shell)"';
+          } else if (detectedShell === 'bash') {
+            shellConfigFile = join(homeDir, '.bashrc');
+            evalLine = 'eval "$(gw install-shell)"';
+          } else if (detectedShell === 'fish') {
+            shellConfigFile = join(homeDir, '.config', 'fish', 'config.fish');
+            evalLine = 'gw install-shell | source';
+          } else {
+            output.warning(`Unsupported shell: ${detectedShell || 'unknown'}`);
+            console.log(`You can install it manually later with: ${output.bold('gw install-shell')}\n`);
+            await signalNavigation(fullPath);
+            return;
+          }
+
+          await Deno.writeTextFile(shellConfigFile, '\n' + evalLine + '\n', { append: true });
+          output.success('Shell integration added!');
+          console.log(`  Added to: ${output.path(shellConfigFile)}`);
           console.log('\nRestart your terminal or run:');
-          const shell = Deno.env.get('SHELL') || '';
-          const shellName = shell.split('/').pop() || '';
-          if (shellName === 'zsh') {
-            console.log(`  ${output.bold('source ~/.zshrc')}`);
-          } else if (shellName === 'bash') {
-            console.log(`  ${output.bold('source ~/.bashrc')}`);
-          } else if (shellName === 'fish') {
-            console.log('  Fish will automatically load the function.');
+          if (detectedShell === 'fish') {
+            console.log(`  ${output.bold(`source ${shellConfigFile}`)}`);
+          } else {
+            console.log(`  ${output.bold(`source ${shellConfigFile}`)}`);
           }
           console.log();
         } catch {
           // executeInstallShell exits on error, but just in case
-          output.warning('Shell integration installation failed.');
+          output.warning('Shell integration setup failed.');
           console.log(`You can install it manually later with: ${output.bold('gw install-shell')}\n`);
         }
       } else {
         console.log();
-        console.log(output.dim('You can install it later with: ') + output.bold('gw install-shell'));
+        console.log(output.dim('You can add it later by adding this to your shell config:'));
+        console.log(`  ${output.bold('eval "$(gw install-shell)"')}`);
         console.log();
       }
     }
