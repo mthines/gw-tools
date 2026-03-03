@@ -71,6 +71,14 @@ export async function executeCd(args: string[]): Promise<void> {
 
   // Output the path to stdout (only thing that goes to stdout)
   console.log(resolved[0].path);
+
+  // If stdout is a TTY, user is running directly without shell integration
+  // (Shell function captures stdout, so it won't be a TTY)
+  if (Deno.stdout.isTerminal()) {
+    console.error('');
+    console.error('💡 Tip: Add shell integration for automatic navigation:');
+    console.error('   eval "$(gw install-shell)"  # add to your shell config');
+  }
 }
 
 /**

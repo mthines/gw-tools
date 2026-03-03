@@ -197,12 +197,60 @@ function installShellIntegration() {
     return;
   }
 
-  // Check if already present
+  // Check if already present or needs migration
   if (fsExists(configFile)) {
-    const content = fsRead(configFile, 'utf8');
+    let content = fsRead(configFile, 'utf8');
+
+    // Check if new eval-based integration is already present
     if (content.includes('gw install-shell')) {
       console.log('✓ Shell integration already configured!');
       return;
+    }
+
+    // Check for old source-based integration and migrate
+    const hasOldSource = content.includes('source ~/.gw/shell/integration') ||
+                         content.includes('source "$HOME/.gw/shell/integration');
+    if (hasOldSource) {
+      console.log('  Migrating from legacy file-based integration...');
+
+      // Remove old comment and source lines
+      const lines = content.split('\n');
+      const filtered = [];
+      let skipNext = false;
+
+      for (const line of lines) {
+        // Skip old comment line
+        if (line.includes('# gw-tools shell integration') && !line.includes('eval')) {
+          skipNext = true;
+          continue;
+        }
+        // Skip old source line
+        if (skipNext && line.includes('source') && line.includes('.gw/shell/integration')) {
+          skipNext = false;
+          continue;
+        }
+        skipNext = false;
+        filtered.push(line);
+      }
+
+      content = filtered.join('\n');
+      fsWrite(configFile, content);
+
+      // Remove old integration files
+      const legacyFiles = [
+        join(home, '.gw', 'shell', 'integration.zsh'),
+        join(home, '.gw', 'shell', 'integration.bash'),
+      ];
+      for (const file of legacyFiles) {
+        if (fsExists(file)) {
+          try {
+            require('fs').unlinkSync(file);
+            console.log(`  Removed legacy file: ${file}`);
+          } catch {
+            // Ignore removal errors
+          }
+        }
+      }
     }
   }
 
