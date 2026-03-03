@@ -49,15 +49,24 @@ async function outputShellIntegration(commandName = 'gw', actualCommand?: string
   // Detect shell
   const shell = Deno.env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
+  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
 
   let shellFunction: string;
+  let configFile: string;
+  let evalLine: string;
 
   if (shellName === 'zsh') {
     shellFunction = getZshFunction(commandName, actualCommand);
+    configFile = '~/.zshrc';
+    evalLine = 'eval "$(gw install-shell)"';
   } else if (shellName === 'bash') {
     shellFunction = getBashFunction(commandName, actualCommand);
+    configFile = '~/.bashrc';
+    evalLine = 'eval "$(gw install-shell)"';
   } else if (shellName === 'fish') {
     shellFunction = getFishFunction(commandName, actualCommand);
+    configFile = '~/.config/fish/config.fish';
+    evalLine = 'gw install-shell | source';
   } else {
     // Always show this error on stderr
     output.error(`Unsupported shell: ${shellName || 'unknown'}`);
@@ -68,9 +77,48 @@ async function outputShellIntegration(commandName = 'gw', actualCommand?: string
     Deno.exit(1);
   }
 
+  // Check for legacy file-based installation and warn user
+  if (home) {
+    const hasLegacy = await checkLegacyInstallation(home, commandName);
+    if (hasLegacy) {
+      console.error('');
+      console.error('⚠️  Legacy file-based shell integration detected!');
+      console.error('   The old integration files are no longer used.');
+      console.error('');
+      console.error('   To migrate, run:');
+      console.error('     gw install-shell --remove');
+      console.error('');
+      console.error('   Then run this command:');
+      console.error(`     echo '${evalLine}' >> ${configFile}`);
+      console.error('');
+    }
+  }
+
   // Write shell function to stdout
   const encoder = new TextEncoder();
   await Deno.stdout.write(encoder.encode(shellFunction + '\n'));
+}
+
+/**
+ * Check if legacy file-based shell integration exists
+ */
+async function checkLegacyInstallation(home: string, commandName: string): Promise<boolean> {
+  const fileSuffix = commandName === 'gw' ? '' : `-${commandName}`;
+  const legacyFiles = [
+    join(home, '.gw', 'shell', `integration${fileSuffix}.zsh`),
+    join(home, '.gw', 'shell', `integration${fileSuffix}.bash`),
+  ];
+
+  for (const file of legacyFiles) {
+    try {
+      await Deno.stat(file);
+      return true;
+    } catch {
+      // File doesn't exist, continue checking
+    }
+  }
+
+  return false;
 }
 
 /**
