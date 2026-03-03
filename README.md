@@ -4,10 +4,10 @@
  ██   ███  ██  ██  ██
  ██    ██   ██ ██ ██                        --- Git Worktree Tools ---
   ██████     ██  ██
- _____ ___   ___  _           A CLI for managing Git worktrees with automatic file syncing, 
+ _____ ___   ___  _           A CLI for managing Git worktrees with automatic file syncing,
 |_   _/ _ \ / _ \| |                enhanced navigation, and autonomous workflows.
   | || (_) | (_) | |__
-  |_| \___/ \___/|____|    
+  |_| \___/ \___/|____|
 ```
 
 Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing, enhanced navigation, and autonomous workflows.
