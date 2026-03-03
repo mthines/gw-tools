@@ -18,11 +18,11 @@ function mockStdin(response: string): () => void {
   const originalRead = Deno.stdin.read;
 
   // @ts-ignore - Intentionally replacing for testing
-  Deno.stdin.read = async (_buffer: Uint8Array): Promise<number | null> => {
+  Deno.stdin.read = (_buffer: Uint8Array): Promise<number | null> => {
     const encoder = new TextEncoder();
     const data = encoder.encode(response + '\n');
     _buffer.set(data);
-    return data.length;
+    return Promise.resolve(data.length);
   };
 
   return () => {
@@ -115,7 +115,7 @@ Deno.test('clean command - removes all safe worktrees by default (no age check)'
     await writeTestConfig(repo.path, config);
 
     // Create a NEW worktree (just created, not old)
-    const worktreePath = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
 
     const cwd = new TempCwd(repo.path);
     try {
@@ -145,7 +145,7 @@ Deno.test('clean command - with --use-autoclean-threshold only removes old workt
     await writeTestConfig(repo.path, config);
 
     // Create a NEW worktree (less than 7 days old)
-    const newWorktree = await repo.createWorktree('new-branch');
+    await repo.createWorktree('new-branch');
 
     // Create an OLD worktree (more than 7 days old)
     const oldWorktree = await repo.createWorktree('old-branch');
@@ -186,7 +186,7 @@ Deno.test('clean command - skips worktrees with uncommitted changes', async () =
     await writeTestConfig(repo.path, config);
 
     // Create a worktree with uncommitted changes
-    const worktreePath = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
     await repo.createFile('feat-branch/new-file.txt', 'uncommitted content');
 
     const cwd = new TempCwd(repo.path);
@@ -216,7 +216,7 @@ Deno.test('clean command - force flag removes worktrees with uncommitted changes
     await writeTestConfig(repo.path, config);
 
     // Create a worktree with uncommitted changes
-    const worktreePath = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
     await repo.createFile('feat-branch/new-file.txt', 'uncommitted content');
 
     const cwd = new TempCwd(repo.path);
@@ -451,7 +451,7 @@ Deno.test('clean command - never removes default branch worktree', async () => {
     await writeTestConfig(repo.path, config);
 
     // Create another worktree that should be removed
-    const featWorktree = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
 
     const cwd = new TempCwd(repo.path);
     try {
@@ -493,7 +493,7 @@ Deno.test('clean command - protects default branch even with --force', async () 
     await writeTestConfig(repo.path, config);
 
     // Create another worktree with uncommitted changes
-    const featWorktree = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
     await repo.createFile('feat-branch/uncommitted.txt', 'content');
 
     const cwd = new TempCwd(repo.path);
@@ -527,7 +527,7 @@ Deno.test('clean command - uses main as default when defaultBranch not configure
 
     // Create worktrees for both main and a feature branch
     await repo.createWorktree('staging');
-    const featWorktree = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
 
     // Config without defaultBranch set (should default to 'main')
     const config = {
@@ -570,7 +570,7 @@ Deno.test('clean command - never removes gw_root worktree', async () => {
 
     // Create gw_root and a feature worktree
     await repo.createWorktree('gw_root');
-    const featWorktree = await repo.createWorktree('feat-branch');
+    await repo.createWorktree('feat-branch');
 
     const cwd = new TempCwd(repo.path);
     try {

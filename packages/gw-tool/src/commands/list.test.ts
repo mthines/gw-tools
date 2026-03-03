@@ -2,7 +2,6 @@
  * Tests for list.ts command
  */
 
-import { assertEquals } from '$std/assert';
 import { executeList } from './list.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

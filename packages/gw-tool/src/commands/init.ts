@@ -673,7 +673,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
             console.log('  Fish will automatically load the function.');
           }
           console.log();
-        } catch (error) {
+        } catch {
           // executeInstallShell exits on error, but just in case
           output.warning('Shell integration installation failed.');
           console.log(`You can install it manually later with: ${output.bold('gw install-shell')}\n`);
