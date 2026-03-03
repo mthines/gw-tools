@@ -120,3 +120,9 @@ Deno.test('cd command - errors when no match found', async () => {
     await repo.cleanup();
   }
 });
+
+// Note: The shell integration warning only appears when stdout.isTerminal() is true.
+// In test environment with captured output, stdout is not a TTY, so the warning
+// won't appear. This is correct behavior - the warning shouldn't appear when
+// output is being piped/captured (e.g., cd $(gw cd branch)).
+// The shell-integration.test.ts tests the detection logic separately.

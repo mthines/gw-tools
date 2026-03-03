@@ -5,6 +5,7 @@
 
 import * as output from '../lib/output.ts';
 import { listWorktrees } from '../lib/git-utils.ts';
+import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
  * Execute the cd command
@@ -71,6 +72,16 @@ export async function executeCd(args: string[]): Promise<void> {
 
   // Output the path to stdout (only thing that goes to stdout)
   console.log(resolved[0].path);
+
+  // Show helpful tip if shell integration not installed and output is a TTY
+  // When piped (e.g., cd $(gw cd branch)), stdout is not a TTY so warning won't appear
+  if (Deno.stdout.isTerminal()) {
+    const hasShellIntegration = await isShellIntegrationInstalled();
+    if (!hasShellIntegration) {
+      console.error(output.dim('\nTip: Add shell integration for automatic navigation:'));
+      console.error(output.dim('  eval "$(gw install-shell)"  # add to ~/.zshrc or ~/.bashrc'));
+    }
+  }
 }
 
 /**
