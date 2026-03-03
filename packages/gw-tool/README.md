@@ -774,17 +774,20 @@ The `--remove` flag cleans up both the new eval-based format and any legacy file
 #### Migrating from File-Based Integration
 
 If you previously used `gw install-shell` (before v0.22), you had file-based integration:
+
 - `~/.gw/shell/integration.zsh` (or `.bash`)
 - A source line in your shell config
 
 To migrate to the new eval-based approach:
 
 1. Remove old integration:
+
    ```bash
    gw install-shell --remove
    ```
 
 2. Add new integration to your shell config:
+
    ```bash
    # Zsh (~/.zshrc)
    eval "$(gw install-shell)"
