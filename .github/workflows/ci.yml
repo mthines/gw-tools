@@ -28,9 +28,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          filter: tree:0
-          fetch-depth: 0
 
       # This enables task distribution via Nx Cloud
       # Run this command as early as possible, before dependencies are installed
@@ -57,8 +54,12 @@ jobs:
           git config --global user.email "ci@gw-tools.dev"
           git config --global user.name "CI"
 
-      # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
-      - run: npx nx-cloud record -- npx nx format:check --base="remotes/origin/main" || echo "Format check failed"
+      # Check formatting (warn but don't block)
+      - name: Check formatting
+        run: |
+          if ! npx nx format:check --base="remotes/origin/main" 2>/dev/null; then
+            echo "::warning::Formatting issues detected. Run 'nx format:write' locally to fix."
+          fi
 
       # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
       - run: npx nx run @gw-tools/gw-tool:test:ci
@@ -248,7 +249,9 @@ jobs:
 
           # Get current version and calculate new version
           CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
-          IFS='.' read -ra V <<< "$CURRENT"
+          # Strip any existing prerelease suffix (e.g., -beta.x)
+          BASE_CURRENT=$(echo "$CURRENT" | sed -E 's/-.*$//')
+          IFS='.' read -ra V <<< "$BASE_CURRENT"
 
           case "$BUMP_TYPE" in
             major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
@@ -315,18 +318,19 @@ jobs:
         with:
           fetch-depth: 100
 
-      - name: Checkout release tag
+      - name: Fetch tags and checkout release
         run: |
+          # Fetch all tags first
+          git fetch --tags --force
+
+          # Checkout the release tag if this is an auto-tag release
           if [ -n "${{ needs.auto-tag.outputs.version }}" ]; then
-            git fetch origin "v${{ needs.auto-tag.outputs.version }}"
+            echo "Checking out stable release tag: v${{ needs.auto-tag.outputs.version }}"
             git checkout "v${{ needs.auto-tag.outputs.version }}"
           elif [ -n "${{ needs.auto-tag-beta.outputs.version }}" ]; then
-            git fetch origin "v${{ needs.auto-tag-beta.outputs.version }}"
+            echo "Checking out beta release tag: v${{ needs.auto-tag-beta.outputs.version }}"
             git checkout "v${{ needs.auto-tag-beta.outputs.version }}"
           fi
-
-      - name: Fetch tags
-        run: git fetch --tags --force
 
       - uses: denoland/setup-deno@v2
         with:
