@@ -144,6 +144,34 @@ Deno.test('sync command - syncs with --from and no explicit target (uses current
   }
 });
 
+Deno.test('sync command - handles nested branch names correctly (e.g., feat/foo/bar)', async () => {
+  // This tests the fix for using full branch name instead of basename
+  const nestedBranchName = 'feat/foo/bar';
+  const { repo, mainPath, featurePath } = await setupBareRepoWithWorktrees(nestedBranchName);
+  try {
+    // Create source file in main worktree
+    await Deno.writeTextFile(join(mainPath, '.env'), 'NESTED_TEST=yes');
+
+    const config = createConfig(repo.path, ['.env']);
+    await writeTestConfig(repo.path, config);
+
+    // cd into the nested feature worktree
+    const cwd = new TempCwd(featurePath);
+    try {
+      // No positional args — should use full branch name 'feat/foo/bar', not just 'bar'
+      await executeCopy([]);
+
+      // The file should be copied to the correct worktree path
+      await assertFileExists(join(featurePath, '.env'));
+      await assertFileContent(join(featurePath, '.env'), 'NESTED_TEST=yes');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('sync command - errors when trying to sync worktree to itself', async () => {
   const { repo, mainPath } = await setupBareRepoWithWorktrees();
   try {

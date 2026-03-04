@@ -5,6 +5,7 @@
 
 import * as output from '../lib/output.ts';
 import { listWorktrees } from '../lib/git-utils.ts';
+import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
  * Execute the cd command
@@ -52,9 +53,7 @@ export async function executeCd(args: string[]): Promise<void> {
   // If multiple matches, check for a single exact branch match
   let resolved = matches;
   if (matches.length > 1) {
-    const exactMatches = matches.filter(
-      (wt) => wt.branch.toLowerCase() === pattern.toLowerCase()
-    );
+    const exactMatches = matches.filter((wt) => wt.branch.toLowerCase() === pattern.toLowerCase());
     if (exactMatches.length === 1) {
       resolved = exactMatches;
     }
@@ -71,6 +70,30 @@ export async function executeCd(args: string[]): Promise<void> {
 
   // Output the path to stdout (only thing that goes to stdout)
   console.log(resolved[0].path);
+
+  // Show helpful tip if shell integration not installed and output is a TTY
+  // When piped (e.g., cd $(gw cd branch)), stdout is not a TTY so warning won't appear
+  if (Deno.stdout.isTerminal()) {
+    const hasShellIntegration = await isShellIntegrationInstalled();
+    if (!hasShellIntegration) {
+      const shell = Deno.env.get('SHELL') || '';
+      const shellName = shell.split('/').pop() || '';
+
+      let configFile = '~/.zshrc';
+      let evalLine = 'eval "$(gw install-shell)"';
+
+      if (shellName === 'bash') {
+        configFile = '~/.bashrc';
+      } else if (shellName === 'fish') {
+        configFile = '~/.config/fish/config.fish';
+        evalLine = 'gw install-shell | source';
+      }
+
+      console.error('');
+      console.error('💡 Tip: Add shell integration for automatic navigation:');
+      console.error(`   echo '${evalLine}' >> ${configFile}`);
+    }
+  }
 }
 
 /**

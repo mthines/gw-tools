@@ -31,7 +31,7 @@ Deno.test('cd command - exact branch match preferred over multi-match', async ()
         async () => {
           await executeCd(['main']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       // Should resolve to the exact branch match (main), not error
@@ -57,7 +57,7 @@ Deno.test('cd command - non exact multi-match still errors', async () => {
         async () => {
           await executeCd(['mai']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, 1);
@@ -83,7 +83,7 @@ Deno.test('cd command - single partial match works', async () => {
         async () => {
           await executeCd(['feat']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, undefined);
@@ -108,7 +108,7 @@ Deno.test('cd command - errors when no match found', async () => {
         async () => {
           await executeCd(['xyz']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, 1);
@@ -120,3 +120,9 @@ Deno.test('cd command - errors when no match found', async () => {
     await repo.cleanup();
   }
 });
+
+// Note: The shell integration warning only appears when stdout.isTerminal() is true.
+// In test environment with captured output, stdout is not a TTY, so the warning
+// won't appear. This is correct behavior - the warning shouldn't appear when
+// output is being piped/captured (e.g., cd $(gw cd branch)).
+// The shell-integration.test.ts tests the detection logic separately.

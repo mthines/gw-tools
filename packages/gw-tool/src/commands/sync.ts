@@ -2,11 +2,10 @@
  * Copy command implementation
  */
 
-import { basename } from '$std/path';
 import { parseCopyArgs, showCopyHelp } from '../lib/cli.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
-import { getCurrentWorktreePath } from '../lib/git-utils.ts';
+import { getCurrentWorktreePath, listWorktrees } from '../lib/git-utils.ts';
 import { resolveWorktreePath, validatePathExists } from '../lib/path-resolver.ts';
 import * as output from '../lib/output.ts';
 
@@ -37,7 +36,15 @@ export async function executeCopy(args: string[]): Promise<void> {
       showCopyHelp();
       Deno.exit(1);
     }
-    target = basename(currentWorktreePath);
+    // Find the current worktree and use its branch name (handles nested paths like feat/foo/bar)
+    const worktrees = await listWorktrees();
+    const currentWorktree = worktrees.find((wt) => wt.path === currentWorktreePath);
+    if (currentWorktree?.branch) {
+      target = currentWorktree.branch;
+    } else {
+      // Fallback: use relative path from git root
+      target = currentWorktreePath.replace(gitRoot + '/', '');
+    }
   }
 
   // 5. Determine files to copy - use autoCopyFiles from config if no files specified
