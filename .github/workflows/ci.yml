@@ -71,8 +71,8 @@ jobs:
     permissions:
       contents: write
     outputs:
-      created: ${{ steps.tag.outputs.created }}
-      version: ${{ steps.tag.outputs.version }}
+      created: ${{ steps.tag.outputs.created || 'false' }}
+      version: ${{ steps.tag.outputs.version || '' }}
     steps:
       # Use PAT to allow tag push to trigger release workflow
       # Falls back to GITHUB_TOKEN if GH_PAT not set (but release won't auto-trigger)
@@ -81,19 +81,21 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Check for releasable changes and create tag
-        id: tag
+      - name: Check for releasable changes
+        id: check
         run: |
           # Skip if this is a release commit
           COMMIT_MSG=$(git log -1 --pretty=%s)
           if [[ "$COMMIT_MSG" =~ ^chore\(gw\):\ release\ v ]]; then
-            echo "Skipping - this is a release commit"
-            echo "created=false" >> $GITHUB_OUTPUT
+            echo "reason=release-commit" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
           # Check if gw-tool source files changed since last tag
           LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
           if [ -z "$LAST_TAG" ]; then
             CHANGED=$(git diff --name-only HEAD~1 -- packages/gw-tool/src/)
           else
@@ -101,13 +103,35 @@ jobs:
           fi
 
           if [ -z "$CHANGED" ]; then
-            echo "No gw-tool source changes since last release"
-            echo "created=false" >> $GITHUB_OUTPUT
+            echo "reason=no-source-changes" >> $GITHUB_OUTPUT
+            echo "should_release=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          echo "Changes detected:"
-          echo "$CHANGED"
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Skip - No release needed
+        if: steps.check.outputs.should_release == 'false'
+        run: |
+          if [ "${{ steps.check.outputs.reason }}" = "release-commit" ]; then
+            echo "::notice::⏭️ Skipping release - this is already a release commit"
+          else
+            echo "::notice::⏭️ No release needed - no source changes in packages/gw-tool/src/ since ${{ steps.check.outputs.last_tag || 'initial commit' }}"
+          fi
+          echo "created=false" >> $GITHUB_OUTPUT
+        id: skip
+
+      - name: Calculate version
+        if: steps.check.outputs.should_release == 'true'
+        id: version
+        run: |
+          LAST_TAG="${{ steps.check.outputs.last_tag }}"
+
+          echo "📦 Source files changed:"
+          echo "${{ steps.check.outputs.changed_files }}"
 
           # Get commits since last tag for version determination
           if [ -z "$LAST_TAG" ]; then
@@ -123,7 +147,6 @@ jobs:
           elif echo "$COMMITS" | grep -q "^feat"; then
             BUMP_TYPE="minor"
           fi
-          echo "Bump type: $BUMP_TYPE"
 
           # Get current version and calculate new version
           CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
@@ -136,7 +159,16 @@ jobs:
           esac
 
           NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
-          echo "New version: $NEW_VERSION"
+
+          echo "::notice::📦 Version bump: $CURRENT → $NEW_VERSION ($BUMP_TYPE)"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Create release tag
+        if: steps.check.outputs.should_release == 'true'
+        id: tag
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
 
           # Update package.json version
           cd packages/gw-tool/npm
@@ -154,6 +186,7 @@ jobs:
           git push origin main
           git push origin "v$NEW_VERSION"
 
+          echo "::notice::🏷️ Created and pushed tag v$NEW_VERSION"
           echo "created=true" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
