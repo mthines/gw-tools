@@ -6,6 +6,7 @@ on:
       - main
     tags:
       - 'v*'
+      - '!v*-beta.*'  # Beta tags are released by the PR workflow, not tag push
   pull_request:
   workflow_dispatch:
     inputs:
@@ -298,11 +299,13 @@ jobs:
     # 3. auto-tag-beta created a new beta version
     # 4. Manual dispatch with test_release=true - dry-run testing
     needs: [test, auto-tag, auto-tag-beta]
+    # Note: Beta tag pushes are skipped here - beta releases are handled by the PR workflow
+    # that created the tag. Only stable tag pushes trigger release from tag event.
     if: |
       always() &&
       needs.test.result == 'success' &&
       (
-        startsWith(github.ref, 'refs/tags/v') ||
+        (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-beta.')) ||
         needs.auto-tag.outputs.created == 'true' ||
         needs.auto-tag-beta.outputs.created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.test_release)
