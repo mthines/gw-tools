@@ -5,18 +5,18 @@ on:
     branches:
       - main
     tags:
-      - "v*"
+      - 'v*'
   pull_request:
   workflow_dispatch:
     inputs:
       test_release:
-        description: "Test release job (dry-run, no actual publishing)"
+        description: 'Test release job (dry-run, no actual publishing)'
         type: boolean
         default: false
       version:
-        description: "Version to simulate (e.g., 0.28.1) - only used if test_release is true"
+        description: 'Version to simulate (e.g., 0.28.1) - only used if test_release is true'
         type: string
-        default: "0.0.0-test"
+        default: '0.0.0-test'
 
 # Default permissions for all jobs
 permissions:
@@ -47,7 +47,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -331,8 +331,8 @@ jobs:
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
-      contents: write      # For creating GitHub releases
-      id-token: write      # For npm trusted publishing (OIDC)
+      contents: write # For creating GitHub releases
+      id-token: write # For npm trusted publishing (OIDC)
     steps:
       - uses: actions/checkout@v4
         with:
@@ -348,8 +348,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
 
