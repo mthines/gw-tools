@@ -1562,12 +1562,12 @@ When a PR is merged to `main` with changes to `packages/gw-tool/src/`:
 
 Use these commit prefixes to control versioning:
 
-| Prefix | Version Bump | Example |
-|--------|--------------|---------|
-| `feat:` | Minor (1.0.0 → 1.1.0) | `feat: add dry-run mode` |
-| `fix:` | Patch (1.0.0 → 1.0.1) | `fix: correct path resolution` |
-| `feat!:` or `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) | `feat!: redesign config` |
-| `chore:`, `docs:`, `refactor:` | No bump | `docs: update README` |
+| Prefix                         | Version Bump          | Example                        |
+| ------------------------------ | --------------------- | ------------------------------ |
+| `feat:`                        | Minor (1.0.0 → 1.1.0) | `feat: add dry-run mode`       |
+| `fix:`                         | Patch (1.0.0 → 1.0.1) | `fix: correct path resolution` |
+| `feat!:` or `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) | `feat!: redesign config`       |
+| `chore:`, `docs:`, `refactor:` | No bump               | `docs: update README`          |
 
 #### Testing Releases
 
