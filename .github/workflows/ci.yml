@@ -63,6 +63,128 @@ jobs:
       # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
       - run: npx nx run @gw-tools/gw-tool:test:ci
 
+  auto-tag-beta:
+    # Run on non-draft PRs to create beta releases
+    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      created: ${{ steps.tag.outputs.created || 'false' }}
+      version: ${{ steps.tag.outputs.version || '' }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Check for releasable changes
+        id: check
+        run: |
+          # Check if gw-tool source files changed in this PR
+          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- packages/gw-tool/src/)
+
+          if [ -z "$CHANGED" ]; then
+            echo "::notice::⏭️ No source changes in packages/gw-tool/src/"
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
+          echo "$CHANGED" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Calculate beta version
+        if: steps.check.outputs.should_release == 'true'
+        id: version
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+
+          echo "📦 Source files changed:"
+          echo "${{ steps.check.outputs.changed_files }}"
+
+          # Get commits for version determination
+          COMMITS=$(git log origin/${{ github.base_ref }}...HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+
+          # Determine bump type from conventional commits
+          BUMP_TYPE="patch"
+          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            BUMP_TYPE="minor"
+          fi
+
+          # Get current version and calculate base version
+          CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          # Strip any existing prerelease suffix
+          BASE_CURRENT=$(echo "$CURRENT" | sed -E 's/-.*$//')
+          IFS='.' read -ra V <<< "$BASE_CURRENT"
+
+          case "$BUMP_TYPE" in
+            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
+            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
+            patch) V[2]=$((V[2] + 1)) ;;
+          esac
+
+          BASE_VERSION="${V[0]}.${V[1]}.${V[2]}"
+
+          # Find next beta number for this PR
+          EXISTING_BETAS=$(git tag -l "v${BASE_VERSION}-beta.${PR_NUMBER}.*" | wc -l)
+          BETA_NUM=$((EXISTING_BETAS + 1))
+
+          NEW_VERSION="${BASE_VERSION}-beta.${PR_NUMBER}.${BETA_NUM}"
+
+          echo "::notice::🧪 Beta version: $NEW_VERSION ($BUMP_TYPE bump, PR #$PR_NUMBER)"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+
+      - name: Create beta tag
+        if: steps.check.outputs.should_release == 'true'
+        id: tag
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Create tag (don't modify package.json for betas - just tag the commit)
+          git tag -a "v$NEW_VERSION" -m "Beta release v$NEW_VERSION"
+          git push origin "v$NEW_VERSION"
+
+          echo "::notice::🏷️ Created beta tag v$NEW_VERSION"
+          echo "created=true" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Comment on PR
+        if: steps.tag.outputs.created == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.tag.outputs.version }}';
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: `## 🧪 Beta Release Published
+
+            **Version:** \`${version}\`
+
+            ### Install
+            \`\`\`bash
+            # npm
+            npm install @gw-tools/gw@beta
+
+            # homebrew
+            brew install mthines/gw-tools/gw-beta
+            \`\`\`
+
+            [View Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version})`
+            });
+
   auto-tag:
     # Only run on push to main (not tags, not PRs, not manual dispatch)
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -194,14 +316,16 @@ jobs:
     # Run when:
     # 1. Tag push (v*) - direct tag push triggers release
     # 2. Auto-tag created a new version - release in same workflow
-    # 3. Manual dispatch with test_release=true - dry-run testing
-    needs: [test, auto-tag]
+    # 3. Auto-tag-beta created a beta version - release in same workflow
+    # 4. Manual dispatch with test_release=true - dry-run testing
+    needs: [test, auto-tag, auto-tag-beta]
     if: |
       always() &&
       needs.test.result == 'success' &&
       (
         startsWith(github.ref, 'refs/tags/v') ||
         needs.auto-tag.outputs.created == 'true' ||
+        needs.auto-tag-beta.outputs.created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.test_release)
       )
     runs-on: ubuntu-latest
@@ -213,7 +337,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || github.ref }}
+          ref: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || needs.auto-tag-beta.outputs.version && format('v{0}', needs.auto-tag-beta.outputs.version) || github.ref }}
 
       - uses: denoland/setup-deno@v2
         with:
@@ -234,7 +358,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
-          # Get version from: auto-tag output, tag ref, or manual input
-          GITHUB_REF_NAME: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || (startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', inputs.version)) }}
+          # Get version from: auto-tag output, auto-tag-beta output, tag ref, or manual input
+          GITHUB_REF_NAME: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || needs.auto-tag-beta.outputs.version && format('v{0}', needs.auto-tag-beta.outputs.version) || (startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', inputs.version)) }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: npx nx run @gw-tools/gw-tool:release:ci
