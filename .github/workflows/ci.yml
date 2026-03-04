@@ -63,6 +63,100 @@ jobs:
       # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
       - run: npx nx run @gw-tools/gw-tool:test:ci
 
+  auto-tag:
+    # Only run on push to main (not tags, not PRs, not manual dispatch)
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      created: ${{ steps.tag.outputs.created }}
+      version: ${{ steps.tag.outputs.version }}
+    steps:
+      # Use PAT to allow tag push to trigger release workflow
+      # Falls back to GITHUB_TOKEN if GH_PAT not set (but release won't auto-trigger)
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Check for releasable changes and create tag
+        id: tag
+        run: |
+          # Skip if this is a release commit
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [[ "$COMMIT_MSG" =~ ^chore\(gw\):\ release\ v ]]; then
+            echo "Skipping - this is a release commit"
+            echo "created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Check if gw-tool source files changed since last tag
+          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+          if [ -z "$LAST_TAG" ]; then
+            CHANGED=$(git diff --name-only HEAD~1 -- packages/gw-tool/src/)
+          else
+            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/gw-tool/src/)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "No gw-tool source changes since last release"
+            echo "created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Changes detected:"
+          echo "$CHANGED"
+
+          # Get commits since last tag for version determination
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          else
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          fi
+
+          # Determine bump type from conventional commits
+          BUMP_TYPE="patch"
+          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            BUMP_TYPE="minor"
+          fi
+          echo "Bump type: $BUMP_TYPE"
+
+          # Get current version and calculate new version
+          CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          IFS='.' read -ra V <<< "$CURRENT"
+
+          case "$BUMP_TYPE" in
+            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
+            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
+            patch) V[2]=$((V[2] + 1)) ;;
+          esac
+
+          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+          echo "New version: $NEW_VERSION"
+
+          # Update package.json version
+          cd packages/gw-tool/npm
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
+          cd -
+
+          # Commit and tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/gw-tool/npm/package.json
+          git commit -m "chore(gw): release v$NEW_VERSION"
+          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
+
+          # Push commit and tag
+          git push origin main
+          git push origin "v$NEW_VERSION"
+
+          echo "created=true" >> $GITHUB_OUTPUT
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
   release:
     # Run on tag pushes OR manual dispatch with test_release=true
     if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.test_release)
