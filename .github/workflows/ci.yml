@@ -293,18 +293,18 @@ jobs:
 
   release:
     # Run when:
-    # 1. Tag push (v*) - tag pushes from auto-tag/auto-tag-beta trigger release
-    # 2. Manual dispatch with test_release=true - dry-run testing
-    #
-    # NOTE: We don't run release in the same workflow as auto-tag/auto-tag-beta.
-    # Instead, the tag push they create triggers a NEW workflow run where
-    # startsWith(github.ref, 'refs/tags/v') is true. This avoids job output
-    # propagation issues between jobs.
-    needs: [test]
+    # 1. Tag push (v*) - direct tag push triggers release
+    # 2. auto-tag created a new stable version
+    # 3. auto-tag-beta created a new beta version
+    # 4. Manual dispatch with test_release=true - dry-run testing
+    needs: [test, auto-tag, auto-tag-beta]
     if: |
+      always() &&
       needs.test.result == 'success' &&
       (
         startsWith(github.ref, 'refs/tags/v') ||
+        needs.auto-tag.outputs.created == 'true' ||
+        needs.auto-tag-beta.outputs.created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.test_release)
       )
     runs-on: ubuntu-latest
@@ -316,10 +316,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 100
+          fetch-depth: 0
+          # Use PAT to ensure we can see tags just pushed by auto-tag jobs
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Fetch tags
-        run: git fetch --tags --force
+      - name: Fetch all tags
+        run: |
+          git fetch --tags --force
+          echo "::group::Available tags"
+          git tag -l "v*" --sort=-version:refname | head -20
+          echo "::endgroup::"
 
       - uses: denoland/setup-deno@v2
         with:
@@ -337,20 +343,72 @@ jobs:
 
       - name: Determine version
         id: version
+        env:
+          # Pass context as env vars to avoid GitHub expression substitution issues in bash
+          GH_REF: ${{ github.ref }}
+          GH_REF_NAME: ${{ github.ref_name }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          INPUT_VERSION: ${{ inputs.version }}
+          AUTO_TAG_CREATED: ${{ needs.auto-tag.outputs.created }}
+          AUTO_TAG_BETA_CREATED: ${{ needs.auto-tag-beta.outputs.created }}
         run: |
-          # Release only runs on tag push or manual dispatch
-          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            VERSION="${{ github.ref_name }}"
-            echo "::notice::Using tag: $VERSION"
-          elif [ -n "${{ inputs.version }}" ]; then
-            VERSION="v${{ inputs.version }}"
+          echo "::group::Debug context"
+          echo "GH_REF: $GH_REF"
+          echo "GH_REF_NAME: $GH_REF_NAME"
+          echo "PR_NUMBER: $PR_NUMBER"
+          echo "INPUT_VERSION: $INPUT_VERSION"
+          echo "AUTO_TAG_CREATED: $AUTO_TAG_CREATED"
+          echo "AUTO_TAG_BETA_CREATED: $AUTO_TAG_BETA_CREATED"
+          echo "::endgroup::"
+
+          VERSION=""
+
+          # Priority 1: Direct tag push
+          if [[ "$GH_REF" == refs/tags/v* ]]; then
+            VERSION="$GH_REF_NAME"
+            echo "::notice::Using direct tag push: $VERSION"
+
+          # Priority 2: auto-tag-beta created a beta tag (detect from git)
+          elif [[ "$AUTO_TAG_BETA_CREATED" == "true" && -n "$PR_NUMBER" ]]; then
+            # Find the most recent beta tag for this PR
+            VERSION=$(git tag -l "v*-beta.${PR_NUMBER}.*" --sort=-version:refname | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "::notice::Found beta tag for PR #$PR_NUMBER: $VERSION"
+            else
+              echo "::error::auto-tag-beta reported created=true but no tag found for PR #$PR_NUMBER"
+              exit 1
+            fi
+
+          # Priority 3: auto-tag created a stable tag (detect from git)
+          elif [[ "$AUTO_TAG_CREATED" == "true" ]]; then
+            # Find the most recent stable tag (exclude betas)
+            VERSION=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -1)
+            if [ -n "$VERSION" ]; then
+              echo "::notice::Found stable tag: $VERSION"
+            else
+              echo "::error::auto-tag reported created=true but no stable tag found"
+              exit 1
+            fi
+
+          # Priority 4: Manual dispatch with test version
+          elif [[ -n "$INPUT_VERSION" ]]; then
+            VERSION="v$INPUT_VERSION"
             echo "::notice::Using manual input version: $VERSION"
+
           else
             echo "::error::No version could be determined!"
+            echo "This usually means release was triggered without a valid tag."
             exit 1
           fi
 
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "::notice::Final version for release: $VERSION"
+
+      - name: Checkout release tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          echo "Checking out tag: $VERSION"
+          git checkout "$VERSION"
 
       - name: Run release
         env:
@@ -362,13 +420,11 @@ jobs:
         run: npx nx run @gw-tools/gw-tool:release:ci
 
       - name: Comment on PR (beta releases)
-        if: contains(github.ref_name, '-beta.')
+        if: contains(steps.version.outputs.version, '-beta.')
         uses: actions/github-script@v7
         with:
           script: |
-            // Version format: vX.Y.Z-beta.{PR_NUMBER}.{ITERATION}
-            const tagName = '${{ github.ref_name }}';
-            const version = tagName.replace(/^v/, '');
+            const version = '${{ steps.version.outputs.version }}'.replace(/^v/, '');
 
             // Extract PR number from version (e.g., "0.29.0-beta.27.5" -> "27")
             const match = version.match(/-beta\.(\d+)\./);
