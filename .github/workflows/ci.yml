@@ -192,8 +192,9 @@ jobs:
             exit 0
           fi
 
-          # Check if gw-tool source files changed since last tag
-          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | head -n 1)
+          # Check if gw-tool source files changed since last STABLE tag
+          # (exclude beta tags - beta releases shouldn't block stable releases)
+          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1)
           echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
 
           if [ -z "$LAST_TAG" ]; then
