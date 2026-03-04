@@ -158,9 +158,19 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
   release:
-    # Run on tag pushes OR manual dispatch with test_release=true
-    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.test_release)
-    needs: test
+    # Run when:
+    # 1. Tag push (v*) - direct tag push triggers release
+    # 2. Auto-tag created a new version - release in same workflow
+    # 3. Manual dispatch with test_release=true - dry-run testing
+    needs: [test, auto-tag]
+    if: |
+      always() &&
+      needs.test.result == 'success' &&
+      (
+        startsWith(github.ref, 'refs/tags/v') ||
+        needs.auto-tag.outputs.created == 'true' ||
+        (github.event_name == 'workflow_dispatch' && inputs.test_release)
+      )
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
@@ -170,6 +180,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || github.ref }}
 
       - uses: denoland/setup-deno@v2
         with:
@@ -190,7 +201,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
-          # For manual test runs, simulate a version
-          GITHUB_REF_NAME: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', inputs.version) }}
+          # Get version from: auto-tag output, tag ref, or manual input
+          GITHUB_REF_NAME: ${{ needs.auto-tag.outputs.version && format('v{0}', needs.auto-tag.outputs.version) || (startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', inputs.version)) }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: npx nx run @gw-tools/gw-tool:release:ci
