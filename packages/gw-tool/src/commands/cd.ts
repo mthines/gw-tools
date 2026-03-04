@@ -69,7 +69,6 @@ export async function executeCd(args: string[]): Promise<void> {
   }
 
   // Output the path to stdout (only thing that goes to stdout)
-  // This allows using it in a subshell for cd: cd $(gw cd <worktree>)
   console.log(resolved[0].path);
 
   // Show helpful tip if shell integration not installed and output is a TTY
