@@ -6,7 +6,7 @@ on:
       - main
     tags:
       - 'v*'
-      - '!v*-beta.*'  # Beta tags are released by the PR workflow, not tag push
+      - '!v*-beta.*' # Beta tags are released by the PR workflow, not tag push
   pull_request:
   workflow_dispatch:
     inputs:
