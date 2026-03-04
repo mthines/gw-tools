@@ -172,3 +172,45 @@ Deno.test('sync command - errors when trying to sync worktree to itself', async 
     await repo.cleanup();
   }
 });
+
+Deno.test('sync command - handles nested worktree paths (e.g., fix/branch-name)', async () => {
+  const repo = new GitTestRepo();
+  await repo.initBare();
+
+  // Create main worktree
+  const mainPath = join(repo.path, 'main');
+  await repo.runCommand('git', ['worktree', 'add', mainPath, '--orphan', '-b', 'main'], repo.path);
+  await repo.runCommand('git', ['commit', '--allow-empty', '-m', 'Initial commit'], mainPath);
+
+  // Create nested worktree under fix/ directory
+  const fixDir = join(repo.path, 'fix');
+  await Deno.mkdir(fixDir, { recursive: true });
+  const nestedFeaturePath = join(fixDir, 'my-feature');
+  await repo.runCommand(
+    'git',
+    ['worktree', 'add', '-b', 'fix/my-feature', nestedFeaturePath, 'main'],
+    repo.path
+  );
+
+  try {
+    // Create source file in main worktree
+    await Deno.writeTextFile(join(mainPath, '.env'), 'NESTED_TEST=works');
+
+    const config = createConfig(repo.path, ['.env']);
+    await writeTestConfig(repo.path, config);
+
+    // cd into the nested worktree
+    const cwd = new TempCwd(nestedFeaturePath);
+    try {
+      // No positional args — should resolve to fix/my-feature
+      await executeCopy([]);
+
+      await assertFileExists(join(nestedFeaturePath, '.env'));
+      await assertFileContent(join(nestedFeaturePath, '.env'), 'NESTED_TEST=works');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});

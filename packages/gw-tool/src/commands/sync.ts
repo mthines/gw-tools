@@ -2,7 +2,7 @@
  * Copy command implementation
  */
 
-import { basename } from '$std/path';
+import { relative } from '$std/path';
 import { parseCopyArgs, showCopyHelp } from '../lib/cli.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
@@ -37,7 +37,7 @@ export async function executeCopy(args: string[]): Promise<void> {
       showCopyHelp();
       Deno.exit(1);
     }
-    target = basename(currentWorktreePath);
+    target = relative(gitRoot, currentWorktreePath);
   }
 
   // 5. Determine files to copy - use autoCopyFiles from config if no files specified
