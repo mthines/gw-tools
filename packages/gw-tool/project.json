@@ -145,6 +145,9 @@
       "configurations": {
         "version": {
           "command": "./packages/gw-tool/scripts/release.sh --version {args.version}"
+        },
+        "ci": {
+          "command": "./packages/gw-tool/scripts/release-ci.sh"
         }
       }
     },

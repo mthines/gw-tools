@@ -4,14 +4,17 @@ on:
   push:
     branches:
       - main
+    tags:
+      - "v*"
   pull_request:
 
+# Default permissions for all jobs
 permissions:
   actions: read
   contents: read
 
 jobs:
-  main:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -38,10 +41,49 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Configure git for tests that create commits
+      - name: Configure git
+        run: |
+          git config --global user.email "ci@gw-tools.dev"
+          git config --global user.name "CI"
+
       # Prepend any command with "nx-cloud record --" to record its logs to Nx Cloud
       - run: npx nx-cloud record -- npx nx format:check --base="remotes/origin/main" || echo "Format check failed"
+
       # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
       - run: npx nx run @gw-tools/gw-tool:test:ci
-      # Nx Cloud recommends fixes for failures to help you get CI green faster. Learn more: https://nx.dev/ci/features/self-healing-ci
-      - run: npx nx fix-ci
-        if: always()
+
+  release:
+    # Only run on tag pushes, after tests pass
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: test
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: write      # For creating GitHub releases
+      id-token: write      # For npm trusted publishing (OIDC)
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Run release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
+          AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+        run: npx nx run @gw-tools/gw-tool:release:ci
