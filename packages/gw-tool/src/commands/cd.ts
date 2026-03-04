@@ -92,6 +92,7 @@ export async function executeCd(args: string[]): Promise<void> {
       console.error('');
       console.error('💡 Tip: Add shell integration for automatic navigation:');
       console.error(`   echo '${evalLine}' >> ${configFile}`);
+      console.error('   Then restart your shell or source the config file.');
     }
   }
 }
