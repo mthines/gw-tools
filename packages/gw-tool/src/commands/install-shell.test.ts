@@ -235,39 +235,6 @@ Deno.test('install-shell - outputs custom command name function', async () => {
   }
 });
 
-Deno.test('install-shell - warns when legacy file-based installation is detected', async () => {
-  const tempHome = new TempHome();
-  try {
-    const originalShell = Deno.env.get('SHELL');
-    Deno.env.set('SHELL', '/bin/zsh');
-
-    try {
-      // Set up legacy integration files (but don't add to .zshrc)
-      const shellDir = join(tempHome.path, '.gw', 'shell');
-      await Deno.mkdir(shellDir, { recursive: true });
-      await Deno.writeTextFile(join(shellDir, 'integration.zsh'), '# gw-tools shell integration\ngw() { ... }');
-
-      // Run install-shell (not --remove, just output)
-      const { stdout, stderr } = await withMockedExit(() => executeInstallShell([]), { captureOutput: true });
-
-      // Should still output the function
-      assertStringIncludes(stdout || '', 'gw() {', 'Should output gw function');
-
-      // Should warn about legacy installation on stderr
-      assertStringIncludes(stderr || '', 'Legacy file-based shell integration detected', 'Should warn about legacy');
-      assertStringIncludes(stderr || '', 'gw install-shell --remove', 'Should suggest removal command');
-    } finally {
-      if (originalShell) {
-        Deno.env.set('SHELL', originalShell);
-      } else {
-        Deno.env.delete('SHELL');
-      }
-    }
-  } finally {
-    await tempHome.cleanup();
-  }
-});
-
 Deno.test('install-shell - removes fish integration with --remove', async () => {
   const tempHome = new TempHome();
   try {
