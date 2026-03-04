@@ -418,7 +418,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
-          GITHUB_REF_NAME: ${{ steps.version.outputs.version }}
+          # Use custom env var name to avoid conflict with GitHub's built-in GITHUB_REF_NAME
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
           SKIP_NPM: 'true'
         run: npx nx run @gw-tools/gw-tool:release:ci

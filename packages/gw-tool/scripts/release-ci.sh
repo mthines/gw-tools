@@ -37,14 +37,17 @@ if [ -z "$CI" ]; then
   exit 1
 fi
 
-# Get version from tag
-if [ -z "$GITHUB_REF_NAME" ]; then
-  echo -e "${RED}❌ GITHUB_REF_NAME not set. This script must be triggered by a tag push.${NC}"
+# Get version from RELEASE_VERSION (preferred) or GITHUB_REF_NAME (fallback for direct tag push)
+if [ -n "$RELEASE_VERSION" ]; then
+  # Use explicit RELEASE_VERSION from workflow (avoids GitHub env var conflicts)
+  VERSION="${RELEASE_VERSION#v}"
+elif [ -n "$GITHUB_REF_NAME" ]; then
+  # Fallback to GITHUB_REF_NAME for direct tag pushes
+  VERSION="${GITHUB_REF_NAME#v}"
+else
+  echo -e "${RED}❌ Neither RELEASE_VERSION nor GITHUB_REF_NAME set. This script must be triggered by a release workflow.${NC}"
   exit 1
 fi
-
-# Extract version from tag (remove 'v' prefix)
-VERSION="${GITHUB_REF_NAME#v}"
 echo -e "${BLUE}📦 CI Release for @gw-tools/gw v${VERSION}${NC}\n"
 
 # Determine if prerelease
