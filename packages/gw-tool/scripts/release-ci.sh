@@ -315,9 +315,9 @@ else
 fi
 
 # =============================================================================
-# Step 6: Prepare and publish npm package
+# Step 6: Prepare npm package (publishing handled by workflow for OIDC)
 # =============================================================================
-echo -e "\n${BLUE}📤 Publishing to npm...${NC}"
+echo -e "\n${BLUE}📦 Preparing npm package...${NC}"
 
 # Prepare npm package
 NPM_DIR="$DIST_DIR/npm"
@@ -332,7 +332,9 @@ echo -e "${BLUE}Updating package.json version to $VERSION...${NC}"
 sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
 echo -e "  Package version: $(grep '"version"' package.json)"
 
-if [ "$DRY_RUN" = "true" ]; then
+if [ "$SKIP_NPM" = "true" ]; then
+  echo -e "${YELLOW}⏭️  Skipping npm publish (will be handled by workflow for OIDC auth)${NC}"
+elif [ "$DRY_RUN" = "true" ]; then
   echo -e "${YELLOW}[DRY RUN] Would publish to npm:${NC}"
   echo -e "  Package: @gw-tools/gw"
   echo -e "  Version: $VERSION"

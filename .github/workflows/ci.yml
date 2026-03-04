@@ -410,14 +410,35 @@ jobs:
           echo "Checking out tag: $VERSION"
           git checkout "$VERSION"
 
-      - name: Run release
+      - name: Run release (build, GitHub release, Homebrew)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
           GITHUB_REF_NAME: ${{ steps.version.outputs.version }}
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          SKIP_NPM: 'true'
         run: npx nx run @gw-tools/gw-tool:release:ci
+
+      - name: Publish to npm
+        if: github.event_name != 'workflow_dispatch'
+        working-directory: dist/packages/gw-tool/npm
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          VERSION="${VERSION#v}"  # Remove v prefix
+
+          # Update version in package.json
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+          echo "Publishing @gw-tools/gw@$VERSION"
+
+          # Determine npm tag
+          if [[ "$VERSION" == *"-"* ]]; then
+            NPM_TAG=$(echo "$VERSION" | sed -E 's/.*-([^.]+)\..*/\1/')
+            echo "Publishing with tag: $NPM_TAG"
+            npm publish --provenance --access public --tag "$NPM_TAG"
+          else
+            npm publish --provenance --access public
+          fi
 
       - name: Comment on PR (beta releases)
         if: contains(steps.version.outputs.version, '-beta.')
