@@ -229,6 +229,8 @@ else
     git commit -m "gw: update to v$VERSION"
   fi
 
+  # Ensure we use token auth for push (some CI environments have credential helpers that override)
+  git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mthines/homebrew-gw-tools.git"
   git push origin main
 
   cd "$WORKSPACE_ROOT"
