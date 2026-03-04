@@ -293,18 +293,18 @@ jobs:
 
   release:
     # Run when:
-    # 1. Tag push (v*) - direct tag push triggers release
-    # 2. Auto-tag created a new version - release in same workflow
-    # 3. Auto-tag-beta created a beta version - release in same workflow
-    # 4. Manual dispatch with test_release=true - dry-run testing
-    needs: [test, auto-tag, auto-tag-beta]
+    # 1. Tag push (v*) - tag pushes from auto-tag/auto-tag-beta trigger release
+    # 2. Manual dispatch with test_release=true - dry-run testing
+    #
+    # NOTE: We don't run release in the same workflow as auto-tag/auto-tag-beta.
+    # Instead, the tag push they create triggers a NEW workflow run where
+    # startsWith(github.ref, 'refs/tags/v') is true. This avoids job output
+    # propagation issues between jobs.
+    needs: [test]
     if: |
-      always() &&
       needs.test.result == 'success' &&
       (
         startsWith(github.ref, 'refs/tags/v') ||
-        needs.auto-tag.outputs.created == 'true' ||
-        needs.auto-tag-beta.outputs.created == 'true' ||
         (github.event_name == 'workflow_dispatch' && inputs.test_release)
       )
     runs-on: ubuntu-latest
@@ -318,19 +318,8 @@ jobs:
         with:
           fetch-depth: 100
 
-      - name: Fetch tags and checkout release
-        run: |
-          # Fetch all tags first
-          git fetch --tags --force
-
-          # Checkout the release tag if this is an auto-tag release
-          if [ -n "${{ needs.auto-tag.outputs.version }}" ]; then
-            echo "Checking out stable release tag: v${{ needs.auto-tag.outputs.version }}"
-            git checkout "v${{ needs.auto-tag.outputs.version }}"
-          elif [ -n "${{ needs.auto-tag-beta.outputs.version }}" ]; then
-            echo "Checking out beta release tag: v${{ needs.auto-tag-beta.outputs.version }}"
-            git checkout "v${{ needs.auto-tag-beta.outputs.version }}"
-          fi
+      - name: Fetch tags
+        run: git fetch --tags --force
 
       - uses: denoland/setup-deno@v2
         with:
@@ -349,19 +338,19 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          if [ -n "${{ needs.auto-tag.outputs.version }}" ]; then
-            echo "version=v${{ needs.auto-tag.outputs.version }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using auto-tag version: v${{ needs.auto-tag.outputs.version }}"
-          elif [ -n "${{ needs.auto-tag-beta.outputs.version }}" ]; then
-            echo "version=v${{ needs.auto-tag-beta.outputs.version }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using auto-tag-beta version: v${{ needs.auto-tag-beta.outputs.version }}"
-          elif [[ "${{ github.ref }}" == refs/tags/v* ]]; then
-            echo "version=${{ github.ref_name }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using tag ref: ${{ github.ref_name }}"
+          # Release only runs on tag push or manual dispatch
+          if [[ "${{ github.ref }}" == refs/tags/v* ]]; then
+            VERSION="${{ github.ref_name }}"
+            echo "::notice::Using tag: $VERSION"
+          elif [ -n "${{ inputs.version }}" ]; then
+            VERSION="v${{ inputs.version }}"
+            echo "::notice::Using manual input version: $VERSION"
           else
-            echo "version=v${{ inputs.version }}" >> $GITHUB_OUTPUT
-            echo "::notice::Using manual input version: v${{ inputs.version }}"
+            echo "::error::No version could be determined!"
+            exit 1
           fi
+
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
 
       - name: Run release
         env:
@@ -373,12 +362,21 @@ jobs:
         run: npx nx run @gw-tools/gw-tool:release:ci
 
       - name: Comment on PR (beta releases)
-        if: needs.auto-tag-beta.outputs.created == 'true'
+        if: contains(github.ref_name, '-beta.')
         uses: actions/github-script@v7
         with:
           script: |
-            const version = '${{ needs.auto-tag-beta.outputs.version }}';
-            const prNumber = '${{ needs.auto-tag-beta.outputs.pr_number }}';
+            // Version format: vX.Y.Z-beta.{PR_NUMBER}.{ITERATION}
+            const tagName = '${{ github.ref_name }}';
+            const version = tagName.replace(/^v/, '');
+
+            // Extract PR number from version (e.g., "0.29.0-beta.27.5" -> "27")
+            const match = version.match(/-beta\.(\d+)\./);
+            if (!match) {
+              console.log('Could not extract PR number from version:', version);
+              return;
+            }
+            const prNumber = match[1];
 
             const body = [
               '## 🧪 Beta Release Published',
