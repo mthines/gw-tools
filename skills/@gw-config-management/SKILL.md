@@ -295,8 +295,9 @@ If no configuration exists:
 **How it's used:**
 
 - `gw add feature-x` copies from `defaultBranch` worktree
-- `gw sync target file.txt` syncs from `defaultBranch` unless `--from` specified
-- `gw sync target` (without files) syncs `autoCopyFiles` from `defaultBranch`
+- `gw sync` (without arguments) syncs `autoCopyFiles` to the current worktree
+- `gw sync target` syncs `autoCopyFiles` to a specific target worktree
+- `gw sync target file.txt` syncs specific files from `defaultBranch` unless `--from` specified
 - `gw update` fetches and updates from `defaultBranch` unless `--from` specified
 - **Auto-clean never removes this worktree** - it's protected as the source for file syncing
 
@@ -364,7 +365,8 @@ Use **rebase** when:
 **How it's used:**
 
 - `gw add feature-x` automatically copies these files when creating worktrees
-- `gw sync feature-x` (without file arguments) syncs these files to existing worktrees
+- `gw sync` syncs these files to the current worktree
+- `gw sync feature-x` syncs these files to a specific worktree
 
 **Important notes:**
 
@@ -505,10 +507,13 @@ gw add feat-new-feature
 When you update secrets in your `defaultBranch` worktree:
 
 ```bash
-# Sync all autoCopyFiles to an existing worktree
+# Sync all autoCopyFiles to current worktree (simplest)
+gw sync
+
+# Sync all autoCopyFiles to a specific worktree
 gw sync feat-existing-branch
 
-# Or sync specific files
+# Or sync specific files to a specific worktree
 gw sync feat-existing-branch .env
 ```
 
@@ -1048,7 +1053,10 @@ gw init --auto-copy-files .env,.env.local
 **Solution B:** Manual sync:
 
 ```bash
-# Sync all autoCopyFiles from config
+# Sync all autoCopyFiles to current worktree
+gw sync
+
+# Sync all autoCopyFiles to a specific worktree
 gw sync feature-x
 
 # Or sync specific files

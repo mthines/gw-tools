@@ -372,13 +372,19 @@ When creating worktrees, `gw add` has different behavior depending on whether yo
 If you need to copy files later or from a different source:
 
 ```bash
-# Copy all autoCopyFiles from config (if configured)
+# Sync autoCopyFiles to current worktree (simplest usage)
+gw sync
+
+# Sync autoCopyFiles to a specific worktree
 gw sync feature-auth
 
-# Copy specific files from main to current worktree
+# Sync specific files to current worktree
+gw sync .env components/agents/.env
+
+# Sync specific files to a specific worktree
 gw sync feature-auth .env components/agents/.env
 
-# Copy from a different worktree
+# Sync from a different source worktree
 gw sync --from staging feature-auth .env
 ```
 
