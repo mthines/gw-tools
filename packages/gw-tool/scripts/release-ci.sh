@@ -327,6 +327,11 @@ cp "$PACKAGE_DIR/README.md" "$NPM_DIR/"
 
 cd "$NPM_DIR"
 
+# Update version in package.json to match the release version
+echo -e "${BLUE}Updating package.json version to $VERSION...${NC}"
+sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+echo -e "  Package version: $(grep '"version"' package.json)"
+
 if [ "$DRY_RUN" = "true" ]; then
   echo -e "${YELLOW}[DRY RUN] Would publish to npm:${NC}"
   echo -e "  Package: @gw-tools/gw"
