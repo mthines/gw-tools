@@ -25,6 +25,11 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
+# Dry run mode (for testing)
+if [ "$DRY_RUN" = "true" ]; then
+  echo -e "${YELLOW}🧪 DRY RUN MODE - No actual publishing will occur${NC}\n"
+fi
+
 # Ensure we're in CI
 if [ -z "$CI" ]; then
   echo -e "${RED}❌ This script is designed to run in CI only${NC}"
@@ -139,13 +144,18 @@ if [ "$IS_PRERELEASE" = true ]; then
   PRERELEASE_FLAG="--prerelease"
 fi
 
-gh release create "v${VERSION}" \
-  $PRERELEASE_FLAG \
-  --title "v${VERSION}" \
-  --notes "$CHANGELOG" \
-  "$BINARIES_DIR"/*
-
-echo -e "${GREEN}✅ GitHub release created${NC}"
+if [ "$DRY_RUN" = "true" ]; then
+  echo -e "${YELLOW}[DRY RUN] Would create GitHub release v${VERSION}${NC}"
+  echo -e "${YELLOW}[DRY RUN] Changelog:${NC}"
+  echo "$CHANGELOG" | head -10
+else
+  gh release create "v${VERSION}" \
+    $PRERELEASE_FLAG \
+    --title "v${VERSION}" \
+    --notes "$CHANGELOG" \
+    "$BINARIES_DIR"/*
+  echo -e "${GREEN}✅ GitHub release created${NC}"
+fi
 
 # =============================================================================
 # Step 4: Update Homebrew formula
@@ -154,6 +164,11 @@ echo -e "\n${BLUE}🍺 Updating Homebrew formula...${NC}"
 
 if [ -z "$HOMEBREW_TAP_TOKEN" ]; then
   echo -e "${YELLOW}⚠️  HOMEBREW_TAP_TOKEN not set, skipping Homebrew update${NC}"
+elif [ "$DRY_RUN" = "true" ]; then
+  echo -e "${YELLOW}[DRY RUN] Would update Homebrew formula with:${NC}"
+  echo -e "  Version: $VERSION"
+  echo -e "  macOS arm64 SHA: $MACOS_ARM64_SHA256"
+  echo -e "  macOS x64 SHA: $MACOS_X64_SHA256"
 else
   HOMEBREW_TAP_DIR="/tmp/homebrew-gw-tools"
 
@@ -230,6 +245,11 @@ if [ "$IS_PRERELEASE" = false ]; then
 
   if [ -z "$AUR_SSH_KEY" ]; then
     echo -e "${YELLOW}⚠️  AUR_SSH_KEY not set, skipping AUR update${NC}"
+  elif [ "$DRY_RUN" = "true" ]; then
+    echo -e "${YELLOW}[DRY RUN] Would update AUR package with:${NC}"
+    echo -e "  Version: $VERSION"
+    echo -e "  Linux x64 SHA: $LINUX_X64_SHA256"
+    echo -e "  Linux arm64 SHA: $LINUX_ARM64_SHA256"
   else
     # Setup SSH
     mkdir -p ~/.ssh
@@ -305,30 +325,42 @@ cp "$PACKAGE_DIR/README.md" "$NPM_DIR/"
 
 cd "$NPM_DIR"
 
-# Publish with provenance (OIDC trusted publishing)
-if [ "$IS_PRERELEASE" = true ]; then
-  echo -e "${BLUE}Publishing to npm with tag: $NPM_TAG...${NC}"
-  npm publish --provenance --access public --tag "$NPM_TAG"
+if [ "$DRY_RUN" = "true" ]; then
+  echo -e "${YELLOW}[DRY RUN] Would publish to npm:${NC}"
+  echo -e "  Package: @gw-tools/gw"
+  echo -e "  Version: $VERSION"
+  echo -e "  Tag: $NPM_TAG"
+  npm pack --dry-run 2>/dev/null || true
 else
-  echo -e "${BLUE}Publishing to npm as latest...${NC}"
-  npm publish --provenance --access public
+  # Publish with provenance (OIDC trusted publishing)
+  if [ "$IS_PRERELEASE" = true ]; then
+    echo -e "${BLUE}Publishing to npm with tag: $NPM_TAG...${NC}"
+    npm publish --provenance --access public --tag "$NPM_TAG"
+  else
+    echo -e "${BLUE}Publishing to npm as latest...${NC}"
+    npm publish --provenance --access public
+  fi
+  echo -e "${GREEN}✅ npm package published${NC}"
 fi
 
 cd "$WORKSPACE_ROOT"
 
-echo -e "${GREEN}✅ npm package published${NC}"
-
 # =============================================================================
 # Done!
 # =============================================================================
-echo -e "\n${GREEN}✅ Successfully released @gw-tools/gw v${VERSION}${NC}"
-echo -e "\nRelease URL: https://github.com/mthines/gw-tools/releases/tag/v${VERSION}"
-
-if [ "$IS_PRERELEASE" = true ]; then
-  echo -e "npm package: npm install @gw-tools/gw@$NPM_TAG"
-  echo -e "Homebrew:    brew install mthines/gw-tools/gw-beta"
+if [ "$DRY_RUN" = "true" ]; then
+  echo -e "\n${GREEN}✅ Dry run completed for @gw-tools/gw v${VERSION}${NC}"
+  echo -e "${YELLOW}No actual publishing was performed.${NC}"
 else
-  echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
-  echo -e "Homebrew:    brew install mthines/gw-tools/gw"
-  echo -e "AUR:         yay -S gw-tools"
+  echo -e "\n${GREEN}✅ Successfully released @gw-tools/gw v${VERSION}${NC}"
+  echo -e "\nRelease URL: https://github.com/mthines/gw-tools/releases/tag/v${VERSION}"
+
+  if [ "$IS_PRERELEASE" = true ]; then
+    echo -e "npm package: npm install @gw-tools/gw@$NPM_TAG"
+    echo -e "Homebrew:    brew install mthines/gw-tools/gw-beta"
+  else
+    echo -e "npm package: https://www.npmjs.com/package/@gw-tools/gw"
+    echo -e "Homebrew:    brew install mthines/gw-tools/gw"
+    echo -e "AUR:         yay -S gw-tools"
+  fi
 fi

@@ -7,6 +7,16 @@ on:
     tags:
       - "v*"
   pull_request:
+  workflow_dispatch:
+    inputs:
+      test_release:
+        description: "Test release job (dry-run, no actual publishing)"
+        type: boolean
+        default: false
+      version:
+        description: "Version to simulate (e.g., 0.28.1) - only used if test_release is true"
+        type: string
+        default: "0.0.0-test"
 
 # Default permissions for all jobs
 permissions:
@@ -54,8 +64,8 @@ jobs:
       - run: npx nx run @gw-tools/gw-tool:test:ci
 
   release:
-    # Only run on tag pushes, after tests pass
-    if: startsWith(github.ref, 'refs/tags/v')
+    # Run on tag pushes OR manual dispatch with test_release=true
+    if: startsWith(github.ref, 'refs/tags/v') || (github.event_name == 'workflow_dispatch' && inputs.test_release)
     needs: test
     runs-on: ubuntu-latest
     environment: npm-publish
@@ -86,4 +96,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
+          # For manual test runs, simulate a version
+          GITHUB_REF_NAME: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', inputs.version) }}
+          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
         run: npx nx run @gw-tools/gw-tool:release:ci
