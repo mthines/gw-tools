@@ -1529,124 +1529,82 @@ nx run gw-tool:test
 
 ### Publishing
 
-This tool uses **automated semantic versioning** based on conventional commits. The version is automatically determined from your commit messages.
+Releases are **fully automated** via CI. No manual release commands are needed.
 
-#### Automated Release (Recommended)
+#### How It Works
 
-The simplest way to publish is using the automated release process:
+**Beta Releases (on Pull Requests):**
+
+When you open a non-draft PR with changes to `packages/gw-tool/src/`:
+
+1. CI runs tests
+2. If tests pass, a beta version is automatically created (e.g., `0.29.0-beta.27.1`)
+3. The beta is published to npm with the `beta` tag and Homebrew as `gw-beta`
+4. A comment is added to the PR with installation instructions
 
 ```bash
-# Make sure you're on main/master branch with all changes pushed
-nx run gw-tool:release
+# Install beta version
+npm install @gw-tools/gw@beta
+brew install mthines/gw-tools/gw-beta
 ```
 
-This single command will:
+**Stable Releases (on Merge to Main):**
 
-1. Analyze your commits since the last release
-2. Automatically determine version bump (major/minor/patch)
-3. Update npm/package.json with the new version
-4. Create a git commit and tag
-5. Push to GitHub
-6. Build binaries for all platforms
-7. Create a GitHub release with binaries attached
-8. Publish to npm
+When a PR is merged to `main` with changes to `packages/gw-tool/src/`:
 
-**Conventional Commit Format:**
+1. CI automatically determines the version bump from conventional commits
+2. Updates `package.json`, creates a git tag, and pushes
+3. Builds binaries for all platforms
+4. Creates a GitHub release with binaries attached
+5. Publishes to npm and updates Homebrew tap
+
+#### Conventional Commits
 
 Use these commit prefixes to control versioning:
 
-- `feat:` - New feature (bumps **MINOR** version: 1.0.0 → 1.1.0)
-- `fix:` - Bug fix (bumps **PATCH** version: 1.0.0 → 1.0.1)
-- `BREAKING CHANGE:` or `feat!:` or `fix!:` - Breaking change (bumps **MAJOR** version: 1.0.0 → 2.0.0)
-- `chore:`, `docs:`, `style:`, `refactor:`, `test:` - No version bump
+| Prefix | Version Bump | Example |
+|--------|--------------|---------|
+| `feat:` | Minor (1.0.0 → 1.1.0) | `feat: add dry-run mode` |
+| `fix:` | Patch (1.0.0 → 1.0.1) | `fix: correct path resolution` |
+| `feat!:` or `BREAKING CHANGE:` | Major (1.0.0 → 2.0.0) | `feat!: redesign config` |
+| `chore:`, `docs:`, `refactor:` | No bump | `docs: update README` |
 
-**Examples:**
+#### Testing Releases
+
+To test the release workflow without publishing:
 
 ```bash
-git commit -m "feat: add dry-run mode"           # 1.0.0 → 1.1.0
-git commit -m "fix: correct path resolution"     # 1.0.0 → 1.0.1
-git commit -m "feat!: redesign config structure" # 1.0.0 → 2.0.0
-git commit -m "docs: update README"              # no version bump
+# Trigger a dry-run release via GitHub Actions
+gh workflow run ci.yml -f test_release=true -f version=0.0.0-test
 ```
 
-#### Manual Publishing
+#### Manual Publishing (Fallback)
 
-If you prefer manual control or need to debug the release process:
+If CI fails or you need manual control:
 
 ```bash
-# 1. Update version
-cd packages/gw-tool/npm
-npm version 1.0.0
-cd ../../..
-
-# 2. Commit and push
-git add packages/gw-tool/npm/package.json
-git commit -m "chore: bump version to 1.0.0"
-git push
-
-# 3. Build binaries
+# 1. Build binaries
 nx run gw-tool:compile-all
 nx run gw-tool:npm-pack
 
-# 4. Create GitHub release
+# 2. Create GitHub release
 gh release create "v1.0.0" \
   --title "v1.0.0" \
   --notes "Release notes" \
   dist/packages/gw-tool/binaries/*
 
-# 5. Publish to npm
+# 3. Publish to npm
 cd dist/packages/gw-tool/npm
 npm publish --access public
 ```
 
 #### Publishing to JSR (Optional)
 
-For users who prefer Deno's native package manager.
-
-1. **Add JSR configuration to `deno.json`:**
-
-   ```json
-   {
-     "name": "@your-scope/gw",
-     "version": "1.0.0",
-     "exports": "./src/main.ts"
-   }
-   ```
-
-2. **Publish:**
-   ```bash
-   nx run gw-tool:publish-jsr
-   ```
-
-#### Version Management
-
-**Automated Approach (Recommended):**
-
-Use conventional commits and let the system determine the version:
+For users who prefer Deno's native package manager:
 
 ```bash
-# Make changes
-git add .
-git commit -m "feat: add new awesome feature"
-
-# When ready to release
-nx run gw-tool:release
+nx run gw-tool:publish-jsr
 ```
-
-The version is automatically determined from your commits:
-
-- `feat:` → minor version bump (1.0.0 → 1.1.0)
-- `fix:` → patch version bump (1.0.0 → 1.0.1)
-- `feat!:` or `BREAKING CHANGE:` → major version bump (1.0.0 → 2.0.0)
-
-**Manual Approach:**
-
-If you prefer manual control:
-
-1. Update `packages/gw-tool/npm/package.json` version
-2. Update `packages/gw-tool/deno.json` version (if using JSR)
-3. Commit and push changes
-4. Build, create release, and publish manually
 
 ### Project Structure
 
