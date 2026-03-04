@@ -10,59 +10,7 @@ import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
-
-/**
- * Check if shell integration is installed
- */
-async function isShellIntegrationInstalled(): Promise<boolean> {
-  const shell = Deno.env.get('SHELL') || '';
-  const shellName = shell.split('/').pop() || '';
-  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
-
-  if (!home) {
-    return false;
-  }
-
-  // Check for new eval-based format in shell config
-  let configFile: string;
-  if (shellName === 'zsh') {
-    configFile = join(home, '.zshrc');
-  } else if (shellName === 'bash') {
-    configFile = join(home, '.bashrc');
-  } else if (shellName === 'fish') {
-    configFile = join(home, '.config', 'fish', 'config.fish');
-  } else {
-    return false;
-  }
-
-  try {
-    const content = await Deno.readTextFile(configFile);
-    if (content.includes('gw install-shell')) {
-      return true;
-    }
-  } catch {
-    // File doesn't exist
-  }
-
-  // Check for legacy file-based format
-  let legacyFile: string;
-  if (shellName === 'zsh') {
-    legacyFile = join(home, '.gw', 'shell', 'integration.zsh');
-  } else if (shellName === 'bash') {
-    legacyFile = join(home, '.gw', 'shell', 'integration.bash');
-  } else if (shellName === 'fish') {
-    legacyFile = join(home, '.config', 'fish', 'functions', 'gw.fish');
-  } else {
-    return false;
-  }
-
-  try {
-    await Deno.stat(legacyFile);
-    return true;
-  } catch {
-    return false;
-  }
-}
+import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
  * Parsed init command arguments
