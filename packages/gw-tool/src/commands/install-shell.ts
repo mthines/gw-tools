@@ -49,7 +49,7 @@ async function outputShellIntegration(commandName = 'gw', actualCommand?: string
   // Detect shell
   const shell = Deno.env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
-  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+  // const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
 
   let shellFunction: string;
   let configFile: string;

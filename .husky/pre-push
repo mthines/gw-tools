@@ -16,6 +16,11 @@ if ! git diff --quiet; then
   git add -A
   git commit -m "chore: autofix"
   echo "Auto-committed formatting changes."
+
+  # Push the autofix commit so user doesn't need to push again
+  echo "Pushing autofix commit..."
+  git push
+  echo "Autofix commit pushed."
 fi
 
 echo "Formatting check passed!"

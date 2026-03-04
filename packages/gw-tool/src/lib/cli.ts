@@ -113,7 +113,8 @@ Examples:
 
 For command-specific help:
   gw <command> --help
-`);
+
+Ciao! 👋`);
 }
 
 /**

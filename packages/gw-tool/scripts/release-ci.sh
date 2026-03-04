@@ -37,14 +37,17 @@ if [ -z "$CI" ]; then
   exit 1
 fi
 
-# Get version from tag
-if [ -z "$GITHUB_REF_NAME" ]; then
-  echo -e "${RED}❌ GITHUB_REF_NAME not set. This script must be triggered by a tag push.${NC}"
+# Get version from RELEASE_VERSION (preferred) or GITHUB_REF_NAME (fallback for direct tag push)
+if [ -n "$RELEASE_VERSION" ]; then
+  # Use explicit RELEASE_VERSION from workflow (avoids GitHub env var conflicts)
+  VERSION="${RELEASE_VERSION#v}"
+elif [ -n "$GITHUB_REF_NAME" ]; then
+  # Fallback to GITHUB_REF_NAME for direct tag pushes
+  VERSION="${GITHUB_REF_NAME#v}"
+else
+  echo -e "${RED}❌ Neither RELEASE_VERSION nor GITHUB_REF_NAME set. This script must be triggered by a release workflow.${NC}"
   exit 1
 fi
-
-# Extract version from tag (remove 'v' prefix)
-VERSION="${GITHUB_REF_NAME#v}"
 echo -e "${BLUE}📦 CI Release for @gw-tools/gw v${VERSION}${NC}\n"
 
 # Determine if prerelease
@@ -229,6 +232,8 @@ else
     git commit -m "gw: update to v$VERSION"
   fi
 
+  # Ensure we use token auth for push (some CI environments have credential helpers that override)
+  git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mthines/homebrew-gw-tools.git"
   git push origin main
 
   cd "$WORKSPACE_ROOT"
@@ -313,9 +318,9 @@ else
 fi
 
 # =============================================================================
-# Step 6: Prepare and publish npm package
+# Step 6: Prepare npm package (publishing handled by workflow for OIDC)
 # =============================================================================
-echo -e "\n${BLUE}📤 Publishing to npm...${NC}"
+echo -e "\n${BLUE}📦 Preparing npm package...${NC}"
 
 # Prepare npm package
 NPM_DIR="$DIST_DIR/npm"
@@ -325,7 +330,14 @@ cp "$PACKAGE_DIR/README.md" "$NPM_DIR/"
 
 cd "$NPM_DIR"
 
-if [ "$DRY_RUN" = "true" ]; then
+# Update version in package.json to match the release version
+echo -e "${BLUE}Updating package.json version to $VERSION...${NC}"
+sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+echo -e "  Package version: $(grep '"version"' package.json)"
+
+if [ "$SKIP_NPM" = "true" ]; then
+  echo -e "${YELLOW}⏭️  Skipping npm publish (will be handled by workflow for OIDC auth)${NC}"
+elif [ "$DRY_RUN" = "true" ]; then
   echo -e "${YELLOW}[DRY RUN] Would publish to npm:${NC}"
   echo -e "  Package: @gw-tools/gw"
   echo -e "  Version: $VERSION"
