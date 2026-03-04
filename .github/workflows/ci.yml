@@ -424,6 +424,13 @@ jobs:
           SKIP_NPM: 'true'
         run: npx nx run @gw-tools/gw-tool:release:ci
 
+      - name: Update npm for OIDC support
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          echo "Current npm version: $(npm --version)"
+          npm install -g npm@latest
+          echo "Updated npm version: $(npm --version)"
+
       - name: Publish to npm
         if: github.event_name != 'workflow_dispatch'
         working-directory: dist/packages/gw-tool/npm
