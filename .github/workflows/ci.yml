@@ -490,3 +490,163 @@ jobs:
               issue_number: parseInt(prNumber),
               body
             });
+
+  # ============================================================================
+  # Autonomous Workflow Agent Package
+  # ============================================================================
+  # Separate pipeline for @gw-tools/autonomous-workflow-agent npm package.
+  # Simpler than gw-tool: Node.js only, no binaries, no Homebrew/AUR.
+
+  test-agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build agent package
+        run: npx nx build autonomous-workflow-agent
+
+      - name: Test agent package
+        run: npx nx test autonomous-workflow-agent
+
+      - name: Lint agent package
+        run: npx nx lint autonomous-workflow-agent
+
+  release-agent:
+    # Only release on push to main with changes to the agent package
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: test-agent
+    runs-on: ubuntu-latest
+    environment: npm-publish
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Check for releasable changes
+        id: check
+        run: |
+          # Skip if this is a release commit
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [[ "$COMMIT_MSG" =~ ^chore\(autonomous-workflow-agent\):\ release ]]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "::notice::⏭️ Skipping - this is already a release commit"
+            exit 0
+          fi
+
+          # Check for changes since last agent tag
+          LAST_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1)
+
+          if [ -z "$LAST_TAG" ]; then
+            CHANGED=$(git diff --name-only HEAD~1 -- packages/autonomous-workflow-agent/)
+          else
+            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/autonomous-workflow-agent/)
+          fi
+
+          if [ -z "$CHANGED" ]; then
+            echo "should_release=false" >> $GITHUB_OUTPUT
+            echo "::notice::⏭️ No changes in packages/autonomous-workflow-agent/"
+            exit 0
+          fi
+
+          echo "should_release=true" >> $GITHUB_OUTPUT
+          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+
+      - uses: pnpm/action-setup@v4
+        if: steps.check.outputs.should_release == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.check.outputs.should_release == 'true'
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.check.outputs.should_release == 'true'
+
+      - name: Calculate version
+        if: steps.check.outputs.should_release == 'true'
+        id: version
+        run: |
+          LAST_TAG="${{ steps.check.outputs.last_tag }}"
+
+          # Get commits for version determination
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
+          else
+            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
+          fi
+
+          # Determine bump type from conventional commits
+          BUMP_TYPE="patch"
+          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            BUMP_TYPE="minor"
+          fi
+
+          # Get current version from package.json
+          CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          IFS='.' read -ra V <<< "$CURRENT"
+
+          case "$BUMP_TYPE" in
+            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
+            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
+            patch) V[2]=$((V[2] + 1)) ;;
+          esac
+
+          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+
+          echo "::notice::📦 autonomous-workflow-agent: $CURRENT → $NEW_VERSION ($BUMP_TYPE)"
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Build package
+        if: steps.check.outputs.should_release == 'true'
+        run: npx nx build autonomous-workflow-agent
+
+      - name: Create release tag
+        if: steps.check.outputs.should_release == 'true'
+        run: |
+          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+
+          # Update package.json version
+          cd packages/autonomous-workflow-agent
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
+          cd -
+
+          # Commit and tag
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add packages/autonomous-workflow-agent/package.json
+          git commit -m "chore(autonomous-workflow-agent): release v$NEW_VERSION"
+          git tag -a "autonomous-workflow-agent-v$NEW_VERSION" -m "Release autonomous-workflow-agent v$NEW_VERSION"
+
+          git push origin main
+          git push origin "autonomous-workflow-agent-v$NEW_VERSION"
+
+          echo "::notice::🏷️ Created tag autonomous-workflow-agent-v$NEW_VERSION"
+
+      - name: Update npm for OIDC support
+        if: steps.check.outputs.should_release == 'true'
+        run: npm install -g npm@latest
+
+      - name: Publish to npm
+        if: steps.check.outputs.should_release == 'true'
+        working-directory: dist/packages/autonomous-workflow-agent
+        run: |
+          VERSION="${{ steps.version.outputs.new_version }}"
+          echo "Publishing @gw-tools/autonomous-workflow-agent@$VERSION"
+          npm publish --provenance --access public
