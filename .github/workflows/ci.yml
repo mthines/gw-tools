@@ -15,11 +15,15 @@ on:
         type: boolean
         default: false
       force_release:
-        description: 'Force release even without source changes (actual publish)'
+        description: 'Force gw-tool release even without source changes (actual publish)'
+        type: boolean
+        default: false
+      force_release_agent:
+        description: 'Force autonomous-workflow-agent release even without source changes (actual publish)'
         type: boolean
         default: false
       version:
-        description: 'Version to simulate (e.g., 0.28.1) - only used if test_release is true'
+        description: 'Version to simulate (e.g., 0.28.1) - only for test_release dry-runs, ignored by force_release'
         type: string
         default: '0.0.0-test'
 
@@ -539,8 +543,10 @@ jobs:
         run: npx nx lint autonomous-workflow-agent
 
   release-agent:
-    # Only release on push to main with changes to the agent package
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    # Run on push to main OR manual dispatch with force_release_agent
+    if: |
+      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+      (github.event_name == 'workflow_dispatch' && inputs.force_release_agent)
     needs: test-agent
     runs-on: ubuntu-latest
     environment: npm-publish
@@ -555,7 +561,18 @@ jobs:
 
       - name: Check for releasable changes
         id: check
+        env:
+          FORCE_RELEASE: ${{ inputs.force_release_agent }}
         run: |
+          # Force release bypasses all checks
+          if [ "$FORCE_RELEASE" = "true" ]; then
+            echo "::notice::🚀 Force release enabled - skipping change detection"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            LAST_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1)
+            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Skip if this is a release commit
           COMMIT_MSG=$(git log -1 --pretty=%s)
           if [[ "$COMMIT_MSG" =~ ^chore\(autonomous-workflow-agent\):\ release ]]; then
