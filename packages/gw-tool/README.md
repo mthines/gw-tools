@@ -156,6 +156,27 @@ Once installed, your AI agent can:
 
 📖 **Skill documentation:** [skills/README.md](../../skills/README.md)
 
+### 🤖 Use as a Claude Code Agent
+
+Want Claude Code to autonomously implement features end-to-end? Install the autonomous workflow agent:
+
+```bash
+# One-liner install (global)
+curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
+  -o ~/.claude/agents/autonomous-workflow.md
+
+# Or manually: copy the file from packages/autonomous-workflow-agent/agents/autonomous-workflow.md
+# to ~/.claude/agents/ (global) or .claude/agents/ (per-project)
+```
+
+Once installed, Claude will automatically use this agent when you ask it to implement features, and it will:
+- Create isolated worktrees for each task
+- Plan and implement incrementally
+- Run tests and iterate until passing
+- Create draft PRs with full context
+
+📦 **Building custom agents?** See [@gw-tools/autonomous-workflow-agent](https://www.npmjs.com/package/@gw-tools/autonomous-workflow-agent) for SDK integration.
+
 ## Initial Setup: Secrets in the Default Branch
 
 **Important:** Before using `gw checkout` with auto-copy, ensure your secrets and environment files exist in your `defaultBranch` worktree (typically `main`). This worktree is the **source** from which files are copied to new worktrees.

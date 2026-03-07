@@ -2,11 +2,39 @@
 
 **Ship features while you sleep.** Give this agent a task description and walk away—it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 
+## Quick Install for Claude Code
+
+```bash
+# One-liner (global - works in all projects)
+curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
+  -o ~/.claude/agents/autonomous-workflow.md
+```
+
+Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
+- `~/.claude/agents/` — Available in all your projects
+- `.claude/agents/` — Available only in that project (commit to git for team sharing)
+
+That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
+
+## For Agent SDK Developers
+
+Building custom agents? Install via npm:
+
+```bash
+npm install @gw-tools/autonomous-workflow-agent
+```
+
 ```typescript
 import { autonomousWorkflowAgent } from '@gw-tools/autonomous-workflow-agent';
 
-// That's it. Your agent now knows how to ship complete features autonomously.
+// Your agent now knows how to ship complete features autonomously.
 ```
+
+---
+
+## Built on gw-tools
+
+This agent is powered by the [gw CLI](https://github.com/mthines/gw-tools)—a Git worktree management tool that handles branch isolation, file syncing, and cleanup. The agent orchestrates `gw` commands to create isolated development environments for each task.
 
 ## The Problem
 
@@ -144,6 +172,14 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 
 ### Installing gw CLI
 
+This agent uses the `gw` CLI under the hood to manage Git worktrees. The CLI handles:
+
+- Creating isolated worktrees (`gw checkout feat/my-feature`)
+- Auto-copying secrets and config files to new worktrees
+- Running post-checkout hooks (dependency installation, etc.)
+- Navigating between worktrees (`gw cd`)
+- Cleaning up merged worktrees (`gw clean`)
+
 ```bash
 # Via npm
 npm install -g @gw-tools/gw
@@ -153,6 +189,8 @@ brew install mthines/tap/gw
 
 # Or download from releases
 ```
+
+📖 **Full CLI documentation:** [gw-tools README](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool)
 
 ## Examples
 

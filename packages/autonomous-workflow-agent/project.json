@@ -19,7 +19,18 @@
         "outputPath": "dist/packages/autonomous-workflow-agent",
         "main": "packages/autonomous-workflow-agent/src/index.ts",
         "tsConfig": "packages/autonomous-workflow-agent/tsconfig.lib.json",
-        "assets": ["packages/autonomous-workflow-agent/*.md"]
+        "assets": [
+          {
+            "input": "packages/autonomous-workflow-agent",
+            "glob": "README.md",
+            "output": "."
+          },
+          {
+            "input": "packages/autonomous-workflow-agent",
+            "glob": "agents/**/*",
+            "output": "."
+          }
+        ]
       }
     },
     "nx-release-publish": {
