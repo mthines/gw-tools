@@ -77,23 +77,10 @@ Execute complete feature development cycles autonomously using isolated worktree
 
 ### Installation
 
-Install individual skills based on your needs:
+Use the interactive installer to select which skills to install:
 
 ```bash
-# For beginners - start here
-npx skills add mthines/gw-tools/git-worktree-workflows
-
-# When setting up gw for a project
-npx skills add mthines/gw-tools/gw-config-management
-
-# For autonomous feature development
-npx skills add mthines/gw-tools/autonomous-workflow
-```
-
-Or install all skills at once:
-
-```bash
-npx skills add mthines/gw-tools
+npx skills add https://github.com/mthines/gw-tools --skill
 ```
 
 ### Using Skills
