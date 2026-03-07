@@ -1,5 +1,5 @@
 ---
-title: "Code Review Workflow Pattern"
+title: 'Code Review Workflow Pattern'
 impact: HIGH
 tags:
   - pattern
@@ -102,12 +102,12 @@ gw cd review-pr-123
 
 ## Decision Table
 
-| Situation | Action |
-|-----------|--------|
-| Review a PR | `gw pr 123` |
-| Review without gh CLI | `gw add review-pr-123 -b pr-123 origin/pr-123` |
-| Done reviewing | `gw remove <pr-branch>` |
-| Want to suggest changes | Create suggestion branch, push |
+| Situation               | Action                                         |
+| ----------------------- | ---------------------------------------------- |
+| Review a PR             | `gw pr 123`                                    |
+| Review without gh CLI   | `gw add review-pr-123 -b pr-123 origin/pr-123` |
+| Done reviewing          | `gw remove <pr-branch>`                        |
+| Want to suggest changes | Create suggestion branch, push                 |
 
 ## References
 

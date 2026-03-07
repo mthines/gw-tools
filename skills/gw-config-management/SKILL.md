@@ -17,46 +17,46 @@ Configure gw-tools for optimal workflows across different project types and team
 
 ## Rules
 
-| Rule | Description |
-|------|-------------|
-| [fundamentals](./rules/fundamentals.md) | **HIGH** - Config file location, creation, and precedence |
-| [options-reference](./rules/options-reference.md) | **HIGH** - Complete reference for all config options |
-| [setup](./rules/setup.md) | **HIGH** - Initial setup flow, secrets, team onboarding |
-| [auto-copy](./rules/auto-copy.md) | **HIGH** - File patterns to copy, what to include/exclude |
-| [team-config](./rules/team-config.md) | **MEDIUM** - Sharing config, documentation, onboarding |
-| [advanced](./rules/advanced.md) | **LOW** - Multiple sources, secret management integration |
-| [troubleshooting](./rules/troubleshooting.md) | **HIGH** - Common issues and solutions |
+| Rule                                              | Description                                               |
+| ------------------------------------------------- | --------------------------------------------------------- |
+| [fundamentals](./rules/fundamentals.md)           | **HIGH** - Config file location, creation, and precedence |
+| [options-reference](./rules/options-reference.md) | **HIGH** - Complete reference for all config options      |
+| [setup](./rules/setup.md)                         | **HIGH** - Initial setup flow, secrets, team onboarding   |
+| [auto-copy](./rules/auto-copy.md)                 | **HIGH** - File patterns to copy, what to include/exclude |
+| [team-config](./rules/team-config.md)             | **MEDIUM** - Sharing config, documentation, onboarding    |
+| [advanced](./rules/advanced.md)                   | **LOW** - Multiple sources, secret management integration |
+| [troubleshooting](./rules/troubleshooting.md)     | **HIGH** - Common issues and solutions                    |
 
 ## Project-Type Patterns
 
-| Pattern | Description |
-|---------|-------------|
-| [nextjs](./rules/project-types/nextjs.md) | **MEDIUM** - Next.js with Vercel deployment |
-| [nodejs-api](./rules/project-types/nodejs-api.md) | **MEDIUM** - Node.js backend/API services |
-| [monorepo](./rules/project-types/monorepo.md) | **MEDIUM** - pnpm/Yarn/npm workspaces |
-| [react-spa](./rules/project-types/react-spa.md) | **MEDIUM** - React Single Page Applications |
+| Pattern                                           | Description                                 |
+| ------------------------------------------------- | ------------------------------------------- |
+| [nextjs](./rules/project-types/nextjs.md)         | **MEDIUM** - Next.js with Vercel deployment |
+| [nodejs-api](./rules/project-types/nodejs-api.md) | **MEDIUM** - Node.js backend/API services   |
+| [monorepo](./rules/project-types/monorepo.md)     | **MEDIUM** - pnpm/Yarn/npm workspaces       |
+| [react-spa](./rules/project-types/react-spa.md)   | **MEDIUM** - React Single Page Applications |
 
 ## Quick Reference
 
-| Task | Command |
-|------|---------|
-| Initialize config | `gw init` |
+| Task                    | Command                                   |
+| ----------------------- | ----------------------------------------- |
+| Initialize config       | `gw init`                                 |
 | Initialize with options | `gw init --auto-copy-files .env,secrets/` |
-| Interactive setup | `gw init --interactive` |
-| Clone and initialize | `gw init git@github.com:user/repo.git` |
-| Sync files to worktree | `gw sync feature-branch` |
-| Show setup command | `gw show-init` |
+| Interactive setup       | `gw init --interactive`                   |
+| Clone and initialize    | `gw init git@github.com:user/repo.git`    |
+| Sync files to worktree  | `gw sync feature-branch`                  |
+| Show setup command      | `gw show-init`                            |
 
 ## Configuration Options
 
-| Option | Purpose | Default |
-|--------|---------|---------|
-| `root` | Repository root path | Auto-detected |
-| `defaultBranch` | Source for file copying | `"main"` |
-| `autoCopyFiles` | Files to auto-copy | `[]` |
-| `updateStrategy` | merge or rebase | `"merge"` |
-| `cleanThreshold` | Days before stale | `7` |
-| `autoClean` | Prompt for cleanup | `false` |
+| Option           | Purpose                 | Default       |
+| ---------------- | ----------------------- | ------------- |
+| `root`           | Repository root path    | Auto-detected |
+| `defaultBranch`  | Source for file copying | `"main"`      |
+| `autoCopyFiles`  | Files to auto-copy      | `[]`          |
+| `updateStrategy` | merge or rebase         | `"merge"`     |
+| `cleanThreshold` | Days before stale       | `7`           |
+| `autoClean`      | Prompt for cleanup      | `false`       |
 
 ## Key Principles
 

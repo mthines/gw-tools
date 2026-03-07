@@ -1,5 +1,5 @@
 ---
-title: "Monorepo Configuration"
+title: 'Monorepo Configuration'
 impact: MEDIUM
 tags:
   - monorepo
@@ -21,25 +21,19 @@ Includes root and package-specific environment files.
 {
   "root": "/projects/monorepo.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    "packages/api/.env",
-    "packages/web/.env",
-    "packages/shared/config.local.json",
-    ".vercel/"
-  ]
+  "autoCopyFiles": [".env", "packages/api/.env", "packages/web/.env", "packages/shared/config.local.json", ".vercel/"]
 }
 ```
 
 ## File Explanations
 
-| File | Purpose |
-|------|---------|
-| `.env` | Root-level shared environment |
-| `packages/api/.env` | API service configuration |
-| `packages/web/.env` | Web app configuration |
-| `packages/shared/config.local.json` | Cross-package configuration |
-| `.vercel/` | Deployment configuration |
+| File                                | Purpose                       |
+| ----------------------------------- | ----------------------------- |
+| `.env`                              | Root-level shared environment |
+| `packages/api/.env`                 | API service configuration     |
+| `packages/web/.env`                 | Web app configuration         |
+| `packages/shared/config.local.json` | Cross-package configuration   |
+| `.vercel/`                          | Deployment configuration      |
 
 ## What NOT to Copy
 
@@ -78,12 +72,7 @@ For Nx workspaces:
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    "apps/api/.env",
-    "apps/web/.env",
-    "libs/shared/config.local.json"
-  ]
+  "autoCopyFiles": [".env", "apps/api/.env", "apps/web/.env", "libs/shared/config.local.json"]
 }
 ```
 

@@ -1,5 +1,5 @@
 ---
-title: "Phase 4: Testing & Iteration"
+title: 'Phase 4: Testing & Iteration'
 impact: CRITICAL
 tags:
   - testing
@@ -48,13 +48,13 @@ while not all_tests_pass:
 
 ### Step 1: Determine Test Strategy
 
-| Changed | Test Type |
-|---------|-----------|
-| Pure functions | Unit tests |
-| React components | Component tests |
-| API endpoints | Integration tests |
-| Database ops | Integration tests with test DB |
-| UI interactions | E2E tests |
+| Changed          | Test Type                      |
+| ---------------- | ------------------------------ |
+| Pure functions   | Unit tests                     |
+| React components | Component tests                |
+| API endpoints    | Integration tests              |
+| Database ops     | Integration tests with test DB |
+| UI interactions  | E2E tests                      |
 
 ### Step 2: Run Existing Tests
 
@@ -65,6 +65,7 @@ npm test -- --testPathPattern="relevant"
 ```
 
 **Expected outcomes:**
+
 - All existing tests pass (no regressions)
 - Some tests fail (if changing behavior intentionally)
 
@@ -81,6 +82,7 @@ npm test -- --testPathPattern="relevant"
 #### Iteration 2: Deep Analysis
 
 If still failing:
+
 1. Add logging to understand state
 2. Check assumptions about data/types
 3. Verify mocks/stubs are correct
@@ -90,6 +92,7 @@ If still failing:
 #### Iteration 3+: Alternative Approach
 
 If still failing:
+
 1. Question implementation approach
 2. Review similar code in codebase
 3. Consider simpler solution
@@ -98,29 +101,35 @@ If still failing:
 
 ### Step 4: Iteration Tracking
 
-Track in each iteration:
-- Iteration number
-- Test results (pass/fail count)
-- Changes made
-- Getting closer or stuck?
+Track iterations in `.gw/{branch}/task.md`:
 
 ```markdown
-## Iteration Log
+## Testing Iterations
 
 ### Iteration 1
+
 - Tests: 5 pass, 3 fail
 - Changed: Fixed import path in ThemeContext
 - Status: Reduced failures
 
 ### Iteration 2
+
 - Tests: 7 pass, 1 fail
 - Changed: Updated mock for localStorage
 - Status: Almost there
 
 ### Iteration 3
+
 - Tests: 8 pass, 0 fail
-- Status: All passing ✓
+- Status: All passing
 ```
+
+Update task.md sections:
+
+- Move test-related items to Completed
+- Update Current with active fix
+- Log test discoveries in Discoveries
+- Update metadata.json with phase: 4
 
 ### Step 5: Fresh Context Strategy
 
@@ -135,10 +144,12 @@ If iteration > 5 and making no progress:
 ### Step 6: Cost Controls
 
 **Safety limits:**
+
 - Iteration 10: Warn user, show progress
 - Iteration 20: Hard stop, ask for guidance
 
 **Token budget:**
+
 - Estimate tokens per iteration
 - Warn if approaching high costs (>$10)
 
@@ -169,6 +180,7 @@ npm test -- --coverage
 ```
 
 **Self-assessment:**
+
 - All requirements from Phase 0 validated?
 - Edge cases tested?
 - No regressions introduced?
@@ -187,12 +199,12 @@ git commit -m "test(scope): add comprehensive tests
 
 ## Self-Validation Checkpoints
 
-| After | Validation Question |
-|-------|---------------------|
-| Each iteration | Are failures decreasing? |
-| 5 iterations | Am I making progress or stuck? |
-| 10 iterations | Is the approach fundamentally correct? |
-| Test pass | Do tests actually validate requirements? |
+| After          | Validation Question                      |
+| -------------- | ---------------------------------------- |
+| Each iteration | Are failures decreasing?                 |
+| 5 iterations   | Am I making progress or stuck?           |
+| 10 iterations  | Is the approach fundamentally correct?   |
+| Test pass      | Do tests actually validate requirements? |
 
 ## When to Stop and Ask
 

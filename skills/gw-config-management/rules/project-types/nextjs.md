@@ -1,5 +1,5 @@
 ---
-title: "Next.js Project Configuration"
+title: 'Next.js Project Configuration'
 impact: MEDIUM
 tags:
   - nextjs
@@ -20,26 +20,19 @@ Includes environment files, Vercel settings, and upload directories.
 {
   "root": "/projects/myapp.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development",
-    ".vercel/",
-    "public/uploads/",
-    "components/ui/.vercel/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", ".env.development", ".vercel/", "public/uploads/", "components/ui/.vercel/"]
 }
 ```
 
 ## File Explanations
 
-| File | Purpose |
-|------|---------|
-| `.env` | Shared environment variables |
-| `.env.local` | Local overrides, secrets |
-| `.env.development` | Development-specific vars |
-| `.vercel/` | Vercel project configuration |
-| `public/uploads/` | User-uploaded assets |
+| File                     | Purpose                            |
+| ------------------------ | ---------------------------------- |
+| `.env`                   | Shared environment variables       |
+| `.env.local`             | Local overrides, secrets           |
+| `.env.development`       | Development-specific vars          |
+| `.vercel/`               | Vercel project configuration       |
+| `public/uploads/`        | User-uploaded assets               |
 | `components/ui/.vercel/` | Component-specific Vercel settings |
 
 ## What NOT to Copy

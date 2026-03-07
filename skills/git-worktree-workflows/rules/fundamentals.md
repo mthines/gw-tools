@@ -1,5 +1,5 @@
 ---
-title: "Git Worktree Fundamentals"
+title: 'Git Worktree Fundamentals'
 impact: HIGH
 tags:
   - concepts
@@ -24,11 +24,11 @@ This eliminates context switching and enables true parallel development.
 
 ## Worktree vs Branch Switching vs Cloning
 
-| Approach | Pros | Cons |
-|----------|------|------|
-| **Branch Switching** | Single directory, less disk space | Interrupts work, requires stashing, IDE reindexes |
-| **Worktrees** | Parallel work, no interruption, shared Git history | Slightly more disk space for working files |
-| **Cloning** | Complete isolation | Huge disk space, separate Git history, harder to sync |
+| Approach             | Pros                                               | Cons                                                  |
+| -------------------- | -------------------------------------------------- | ----------------------------------------------------- |
+| **Branch Switching** | Single directory, less disk space                  | Interrupts work, requires stashing, IDE reindexes     |
+| **Worktrees**        | Parallel work, no interruption, shared Git history | Slightly more disk space for working files            |
+| **Cloning**          | Complete isolation                                 | Huge disk space, separate Git history, harder to sync |
 
 ## What Worktrees Share
 
@@ -49,6 +49,7 @@ This eliminates context switching and enables true parallel development.
 ## When to Use Worktrees
 
 **Ideal for:**
+
 - Parallel feature development
 - Hotfix workflows
 - Code reviews (check out PRs without disrupting work)
@@ -57,6 +58,7 @@ This eliminates context switching and enables true parallel development.
 - Separate build processes
 
 **Not ideal for:**
+
 - Very short-lived tasks (branch switching is faster)
 - Single-file quick fixes
 

@@ -1,5 +1,5 @@
 ---
-title: "Phase 2: Worktree Setup"
+title: 'Phase 2: Worktree Setup'
 impact: CRITICAL
 tags:
   - worktree
@@ -34,6 +34,7 @@ Never work in the user's current directory.
 ## When to Skip (Rare)
 
 Only skip worktree creation if user explicitly says:
+
 - "work in current directory"
 - "don't create worktree"
 - "continue here" (after smart detection prompt)
@@ -49,16 +50,17 @@ See [smart-worktree-detection](./smart-worktree-detection.md).
 
 **Pattern:** `<type>/<short-description>`
 
-| Type | Use Case |
-|------|----------|
-| `feat/` | New feature |
-| `fix/` | Bug fix |
-| `refactor/` | Code restructuring |
-| `docs/` | Documentation only |
-| `chore/` | Tooling, dependencies |
-| `test/` | Adding/fixing tests |
+| Type        | Use Case              |
+| ----------- | --------------------- |
+| `feat/`     | New feature           |
+| `fix/`      | Bug fix               |
+| `refactor/` | Code restructuring    |
+| `docs/`     | Documentation only    |
+| `chore/`    | Tooling, dependencies |
+| `test/`     | Adding/fixing tests   |
 
 **Examples:**
+
 - `feat/dark-mode-toggle`
 - `fix/login-validation-error`
 - `refactor/api-client-structure`
@@ -70,6 +72,7 @@ gw add <branch-name>
 ```
 
 **Validation:**
+
 - Command succeeded?
 - Worktree appears in `gw list`?
 
@@ -82,6 +85,7 @@ gw cd <branch-name>
 ```
 
 **Validation:**
+
 - `pwd` shows correct directory?
 - `.git` symlink exists?
 
@@ -97,6 +101,7 @@ yarn install
 ```
 
 **Validation:**
+
 - `node_modules/` exists?
 - No installation errors?
 
@@ -114,6 +119,7 @@ npm test -- --listTests
 ```
 
 **Validation:**
+
 - No immediate errors?
 - Build system works?
 - Test framework found?
@@ -125,8 +131,25 @@ gw sync <branch-name>
 ```
 
 **Validation:**
+
 - `.env` copied (if configured)?
 - Config files synced?
+
+### Step 7: Ensure .gw/ is Gitignored
+
+Check if `.gw/` is gitignored:
+
+```bash
+# Check if already ignored
+grep -q "^\.gw/$" .gitignore 2>/dev/null || echo ".gw/" >> .gitignore
+```
+
+**Validation:**
+
+- `.gw/` appears in `.gitignore`?
+
+The `.gw/` folder contains working artifacts that should not be committed.
+See [artifacts-overview](./artifacts-overview.md) for details.
 
 ## gw Commands Reference
 
@@ -150,6 +173,7 @@ gw status
 ## Setup Checklist
 
 Before Phase 3 (Implementation):
+
 - [ ] Smart detection completed
 - [ ] Branch name follows conventions
 - [ ] Worktree created with `gw add`
@@ -157,6 +181,7 @@ Before Phase 3 (Implementation):
 - [ ] Dependencies installed
 - [ ] Environment builds/compiles
 - [ ] Configuration files synced
+- [ ] `.gw/` is gitignored
 
 **If any marked item not checked, STOP and complete Phase 2.**
 

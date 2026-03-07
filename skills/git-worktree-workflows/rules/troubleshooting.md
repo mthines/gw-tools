@@ -1,5 +1,5 @@
 ---
-title: "Troubleshooting Common Issues"
+title: 'Troubleshooting Common Issues'
 impact: HIGH
 tags:
   - troubleshooting
@@ -17,11 +17,13 @@ Most issues stem from branch conflicts, stale references, or shell integration p
 ## "Worktree already exists"
 
 **Symptom**:
+
 ```bash
 fatal: 'feature-auth' already exists
 ```
 
 **Fix**:
+
 ```bash
 # List existing worktrees
 gw list
@@ -37,11 +39,13 @@ gw add feature-auth
 ## "Branch already checked out"
 
 **Symptom**:
+
 ```bash
 fatal: 'feature-x' is already checked out at '/projects/myapp.git/other-worktree'
 ```
 
 **Fix**:
+
 ```bash
 # Navigate to existing worktree
 gw cd feature-x
@@ -56,6 +60,7 @@ gw add feature-x-copy -b feature-x-copy --force
 ## Git Ref Conflicts (Branch Name Hierarchy)
 
 **Symptom**:
+
 ```bash
 Cannot create branch test because it conflicts with existing branch test/foo
 ```
@@ -63,6 +68,7 @@ Cannot create branch test because it conflicts with existing branch test/foo
 **Cause**: Git prevents both `test` and `test/foo` (hierarchical conflict).
 
 **Fix**:
+
 ```bash
 # Use different name
 gw add test-new -b test-new
@@ -77,11 +83,13 @@ gw add test
 ## Locked Worktree
 
 **Symptom**:
+
 ```bash
 fatal: 'feature-x' is locked
 ```
 
 **Fix**:
+
 ```bash
 gw unlock feature-x
 gw remove feature-x
@@ -90,11 +98,13 @@ gw remove feature-x
 ## Corrupted Worktree State
 
 **Symptom**:
+
 ```bash
 fatal: 'feature-x' does not appear to be a git repository
 ```
 
 **Fix**:
+
 ```bash
 # Try repair
 gw repair
@@ -107,11 +117,13 @@ gw add feature-x -b feature-x origin/feature-x
 ## Permission Denied
 
 **Symptom**:
+
 ```bash
 fatal: could not create work tree dir 'feature-y': Permission denied
 ```
 
 **Fix**:
+
 ```bash
 # Check parent directory permissions
 ls -la /projects/myapp.git/
@@ -123,12 +135,14 @@ chmod 755 /projects/myapp.git/
 ## Corrupted Git Index
 
 **Symptom**:
+
 ```bash
 error: bad signature 0x00000000
 fatal: index file corrupt
 ```
 
 **Fix**:
+
 ```bash
 # In affected worktree
 rm .git/index
@@ -146,6 +160,7 @@ git add .
 **Symptom**: `gw cd` runs but directory doesn't change.
 
 **Fix**:
+
 ```bash
 # Add to ~/.zshrc or ~/.bashrc
 eval "$(gw install-shell)"
@@ -157,6 +172,7 @@ source ~/.zshrc
 ## Shell Parse Error
 
 **Symptom**:
+
 ```bash
 parse error near '()'
 ```
@@ -164,6 +180,7 @@ parse error near '()'
 **Cause**: Conflicting alias and function with same name.
 
 **Fix**:
+
 - Remove conflicting alias from .zshrc
 - Reinstall shell integration
 - Reload shell
@@ -173,6 +190,7 @@ parse error near '()'
 **Symptom**: Partial worktree left after failed creation.
 
 **Fix**:
+
 ```bash
 # Remove partial directory
 rm -rf /projects/myapp.git/failed-worktree
@@ -189,6 +207,7 @@ gw list
 **Symptom**: `Could not fetch from remote`
 
 **Fix**:
+
 ```bash
 # Check network
 ping github.com

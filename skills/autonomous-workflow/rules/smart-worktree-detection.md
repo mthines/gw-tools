@@ -1,5 +1,5 @@
 ---
-title: "Smart Worktree Detection"
+title: 'Smart Worktree Detection'
 impact: CRITICAL
 tags:
   - worktree
@@ -35,6 +35,7 @@ pwd
 ```
 
 Extract:
+
 - Current worktree name
 - Current branch name
 - Current directory path
@@ -55,6 +56,7 @@ Keywords: ["login", "validation", "error", "fix"]
 ```
 
 **Ignore common words:**
+
 - Verbs: "add", "fix", "update", "implement", "create", "remove"
 - Articles: "the", "a", "an"
 - Prepositions: "to", "for", "in", "on", "with"
@@ -70,19 +72,20 @@ Match: "auth" found in "add-authentication" ✓
 ```
 
 **Match rules:**
+
 - Case-insensitive comparison
 - Partial match counts (auth matches authentication)
 - At least one significant keyword must match
 
 ## Decision Logic
 
-| Scenario | Action |
-|----------|--------|
-| On main/master/develop | Always create new worktree |
-| Worktree name matches task keywords | Prompt user with options |
-| No keyword match | Create new worktree |
-| User says "continue here" | Work in current directory |
-| User says "create new" | Create new worktree |
+| Scenario                            | Action                     |
+| ----------------------------------- | -------------------------- |
+| On main/master/develop              | Always create new worktree |
+| Worktree name matches task keywords | Prompt user with options   |
+| No keyword match                    | Create new worktree        |
+| User says "continue here"           | Work in current directory  |
+| User says "create new"              | Create new worktree        |
 
 ## User Prompt Template
 
@@ -95,6 +98,7 @@ When match detected:
 It looks like you may already be working on a related task.
 
 **Options:**
+
 1. **Continue in current worktree** (recommended if same feature)
 2. **Create new worktree** (if this is a separate task)
 3. **Let me explain the differences first**

@@ -1,5 +1,5 @@
 ---
-title: "Phase 7: Cleanup"
+title: 'Phase 7: Cleanup'
 impact: LOW
 tags:
   - cleanup
@@ -17,11 +17,13 @@ This phase is optional and should only run when appropriate.
 ## When to Use
 
 **Run cleanup when:**
+
 - PR has been merged
 - PR has been closed/abandoned
 - User explicitly requests cleanup
 
 **Do NOT cleanup if:**
+
 - PR still under review
 - User hasn't reviewed changes yet
 - Might need to iterate on PR
@@ -35,10 +37,12 @@ gh pr view <pr-number> --json state,mergedAt
 ```
 
 **Safe to cleanup if:**
+
 - State: MERGED
 - State: CLOSED (and user confirms)
 
 **NOT safe if:**
+
 - State: OPEN
 - User hasn't reviewed yet
 
@@ -57,6 +61,7 @@ gw remove <branch-name>
 ```
 
 **Validation:**
+
 - Worktree removed from `gw list`?
 - Directory deleted?
 

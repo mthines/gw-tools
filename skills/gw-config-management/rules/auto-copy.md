@@ -1,5 +1,5 @@
 ---
-title: "Auto-Copy Strategies"
+title: 'Auto-Copy Strategies'
 impact: HIGH
 tags:
   - auto-copy
@@ -27,11 +27,7 @@ Configure `autoCopyFiles` to automatically copy files when creating worktrees wi
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.development"
-  ]
+  "autoCopyFiles": [".env", ".env.local", ".env.development"]
 }
 ```
 
@@ -39,11 +35,7 @@ Configure `autoCopyFiles` to automatically copy files when creating worktrees wi
 
 ```json
 {
-  "autoCopyFiles": [
-    "secrets/",
-    "keys/",
-    "ssl/certificates/"
-  ]
+  "autoCopyFiles": ["secrets/", "keys/", "ssl/certificates/"]
 }
 ```
 
@@ -51,22 +43,19 @@ Configure `autoCopyFiles` to automatically copy files when creating worktrees wi
 
 ```json
 {
-  "autoCopyFiles": [
-    "config/local.json",
-    ".vscode/settings.json"
-  ]
+  "autoCopyFiles": ["config/local.json", ".vscode/settings.json"]
 }
 ```
 
 ## Files NOT to Copy
 
-| Type | Why Not |
-|------|---------|
-| `node_modules/` | Install fresh |
-| `dist/`, `build/` | Build fresh |
-| `.git` | Handled automatically |
-| `*.log` | Not needed |
-| IDE settings | Usually personal |
+| Type              | Why Not               |
+| ----------------- | --------------------- |
+| `node_modules/`   | Install fresh         |
+| `dist/`, `build/` | Build fresh           |
+| `.git`            | Handled automatically |
+| `*.log`           | Not needed            |
+| IDE settings      | Usually personal      |
 
 ## Pattern Types
 
@@ -85,6 +74,7 @@ Copies exactly one file.
 ```
 
 Copies entire directory including subdirectories:
+
 ```
 secrets/
 ├── api-key.json     # Copied
@@ -125,12 +115,7 @@ gw sync --from staging feature-branch .env
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".vercel/",
-    "components/ui/.vercel/"
-  ]
+  "autoCopyFiles": [".env", ".env.local", ".vercel/", "components/ui/.vercel/"]
 }
 ```
 
@@ -138,12 +123,7 @@ gw sync --from staging feature-branch .env
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    "ssl/",
-    "keys/",
-    "config/local.json"
-  ]
+  "autoCopyFiles": [".env", "ssl/", "keys/", "config/local.json"]
 }
 ```
 
@@ -151,11 +131,7 @@ gw sync --from staging feature-branch .env
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    "packages/api/.env",
-    "packages/web/.env"
-  ]
+  "autoCopyFiles": [".env", "packages/api/.env", "packages/web/.env"]
 }
 ```
 
@@ -164,11 +140,13 @@ gw sync --from staging feature-branch .env
 ### File Not Copied
 
 **Check 1**: File exists in source worktree?
+
 ```bash
 ls ../main/.env
 ```
 
 **Check 2**: File in autoCopyFiles?
+
 ```bash
 cat .gw/config.json | grep autoCopyFiles
 ```
@@ -194,6 +172,7 @@ cat .gw/config.json | grep autoCopyFiles
 **Cause**: Using absolute path or wrong relative path.
 
 **Fix**: Use paths relative to repo root:
+
 ```json
 "autoCopyFiles": ["secrets/api-key.json"]  // Correct
 // NOT: "/Users/you/projects/myapp/secrets/api-key.json"

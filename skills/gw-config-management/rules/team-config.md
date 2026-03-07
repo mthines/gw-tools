@@ -1,5 +1,5 @@
 ---
-title: "Team Configuration Management"
+title: 'Team Configuration Management'
 impact: MEDIUM
 tags:
   - team
@@ -43,19 +43,17 @@ git push
 ### Team-Wide (Commit)
 
 Files everyone needs:
+
 ```json
 {
-  "autoCopyFiles": [
-    ".env.template",
-    "ssl/development-cert.pem",
-    "config/shared.json"
-  ]
+  "autoCopyFiles": [".env.template", "ssl/development-cert.pem", "config/shared.json"]
 }
 ```
 
 ### Personal (Don't Commit)
 
 Individual developer files:
+
 ```bash
 # Create personal override
 cp .gw/config.json .gw/config.local.json
@@ -95,6 +93,7 @@ echo ".gw/config.local.json" >> .gitignore
 ### Auto-Copied Files
 
 The following files are automatically copied to new worktrees:
+
 - `.env` - Environment variables
 - `ssl/` - Development SSL certificates
 - `secrets/` - Service credentials
@@ -174,6 +173,7 @@ gw sync feature-branch
 **Cause**: Secrets not set up in defaultBranch worktree.
 
 **Fix**:
+
 ```bash
 # Team member needs to set up source files first
 cd main
@@ -189,6 +189,7 @@ gw add feature-x
 **Symptom**: Different team members have different config.
 
 **Fix**:
+
 ```bash
 # Pull latest config
 git pull

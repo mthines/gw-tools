@@ -1,5 +1,5 @@
 ---
-title: "Decision Framework"
+title: 'Decision Framework'
 impact: HIGH
 tags:
   - decisions
@@ -40,6 +40,7 @@ Is this testing only?
 ```
 
 **Examples:**
+
 - `feat/dark-mode-toggle`
 - `fix/login-validation-error`
 - `refactor/api-client-structure`

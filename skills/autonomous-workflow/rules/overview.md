@@ -1,5 +1,5 @@
 ---
-title: "Autonomous Workflow Overview"
+title: 'Autonomous Workflow Overview'
 impact: HIGH
 tags:
   - overview
@@ -18,22 +18,35 @@ This workflow operates with high autonomy after initial validation.
 
 - **Always validate first (Phase 0)**: Never skip directly to implementation.
 - **Always create worktree (Phase 2)**: Isolation is mandatory.
+- **Track progress with artifacts**: Use `.gw/{branch}/` files for transparency.
 - **Iterate until correct**: No artificial iteration limits.
 - **Self-validate continuously**: Check work at every step.
 - **Stop and ask when blocked**: Don't guess on ambiguity.
 
+## Artifact System
+
+Inspired by Google Antigravity, this workflow produces three artifacts:
+
+| Artifact        | File                          | Purpose                                   |
+| --------------- | ----------------------------- | ----------------------------------------- |
+| **Task**        | `.gw/{branch}/task.md`        | Dynamic checklist, decisions, discoveries |
+| **Plan**        | `.gw/{branch}/plan.md`        | Implementation strategy                   |
+| **Walkthrough** | `.gw/{branch}/walkthrough.md` | Final summary for PR                      |
+
+See [artifacts-overview](./artifacts-overview.md) for full details.
+
 ## Workflow Phases
 
-| Phase | Name | Autonomy | Description |
-|-------|------|----------|-------------|
-| 0 | Validation | Interactive | Ask questions, validate understanding |
-| 1 | Planning | Autonomous | Analyze codebase, create plan |
-| 2 | Worktree Setup | **MANDATORY** | Create isolated worktree with `gw` |
-| 3 | Implementation | Autonomous | Code changes in isolated worktree |
-| 4 | Testing | Autonomous | Iterate until tests pass |
-| 5 | Documentation | Autonomous | Update docs |
-| 6 | PR Creation | Autonomous | Create draft PR |
-| 7 | Cleanup | Optional | Remove worktree after merge |
+| Phase | Name           | Autonomy      | Description                           |
+| ----- | -------------- | ------------- | ------------------------------------- |
+| 0     | Validation     | Interactive   | Ask questions, validate understanding |
+| 1     | Planning       | Autonomous    | Analyze codebase, create plan         |
+| 2     | Worktree Setup | **MANDATORY** | Create isolated worktree with `gw`    |
+| 3     | Implementation | Autonomous    | Code changes in isolated worktree     |
+| 4     | Testing        | Autonomous    | Iterate until tests pass              |
+| 5     | Documentation  | Autonomous    | Update docs                           |
+| 6     | PR Creation    | Autonomous    | Create draft PR                       |
+| 7     | Cleanup        | Optional      | Remove worktree after merge           |
 
 ## Phase Flow
 
@@ -58,12 +71,14 @@ Phase 7: Cleanup (optional)
 ## When to Use
 
 **Use this skill when:**
+
 - User requests autonomous feature implementation
 - Task has clear deliverable (feature, fix, refactor)
 - Tests are available to validate correctness
 - User wants parallel/isolated development
 
 **Do NOT use when:**
+
 - User wants to code alongside you
 - Task is exploratory research
 - Project doesn't use Git or gw-tools
@@ -72,6 +87,7 @@ Phase 7: Cleanup (optional)
 ## Expected Outcomes
 
 **Successful execution produces:**
+
 - Isolated worktree created
 - Complete implementation
 - All tests passing
@@ -79,6 +95,7 @@ Phase 7: Cleanup (optional)
 - Draft PR ready for review
 
 **If unable to complete:**
+
 - Partial implementation committed
 - Clear explanation of blockers
 - Recommendations for next steps
@@ -87,3 +104,5 @@ Phase 7: Cleanup (optional)
 
 - Related rule: [phase-0-validation](./phase-0-validation.md)
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
+- Related rule: [artifacts-overview](./artifacts-overview.md)
+- Research: [Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/)

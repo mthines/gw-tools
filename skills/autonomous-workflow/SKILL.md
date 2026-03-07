@@ -27,45 +27,71 @@ Execute complete feature development cycles autonomously—from task intake thro
 
 ## Rules
 
-| Rule | Description |
-|------|-------------|
-| [overview](./rules/overview.md) | **HIGH** - Workflow phases, when to use, expected outcomes |
+| Rule                                                            | Description                                                                           |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                            |
 | [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree, prompt to continue or create new |
-| [phase-0-validation](./rules/phase-0-validation.md) | **CRITICAL** - MANDATORY - Validate requirements before any work |
-| [phase-1-planning](./rules/phase-1-planning.md) | **HIGH** - Deep codebase analysis and implementation planning |
-| [phase-2-worktree](./rules/phase-2-worktree.md) | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add` |
-| [phase-3-implementation](./rules/phase-3-implementation.md) | **HIGH** - Incremental implementation with continuous validation |
-| [phase-4-testing](./rules/phase-4-testing.md) | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern) |
-| [phase-5-documentation](./rules/phase-5-documentation.md) | **MEDIUM** - Update README, CHANGELOG, API docs |
-| [phase-6-pr-creation](./rules/phase-6-pr-creation.md) | **HIGH** - Create draft PR, deliver results |
-| [phase-7-cleanup](./rules/phase-7-cleanup.md) | **LOW** - Optional worktree removal after merge |
-| [decision-framework](./rules/decision-framework.md) | **HIGH** - Branch naming, test strategy, iteration decisions |
-| [error-recovery](./rules/error-recovery.md) | **HIGH** - Recovery procedures for common errors |
-| [safety-guardrails](./rules/safety-guardrails.md) | **CRITICAL** - Validation checkpoints, resource limits, rollback |
-| [parallel-coordination](./rules/parallel-coordination.md) | **HIGH** - Multi-agent coordination, handoff protocol |
+| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                      |
+| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                         |
+| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`                     |
+| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with continuous validation                      |
+| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)            |
+| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                                       |
+| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                           |
+| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                                       |
+| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                          |
+| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                                      |
+| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback                      |
+| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                                 |
+| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Three-artifact pattern (Task, Plan, Walkthrough), file locations           |
+| [task-tracking](./rules/task-tracking.md)                       | **HIGH** - Dynamic task updates throughout workflow                                   |
+| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                                      |
+
+## Templates
+
+Structured templates for consistent artifact generation:
+
+| Template                                                       | Purpose                |
+| -------------------------------------------------------------- | ---------------------- |
+| [task.template.md](./templates/task.template.md)               | Dynamic task checklist |
+| [plan.template.md](./templates/plan.template.md)               | Implementation plan    |
+| [walkthrough.template.md](./templates/walkthrough.template.md) | Final summary          |
 
 ## Quick Reference
 
-| Phase | Command/Action |
-|-------|----------------|
-| 0. Validation | Ask clarifying questions, get user confirmation |
-| 1. Planning | Analyze codebase, create implementation plan |
-| 2. Worktree | `gw add feat/feature-name` (MANDATORY) |
-| 3. Implementation | Code in isolated worktree, commit incrementally |
-| 4. Testing | `npm test`, iterate until all pass |
-| 5. Documentation | Update README, CHANGELOG |
-| 6. PR Creation | `gh pr create --draft` |
-| 7. Cleanup | `gw remove feat/feature-name` (after merge) |
+| Phase             | Command/Action                                                |
+| ----------------- | ------------------------------------------------------------- |
+| 0. Validation     | Ask clarifying questions, get user confirmation               |
+| 1. Planning       | Analyze codebase, create `.gw/{branch}/task.md` and `plan.md` |
+| 2. Worktree       | `gw add feat/feature-name` (MANDATORY)                        |
+| 3. Implementation | Code in worktree, update `task.md` on changes                 |
+| 4. Testing        | `npm test`, iterate until all pass, log in `task.md`          |
+| 5. Documentation  | Update README, CHANGELOG                                      |
+| 6. PR Creation    | Generate `walkthrough.md`, `gh pr create --draft`             |
+| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                   |
 
 ## Key Principles
 
 - **Always validate first (Phase 0)**: Never skip directly to implementation.
 - **Always create worktree (Phase 2)**: Isolation is mandatory.
+- **Track progress with artifacts**: Use `.gw/{branch}/` files for transparency.
 - **Smart worktree detection**: Check if current worktree matches task before creating new.
 - **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
 - **Fast feedback loops**: Run tests frequently, fix failures immediately.
 - **Self-validate continuously**: Check work at every step.
 - **Stop and ask when blocked**: Don't guess on ambiguity.
+
+## Artifact System
+
+Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{branch-name}/`:
+
+| Artifact        | File             | Created | Purpose                                   |
+| --------------- | ---------------- | ------- | ----------------------------------------- |
+| **Task**        | `task.md`        | Phase 1 | Dynamic checklist, decisions, discoveries |
+| **Plan**        | `plan.md`        | Phase 1 | Implementation strategy                   |
+| **Walkthrough** | `walkthrough.md` | Phase 6 | Final summary for PR                      |
+
+Files are gitignored and grouped by branch for easy browsing.
 
 ## Workflow Flow
 
@@ -91,11 +117,11 @@ Phase 7: Cleanup (optional)
 
 Before creating a new worktree, the workflow checks if the current context matches the task:
 
-| Scenario | Action |
-|----------|--------|
-| On main/master | Always create new worktree |
+| Scenario                            | Action                                |
+| ----------------------------------- | ------------------------------------- |
+| On main/master                      | Always create new worktree            |
 | Worktree name matches task keywords | Prompt user to continue or create new |
-| No keyword match | Create new worktree |
+| No keyword match                    | Create new worktree                   |
 
 ## Fast Iteration Loop (Phase 4)
 
@@ -122,6 +148,7 @@ while not all_tests_pass:
 
 ## Research Sources
 
+- [Google Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/) - Three-artifact pattern
 - [Ralph Wiggum AI Coding Loops](https://ralph-wiggum.ai) - Iteration pattern
 - [Addy Osmani's LLM Workflow](https://addyosmani.com/blog/ai-coding-workflow/) - Fast feedback loops
 - [Claude Code Worktree Support](https://code.claude.com/docs/en/common-workflows) - Best practices

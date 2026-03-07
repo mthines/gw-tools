@@ -1,5 +1,5 @@
 ---
-title: "Creating and Managing Worktrees"
+title: 'Creating and Managing Worktrees'
 impact: HIGH
 tags:
   - gw-add
@@ -59,12 +59,12 @@ gw init
 
 ## Remote Fetch Behavior
 
-| Scenario | Behavior |
-|----------|----------|
-| New branch (no `--from`) | Fetches latest default branch, falls back to local on network failure |
-| New branch (with `--from`) | Requires successful fetch, exits on failure |
-| Local branch exists | Uses local directly, no fetch |
-| Remote-only branch | Fetches and creates local tracking branch |
+| Scenario                   | Behavior                                                              |
+| -------------------------- | --------------------------------------------------------------------- |
+| New branch (no `--from`)   | Fetches latest default branch, falls back to local on network failure |
+| New branch (with `--from`) | Requires successful fetch, exits on failure                           |
+| Local branch exists        | Uses local directly, no fetch                                         |
+| Remote-only branch         | Fetches and creates local tracking branch                             |
 
 ### GOOD Pattern
 
@@ -133,6 +133,7 @@ gw sync --from staging feature-auth .env
 **Symptom**: `fatal: 'feature-x' is already checked out at '/path'`
 
 **Fix**:
+
 ```bash
 # Navigate to existing worktree instead
 gw cd feature-x
@@ -146,6 +147,7 @@ gw add feature-x-v2 -b feature-x-v2
 **Symptom**: `Could not fetch from remote`
 
 **Fix**:
+
 - Check network connection
 - Without `--from`: Falls back to local (warning shown)
 - With `--from`: Must fix network or remove `--from` flag

@@ -1,5 +1,5 @@
 ---
-title: "Feature Branch Development Pattern"
+title: 'Feature Branch Development Pattern'
 impact: HIGH
 tags:
   - pattern
@@ -101,19 +101,20 @@ gw add feature-auth-social --from feature-auth
 ```
 
 **Merge order:**
+
 1. Merge parent first: `feature-auth` → `main`
 2. Rebase child onto updated main
 3. Merge child: `feature-auth-social` → `main`
 
 ## Decision Table
 
-| Situation | Action |
-|-----------|--------|
-| Starting new feature | `gw add feature-name` |
+| Situation                  | Action                       |
+| -------------------------- | ---------------------------- |
+| Starting new feature       | `gw add feature-name`        |
 | Feature depends on another | `gw add child --from parent` |
-| Need to update with main | `gw update` |
-| Feature complete | PR → merge → `gw remove` |
-| Feature abandoned | `gw remove --force` |
+| Need to update with main   | `gw update`                  |
+| Feature complete           | PR → merge → `gw remove`     |
+| Feature abandoned          | `gw remove --force`          |
 
 ## References
 

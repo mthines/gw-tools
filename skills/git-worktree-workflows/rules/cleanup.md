@@ -1,5 +1,5 @@
 ---
-title: "Cleanup and Maintenance"
+title: 'Cleanup and Maintenance'
 impact: MEDIUM
 tags:
   - cleanup
@@ -46,6 +46,7 @@ gw remove feature-abandoned --force
 ### Protected Worktrees
 
 Cannot be removed:
+
 - Default branch (typically `main`)
 - `gw_root` branch
 - Bare repository worktree
@@ -69,6 +70,7 @@ gw clean --force
 ### Safety Checks
 
 Only removes worktrees with:
+
 - NO uncommitted changes
 - NO unpushed commits
 
@@ -90,11 +92,11 @@ gw prune --stale-only
 
 ## Decision Table: `gw clean` vs `gw prune`
 
-| Use Case | Command |
-|----------|---------|
-| Weekly maintenance | `gw clean` |
-| Before project break | `gw prune` |
-| After major release | `gw prune` |
+| Use Case                    | Command    |
+| --------------------------- | ---------- |
+| Weekly maintenance          | `gw clean` |
+| Before project break        | `gw prune` |
+| After major release         | `gw prune` |
 | Keep branches for reference | `gw clean` |
 | Full reset to minimal state | `gw prune` |
 
@@ -141,6 +143,7 @@ gw init --clean-threshold 14
 **Symptom**: `fatal: 'feature-x' is locked`
 
 **Fix**:
+
 ```bash
 gw unlock feature-x
 gw remove feature-x
@@ -151,6 +154,7 @@ gw remove feature-x
 **Symptom**: Worktrees marked `(prunable)` in list.
 
 **Fix**:
+
 ```bash
 gw prune --stale-only
 ```

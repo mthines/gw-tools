@@ -1,5 +1,5 @@
 ---
-title: "Initial Setup"
+title: 'Initial Setup'
 impact: HIGH
 tags:
   - setup
@@ -141,6 +141,7 @@ gw init --interactive
 ```
 
 Prompts for:
+
 - Default source worktree
 - Auto-copy files
 - Post-add hooks
@@ -156,6 +157,7 @@ Prompts for:
 **Cause**: File doesn't exist in defaultBranch worktree.
 
 **Fix**:
+
 ```bash
 # Add file to source worktree
 cd main
@@ -170,6 +172,7 @@ gw sync feature-branch .env
 **Symptom**: `Error: Could not find .gw/config.json`
 
 **Fix**:
+
 ```bash
 gw init
 ```

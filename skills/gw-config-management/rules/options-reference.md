@@ -1,5 +1,5 @@
 ---
-title: "Configuration Options Reference"
+title: 'Configuration Options Reference'
 impact: HIGH
 tags:
   - config
@@ -23,7 +23,7 @@ Each option affects specific gw commands and behaviors.
   "autoCopyFiles": [".env", "secrets/"],
   "updateStrategy": "merge",
   "cleanThreshold": 7,
-  "autoClean": true
+  "autoClean": true,
 }
 ```
 
@@ -42,6 +42,7 @@ Each option affects specific gw commands and behaviors.
 ```
 
 **When to set manually**:
+
 - Auto-detection fails
 - Non-standard directory structure
 - Using symlinks or network drives
@@ -74,12 +75,7 @@ Each option affects specific gw commands and behaviors.
 
 ```json
 {
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "secrets/",
-    "config/local.json"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "secrets/", "config/local.json"]
 }
 ```
 
@@ -106,10 +102,10 @@ Each option affects specific gw commands and behaviors.
 }
 ```
 
-| Strategy | When to Use |
-|----------|-------------|
-| `merge` | Preserve complete history, shared branches |
-| `rebase` | Linear history, personal feature branches |
+| Strategy | When to Use                                |
+| -------- | ------------------------------------------ |
+| `merge`  | Preserve complete history, shared branches |
+| `rebase` | Linear history, personal feature branches  |
 
 **Override per-command**: `gw update --merge` or `gw update --rebase`
 
@@ -152,6 +148,7 @@ Each option affects specific gw commands and behaviors.
 ```
 
 **Behavior**:
+
 - Prompts after `gw add` or `gw list` when stale worktrees detected
 - Only prompts once per 24 hours
 - Uses `cleanThreshold` for age check
@@ -161,12 +158,12 @@ Each option affects specific gw commands and behaviors.
 
 ## Decision Table: Which Options to Set
 
-| Project Type | Essential Options |
-|--------------|-------------------|
-| Solo project | `autoCopyFiles` |
-| Team project | All options, commit to repo |
-| Monorepo | `autoCopyFiles` with package paths |
-| CI/CD | `root`, `defaultBranch` |
+| Project Type | Essential Options                  |
+| ------------ | ---------------------------------- |
+| Solo project | `autoCopyFiles`                    |
+| Team project | All options, commit to repo        |
+| Monorepo     | `autoCopyFiles` with package paths |
+| CI/CD        | `root`, `defaultBranch`            |
 
 ## References
 

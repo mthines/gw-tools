@@ -1,5 +1,5 @@
 ---
-title: "Parallel Testing Pattern"
+title: 'Parallel Testing Pattern'
 impact: MEDIUM
 tags:
   - pattern
@@ -86,12 +86,12 @@ gw add experiment-new-architecture -b experiment/new-arch
 
 ## Decision Table
 
-| Goal | Setup |
-|------|-------|
-| Test Node versions | Multiple worktrees, same branch with `--force` |
-| Test configurations | Multiple worktrees, different .env files |
-| Compare implementations | Child branches from same parent |
-| Long experiment | Separate branch, own worktree |
+| Goal                    | Setup                                          |
+| ----------------------- | ---------------------------------------------- |
+| Test Node versions      | Multiple worktrees, same branch with `--force` |
+| Test configurations     | Multiple worktrees, different .env files       |
+| Compare implementations | Child branches from same parent                |
+| Long experiment         | Separate branch, own worktree                  |
 
 ## Cleanup
 

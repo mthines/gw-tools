@@ -1,5 +1,5 @@
 ---
-title: "Node.js API Configuration"
+title: 'Node.js API Configuration'
 impact: MEDIUM
 tags:
   - nodejs
@@ -20,25 +20,19 @@ Includes environment files, SSL certificates, and service credentials.
 {
   "root": "/projects/api.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    "ssl/",
-    "keys/",
-    "secrets/",
-    "config/local.json"
-  ]
+  "autoCopyFiles": [".env", "ssl/", "keys/", "secrets/", "config/local.json"]
 }
 ```
 
 ## File Explanations
 
-| File | Purpose |
-|------|---------|
-| `.env` | Database URLs, API keys, service credentials |
-| `ssl/` | SSL certificates for HTTPS |
-| `keys/` | JWT keys, encryption keys |
-| `secrets/` | Service account credentials |
-| `config/local.json` | Local-only configuration overrides |
+| File                | Purpose                                      |
+| ------------------- | -------------------------------------------- |
+| `.env`              | Database URLs, API keys, service credentials |
+| `ssl/`              | SSL certificates for HTTPS                   |
+| `keys/`             | JWT keys, encryption keys                    |
+| `secrets/`          | Service account credentials                  |
+| `config/local.json` | Local-only configuration overrides           |
 
 ## What NOT to Copy
 

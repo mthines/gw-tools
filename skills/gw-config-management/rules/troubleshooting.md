@@ -1,5 +1,5 @@
 ---
-title: "Troubleshooting Configuration"
+title: 'Troubleshooting Configuration'
 impact: HIGH
 tags:
   - troubleshooting
@@ -17,6 +17,7 @@ Most problems stem from missing source files, incorrect paths, or config not bei
 ## Config Not Detected
 
 **Symptom**:
+
 ```bash
 Error: Could not find .gw/config.json
 ```
@@ -24,6 +25,7 @@ Error: Could not find .gw/config.json
 **Cause**: No config file exists or not in search path.
 
 **Fix**:
+
 ```bash
 # Initialize configuration
 gw init
@@ -35,6 +37,7 @@ gw init --root $(gw root)
 ## Files Not Auto-Copied
 
 **Symptom**:
+
 ```bash
 $ gw add feature-x
 ✓ Worktree created
@@ -42,6 +45,7 @@ $ gw add feature-x
 ```
 
 **Diagnostics**:
+
 ```bash
 # Check configuration
 cat .gw/config.json | grep autoCopyFiles
@@ -53,11 +57,13 @@ ls ../main/.env
 **Solutions**:
 
 ### A: Add to auto-copy
+
 ```bash
 gw init --auto-copy-files .env,.env.local
 ```
 
 ### B: Manual sync
+
 ```bash
 # Sync all configured files
 gw sync feature-x
@@ -67,6 +73,7 @@ gw sync feature-x .env
 ```
 
 ### C: File missing in source
+
 ```bash
 # Add file to defaultBranch worktree first
 cd main
@@ -93,6 +100,7 @@ gw sync feature-x
 ## Path Resolution Issues
 
 **Symptom**:
+
 ```bash
 Error: Source file not found: secrets/api-key.json
 ```
@@ -117,11 +125,13 @@ Error: Source file not found: secrets/api-key.json
 **Symptom**: Commands fail or find wrong worktrees.
 
 **Diagnostics**:
+
 ```bash
 cat .gw/config.json | grep root
 ```
 
 **Fix**:
+
 ```bash
 # Reinitialize with correct root
 gw init --root /correct/path/to/repo.git
@@ -132,6 +142,7 @@ gw init --root /correct/path/to/repo.git
 **Symptom**: Files copied from wrong worktree.
 
 **Fix**:
+
 ```bash
 # Update in config
 # Edit .gw/config.json:
@@ -145,16 +156,19 @@ gw init --root /correct/path/to/repo.git
 **Symptom**: Stale worktrees not being cleaned.
 
 **Check 1**: Is `autoClean` enabled?
+
 ```bash
 cat .gw/config.json | grep autoClean
 ```
 
 **Check 2**: Is threshold correct?
+
 ```bash
 cat .gw/config.json | grep cleanThreshold
 ```
 
 **Fix**:
+
 ```bash
 gw init --auto-clean --clean-threshold 7
 ```
@@ -164,11 +178,13 @@ gw init --auto-clean --clean-threshold 7
 **Symptom**: `gw update` uses wrong strategy.
 
 **Check**: Config setting:
+
 ```bash
 cat .gw/config.json | grep updateStrategy
 ```
 
 **Fix**: Set strategy:
+
 ```json
 {
   "updateStrategy": "rebase"
@@ -176,6 +192,7 @@ cat .gw/config.json | grep updateStrategy
 ```
 
 **Override per-command**:
+
 ```bash
 gw update --rebase
 gw update --merge
@@ -184,11 +201,13 @@ gw update --merge
 ## Permission Denied
 
 **Symptom**:
+
 ```bash
 Error: EACCES: permission denied
 ```
 
 **Fix**:
+
 ```bash
 # Check directory permissions
 ls -la /projects/myapp.git/
@@ -200,11 +219,13 @@ chmod 755 /projects/myapp.git/
 ## Config JSON Invalid
 
 **Symptom**:
+
 ```bash
 Error: Unexpected token in JSON
 ```
 
 **Fix**: Validate JSON:
+
 ```bash
 # Check for syntax errors
 cat .gw/config.json | jq .

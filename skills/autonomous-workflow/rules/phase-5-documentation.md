@@ -1,5 +1,5 @@
 ---
-title: "Phase 5: Documentation"
+title: 'Phase 5: Documentation'
 impact: MEDIUM
 tags:
   - documentation
@@ -25,13 +25,13 @@ Maintain style consistency with existing docs.
 
 ### Step 1: Identify Documentation Needs
 
-| Change Type | Documentation |
-|-------------|---------------|
-| User-facing feature | README, user guides |
-| API changes | JSDoc/TSDoc, API reference |
-| Configuration | Config docs, setup instructions |
-| Breaking changes | CHANGELOG, migration guide |
-| All changes | CHANGELOG entry |
+| Change Type         | Documentation                   |
+| ------------------- | ------------------------------- |
+| User-facing feature | README, user guides             |
+| API changes         | JSDoc/TSDoc, API reference      |
+| Configuration       | Config docs, setup instructions |
+| Breaking changes    | CHANGELOG, migration guide      |
+| All changes         | CHANGELOG entry                 |
 
 ### Step 2: Update README (If Applicable)
 
@@ -41,20 +41,23 @@ Maintain style consistency with existing docs.
 The app now supports dark mode!
 
 #### Using the UI
+
 Click the theme toggle in the navigation bar.
 
 #### Programmatically
+
 \`\`\`typescript
 import { useTheme } from '@/contexts/ThemeContext';
 
 function MyComponent() {
-  const { theme, setTheme } = useTheme();
-  setTheme(theme === 'light' ? 'dark' : 'light');
+const { theme, setTheme } = useTheme();
+setTheme(theme === 'light' ? 'dark' : 'light');
 }
 \`\`\`
 ```
 
 **Validation:**
+
 - Is it clear how to use the feature?
 - Are code examples correct?
 - Is it easy to find?
@@ -81,11 +84,13 @@ export function useTheme(): ThemeContextValue {
 ## [Unreleased]
 
 ### Added
+
 - Dark mode toggle in navigation bar (#123)
   - Respects system preference
   - Persists user choice to localStorage
 
 ### Changed
+
 - Theme context exported from `@/contexts/ThemeContext`
 ```
 
@@ -94,14 +99,17 @@ export function useTheme(): ThemeContextValue {
 Read your documentation with fresh eyes:
 
 **Clarity check:**
+
 - Can I understand this without context?
 - Are examples self-contained?
 
 **Completeness check:**
+
 - Are all new features documented?
 - Are edge cases explained?
 
 **Accuracy check:**
+
 - Do code examples actually work?
 - Are paths/names correct?
 

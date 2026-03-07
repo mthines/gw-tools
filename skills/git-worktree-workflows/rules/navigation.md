@@ -1,5 +1,5 @@
 ---
-title: "Navigating Between Worktrees"
+title: 'Navigating Between Worktrees'
 impact: MEDIUM
 tags:
   - navigation
@@ -51,12 +51,12 @@ gw co main    # Alias
 
 ## Decision Table
 
-| Situation | Command |
-|-----------|---------|
-| Know worktree directory name | `gw cd <name>` |
-| Know branch name | `gw checkout <branch>` |
-| Branch already checked out elsewhere | `gw checkout` navigates there |
-| Remote branch, no local worktree | `gw checkout` prompts to create |
+| Situation                            | Command                         |
+| ------------------------------------ | ------------------------------- |
+| Know worktree directory name         | `gw cd <name>`                  |
+| Know branch name                     | `gw checkout <branch>`          |
+| Branch already checked out elsewhere | `gw checkout` navigates there   |
+| Remote branch, no local worktree     | `gw checkout` prompts to create |
 
 ## Shell Integration Setup
 
@@ -115,6 +115,7 @@ idea .
 **Symptom**: Command runs but directory doesn't change.
 
 **Fix**: Ensure shell integration is installed:
+
 ```bash
 # Check if function exists
 type gw

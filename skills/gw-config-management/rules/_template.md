@@ -1,5 +1,5 @@
 ---
-title: "Rule Title"
+title: 'Rule Title'
 impact: HIGH
 tags:
   - tag1
@@ -48,11 +48,11 @@ git checkout -b feature/my-task  # Don't use git checkout for worktrees
 
 ## Decision Table
 
-| Scenario | Action |
-|----------|--------|
-| Condition A | Do X |
-| Condition B | Do Y |
-| Default | Do Z |
+| Scenario    | Action |
+| ----------- | ------ |
+| Condition A | Do X   |
+| Condition B | Do Y   |
+| Default     | Do Z   |
 
 ## Troubleshooting
 
@@ -63,6 +63,7 @@ git checkout -b feature/my-task  # Don't use git checkout for worktrees
 **Cause**: Why this happens.
 
 **Fix**:
+
 ```bash
 # Resolution command
 gw fix-command

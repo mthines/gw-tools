@@ -1,5 +1,5 @@
 ---
-title: "Phase 1: Task Intake & Planning"
+title: 'Phase 1: Task Intake & Planning'
 impact: HIGH
 tags:
   - planning
@@ -27,6 +27,7 @@ Validate the plan against requirements from Phase 0.
 ### Step 1: Analyze Codebase
 
 **Project Structure:**
+
 - Identify relevant directories/modules
 - Map dependencies between components
 - Locate configuration files
@@ -34,6 +35,7 @@ Validate the plan against requirements from Phase 0.
 Tools: `nx_workspace`, `nx_project_details`, `Glob`
 
 **Existing Patterns:**
+
 - Find similar features already implemented
 - Study code style, naming conventions
 - Understand error handling patterns
@@ -42,6 +44,7 @@ Tools: `nx_workspace`, `nx_project_details`, `Glob`
 Tools: `Grep`, `Read`
 
 **Technology Stack:**
+
 - Framework version and features
 - Build tools and configuration
 - Testing framework and conventions
@@ -63,14 +66,17 @@ Document your plan:
    - Exports: [public API]
 
 **Testing Strategy:**
+
 - Unit tests: [what to test]
 - Integration tests: [if applicable]
 
 **Documentation Updates:**
+
 - README.md: [what to add/change]
 - CHANGELOG: [entry to add]
 
 **Risks & Mitigations:**
+
 - Risk: [potential issue]
   Mitigation: [how to handle]
 ```
@@ -80,27 +86,73 @@ Document your plan:
 Ask yourself:
 
 **Completeness:**
+
 - Does this plan achieve all requirements from Phase 0?
 - Are edge cases addressed?
 
 **Correctness:**
+
 - Does this follow existing project patterns?
 - Are dependencies correct?
 
 **Testability:**
+
 - Can this be validated with tests?
 - Are test cases comprehensive?
 
 **Maintainability:**
+
 - Is this approach simple enough?
 - Will other developers understand this?
 
-### Step 4: Iterate if Needed
+### Step 4: Create Artifacts
+
+Initialize tracking artifacts in `.gw/{branch-name}/`:
+
+```bash
+# Create artifact directory
+mkdir -p .gw/$(echo "<branch-name>" | tr '/' '-')
+
+# Create task.md using template
+# See templates/task.template.md
+```
+
+**task.md** - Initialize with:
+
+- Phase 0 and Phase 1 marked complete
+- Phase 2-6 in Upcoming
+- Decisions from Phase 0 in Decisions Log
+
+**plan.md** - Document:
+
+- Summary of approach
+- Files to create/modify
+- Testing strategy
+- Dependencies and risks
+
+**metadata.json** - Create with:
+
+```json
+{
+  "branch": "<branch-name>",
+  "task": "<task-description>",
+  "created": "<ISO-timestamp>",
+  "updated": "<ISO-timestamp>",
+  "phase": 1,
+  "status": "in_progress"
+}
+```
+
+See [artifacts-overview](./artifacts-overview.md) for full details.
+
+### Step 5: Iterate if Needed
 
 If self-validation reveals issues:
+
 1. Refine the plan
-2. Re-validate
-3. Iterate until plan is solid
+2. Update `plan.md`
+3. Re-validate
+4. Iterate until plan is solid
 
 **Do NOT proceed to Phase 2 until plan is validated.**
 
@@ -118,3 +170,6 @@ If self-validation reveals issues:
 
 - Related rule: [phase-0-validation](./phase-0-validation.md)
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
+- Related rule: [artifacts-overview](./artifacts-overview.md)
+- Template: `templates/task.template.md`
+- Template: `templates/plan.template.md`

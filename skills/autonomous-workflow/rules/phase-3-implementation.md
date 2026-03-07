@@ -1,5 +1,5 @@
 ---
-title: "Phase 3: Implementation"
+title: 'Phase 3: Implementation'
 impact: HIGH
 tags:
   - implementation
@@ -18,10 +18,12 @@ Follow existing patterns, commit logically.
 ## Prerequisite
 
 **Before starting, verify:**
+
 - Worktree created with `gw add`
 - Currently in worktree directory (`pwd` check)
 - Dependencies installed
 - Environment validated
+- Artifacts initialized (`.gw/{branch}/task.md` exists)
 
 **If worktree not created, STOP and return to Phase 2.**
 
@@ -37,6 +39,7 @@ Follow existing patterns, commit logically.
 ### Step 1: Implementation Order
 
 Implement in logical order:
+
 1. Types/interfaces (if TypeScript)
 2. Core logic/functions
 3. UI components (if applicable)
@@ -46,18 +49,21 @@ Implement in logical order:
 ### Step 2: One Change at a Time
 
 **Before Editing:**
+
 - Read existing file completely
 - Understand current structure
 - Identify insertion points
 - Note existing patterns
 
 **During Editing:**
+
 - Make focused change (one concern)
 - Follow existing code style
 - Maintain consistent formatting
 - Add comments only if logic non-obvious
 
 **After Editing:**
+
 ```bash
 # Does it compile?
 npm run build  # or tsc --noEmit
@@ -67,12 +73,36 @@ npm run lint -- <file-path>
 ```
 
 **Self-review questions:**
+
 - Does this match existing patterns?
 - Is naming consistent?
 - Are imports organized correctly?
 - Is this the simplest solution?
 
-### Step 3: Commit Incrementally
+### Step 3: Update Task Tracking
+
+After each file change, update `.gw/{branch}/task.md`:
+
+```markdown
+## Completed
+
+- [x] Created ThemeContext.tsx # Move from Current/Upcoming
+
+## Current
+
+- [ ] Creating ThemeToggle <- **IN PROGRESS**
+```
+
+**Update on:**
+
+- File created → Add to Completed
+- Decision made → Add to Decisions Log
+- Discovery found → Add to Discoveries
+- Blocker hit → Update Blockers section
+
+See [task-tracking](./task-tracking.md) for full details.
+
+### Step 4: Commit Incrementally
 
 After each logical unit:
 
@@ -82,16 +112,18 @@ git commit -m "<type>(<scope>): <description>"
 ```
 
 **Conventional commit format:**
+
 - `feat(ui): add dark mode toggle button`
 - `feat(theme): implement theme context provider`
 - `test(theme): add theme toggle unit tests`
 
 **Guidelines:**
+
 - One logical change per commit
 - Clear, descriptive messages
 - Keep commits atomic
 
-### Step 4: Continuous Validation
+### Step 5: Continuous Validation
 
 After every 2-3 files changed:
 
@@ -107,19 +139,21 @@ npm test -- --coverage=false --maxWorkers=1
 ```
 
 **Self-assessment:**
+
 - Is implementation on track?
 - Any deviations from plan?
 - Need to adjust approach?
 
-### Step 5: Integration Check
+### Step 6: Integration Check
 
 After all implementation:
+
 - All files compile together?
 - No TypeScript/lint errors?
 - Imports resolve correctly?
 - No circular dependencies?
 
-### Step 6: Pre-Testing Commit
+### Step 7: Pre-Testing Commit
 
 ```bash
 git add .
@@ -143,3 +177,4 @@ git commit -m "feat(scope): implement <feature-name>
 
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
 - Related rule: [phase-4-testing](./phase-4-testing.md)
+- Related rule: [task-tracking](./task-tracking.md)

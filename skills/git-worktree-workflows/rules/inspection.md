@@ -1,5 +1,5 @@
 ---
-title: "Listing and Inspecting Worktrees"
+title: 'Listing and Inspecting Worktrees'
 impact: LOW
 tags:
   - gw-list
@@ -80,6 +80,7 @@ $ gw list
 ```
 
 The main worktree:
+
 - Contains the actual `.git` directory
 - Cannot be removed
 - Is the parent of all other worktrees

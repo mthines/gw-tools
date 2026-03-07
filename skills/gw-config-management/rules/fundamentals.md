@@ -1,5 +1,5 @@
 ---
-title: "gw Configuration Fundamentals"
+title: 'gw Configuration Fundamentals'
 impact: HIGH
 tags:
   - config
@@ -86,7 +86,7 @@ gw init git@github.com:user/repo.git \
   "autoCopyFiles": [".env", "secrets/"],
   "updateStrategy": "merge",
   "cleanThreshold": 7,
-  "autoClean": true
+  "autoClean": true,
 }
 ```
 
@@ -130,6 +130,7 @@ gw add feature-new  # .env copied automatically
 **Symptom**: `Error: Could not find .gw/config.json`
 
 **Fix**:
+
 ```bash
 gw init
 ```
@@ -139,6 +140,7 @@ gw init
 **Symptom**: Wrong root or default branch detected.
 
 **Fix**:
+
 ```bash
 gw init --root /correct/path.git --default-branch develop
 ```

@@ -1,5 +1,5 @@
 ---
-title: "Advanced Configuration Techniques"
+title: 'Advanced Configuration Techniques'
 impact: LOW
 tags:
   - advanced
@@ -18,6 +18,7 @@ Advanced patterns for complex workflows including multiple source worktrees, env
 ### Scenario
 
 Different branch types need files from different sources:
+
 - Feature branches → from develop
 - Hotfixes → from main
 
@@ -129,10 +130,7 @@ gw init --post-add "pnpm install"
 ```json
 {
   "hooks": {
-    "post-add": [
-      "pnpm install",
-      "cp .env.example .env"
-    ]
+    "post-add": ["pnpm install", "cp .env.example .env"]
   }
 }
 ```
@@ -140,6 +138,7 @@ gw init --post-add "pnpm install"
 ### Hook Variables
 
 Available in hook commands:
+
 - `{worktree}` - Worktree name
 - `{worktreePath}` - Full path to worktree
 - `{gitRoot}` - Repository root
@@ -158,20 +157,22 @@ Available in hook commands:
 ### Remote-First Design
 
 When creating new branches, gw fetches from remote:
+
 1. Fetches latest source branch from remote
 2. Creates branch from fresh remote ref
 3. Sets up tracking
 
 ### Strictness Levels
 
-| Command | Network Behavior |
-|---------|------------------|
-| `gw add feat/new` | Fetches remote, falls back to local |
-| `gw add feat/new --from develop` | Requires successful fetch |
+| Command                          | Network Behavior                    |
+| -------------------------------- | ----------------------------------- |
+| `gw add feat/new`                | Fetches remote, falls back to local |
+| `gw add feat/new --from develop` | Requires successful fetch           |
 
 ### Offline Fallback
 
 Without `--from`, allows local fallback:
+
 ```
 ⚠ WARNING Could not fetch from remote
 Falling back to local branch.
@@ -192,9 +193,9 @@ Configuration supports JSON with Comments:
   "defaultBranch": "main",
 
   "autoCopyFiles": [
-    ".env",      // Environment variables
-    "secrets/",  // All secrets
-  ]  // Trailing comma OK
+    ".env", // Environment variables
+    "secrets/", // All secrets
+  ], // Trailing comma OK
 }
 ```
 

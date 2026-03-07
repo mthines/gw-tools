@@ -1,5 +1,5 @@
 ---
-title: "Hotfix Workflow Pattern"
+title: 'Hotfix Workflow Pattern'
 impact: HIGH
 tags:
   - pattern
@@ -93,22 +93,22 @@ gw add hotfix-v1.2.1 -b hotfix-v1.2.1 v1.2.0
 
 ## Decision Table
 
-| Situation | Action |
-|-----------|--------|
-| Bug in production | `gw add hotfix-name -b hotfix-name main` |
+| Situation               | Action                                     |
+| ----------------------- | ------------------------------------------ |
+| Bug in production       | `gw add hotfix-name -b hotfix-name main`   |
 | Bug in specific release | `gw add hotfix-name -b hotfix-name v1.x.x` |
-| Fix complete | PR → merge to main AND release branch |
-| Need to update fix | `gw cd hotfix-name`, make changes |
+| Fix complete            | PR → merge to main AND release branch      |
+| Need to update fix      | `gw cd hotfix-name`, make changes          |
 
 ## Benefits Over Branch Switching
 
-| Traditional | With Worktrees |
-|-------------|----------------|
-| Stash current work | No stashing needed |
-| Switch to main | Keep feature worktree untouched |
-| Create hotfix branch | Create hotfix worktree |
-| Fix, commit, push | Same |
-| Switch back, unstash | Just `gw cd feature` |
+| Traditional          | With Worktrees                  |
+| -------------------- | ------------------------------- |
+| Stash current work   | No stashing needed              |
+| Switch to main       | Keep feature worktree untouched |
+| Create hotfix branch | Create hotfix worktree          |
+| Fix, commit, push    | Same                            |
+| Switch back, unstash | Just `gw cd feature`            |
 
 ## References
 

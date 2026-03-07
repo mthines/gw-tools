@@ -1,5 +1,5 @@
 ---
-title: "React SPA Configuration"
+title: 'React SPA Configuration'
 impact: MEDIUM
 tags:
   - react
@@ -20,21 +20,17 @@ Includes environment files and runtime configuration.
 {
   "root": "/projects/webapp.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    "public/config.json"
-  ]
+  "autoCopyFiles": [".env", ".env.local", "public/config.json"]
 }
 ```
 
 ## File Explanations
 
-| File | Purpose |
-|------|---------|
-| `.env` | Build-time environment variables |
-| `.env.local` | Local API endpoints, feature flags |
-| `public/config.json` | Runtime configuration |
+| File                 | Purpose                            |
+| -------------------- | ---------------------------------- |
+| `.env`               | Build-time environment variables   |
+| `.env.local`         | Local API endpoints, feature flags |
+| `public/config.json` | Runtime configuration              |
 
 ## What NOT to Copy
 
@@ -70,6 +66,7 @@ webapp/
 ### Build-Time (`.env`)
 
 Variables baked into the bundle:
+
 ```
 REACT_APP_API_URL=https://api.example.com
 REACT_APP_VERSION=1.0.0
@@ -78,6 +75,7 @@ REACT_APP_VERSION=1.0.0
 ### Runtime (`public/config.json`)
 
 Variables loaded at runtime:
+
 ```json
 {
   "apiUrl": "https://api.example.com",
@@ -88,6 +86,7 @@ Variables loaded at runtime:
 ```
 
 **Why both?**
+
 - Build-time: Cannot change without rebuild
 - Runtime: Can change per environment without rebuild
 

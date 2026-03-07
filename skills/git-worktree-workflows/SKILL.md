@@ -17,37 +17,37 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 
 ## Rules
 
-| Rule | Description |
-|------|-------------|
-| [fundamentals](./rules/fundamentals.md) | **HIGH** - Core concepts of Git worktrees, what they share/don't share, when to use them |
-| [creation](./rules/creation.md) | **HIGH** - Creating worktrees with `gw add`, remote fetch behavior, auto-copy files |
-| [navigation](./rules/navigation.md) | **MEDIUM** - Navigating with `gw cd` and `gw checkout`, shell integration setup |
-| [inspection](./rules/inspection.md) | **LOW** - Listing worktrees with `gw list`, understanding worktree states |
-| [cleanup](./rules/cleanup.md) | **MEDIUM** - Removing worktrees, `gw clean`, `gw prune`, disk space management |
-| [troubleshooting](./rules/troubleshooting.md) | **HIGH** - Common errors and solutions, recovery procedures |
+| Rule                                          | Description                                                                              |
+| --------------------------------------------- | ---------------------------------------------------------------------------------------- |
+| [fundamentals](./rules/fundamentals.md)       | **HIGH** - Core concepts of Git worktrees, what they share/don't share, when to use them |
+| [creation](./rules/creation.md)               | **HIGH** - Creating worktrees with `gw add`, remote fetch behavior, auto-copy files      |
+| [navigation](./rules/navigation.md)           | **MEDIUM** - Navigating with `gw cd` and `gw checkout`, shell integration setup          |
+| [inspection](./rules/inspection.md)           | **LOW** - Listing worktrees with `gw list`, understanding worktree states                |
+| [cleanup](./rules/cleanup.md)                 | **MEDIUM** - Removing worktrees, `gw clean`, `gw prune`, disk space management           |
+| [troubleshooting](./rules/troubleshooting.md) | **HIGH** - Common errors and solutions, recovery procedures                              |
 
 ## Workflow Patterns
 
-| Pattern | Description |
-|---------|-------------|
-| [feature-branch](./rules/patterns/feature-branch.md) | **HIGH** - Feature development workflow with worktrees |
-| [hotfix](./rules/patterns/hotfix.md) | **HIGH** - Urgent bug fixes without interrupting feature work |
-| [code-review](./rules/patterns/code-review.md) | **HIGH** - Review PRs in isolated environments with `gw pr` |
-| [parallel-testing](./rules/patterns/parallel-testing.md) | **MEDIUM** - Test across Node versions or configurations |
+| Pattern                                                  | Description                                                   |
+| -------------------------------------------------------- | ------------------------------------------------------------- |
+| [feature-branch](./rules/patterns/feature-branch.md)     | **HIGH** - Feature development workflow with worktrees        |
+| [hotfix](./rules/patterns/hotfix.md)                     | **HIGH** - Urgent bug fixes without interrupting feature work |
+| [code-review](./rules/patterns/code-review.md)           | **HIGH** - Review PRs in isolated environments with `gw pr`   |
+| [parallel-testing](./rules/patterns/parallel-testing.md) | **MEDIUM** - Test across Node versions or configurations      |
 
 ## Quick Reference
 
-| Task | Command |
-|------|---------|
-| Create worktree | `gw add feature-name` |
+| Task                         | Command                              |
+| ---------------------------- | ------------------------------------ |
+| Create worktree              | `gw add feature-name`                |
 | Create from different branch | `gw add feature-name --from develop` |
-| Navigate to worktree | `gw cd feature-name` |
-| List all worktrees | `gw list` |
-| Remove worktree | `gw remove feature-name` |
-| Check out PR | `gw pr 123` |
-| Update with main | `gw update` |
-| Batch cleanup | `gw clean` |
-| Full cleanup | `gw prune` |
+| Navigate to worktree         | `gw cd feature-name`                 |
+| List all worktrees           | `gw list`                            |
+| Remove worktree              | `gw remove feature-name`             |
+| Check out PR                 | `gw pr 123`                          |
+| Update with main             | `gw update`                          |
+| Batch cleanup                | `gw clean`                           |
+| Full cleanup                 | `gw prune`                           |
 
 ## Key Principles
 

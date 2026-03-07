@@ -1,5 +1,5 @@
 ---
-title: "Parallel Agent Coordination"
+title: 'Parallel Agent Coordination'
 impact: HIGH
 tags:
   - parallel
@@ -31,11 +31,13 @@ When multiple agents may run in parallel:
 **Pattern:** `<type>/<name>-<identifier>`
 
 **Options:**
+
 - Timestamp: `feat/auth-20240315-143022`
 - Agent ID: `feat/auth-agent-abc123`
 - Session ID: `feat/auth-session-xyz`
 
 **Examples:**
+
 ```bash
 # With timestamp
 gw add feat/dark-mode-$(date +%Y%m%d-%H%M%S)
@@ -57,6 +59,7 @@ git branch --list "*dark-mode*"
 ```
 
 ### Rules
+
 1. Never work on same branch as another worktree
 2. Use descriptive names to avoid confusion
 3. Check `gw list` before every `gw add`
@@ -80,19 +83,23 @@ Create `HANDOFF.md` in worktree:
 # Handoff Notes
 
 ## Current State
+
 - Phase: [current phase]
 - Last completed: [what's done]
 - Next step: [what's next]
 
 ## Outstanding Issues
+
 - [Issue 1]
 - [Issue 2]
 
 ## Important Context
+
 - [Key decision made]
 - [Edge case discovered]
 
 ## Commands to Resume
+
 \`\`\`bash
 cd $(gw path <branch-name>)
 npm install
@@ -109,6 +116,7 @@ git push -u origin <branch-name>
 ### Step 4: Provide Handoff Info
 
 Share with next agent:
+
 - Worktree path: `/path/to/worktree`
 - Branch name: `feat/feature-name`
 - PR (if created): `https://github.com/...`
@@ -163,6 +171,7 @@ Agent B: feat/auth-oauth-agent-b    (depends on A)
 ```
 
 **Coordination:**
+
 1. Agent B waits for Agent A to complete
 2. Agent B creates branch from Agent A's branch:
    ```bash
@@ -179,6 +188,7 @@ Agent B: feat/dashboard-filters
 ```
 
 **Coordination:**
+
 1. Both start from same base (main)
 2. Merge both PRs to main
 3. Or: One agent integrates both at the end

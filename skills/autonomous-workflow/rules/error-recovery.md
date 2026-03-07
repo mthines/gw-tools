@@ -1,5 +1,5 @@
 ---
-title: "Error Recovery Procedures"
+title: 'Error Recovery Procedures'
 impact: HIGH
 tags:
   - errors
@@ -19,6 +19,7 @@ Don't give up on errors—diagnose and recover.
 **Error:** `gw add` fails
 
 **Diagnosis:**
+
 ```bash
 git status
 git worktree list
@@ -27,18 +28,19 @@ git branch --list <branch-name>
 
 **Recovery:**
 
-| Cause | Fix |
-|-------|-----|
+| Cause                 | Fix                                    |
+| --------------------- | -------------------------------------- |
 | Branch already exists | Use different name or `gw cd <branch>` |
-| Permission error | Check directory permissions |
-| Disk space issue | Run `gw prune`, free space |
-| Git error | Read message, fix underlying issue |
+| Permission error      | Check directory permissions            |
+| Disk space issue      | Run `gw prune`, free space             |
+| Git error             | Read message, fix underlying issue     |
 
 ## Dependency Installation Failures
 
 **Error:** `npm install` fails
 
 **Diagnosis:**
+
 ```bash
 node --version
 which npm pnpm yarn
@@ -47,12 +49,12 @@ ping registry.npmjs.org
 
 **Recovery:**
 
-| Cause | Fix |
-|-------|-----|
-| Network error | Check connection, try different registry |
-| Version incompatibility | Check node requirements, switch version |
-| Lock file mismatch | Delete lock file and node_modules, reinstall |
-| Disk space | Clean npm cache: `npm cache clean --force` |
+| Cause                   | Fix                                          |
+| ----------------------- | -------------------------------------------- |
+| Network error           | Check connection, try different registry     |
+| Version incompatibility | Check node requirements, switch version      |
+| Lock file mismatch      | Delete lock file and node_modules, reinstall |
+| Disk space              | Clean npm cache: `npm cache clean --force`   |
 
 ## Test Failures During Iteration
 
@@ -61,6 +63,7 @@ ping registry.npmjs.org
 **Recovery Approach:**
 
 ### Iteration 1: Fix Obvious Issues
+
 1. Read error message completely
 2. Identify assertion that failed
 3. Fix most likely cause
@@ -68,18 +71,21 @@ ping registry.npmjs.org
 5. Assess: Better or worse?
 
 ### Iteration 2: Deep Analysis
+
 1. Add console.logs to understand state
 2. Check assumptions about data/types
 3. Verify mocks/stubs are correct
 4. Fix root cause (not symptom)
 
 ### Iteration 3+: Alternative Approach
+
 1. Question implementation approach
 2. Review similar code in codebase
 3. Consider simpler solution
 4. Refactor if necessary
 
 ### If Truly Stuck
+
 1. Commit working code with failing test
 2. Document exact failure and attempts
 3. Ask user for guidance
@@ -101,6 +107,7 @@ ping registry.npmjs.org
    - Remove conflict markers
 
 3. **Test after resolution:**
+
    ```bash
    npm run build
    npm test
@@ -118,12 +125,12 @@ ping registry.npmjs.org
 
 **Recovery:**
 
-| Cause | Fix |
-|-------|-----|
-| TypeScript error | Fix type issues, add missing types |
-| Missing dependency | Install missing package |
-| Path/import error | Check file locations, fix imports |
-| Config error | Review build config, restore working |
+| Cause              | Fix                                  |
+| ------------------ | ------------------------------------ |
+| TypeScript error   | Fix type issues, add missing types   |
+| Missing dependency | Install missing package              |
+| Path/import error  | Check file locations, fix imports    |
+| Config error       | Review build config, restore working |
 
 ## References
 
