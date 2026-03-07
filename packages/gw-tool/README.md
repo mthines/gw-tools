@@ -8,6 +8,7 @@ A command-line tool for managing git worktrees, built with Deno.
   - [Table of Contents](#table-of-contents)
   - [Quick Start](#quick-start)
   - [🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)](#-ai-skills-for-claude-code-copilot-cursor-etc)
+    - [🤖 Use as a Claude Code Agent](#-use-as-a-claude-code-agent)
   - [Initial Setup: Secrets in the Default Branch](#initial-setup-secrets-in-the-default-branch)
     - [First-Time Setup Flow](#first-time-setup-flow)
     - [Why This Matters](#why-this-matters)
@@ -162,7 +163,8 @@ Want Claude Code to autonomously implement features end-to-end? Install the auto
 
 ```bash
 # One-liner install (global)
-curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
+mkdir -p ~/.claude/agents && \
+  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
   -o ~/.claude/agents/autonomous-workflow.md
 
 # Or manually: copy the file from packages/autonomous-workflow-agent/agents/autonomous-workflow.md
