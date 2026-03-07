@@ -18,6 +18,29 @@ Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.
 
 That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
 
+## Prerequisites
+
+This agent requires the **gw CLI** to manage Git worktrees. Install it first:
+
+```bash
+# Install (Homebrew on macOS)
+brew install mthines/gw-tools/gw
+
+# Or install via npm
+npm install -g @gw-tools/gw
+
+# Or install via Linux package manager
+yay -S gw-tools
+```
+
+Then initialize gw in your project:
+
+```bash
+gw init <repo-url>
+```
+
+See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup instructions.
+
 ## For Agent SDK Developers
 
 Building custom agents? Install via npm:
