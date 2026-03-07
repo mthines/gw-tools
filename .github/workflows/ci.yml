@@ -544,19 +544,28 @@ jobs:
 
   release-agent:
     # Run on push to main OR manual dispatch with force_release_agent
+    # Waits for gw-tool pipeline to avoid git push race conditions
     if: |
-      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && inputs.force_release_agent)
-    needs: test-agent
+      always() &&
+      needs.test-agent.result == 'success' &&
+      (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped') &&
+      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
+      (
+        (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
+        (github.event_name == 'workflow_dispatch' && inputs.force_release_agent)
+      )
+    needs: [test-agent, auto-tag, release]
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
       contents: write
       id-token: write
     steps:
+      # Checkout latest main to include any commits from auto-tag job
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
       - name: Check for releasable changes
