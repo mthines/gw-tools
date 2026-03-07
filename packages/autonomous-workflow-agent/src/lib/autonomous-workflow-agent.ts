@@ -3,7 +3,7 @@ import { systemPrompt } from './system-prompt.js';
 /**
  * Tool names available to the autonomous workflow agent.
  */
-export type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Task';
+export type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Task' | 'Skill';
 
 /**
  * Agent definition compatible with Claude Agent SDK.
@@ -50,7 +50,7 @@ export const autonomousWorkflowAgent: AgentDefinition = {
 Use for end-to-end feature implementation from task description through tested PR delivery.
 Handles validation, planning, worktree setup, implementation, testing, documentation, and PR creation.`,
   prompt: systemPrompt,
-  tools: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep'],
+  tools: ['Read', 'Write', 'Edit', 'Bash', 'Glob', 'Grep', 'Skill'],
   model: 'sonnet',
 };
 
