@@ -66,8 +66,8 @@ import { autonomousWorkflowAgent } from '@gw-tools/autonomous-workflow-agent';
 // Override defaults for your use case
 const myAgent = {
   ...autonomousWorkflowAgent,
-  model: 'opus',        // Use Opus for complex tasks
-  maxTurns: 150,        // Allow more iterations
+  model: 'opus', // Use Opus for complex tasks
+  maxTurns: 150, // Allow more iterations
 };
 ```
 
@@ -86,23 +86,23 @@ console.log(systemPrompt.length); // ~16KB of battle-tested instructions
 
 The agent automatically detects the right workflow mode:
 
-| Mode | When | Artifacts |
-|------|------|-----------|
-| **Full** | 4+ files OR architectural changes | `task.md`, `plan.md`, `walkthrough.md` |
-| **Lite** | 1-3 files, straightforward changes | Mental plan only |
+| Mode     | When                               | Artifacts                              |
+| -------- | ---------------------------------- | -------------------------------------- |
+| **Full** | 4+ files OR architectural changes  | `task.md`, `plan.md`, `walkthrough.md` |
+| **Lite** | 1-3 files, straightforward changes | Mental plan only                       |
 
 ### The 8 Phases
 
-| Phase | Name | What Happens |
-|-------|------|--------------|
-| **0** | Validation | Asks clarifying questions, confirms understanding, detects workflow mode |
-| **1** | Planning | Deep codebase analysis, creates implementation plan |
-| **2** | Worktree Setup | Creates isolated Git worktree via `gw add` |
-| **3** | Implementation | Writes code incrementally, commits logically |
-| **4** | Testing | Runs tests, iterates until green (no artificial limits) |
-| **5** | Documentation | Updates README, CHANGELOG, API docs as needed |
-| **6** | PR Creation | Pushes branch, creates draft PR with full context |
-| **7** | Cleanup | Removes worktree after PR is merged |
+| Phase | Name           | What Happens                                                             |
+| ----- | -------------- | ------------------------------------------------------------------------ |
+| **0** | Validation     | Asks clarifying questions, confirms understanding, detects workflow mode |
+| **1** | Planning       | Deep codebase analysis, creates implementation plan                      |
+| **2** | Worktree Setup | Creates isolated Git worktree via `gw add`                               |
+| **3** | Implementation | Writes code incrementally, commits logically                             |
+| **4** | Testing        | Runs tests, iterates until green (no artificial limits)                  |
+| **5** | Documentation  | Updates README, CHANGELOG, API docs as needed                            |
+| **6** | PR Creation    | Pushes branch, creates draft PR with full context                        |
+| **7** | Cleanup        | Removes worktree after PR is merged                                      |
 
 ### Safety Guardrails
 
@@ -131,10 +131,10 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 
 ### Default Configuration
 
-| Property | Value |
-|----------|-------|
-| `model` | `sonnet` |
-| `tools` | `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Skill` |
+| Property | Value                                                    |
+| -------- | -------------------------------------------------------- |
+| `model`  | `sonnet`                                                 |
+| `tools`  | `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Skill` |
 
 ## Requirements
 
@@ -166,6 +166,7 @@ await query({
 ```
 
 The agent will:
+
 1. Ask about cache invalidation strategy, TTL defaults, storage backend
 2. Analyze existing API client code
 3. Create `feat/api-caching` worktree
