@@ -52,21 +52,13 @@ async function outputShellIntegration(commandName = 'gw', actualCommand?: string
   // const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
 
   let shellFunction: string;
-  let configFile: string;
-  let evalLine: string;
 
   if (shellName === 'zsh') {
     shellFunction = getZshFunction(commandName, actualCommand);
-    configFile = '~/.zshrc';
-    evalLine = 'eval "$(gw install-shell)"';
   } else if (shellName === 'bash') {
     shellFunction = getBashFunction(commandName, actualCommand);
-    configFile = '~/.bashrc';
-    evalLine = 'eval "$(gw install-shell)"';
   } else if (shellName === 'fish') {
     shellFunction = getFishFunction(commandName, actualCommand);
-    configFile = '~/.config/fish/config.fish';
-    evalLine = 'gw install-shell | source';
   } else {
     // Always show this error on stderr
     output.error(`Unsupported shell: ${shellName || 'unknown'}`);
