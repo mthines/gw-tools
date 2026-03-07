@@ -89,7 +89,7 @@ This is CRITICAL for long-running tasks and session recovery.
 | ----- | -------------- | ------------------------------------- |
 | 0     | Validation     | Ask questions, validate understanding |
 | 1     | Planning       | Analyze codebase, create plan         |
-| 2     | Worktree Setup | Create isolated worktree with `gw`  |
+| 2     | Worktree Setup | Create isolated worktree with `gw`    |
 | 3     | Implementation | Code changes in isolated worktree     |
 | 4     | Testing        | Iterate until tests pass              |
 | 5     | Documentation  | Update docs                           |
@@ -135,6 +135,7 @@ Announce: "Phase 0 complete. User confirmed. Proceeding to Phase 1 Planning."
 Deep codebase analysis and implementation planning.
 
 ### Context Recovery
+
 ```
 READ: .gw/{branch}/task.md (if exists)
 READ: .gw/{branch}/plan.md (if exists)
@@ -178,12 +179,12 @@ Before creating a new worktree, check if current context matches the task:
 
 | Type        | Use Case              |
 | ----------- | --------------------- |
-| `feat/`   | New feature           |
-| `fix/`    | Bug fix               |
-| `refactor/` | Code restructuring  |
-| `docs/`   | Documentation only    |
-| `chore/`  | Tooling, dependencies |
-| `test/`   | Adding/fixing tests   |
+| `feat/`     | New feature           |
+| `fix/`      | Bug fix               |
+| `refactor/` | Code restructuring    |
+| `docs/`     | Documentation only    |
+| `chore/`    | Tooling, dependencies |
+| `test/`     | Adding/fixing tests   |
 
 ### Procedure
 
@@ -213,6 +214,7 @@ Announce: "Phase 2 complete. Worktree ready. Proceeding to Phase 3 Implementatio
 Incremental implementation with continuous validation.
 
 ### Context Recovery
+
 ```
 READ: .gw/{branch}/task.md
 READ: .gw/{branch}/plan.md
@@ -247,6 +249,7 @@ Announce: "Phase 3 complete. Implementation done. Proceeding to Phase 4 Testing.
 Run comprehensive tests and iterate until all pass.
 
 ### Context Recovery
+
 ```
 READ: .gw/{branch}/task.md
 Check: Any known test issues from previous attempts?
@@ -296,6 +299,7 @@ Attempt 7+: Escalate to User
 ### Self-Reflection Checkpoint
 
 After every 3 test iterations:
+
 ```
 REFLECT:
 - Am I making progress or going in circles?
@@ -324,6 +328,7 @@ Announce: "Phase 4 complete. All tests passing. Proceeding to Phase 5 Documentat
 Update relevant documentation based on changes made.
 
 ### Context Recovery
+
 ```
 READ: .gw/{branch}/task.md
 READ: .gw/{branch}/plan.md
@@ -358,6 +363,7 @@ Announce: "Phase 5 complete. Documentation updated. Proceeding to Phase 6 PR Cre
 Create a DRAFT pull request with comprehensive description.
 
 ### Context Recovery
+
 ```
 READ: .gw/{branch}/task.md - Full history of work done
 READ: .gw/{branch}/plan.md - Original plan for comparison
@@ -426,11 +432,13 @@ Remove worktree after PR is merged or closed.
 ### Resource Limits
 
 **Soft Limits:**
+
 - Commits: ~3-10 per feature
 - Files changed: ~20 max
 - Test iterations: Escalate at 7+
 
 **Hard Limits (Stop and Ask):**
+
 - > 50 files changed → Scope too large
 - > 3 hours stuck → Fundamental issue
 - 10+ test iterations without progress → Get user guidance
@@ -450,13 +458,13 @@ Remove worktree after PR is merged or closed.
 
 ### Common Errors & Recovery
 
-| Error              | Recovery                               |
-| ------------------ | -------------------------------------- |
-| Branch exists      | Use different name or `gw cd`        |
-| npm install fails  | Delete node_modules, reinstall         |
-| Build fails        | Fix type issues, check imports         |
-| Merge conflicts    | Resolve manually, test after           |
-| Test flaky         | Run 3x to confirm, investigate if inconsistent |
+| Error             | Recovery                                       |
+| ----------------- | ---------------------------------------------- |
+| Branch exists     | Use different name or `gw cd`                  |
+| npm install fails | Delete node_modules, reinstall                 |
+| Build fails       | Fix type issues, check imports                 |
+| Merge conflicts   | Resolve manually, test after                   |
+| Test flaky        | Run 3x to confirm, investigate if inconsistent |
 
 ---
 
@@ -464,15 +472,16 @@ Remove worktree after PR is merged or closed.
 
 For Full Mode (4+ files), maintain artifacts in `.gw/{branch-name}/`:
 
-| Artifact        | File             | Created   | Purpose                    |
-| --------------- | ---------------- | --------- | -------------------------- |
-| **Task**        | `task.md`      | Action 3  | Dynamic checklist          |
-| **Plan**        | `plan.md`      | Phase 1   | Implementation strategy    |
-| **Walkthrough** | `walkthrough.md` | Phase 6 | Final summary for PR       |
+| Artifact        | File             | Created  | Purpose                 |
+| --------------- | ---------------- | -------- | ----------------------- |
+| **Task**        | `task.md`        | Action 3 | Dynamic checklist       |
+| **Plan**        | `plan.md`        | Phase 1  | Implementation strategy |
+| **Walkthrough** | `walkthrough.md` | Phase 6  | Final summary for PR    |
 
 ### Artifact Update Protocol
 
 Update `task.md` whenever:
+
 - A file is completed
 - A decision is made
 - A blocker is encountered
@@ -485,17 +494,17 @@ Update `task.md` whenever:
 
 ### Full Mode (4+ files)
 
-| Phase | Command/Action                                    |
-| ----- | ------------------------------------------------- |
-| Setup | Output MODE SELECTION, create `.gw/{branch}/`  |
-| 0     | Ask clarifying questions, get user confirmation  |
-| 1     | Analyze codebase, populate `plan.md`           |
-| 2     | `gw add feat/feature-name`                     |
-| 3     | Code in worktree, update `task.md` per file    |
-| 4     | `npm test`, one failure at a time, escalate    |
-| 5     | Update README, CHANGELOG                         |
+| Phase | Command/Action                                  |
+| ----- | ----------------------------------------------- |
+| Setup | Output MODE SELECTION, create `.gw/{branch}/`   |
+| 0     | Ask clarifying questions, get user confirmation |
+| 1     | Analyze codebase, populate `plan.md`            |
+| 2     | `gw add feat/feature-name`                      |
+| 3     | Code in worktree, update `task.md` per file     |
+| 4     | `npm test`, one failure at a time, escalate     |
+| 5     | Update README, CHANGELOG                        |
 | 6     | Create `walkthrough.md`, `gh pr create --draft` |
-| 7     | `gw remove` (after merge)                      |
+| 7     | `gw remove` (after merge)                       |
 
 ### Lite Mode (1-3 files)
 
@@ -504,18 +513,18 @@ Update `task.md` whenever:
 | Setup | Output MODE SELECTION         |
 | 0     | Quick clarification if needed |
 | 1     | Brief mental plan             |
-| 2     | `gw add fix/bug-name`       |
+| 2     | `gw add fix/bug-name`         |
 | 3     | Code directly, commit         |
-| 4     | `npm test`, fix failures    |
-| 5     | `gh pr create --draft`      |
+| 4     | `npm test`, fix failures      |
+| 5     | `gh pr create --draft`        |
 
 ### Key Commands
 
-| Action              | Command                          |
-| ------------------- | -------------------------------- |
-| Create worktree     | `gw add <branch-name>`         |
-| Switch to worktree  | `gw cd <branch-name>`          |
-| List worktrees      | `gw list`                      |
-| Remove worktree     | `gw remove <branch-name>`      |
-| Create draft PR     | `gh pr create --draft`         |
-| Check PR status     | `gh pr view <num> --json state` |
+| Action             | Command                         |
+| ------------------ | ------------------------------- |
+| Create worktree    | `gw add <branch-name>`          |
+| Switch to worktree | `gw cd <branch-name>`           |
+| List worktrees     | `gw list`                       |
+| Remove worktree    | `gw remove <branch-name>`       |
+| Create draft PR    | `gh pr create --draft`          |
+| Check PR status    | `gh pr view <num> --json state` |

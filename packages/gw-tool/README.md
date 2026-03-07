@@ -170,6 +170,7 @@ curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/auto
 ```
 
 Once installed, Claude will automatically use this agent when you ask it to implement features, and it will:
+
 - Create isolated worktrees for each task
 - Plan and implement incrementally
 - Run tests and iterate until passing

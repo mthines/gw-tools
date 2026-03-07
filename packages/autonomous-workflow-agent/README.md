@@ -11,6 +11,7 @@ curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/auto
 ```
 
 Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
+
 - `~/.claude/agents/` — Available in all your projects
 - `.claude/agents/` — Available only in that project (commit to git for team sharing)
 
