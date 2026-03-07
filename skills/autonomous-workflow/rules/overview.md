@@ -84,6 +84,49 @@ Phase 7: Cleanup (optional)
 - Project doesn't use Git or gw-tools
 - User says "work in current directory"
 
+## Workflow Modes
+
+### Full Mode (with Artifacts)
+
+Use for complex, multi-file changes:
+
+- Creates `.gw/{branch}/task.md`, `plan.md`, `walkthrough.md`
+- Tracks progress, decisions, and discoveries
+- Enables context recovery and handoff
+- Generates comprehensive PR summary
+
+**Triggers:**
+
+- 4+ files changed
+- Multiple decisions required
+- Long session expected
+- Handoff to another agent possible
+
+### Lite Mode (without Artifacts)
+
+Use for simple, focused changes:
+
+- No artifact files created
+- Plan exists only in conversation
+- Faster execution
+
+**Triggers:**
+
+- 1-3 files changed
+- Straightforward implementation
+- Single session completion
+- No complex decisions
+
+### Decision Flow
+
+```
+Is this a complex change?
+├── Yes (4+ files, multiple decisions) → Full Mode with artifacts
+└── No (1-3 files, straightforward)
+    ├── Still want worktree isolation? → Lite Mode with worktree
+    └── Very simple fix? → Direct implementation (no worktree)
+```
+
 ## Expected Outcomes
 
 **Successful execution produces:**

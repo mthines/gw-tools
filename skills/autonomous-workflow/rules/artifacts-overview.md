@@ -14,6 +14,27 @@ tags:
 
 The autonomous workflow uses a three-artifact pattern inspired by Google Antigravity for tracking progress, documenting decisions, and generating summaries. These artifacts complement Claude's built-in memory by providing explicit, user-visible files.
 
+## When to Use Artifacts
+
+**Create artifacts (Full Mode) when:**
+
+- Task involves 4+ files
+- Multiple architectural decisions required
+- Long session where context may be compacted
+- Handoff to another agent is possible
+- User wants detailed progress tracking
+- Complex feature with many steps
+
+**Skip artifacts (Lite Mode) when:**
+
+- Task involves 1-3 files
+- Implementation is straightforward
+- Can be completed quickly in one session
+- No complex decisions to track
+- Simple bug fix or enhancement
+
+See [overview](./overview.md) for the complete decision flow.
+
 ## Three-Artifact Pattern
 
 | Artifact        | File             | Purpose                                   | Created |

@@ -71,7 +71,64 @@ Use this skill when you need:
 
 - ❌ Interactive coding sessions (use conversational mode instead)
 - ❌ Exploratory research tasks (use explore agent)
-- ❌ Simple one-file changes (no need for full workflow)
+
+## 📊 Workflow Modes
+
+The workflow adapts based on task complexity:
+
+### Full Mode (Complex Changes)
+
+**Use when:** Multi-file features, significant refactors, new capabilities
+
+```
+Phase 0 → Phase 1 (with artifacts) → Phase 2 → Phase 3-6 → Phase 7
+          ↓
+    Creates .gw/{branch}/
+    ├── task.md      ← Updated throughout
+    ├── plan.md      ← Created at planning
+    └── walkthrough.md ← Generated at end
+```
+
+**Artifacts provide:**
+
+- Progress tracking across long sessions
+- Context recovery if conversation is compacted
+- Decision log for future reference
+- Comprehensive PR summary
+
+### Lite Mode (Simple Changes)
+
+**Use when:** Single-file fixes, small enhancements, well-understood changes
+
+```
+Phase 0 → Quick Plan → Phase 2 (optional) → Implement → Test → PR
+          ↓
+    No artifact files created
+    Plan exists only in conversation
+```
+
+**Skip artifacts when:**
+
+- Change touches 1-3 files
+- Implementation is straightforward
+- No complex decisions to track
+- Can be completed in one session
+
+### Decision Guide
+
+| Complexity | Files Changed | Artifacts | Worktree |
+| ---------- | ------------- | --------- | -------- |
+| Trivial    | 1 file        | No        | Optional |
+| Small      | 2-3 files     | No        | Yes      |
+| Medium     | 4-10 files    | Yes       | Yes      |
+| Large      | 10+ files     | Yes       | Yes      |
+
+**Other factors favoring Full Mode:**
+
+- Multiple decisions to make
+- Risk of context loss (long session)
+- Handoff to another agent possible
+- User wants detailed summary
 
 ## 🔄 Workflow Overview
 

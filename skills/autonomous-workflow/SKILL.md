@@ -59,22 +59,46 @@ Structured templates for consistent artifact generation:
 
 ## Quick Reference
 
+### Full Mode (4+ files, complex changes)
+
 | Phase             | Command/Action                                                |
 | ----------------- | ------------------------------------------------------------- |
 | 0. Validation     | Ask clarifying questions, get user confirmation               |
 | 1. Planning       | Analyze codebase, create `.gw/{branch}/task.md` and `plan.md` |
-| 2. Worktree       | `gw add feat/feature-name` (MANDATORY)                        |
+| 2. Worktree       | `gw add feat/feature-name`                                    |
 | 3. Implementation | Code in worktree, update `task.md` on changes                 |
 | 4. Testing        | `npm test`, iterate until all pass, log in `task.md`          |
 | 5. Documentation  | Update README, CHANGELOG                                      |
 | 6. PR Creation    | Generate `walkthrough.md`, `gh pr create --draft`             |
 | 7. Cleanup        | `gw remove feat/feature-name` (after merge)                   |
 
+### Lite Mode (1-3 files, simple changes)
+
+| Phase             | Command/Action                                    |
+| ----------------- | ------------------------------------------------- |
+| 0. Validation     | Quick clarification if needed                     |
+| 1. Planning       | Brief mental plan (no artifact files)             |
+| 2. Worktree       | `gw add fix/bug-name` (optional for trivial)      |
+| 3. Implementation | Code directly, commit when done                   |
+| 4. Testing        | `npm test`, fix any failures                      |
+| 5. PR Creation    | `gh pr create --draft`                            |
+
+## Workflow Modes
+
+| Mode     | Files Changed | Artifacts | Use When                            |
+| -------- | ------------- | --------- | ----------------------------------- |
+| **Lite** | 1-3 files     | No        | Simple fixes, small enhancements    |
+| **Full** | 4+ files      | Yes       | Features, refactors, complex changes|
+
+**Full Mode**: Creates `.gw/{branch}/` artifacts for progress tracking and context recovery.
+
+**Lite Mode**: Faster execution without artifact overhead. Still uses worktree isolation.
+
 ## Key Principles
 
 - **Always validate first (Phase 0)**: Never skip directly to implementation.
-- **Always create worktree (Phase 2)**: Isolation is mandatory.
-- **Track progress with artifacts**: Use `.gw/{branch}/` files for transparency.
+- **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
+- **Track progress with artifacts**: Use `.gw/{branch}/` files for complex changes.
 - **Smart worktree detection**: Check if current worktree matches task before creating new.
 - **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
 - **Fast feedback loops**: Run tests frequently, fix failures immediately.
