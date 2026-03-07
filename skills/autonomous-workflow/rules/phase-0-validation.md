@@ -106,6 +106,40 @@ If user clarifies/corrects:
 - Re-validate if significant changes
 - Confirm again before proceeding
 
+### Step 6: Detect Workflow Mode & Create Artifacts
+
+**After user confirmation, before Phase 1:**
+
+#### 6a. Determine Mode
+
+Analyze the confirmed scope:
+
+| Mode     | Criteria                              | Artifacts |
+| -------- | ------------------------------------- | --------- |
+| **Full** | 4+ files OR complex/architectural     | **REQUIRED** |
+| **Lite** | 1-3 files AND simple/straightforward  | Skip      |
+
+**When in doubt, choose Full Mode.**
+
+#### 6b. Announce Mode Selection
+
+State explicitly:
+> "This is a **Full Mode** task (affects X files). Creating artifacts now."
+
+or
+
+> "This is a **Lite Mode** task (Y files, simple fix). Proceeding without artifacts."
+
+#### 6c. Create Artifacts (Full Mode ONLY)
+
+```bash
+mkdir -p .gw/{branch-name}
+touch .gw/{branch-name}/task.md
+touch .gw/{branch-name}/plan.md
+```
+
+**⛔ DO NOT proceed to Phase 1 without completing Step 6.**
+
 ## Example
 
 ```markdown
@@ -149,6 +183,8 @@ Before leaving Phase 0:
 - [ ] Acceptance criteria defined
 - [ ] Technical approach validated
 - [ ] User gave explicit "proceed" signal
+- [ ] **Workflow mode determined (Full or Lite)**
+- [ ] **Artifacts created (Full Mode only)**: `.gw/{branch}/task.md`, `plan.md`
 
 **If any checkbox unchecked, DO NOT proceed to Phase 1.**
 

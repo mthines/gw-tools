@@ -25,6 +25,56 @@ metadata:
 
 Execute complete feature development cycles autonomously—from task intake through tested PR delivery—using isolated Git worktrees.
 
+---
+
+## ⚠️ CRITICAL: Before Starting ANY Work
+
+**You MUST complete these steps IN ORDER before writing any code:**
+
+### Step 1: Detect Workflow Mode (MANDATORY)
+
+Analyze the task scope to determine the workflow mode:
+
+| Mode     | Criteria                              | Artifacts Required |
+| -------- | ------------------------------------- | ------------------ |
+| **Full** | 4+ files OR complex/architectural     | **YES - MANDATORY** |
+| **Lite** | 1-3 files AND simple/straightforward  | No                 |
+
+**When in doubt, choose Full Mode.**
+
+### Step 2: Create Artifact Files (Full Mode ONLY)
+
+For **Full Mode**, you MUST create these files in `.gw/{branch-name}/` **BEFORE Phase 1 Planning begins**:
+
+```bash
+# Create artifact directory
+mkdir -p .gw/{branch-name}
+
+# Create required files
+touch .gw/{branch-name}/task.md
+touch .gw/{branch-name}/plan.md
+```
+
+| File | Purpose | When to Update |
+| ---- | ------- | -------------- |
+| `task.md` | Dynamic checklist, decisions, blockers | Throughout implementation |
+| `plan.md` | Implementation strategy, file list | After Phase 1 analysis |
+| `walkthrough.md` | Final summary for PR | Phase 6 only |
+
+**⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
+
+### Step 3: Announce Mode Selection
+
+State your mode selection explicitly:
+
+> "This is a **Full Mode** task (affects 5+ files). Creating `.gw/{branch-name}/` artifacts now."
+
+or
+
+> "This is a **Lite Mode** task (2 files, simple fix). Proceeding without artifacts."
+
+---
+
 ## Rules
 
 | Rule                                                            | Description                                                                           |
@@ -96,14 +146,16 @@ Structured templates for consistent artifact generation:
 
 ## Key Principles
 
-- **Always validate first (Phase 0)**: Never skip directly to implementation.
-- **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
-- **Track progress with artifacts**: Use `.gw/{branch}/` files for complex changes.
-- **Smart worktree detection**: Check if current worktree matches task before creating new.
-- **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
-- **Fast feedback loops**: Run tests frequently, fix failures immediately.
-- **Self-validate continuously**: Check work at every step.
-- **Stop and ask when blocked**: Don't guess on ambiguity.
+1. **Detect workflow mode FIRST**: Determine Full vs Lite before any other action.
+2. **Create artifacts BEFORE planning (Full Mode)**: `.gw/{branch}/task.md` and `plan.md` are MANDATORY.
+3. **Always validate first (Phase 0)**: Never skip directly to implementation.
+4. **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
+5. **Track progress with artifacts**: Update `.gw/{branch}/task.md` as you work.
+6. **Smart worktree detection**: Check if current worktree matches task before creating new.
+7. **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
+8. **Fast feedback loops**: Run tests frequently, fix failures immediately.
+9. **Self-validate continuously**: Check work at every step.
+10. **Stop and ask when blocked**: Don't guess on ambiguity.
 
 ## Artifact System
 
@@ -120,19 +172,25 @@ Files are gitignored and grouped by branch for easy browsing.
 ## Workflow Flow
 
 ```
+┌─────────────────────────────────────────────────────┐
+│  MODE DETECTION ← MANDATORY FIRST STEP              │
+│  Analyze task → Choose Full (4+ files) or Lite      │
+│  Full Mode: Create .gw/{branch}/ artifacts NOW      │
+└─────────────────────────────────────────────────────┘
+    ↓
 Phase 0: Validation ← MANDATORY
     ↓ (user confirms)
-Phase 1: Planning
+Phase 1: Planning (Full: write to plan.md, Lite: mental plan)
     ↓ (plan validated)
 Phase 2: Worktree Setup ← MANDATORY (with smart detection)
     ↓ (worktree created)
-Phase 3: Implementation
+Phase 3: Implementation (Full: update task.md, Lite: just code)
     ↓ (code complete)
 Phase 4: Testing ← iterate until passing
     ↓ (all tests pass)
 Phase 5: Documentation
     ↓ (docs complete)
-Phase 6: PR Creation
+Phase 6: PR Creation (Full: generate walkthrough.md)
     ↓ (draft PR delivered)
 Phase 7: Cleanup (optional)
 ```

@@ -9,6 +9,44 @@ tags:
 
 # Phase 1: Task Intake & Planning
 
+---
+
+## ⚠️ PREREQUISITE GATE: Workflow Mode & Artifacts
+
+**Before ANY Phase 1 work, you MUST have completed:**
+
+### 1. Workflow Mode Detection
+
+Confirm which mode applies to this task:
+
+| Mode | Criteria | Artifacts |
+| ---- | -------- | --------- |
+| **Full** | 4+ files OR complex changes | **REQUIRED** |
+| **Lite** | 1-3 files AND simple | Skip artifacts |
+
+### 2. Artifact Creation (Full Mode ONLY)
+
+**⛔ STOP if Full Mode and artifacts don't exist yet.**
+
+```bash
+# Create artifact directory FIRST
+mkdir -p .gw/{branch-name}
+
+# Create required files
+touch .gw/{branch-name}/task.md
+touch .gw/{branch-name}/plan.md
+```
+
+Verify files exist before proceeding:
+```bash
+ls -la .gw/{branch-name}/
+# Must show: task.md, plan.md
+```
+
+**Only proceed to Phase 1 analysis after artifacts are created.**
+
+---
+
 ## Overview
 
 Deep codebase analysis and implementation planning.
@@ -105,17 +143,11 @@ Ask yourself:
 - Is this approach simple enough?
 - Will other developers understand this?
 
-### Step 4: Create Artifacts
+### Step 4: Populate Artifacts (Full Mode)
 
-Initialize tracking artifacts in `.gw/{branch-name}/`:
+**Note:** Artifact files should already exist from the Prerequisite Gate above.
 
-```bash
-# Create artifact directory
-mkdir -p .gw/$(echo "<branch-name>" | tr '/' '-')
-
-# Create task.md using template
-# See templates/task.template.md
-```
+Now populate the artifacts with your planning content:
 
 **task.md** - Initialize with:
 
