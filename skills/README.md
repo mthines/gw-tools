@@ -20,10 +20,6 @@ npx skills add https://github.com/mthines/gw-tools --skill
 
 Master Git worktrees and optimize development workflows with gw-tools.
 
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows
-```
-
 **Learn:**
 
 - Git worktree fundamentals and best practices
@@ -39,10 +35,6 @@ npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflow
 ### 2. [Configuration Management](./gw-config-management/)
 
 Configure and optimize gw-tools for different project types and team needs.
-
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill gw-config-management
-```
 
 **Learn:**
 
