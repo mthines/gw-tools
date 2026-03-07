@@ -15,10 +15,10 @@ tags:
 
 **Before starting ANY phase, you MUST determine the workflow mode:**
 
-| Mode     | Criteria                              | Artifacts Required |
-| -------- | ------------------------------------- | ------------------ |
-| **Full** | 4+ files OR complex/architectural     | **YES - MANDATORY** |
-| **Lite** | 1-3 files AND simple/straightforward  | No                 |
+| Mode     | Criteria                             | Artifacts Required  |
+| -------- | ------------------------------------ | ------------------- |
+| **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
+| **Lite** | 1-3 files AND simple/straightforward | No                  |
 
 **For Full Mode:** Create `.gw/{branch-name}/task.md` and `plan.md` BEFORE Phase 1.
 

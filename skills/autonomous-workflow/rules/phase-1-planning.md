@@ -19,10 +19,10 @@ tags:
 
 Confirm which mode applies to this task:
 
-| Mode | Criteria | Artifacts |
-| ---- | -------- | --------- |
-| **Full** | 4+ files OR complex changes | **REQUIRED** |
-| **Lite** | 1-3 files AND simple | Skip artifacts |
+| Mode     | Criteria                    | Artifacts      |
+| -------- | --------------------------- | -------------- |
+| **Full** | 4+ files OR complex changes | **REQUIRED**   |
+| **Lite** | 1-3 files AND simple        | Skip artifacts |
 
 ### 2. Artifact Creation (Full Mode ONLY)
 
@@ -38,6 +38,7 @@ touch .gw/{branch-name}/plan.md
 ```
 
 Verify files exist before proceeding:
+
 ```bash
 ls -la .gw/{branch-name}/
 # Must show: task.md, plan.md

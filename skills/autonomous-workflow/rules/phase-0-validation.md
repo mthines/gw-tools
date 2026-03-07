@@ -114,16 +114,17 @@ If user clarifies/corrects:
 
 Analyze the confirmed scope:
 
-| Mode     | Criteria                              | Artifacts |
-| -------- | ------------------------------------- | --------- |
-| **Full** | 4+ files OR complex/architectural     | **REQUIRED** |
-| **Lite** | 1-3 files AND simple/straightforward  | Skip      |
+| Mode     | Criteria                             | Artifacts    |
+| -------- | ------------------------------------ | ------------ |
+| **Full** | 4+ files OR complex/architectural    | **REQUIRED** |
+| **Lite** | 1-3 files AND simple/straightforward | Skip         |
 
 **When in doubt, choose Full Mode.**
 
 #### 6b. Announce Mode Selection
 
 State explicitly:
+
 > "This is a **Full Mode** task (affects X files). Creating artifacts now."
 
 or

@@ -54,13 +54,13 @@ See [overview](./overview.md) for the complete decision flow.
 
 ## Three-Artifact Pattern
 
-| Artifact        | File             | Purpose                                   | Created | Populated |
-| --------------- | ---------------- | ----------------------------------------- | ------- | --------- |
-| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 0 (end) | Phase 1+ |
-| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 0 (end) | Phase 1 |
-| **Walkthrough** | `walkthrough.md` | Final summary, verification steps         | Phase 6 | Phase 6 |
+| Artifact        | File             | Purpose                                   | Created       | Populated |
+| --------------- | ---------------- | ----------------------------------------- | ------------- | --------- |
+| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 0 (end) | Phase 1+  |
+| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 0 (end) | Phase 1   |
+| **Walkthrough** | `walkthrough.md` | Final summary, verification steps         | Phase 6       | Phase 6   |
 
-**Note:** Files are *created* at mode detection (Phase 0), then *populated* in Phase 1.
+**Note:** Files are _created_ at mode detection (Phase 0), then _populated_ in Phase 1.
 
 ## File Location
 

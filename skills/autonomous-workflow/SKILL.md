@@ -35,10 +35,10 @@ Execute complete feature development cycles autonomously—from task intake thro
 
 Analyze the task scope to determine the workflow mode:
 
-| Mode     | Criteria                              | Artifacts Required |
-| -------- | ------------------------------------- | ------------------ |
-| **Full** | 4+ files OR complex/architectural     | **YES - MANDATORY** |
-| **Lite** | 1-3 files AND simple/straightforward  | No                 |
+| Mode     | Criteria                             | Artifacts Required  |
+| -------- | ------------------------------------ | ------------------- |
+| **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
+| **Lite** | 1-3 files AND simple/straightforward | No                  |
 
 **When in doubt, choose Full Mode.**
 
@@ -55,11 +55,11 @@ touch .gw/{branch-name}/task.md
 touch .gw/{branch-name}/plan.md
 ```
 
-| File | Purpose | When to Update |
-| ---- | ------- | -------------- |
-| `task.md` | Dynamic checklist, decisions, blockers | Throughout implementation |
-| `plan.md` | Implementation strategy, file list | After Phase 1 analysis |
-| `walkthrough.md` | Final summary for PR | Phase 6 only |
+| File             | Purpose                                | When to Update            |
+| ---------------- | -------------------------------------- | ------------------------- |
+| `task.md`        | Dynamic checklist, decisions, blockers | Throughout implementation |
+| `plan.md`        | Implementation strategy, file list     | After Phase 1 analysis    |
+| `walkthrough.md` | Final summary for PR                   | Phase 6 only              |
 
 **⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
 
