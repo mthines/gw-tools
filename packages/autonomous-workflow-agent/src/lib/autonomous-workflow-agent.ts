@@ -3,15 +3,7 @@ import { systemPrompt } from './system-prompt.js';
 /**
  * Tool names available to the autonomous workflow agent.
  */
-export type ToolName =
-  | 'Read'
-  | 'Write'
-  | 'Edit'
-  | 'Bash'
-  | 'Glob'
-  | 'Grep'
-  | 'WebSearch'
-  | 'Task';
+export type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Task';
 
 /**
  * Agent definition compatible with Claude Agent SDK.
