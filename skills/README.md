@@ -52,10 +52,6 @@ Configure and optimize gw-tools for different project types and team needs.
 
 Execute complete feature development cycles autonomously using isolated worktrees.
 
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow
-```
-
 **Capabilities:**
 
 - Smart worktree detection (fuzzy match task to current worktree)
