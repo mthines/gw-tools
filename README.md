@@ -77,7 +77,7 @@ gw remove feature-auth
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows @gw-config-management @gw-autonomous-workflow # installs all skills
+npx skills add https://github.com/mthines/gw-tools --skill
 ```
 
 ```bash

@@ -2,18 +2,26 @@
 
 > Enhance your Git worktree workflows with Claude Code skills
 
-## 🎯 What are Skills?
+## What are Skills?
 
 Skills are reusable capabilities for AI agents that provide procedural knowledge about specific tools and workflows. These gw-tools skills help you master Git worktrees and the `gw` CLI tool for improved development workflows.
 
-## 📚 Available Skills
+### Installation
+
+You can use the interactive skills installation:
+
+```bash
+npx skills add https://github.com/mthines/gw-tools --skill
+```
+
+## Available Skills
 
 ### 1. [Git Worktree Workflows](./git-worktree-workflows/)
 
 Master Git worktrees and optimize development workflows with gw-tools.
 
 ```bash
-npx skills add mthines/gw-tools/git-worktree-workflows
+npx skills add https://github.com/mthines/gw-tools --skill git-worktree-workflows
 ```
 
 **Learn:**
@@ -28,12 +36,12 @@ npx skills add mthines/gw-tools/git-worktree-workflows
 
 ---
 
-### 2. [Configuration Management](./config-management/)
+### 2. [Configuration Management](./gw-config-management/)
 
 Configure and optimize gw-tools for different project types and team needs.
 
 ```bash
-npx skills add mthines/gw-tools/config-management
+npx skills add https://github.com/mthines/gw-tools --skill gw-config-management
 ```
 
 **Learn:**
@@ -53,22 +61,25 @@ npx skills add mthines/gw-tools/config-management
 Execute complete feature development cycles autonomously using isolated worktrees.
 
 ```bash
-npx skills add mthines/gw-tools/autonomous-workflow
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow
 ```
 
 **Capabilities:**
 
+- Smart worktree detection (fuzzy match task to current worktree)
 - Autonomous feature implementation from requirements to PR
+- Fast iteration loops until tests pass (Ralph Wiggum pattern)
 - Worktree creation and environment setup
-- Continuous testing and iteration
+- Continuous testing and self-validation
 - Documentation generation
 - Draft PR creation with comprehensive descriptions
+- Multi-agent coordination support
 
 **Best for:** AI agents executing end-to-end feature development, autonomous task completion, production-ready deliverables
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 ### Prerequisites
 
@@ -85,7 +96,7 @@ Install individual skills based on your needs:
 npx skills add mthines/gw-tools/git-worktree-workflows
 
 # When setting up gw for a project
-npx skills add mthines/gw-tools/config-management
+npx skills add mthines/gw-tools/gw-config-management
 
 # For autonomous feature development
 npx skills add mthines/gw-tools/autonomous-workflow
@@ -107,28 +118,46 @@ Once installed, your AI agent will have access to the skill knowledge. Simply as
 
 ---
 
-## 📖 Skill Content Overview
+## Skill Structure
 
-Each skill includes:
+Each skill follows a consistent structure with focused rule files:
 
-- **README.md** - Overview, installation, and quick links
-- **SKILL.md** - Comprehensive procedural knowledge organized by topic
-- **examples/** - Real-world scenarios with step-by-step solutions
-- **templates/** - Configuration files and scripts (config-management only)
+```
+skill-name/
+├── SKILL.md         # Manifest with rules table and quick reference
+├── README.md        # Human-readable documentation
+├── rules/           # Focused, prescriptive rule files
+│   ├── _template.md # Rule authoring template
+│   ├── rule-1.md    # Each rule is self-contained
+│   ├── rule-2.md
+│   └── patterns/    # Optional subdirectory for patterns
+├── examples/        # Real-world scenarios
+└── templates/       # Configuration templates (some skills)
+```
+
+### Rule Files
+
+Each rule file contains:
+
+- **Frontmatter**: title, impact level (CRITICAL/HIGH/MEDIUM/LOW), tags
+- **Overview**: 2-4 sentences on what the rule covers
+- **Core Principles**: Prescriptive guidance (what to do)
+- **Implementation**: Code examples with GOOD/BAD patterns
+- **Troubleshooting**: Common issues and fixes
 
 ---
 
-## 🎓 Learning Path
+## Learning Path
 
 We recommend following this learning path:
 
 1. **Start with git-worktree-workflows** - Build a solid foundation in Git worktrees and basic gw usage
-2. **Add config-management** - Optimize gw for your specific project type and team
+2. **Add gw-config-management** - Optimize gw for your specific project type and team
 3. **Use autonomous-workflow** - Enable autonomous end-to-end feature development
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! If you have:
 
@@ -141,20 +170,20 @@ See [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
 
 ---
 
-## 📊 Skill Compatibility
+## Skill Compatibility
 
 These skills are designed for:
 
-- **Claude Code** ✅
-- **GitHub Copilot** ✅
-- **Cline** ✅
-- **Cursor** ✅
-- **Windsurf** ✅
+- **Claude Code**
+- **GitHub Copilot**
+- **Cline**
+- **Cursor**
+- **Windsurf**
 - **Other AI agents** - Most agents supporting the skills.sh ecosystem
 
 ---
 
-## 🔗 Links
+## Links
 
 - [gw CLI Tool Repository](../)
 - [gw Documentation](../packages/gw-tool/README.md)
@@ -163,13 +192,13 @@ These skills are designed for:
 
 ---
 
-## 📝 License
+## License
 
 These skills are licensed under the MIT License - see the [LICENSE](../LICENSE) file for details.
 
 ---
 
-## 💡 Questions or Feedback?
+## Questions or Feedback?
 
 - Open an [issue](../issues) for bugs or feature requests
 - Start a [discussion](../discussions) for questions or ideas
@@ -177,4 +206,4 @@ These skills are licensed under the MIT License - see the [LICENSE](../LICENSE) 
 
 ---
 
-_Made with ❤️ for the Git worktree community_
+_Made with care for the Git worktree community_
