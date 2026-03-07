@@ -74,21 +74,21 @@ Structured templates for consistent artifact generation:
 
 ### Lite Mode (1-3 files, simple changes)
 
-| Phase             | Command/Action                                    |
-| ----------------- | ------------------------------------------------- |
-| 0. Validation     | Quick clarification if needed                     |
-| 1. Planning       | Brief mental plan (no artifact files)             |
-| 2. Worktree       | `gw add fix/bug-name` (optional for trivial)      |
-| 3. Implementation | Code directly, commit when done                   |
-| 4. Testing        | `npm test`, fix any failures                      |
-| 5. PR Creation    | `gh pr create --draft`                            |
+| Phase             | Command/Action                               |
+| ----------------- | -------------------------------------------- |
+| 0. Validation     | Quick clarification if needed                |
+| 1. Planning       | Brief mental plan (no artifact files)        |
+| 2. Worktree       | `gw add fix/bug-name` (optional for trivial) |
+| 3. Implementation | Code directly, commit when done              |
+| 4. Testing        | `npm test`, fix any failures                 |
+| 5. PR Creation    | `gh pr create --draft`                       |
 
 ## Workflow Modes
 
-| Mode     | Files Changed | Artifacts | Use When                            |
-| -------- | ------------- | --------- | ----------------------------------- |
-| **Lite** | 1-3 files     | No        | Simple fixes, small enhancements    |
-| **Full** | 4+ files      | Yes       | Features, refactors, complex changes|
+| Mode     | Files Changed | Artifacts | Use When                             |
+| -------- | ------------- | --------- | ------------------------------------ |
+| **Lite** | 1-3 files     | No        | Simple fixes, small enhancements     |
+| **Full** | 4+ files      | Yes       | Features, refactors, complex changes |
 
 **Full Mode**: Creates `.gw/{branch}/` artifacts for progress tracking and context recovery.
 
