@@ -2,25 +2,14 @@
 
 **Ship features while you sleep.** Give this agent a task description and walk away—it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 
-## Quick Install for Claude Code
-
-```bash
-# One-liner (global - works in all projects)
-mkdir -p ~/.claude/agents && \
-  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
-  -o ~/.claude/agents/autonomous-workflow.md
-```
-
-Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
-
-- `~/.claude/agents/` — Available in all your projects
-- `.claude/agents/` — Available only in that project (commit to git for team sharing)
-
-That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
-
 ## Prerequisites
 
-This agent requires the **gw CLI** to manage Git worktrees. Install it first:
+This agent requires:
+
+1. **gw CLI** — Manages Git worktrees
+2. **autonomous-workflow skill** — Contains the workflow instructions the agent follows
+
+### 1. Install gw CLI
 
 ```bash
 # Install (Homebrew on macOS)
@@ -40,6 +29,33 @@ gw init <repo-url>
 ```
 
 See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup instructions.
+
+### 2. Install the autonomous-workflow skill
+
+The agent delegates workflow logic to this skill. Install it globally:
+
+```bash
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+```
+
+## Quick Install for Claude Code
+
+With prerequisites installed, add the agent to Claude Code:
+
+```bash
+# One-liner - installs agent and skill (global - works in all projects)
+mkdir -p ~/.claude/agents && \
+  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
+  -o ~/.claude/agents/autonomous-workflow.md && \
+  npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+```
+
+Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
+
+- `~/.claude/agents/` — Available in all your projects
+- `.claude/agents/` — Available only in that project (commit to git for team sharing)
+
+That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
 
 ## For Agent SDK Developers
 

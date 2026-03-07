@@ -52,6 +52,9 @@ gw install-shell | source
 ### Quick Start
 
 ```bash
+# Clone and set up repository with gw
+gw init git@github.com:user/repo.git
+
 # Create a new worktree (auto-creates branch if needed, auto-copies files)
 gw add feature-auth
 
