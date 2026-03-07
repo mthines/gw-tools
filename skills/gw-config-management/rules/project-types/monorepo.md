@@ -79,4 +79,4 @@ For Nx workspaces:
 ## References
 
 - Related: [nextjs](./nextjs.md)
-- Example: [monorepo-setup](../../examples/monorepo-setup.md)
+- Example: [monorepo-setup](../../references/monorepo-setup.md)

@@ -68,4 +68,4 @@ myapp/
 ## References
 
 - Related: [monorepo](./monorepo.md)
-- Example: [nextjs-setup](../../examples/nextjs-setup.md)
+- Example: [nextjs-setup](../../references/nextjs-setup.md)

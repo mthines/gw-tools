@@ -36,11 +36,11 @@ Select `autonomous-workflow` from the interactive menu.
 
 - **[SKILL.md](./SKILL.md)** - Complete autonomous workflow procedures (12 sections)
 
-### Examples
+### References (Lazy-loaded)
 
-- **[Complete Workflow](./examples/autonomous-workflow-complete.md)** - Full end-to-end execution trace
-- **[Error Recovery](./examples/error-recovery-scenarios.md)** - Common errors and recovery procedures
-- **[Iterative Refinement](./examples/iterative-refinement.md)** - Progressive improvement examples
+- **[Complete Workflow](./references/autonomous-workflow-complete.md)** - Full end-to-end execution trace
+- **[Error Recovery](./references/error-recovery-scenarios.md)** - Common errors and recovery procedures
+- **[Iterative Refinement](./references/iterative-refinement.md)** - Progressive improvement examples
 
 ## 🚀 Quick Start
 
@@ -222,7 +222,7 @@ Phase 7: Cleanup (Optional)
 
 ## 🆘 Need Help?
 
-- Check the [examples](./examples/) for detailed scenarios
+- Check the [references](./references/) for detailed scenarios
 - Read [SKILL.md](./SKILL.md) for complete procedures
 - Ask your AI agent with this skill loaded
 - Open an issue in the [main repository](https://github.com/mthines/gw-tools/issues)

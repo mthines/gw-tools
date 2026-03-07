@@ -28,7 +28,7 @@ When adding, changing, or removing features in the gw CLI tool, always update th
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
    - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features (@gw-autonomous-workflow)
 
-3. **Example files** (in `skills/*/examples/`):
+3. **Example files** (in `skills/*/references/`):
    - Update relevant examples that reference the changed feature
    - Check troubleshooting guides for outdated information
 

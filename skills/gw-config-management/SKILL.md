@@ -73,6 +73,6 @@ Configure gw-tools for optimal workflows across different project types and team
 ## Resources
 
 - [Project-Type Guides](./rules/project-types/) - Configuration guides for common project types
-- [Next.js Setup Example](./examples/nextjs-setup.md)
-- [Monorepo Setup Example](./examples/monorepo-setup.md)
-- [Troubleshooting Guide](./examples/troubleshooting-config.md)
+- [Next.js Setup Example](./references/nextjs-setup.md)
+- [Monorepo Setup Example](./references/monorepo-setup.md)
+- [Troubleshooting Guide](./references/troubleshooting-config.md)

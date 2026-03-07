@@ -234,7 +234,7 @@ PORT=3002
 
 **Problem:** Both features modify the same database
 
-**Solution:** Use separate databases or Docker containers (see [autonomous-workflow examples](../../autonomous-workflow/examples/))
+**Solution:** Use separate databases or Docker containers (see [autonomous-workflow references](../../autonomous-workflow/references/))
 
 ---
 

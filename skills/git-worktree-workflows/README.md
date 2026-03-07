@@ -33,12 +33,12 @@ Select `git-worktree-workflows` from the interactive menu.
 
 - **[SKILL.md](./SKILL.md)** - Comprehensive guide covering all aspects of Git worktree workflows
 
-### Examples
+### References (Lazy-loaded)
 
-- **[Getting Started](./examples/getting-started.md)** - Complete walkthrough for first-time worktree users
-- **[Parallel Development](./examples/parallel-development.md)** - Working on multiple features simultaneously
-- **[Testing Multiple Versions](./examples/testing-multiple-versions.md)** - Compatibility testing across versions
-- **[Troubleshooting](./examples/troubleshooting-worktrees.md)** - Common problems and solutions
+- **[Getting Started](./references/getting-started.md)** - Complete walkthrough for first-time worktree users
+- **[Parallel Development](./references/parallel-development.md)** - Working on multiple features simultaneously
+- **[Testing Multiple Versions](./references/testing-multiple-versions.md)** - Compatibility testing across versions
+- **[Troubleshooting](./references/troubleshooting-worktrees.md)** - Common problems and solutions
 
 ## 🚀 Quick Start
 
@@ -56,9 +56,9 @@ After installing this skill, try asking your AI agent:
 
 ## 🎓 Learning Path
 
-1. **Beginners** - Start with [Getting Started](./examples/getting-started.md)
+1. **Beginners** - Start with [Getting Started](./references/getting-started.md)
 2. **Intermediate** - Read the full [SKILL.md](./SKILL.md) guide
-3. **Advanced** - Explore [Parallel Development](./examples/parallel-development.md) and [Testing Multiple Versions](./examples/testing-multiple-versions.md)
+3. **Advanced** - Explore [Parallel Development](./references/parallel-development.md) and [Testing Multiple Versions](./references/testing-multiple-versions.md)
 
 ## 🔗 Related Skills
 
@@ -79,7 +79,7 @@ This skill helps with:
 
 ## 🆘 Need Help?
 
-- Check the [Troubleshooting Guide](./examples/troubleshooting-worktrees.md)
+- Check the [Troubleshooting Guide](./references/troubleshooting-worktrees.md)
 - Ask your AI agent with this skill loaded
 - Open an issue in the [main repository](../../issues)
 

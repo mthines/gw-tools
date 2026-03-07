@@ -106,7 +106,7 @@ skill-name/
 │   ├── rule-1.md    # Each rule is self-contained
 │   ├── rule-2.md
 │   └── patterns/    # Optional subdirectory for patterns
-├── examples/        # Real-world scenarios
+├── references/      # Lazy-loaded examples and scenarios
 └── templates/       # Configuration templates (some skills)
 ```
 

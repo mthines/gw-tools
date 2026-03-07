@@ -164,11 +164,13 @@ while not all_tests_pass:
 - [git-worktree-workflows](../git-worktree-workflows/) - Worktree fundamentals
 - [gw-config-management](../gw-config-management/) - Configure auto-copy and hooks
 
-## Resources
+## References
 
-- [Complete Workflow Example](./examples/autonomous-workflow-complete.md)
-- [Error Recovery Scenarios](./examples/error-recovery-scenarios.md)
-- [Iterative Refinement Example](./examples/iterative-refinement.md)
+Detailed examples and scenarios (loaded on-demand):
+
+- [Complete Workflow Example](./references/autonomous-workflow-complete.md)
+- [Error Recovery Scenarios](./references/error-recovery-scenarios.md)
+- [Iterative Refinement Example](./references/iterative-refinement.md)
 
 ## Research Sources
 

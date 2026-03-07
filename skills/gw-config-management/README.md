@@ -40,11 +40,11 @@ Select `gw-config-management` from the interactive menu.
 - **[Monorepo Config](./rules/project-types/monorepo.md)** - For monorepo projects
 - **[React SPA Config](./rules/project-types/react-spa.md)** - For React single-page apps
 
-### Examples
+### References (Lazy-loaded)
 
-- **[Next.js Setup](./examples/nextjs-setup.md)** - Step-by-step Next.js configuration
-- **[Monorepo Setup](./examples/monorepo-setup.md)** - Configuring for monorepos
-- **[Troubleshooting](./examples/troubleshooting-config.md)** - Common configuration problems
+- **[Next.js Setup](./references/nextjs-setup.md)** - Step-by-step Next.js configuration
+- **[Monorepo Setup](./references/monorepo-setup.md)** - Configuring for monorepos
+- **[Troubleshooting](./references/troubleshooting-config.md)** - Common configuration problems
 
 ## 🚀 Quick Start
 
@@ -120,7 +120,7 @@ gw init --auto-copy-files .env,.env.local,.vercel/
 
 ## 🆘 Need Help?
 
-- Check the [Troubleshooting Guide](./examples/troubleshooting-config.md)
+- Check the [Troubleshooting Guide](./references/troubleshooting-config.md)
 - Review [project-type guides](./rules/project-types/)
 - Ask your AI agent with this skill loaded
 - Open an issue in the [main repository](https://github.com/mthines/gw-tools/issues)

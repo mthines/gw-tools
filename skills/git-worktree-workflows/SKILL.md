@@ -63,7 +63,7 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 
 ## Resources
 
-- [Getting Started Example](./examples/getting-started.md)
-- [Parallel Development Example](./examples/parallel-development.md)
-- [Troubleshooting Guide](./examples/troubleshooting-worktrees.md)
+- [Getting Started Example](./references/getting-started.md)
+- [Parallel Development Example](./references/parallel-development.md)
+- [Troubleshooting Guide](./references/troubleshooting-worktrees.md)
 - [gw CLI Documentation](../../packages/gw-tool/README.md)
