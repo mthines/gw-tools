@@ -112,9 +112,7 @@ Examples:
   gw clean --dry-run
 
 For command-specific help:
-  gw <command> --help
-
-Ciao! 👋`);
+  gw <command> --help`);
 }
 
 /**

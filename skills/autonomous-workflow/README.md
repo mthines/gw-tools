@@ -18,8 +18,10 @@ This skill enables AI agents to autonomously execute complete feature developmen
 ## 📦 Installation
 
 ```bash
-npx skills add mthines/gw-tools/autonomous-workflow
+npx skills add https://github.com/mthines/gw-tools --skill
 ```
+
+Select `autonomous-workflow` from the interactive menu.
 
 ## 📋 Prerequisites
 
