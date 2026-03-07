@@ -75,6 +75,68 @@ or
 
 ---
 
+## Prerequisites: gw CLI Installation
+
+Before Phase 2 (Worktree Setup), verify the `gw` CLI is installed:
+
+```bash
+which gw
+```
+
+### If gw is NOT installed
+
+**STOP and prompt the user to install gw.** The workflow cannot proceed without it.
+
+**Installation options (present to user):**
+
+```bash
+# Via npm (recommended)
+npm install -g @gw-tools/gw
+
+# Via Homebrew (macOS)
+brew install mthines/gw-tools/gw
+
+# Via pnpm
+pnpm add -g @gw-tools/gw
+```
+
+**After installation, set up shell integration:**
+
+```bash
+# For zsh (add to ~/.zshrc)
+echo 'eval "$(gw install-shell)"' >> ~/.zshrc
+source ~/.zshrc
+
+# For bash (add to ~/.bashrc)
+echo 'eval "$(gw install-shell)"' >> ~/.bashrc
+source ~/.bashrc
+
+# For fish (add to ~/.config/fish/config.fish)
+echo 'gw install-shell | source' >> ~/.config/fish/config.fish
+source ~/.config/fish/config.fish
+```
+
+**Verify installation:**
+
+```bash
+gw --version
+gw --help
+```
+
+**Then initialize gw in the repository (if not already done):**
+
+```bash
+# For existing repositories
+gw init
+
+# With auto-copy files (recommended)
+gw init --auto-copy-files .env,secrets/ --post-checkout "npm install"
+```
+
+Once `gw` is installed and configured, resume the workflow from Phase 2.
+
+---
+
 ## Rules
 
 | Rule                                                            | Description                                                                           |
@@ -216,6 +278,17 @@ while not all_tests_pass:
     3. If fail: analyze → fix → commit → continue
     4. Safety: warn at 10 iterations, stop at 20
 ```
+
+## Troubleshooting Quick Reference
+
+| Issue                  | Check                       | Recovery                                                              |
+| ---------------------- | --------------------------- | --------------------------------------------------------------------- |
+| Wrong worktree         | `gw list`, `pwd`            | `gw cd <correct-branch>`                                              |
+| gw command not found   | `which gw`                  | `npm install -g @gw-tools/gw`                                         |
+| Secrets missing        | `cat .gw/config.json`       | `gw sync <branch> .env`                                               |
+| Agent stuck in loop    | `task.md` iteration history | Try alternative approach, ask user                                    |
+| Tests keep failing     | `task.md` test results      | Focus on ONE failure, escalate at 7+                                  |
+| Agent hallucinated cmd | Error message               | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
 
 ## Related Skills
 

@@ -528,3 +528,54 @@ Update `task.md` whenever:
 | Remove worktree    | `gw remove <branch-name>`       |
 | Create draft PR    | `gh pr create --draft`          |
 | Check PR status    | `gh pr view <num> --json state` |
+
+---
+
+## Troubleshooting
+
+### Self-Diagnosis Checklist
+
+When encountering issues, check these in order:
+
+1. **Read `.gw/{branch}/task.md`** — Contains iteration history, decisions, and blockers
+2. **Read `.gw/{branch}/plan.md`** — Original plan for comparison
+3. **Check `gw list`** — Verify you're in the correct worktree
+4. **Run `git status`** — Check for uncommitted changes or conflicts
+
+### Common Issues & Recovery
+
+| Issue              | Check                       | Recovery                              |
+| ------------------ | --------------------------- | ------------------------------------- |
+| Wrong worktree     | `gw list`, `pwd`            | `gw cd <correct-branch>`              |
+| Command not found  | `which gw`                  | `npm install -g @gw-tools/gw`         |
+| Secrets missing    | `cat .gw/config.json`       | `gw sync <branch> .env`               |
+| Stuck in loop      | `task.md` iteration history | Try alternative approach, ask user    |
+| Tests keep failing | `task.md` test results      | Focus on ONE failure, escalate at 7+  |
+| Build fails        | Error message               | Fix types/imports, check dependencies |
+
+### When to Escalate to User
+
+Escalate immediately when:
+
+1. Same error repeating after 3+ attempts with different fixes
+2. Requirements become ambiguous mid-implementation
+3. Scope creep detected (task growing beyond original plan)
+4. Fundamental architectural question arises
+5. Hard limits approached (50+ files, 20+ test iterations)
+
+**Format for escalation:**
+
+```
+BLOCKED: [Brief description]
+
+What I tried:
+1. [Attempt 1]
+2. [Attempt 2]
+3. [Attempt 3]
+
+Current state:
+- [Relevant context]
+
+Question for user:
+- [Specific question to unblock]
+```

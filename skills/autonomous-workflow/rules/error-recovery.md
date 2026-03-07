@@ -132,6 +132,86 @@ ping registry.npmjs.org
 | Path/import error  | Check file locations, fix imports    |
 | Config error       | Review build config, restore working |
 
+## Agent-Specific Recovery
+
+### Hallucinated Commands
+
+**Error:** Agent issues a `gw` command that doesn't exist
+
+**Common hallucinations and corrections:**
+
+| Hallucinated Command | Correct Command             |
+| -------------------- | --------------------------- |
+| `gw create`          | `gw checkout` or `gw add`   |
+| `gw switch`          | `gw cd`                     |
+| `gw delete`          | `gw remove`                 |
+| `gw new`             | `gw checkout`               |
+| `gw branch`          | `gw checkout` (creates new) |
+| `gw copy`            | `gw sync`                   |
+
+**Recovery:**
+
+1. Read the error message to understand what was attempted
+2. Check `.gw/{branch}/task.md` for context on what the agent was trying to do
+3. Run the correct command manually
+4. If in an agentic session, provide guidance: "The command is `gw checkout`, not `gw create`"
+
+### Stuck in Loop
+
+**Error:** Agent repeats same fix multiple times without progress
+
+**Detection:**
+
+Check `.gw/{branch}/task.md` for patterns:
+
+```
+## Test Iterations
+- Attempt 1: Fixed import statement → Still failing
+- Attempt 2: Fixed import statement again → Still failing
+- Attempt 3: Fixed import statement differently → Still failing
+```
+
+**Recovery:**
+
+1. **Identify the loop pattern** — What is being repeated?
+2. **Force alternative approach** — "Stop fixing imports. The issue is likely X instead."
+3. **Provide concrete direction** — "Look at how `<similar-file>` handles this"
+4. **Consider scope reduction** — "Let's skip this test for now and create an issue"
+
+### Context Loss
+
+**Error:** Agent forgets previous decisions or work done
+
+**Detection:**
+
+- Agent re-does work already completed
+- Agent asks questions already answered
+- Agent ignores previously stated constraints
+
+**Recovery:**
+
+1. **Point to artifacts:** "Read `.gw/{branch}/task.md` for previous decisions"
+2. **Summarize context:** "We already decided X. Continue from there."
+3. **Check artifact existence:** Ensure `task.md` and `plan.md` were created
+
+### Wrong Worktree
+
+**Error:** Agent makes changes in wrong worktree
+
+**Detection:**
+
+```bash
+pwd                    # Check current directory
+gw list               # See all worktrees
+git branch --show-current  # Verify branch
+```
+
+**Recovery:**
+
+1. Navigate to correct worktree: `gw cd <correct-branch>`
+2. Check for unintended changes: `git status` in wrong worktree
+3. If changes made in wrong place, copy them: `gw sync <correct-branch> <files>`
+
 ## References
 
 - Related rule: [phase-4-testing](./phase-4-testing.md)

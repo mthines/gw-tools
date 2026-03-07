@@ -168,8 +168,51 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 ## Requirements
 
 - **Git** with worktree support (Git 2.5+)
-- **[gw CLI](https://github.com/mthines/gw-tools)** for worktree management
+- **[gw CLI](https://github.com/mthines/gw-tools)** for worktree management (v0.20+)
 - **Node.js** project (npm/pnpm/yarn)
+
+## Compatibility
+
+| Dependency      | Minimum Version | Notes                     |
+| --------------- | --------------- | ------------------------- |
+| Git             | 2.5+            | Worktree support required |
+| gw CLI          | 0.20+           | Earlier versions may work |
+| Claude Code SDK | 1.x             | Tested with v1.0.x        |
+| Node.js         | 18+             | For running the agent     |
+
+## Performance Characteristics
+
+Realistic expectations for agent behavior:
+
+| Metric              | Typical Range | Notes                              |
+| ------------------- | ------------- | ---------------------------------- |
+| Agent turns         | 15-80         | Depends on task complexity         |
+| Files changed       | 3-20          | Soft limit at 20, hard limit at 50 |
+| Test iterations     | 2-8           | Escalates to user at 7+            |
+| Commits per feature | 3-10          | Logical, incremental commits       |
+| Success rate (Lite) | ~90%          | Simple fixes, 1-3 files            |
+| Success rate (Full) | ~75%          | Complex features, 4+ files         |
+
+**Note:** These are estimates based on typical usage. Actual performance varies by codebase complexity, test suite speed, and task clarity.
+
+## Model Selection
+
+The agent defaults to **Sonnet** which handles ~80% of tasks effectively. Consider **Opus** for:
+
+| Use Opus When                                      | Stick with Sonnet When            |
+| -------------------------------------------------- | --------------------------------- |
+| Architectural changes (new patterns, abstractions) | Bug fixes and small features      |
+| Complex multi-system integrations                  | Single-system changes             |
+| Ambiguous requirements needing inference           | Clear, well-defined requirements  |
+| Large refactoring (10+ files)                      | Focused changes (1-5 files)       |
+| Novel problem domains                              | Familiar patterns in the codebase |
+
+````typescript
+// Override model for complex tasks
+const myAgent = {
+  ...autonomousWorkflowAgent,
+  model: 'opus',
+};
 
 ### Installing gw CLI
 
@@ -180,6 +223,37 @@ This agent uses the `gw` CLI under the hood to manage Git worktrees. The CLI han
 - Running post-checkout hooks (dependency installation, etc.)
 - Navigating between worktrees (`gw cd`)
 - Cleaning up merged worktrees (`gw clean`)
+
+### Secret Handling in Worktrees
+
+When the agent creates a new worktree, `gw` automatically copies configured files from your default branch (usually `main`). This ensures secrets and environment files are available without committing them to git.
+
+**Setup (one-time):**
+
+```bash
+# Configure which files to auto-copy
+gw init --auto-copy-files .env,secrets/,.env.local
+
+# Ensure secrets exist in your main worktree first
+cd main
+cp .env.example .env
+# Edit .env with your actual secrets
+````
+
+**How it works:**
+
+1. Secrets are stored in your `main` worktree (the source)
+2. When `gw checkout` creates a new worktree, it copies `autoCopyFiles` from `main`
+3. Worktree secrets are independent—changes don't affect other worktrees
+4. Use `gw sync <worktree>` to update secrets in existing worktrees
+
+**Security notes:**
+
+- `.env` files are never committed (ensure they're in `.gitignore`)
+- Each worktree gets its own copy—no shared state
+- The agent never reads or logs secret values
+
+📖 **Full details:** [gw-tools secret handling](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool#initial-setup-secrets-in-the-default-branch)
 
 ```bash
 # Via npm
@@ -240,6 +314,48 @@ Traditional AI coding assistants modify your working directory directly. This me
 
 With worktrees, the agent works in a completely separate directory. Your main checkout stays clean, and you can review the agent's work when it's ready.
 
+## Observability
+
+### Watching Agent Progress
+
+For Full Mode tasks, the agent maintains progress artifacts you can monitor:
+
+```bash
+# Watch real-time progress (Full Mode)
+tail -f .gw/<branch>/task.md
+
+# Check the implementation plan
+cat .gw/<branch>/plan.md
+
+# After completion, review the walkthrough
+cat .gw/<branch>/walkthrough.md
+```
+
+### Claude Code Hooks (Optional)
+
+Get notifications when the agent completes significant actions:
+
+```json
+// ~/.claude/settings.json
+{
+  "hooks": {
+    "postToolUse": {
+      "Bash": "echo \"gw action completed\" | tee -a /tmp/agent.log"
+    }
+  }
+}
+```
+
+**Platform-specific notifications:**
+
+```bash
+# macOS
+osascript -e 'display notification "Agent completed action" with title "gw"'
+
+# Linux (requires libnotify)
+notify-send "gw" "Agent completed action"
+```
+
 ## Troubleshooting
 
 ### "gw: command not found"
@@ -254,11 +370,64 @@ The agent includes "smart detection" to reuse existing worktrees. If you're seei
 
 The agent will iterate up to 20 times on test failures. If it's still stuck, it will stop and ask for help. Check the `task.md` file in `.gw/<branch>/` for iteration history.
 
+### Agent issued an invalid gw command
+
+If the agent hallucinates a `gw` command that doesn't exist:
+
+1. Check `.gw/<branch>/task.md` for what the agent was trying to do
+2. Look at the error message for the actual command attempted
+3. Manually run the correct command or guide the agent
+
+Common hallucinations:
+
+- `gw create` → should be `gw checkout` or `gw add`
+- `gw switch` → should be `gw cd`
+- `gw delete` → should be `gw remove`
+
+### Agent stuck in a loop
+
+If the agent keeps trying the same fix repeatedly:
+
+1. Check `.gw/<branch>/task.md` for iteration history
+2. Look for repeated "Attempt N" entries with similar fixes
+3. Interrupt and provide guidance: "Try a different approach—the issue is X"
+
+The agent has built-in loop detection and will ask for help after 7+ similar attempts, but you can intervene earlier.
+
+### Agent created wrong worktree name
+
+The agent uses smart worktree detection. If it created a worktree with an unexpected name:
+
+```bash
+# List all worktrees
+gw list
+
+# Navigate to the correct one
+gw cd <branch-name>
+
+# Or remove and recreate
+gw remove <wrong-branch>
+```
+
+### Secrets missing in new worktree
+
+If `.env` or other secrets weren't copied:
+
+1. Verify `autoCopyFiles` is configured: `cat .gw/config.json`
+2. Ensure secrets exist in your `main` worktree
+3. Manually sync: `gw sync <worktree> .env`
+
 ## Related
 
 - **[gw-tools](https://github.com/mthines/gw-tools)** — Git worktree workflow CLI
-- **[Skill Documentation](https://github.com/mthines/gw-tools/tree/main/skills/autonomous-workflow)** — Full 26-file skill with all rules and templates
+- **[Skill Documentation](https://github.com/mthines/gw-tools/tree/main/skills/autonomous-workflow)** — Full skill with all rules and templates
 - **[Claude Code SDK](https://github.com/anthropics/claude-code-sdk)** — Official SDK for building Claude agents
+
+## Community & Support
+
+- **Issues & Feature Requests:** [github.com/mthines/gw-tools/issues](https://github.com/mthines/gw-tools/issues)
+- **Questions & Discussions:** Open an issue with the `question` label
+- **Share your experience:** We'd love to hear how you're using the agent—open an issue with the `show-and-tell` label
 
 ## Contributing
 
