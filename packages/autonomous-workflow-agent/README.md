@@ -64,7 +64,7 @@ interface AgentDefinition {
 | Property      | Value                                                            |
 | ------------- | ---------------------------------------------------------------- |
 | `description` | Autonomous feature development workflow using isolated worktrees |
-| `tools`       | `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`                  |
+| `tools`       | `Read`, `Write`, `Edit`, `Bash`, `Glob`, `Grep`, `Skill`         |
 | `model`       | `sonnet`                                                         |
 
 ## Workflow Phases
