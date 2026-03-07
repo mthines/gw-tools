@@ -544,14 +544,14 @@ When encountering issues, check these in order:
 
 ### Common Issues & Recovery
 
-| Issue                    | Check                          | Recovery                              |
-| ------------------------ | ------------------------------ | ------------------------------------- |
-| Wrong worktree           | `gw list`, `pwd`               | `gw cd <correct-branch>`              |
-| Command not found        | `which gw`                     | `npm install -g @gw-tools/gw`         |
-| Secrets missing          | `cat .gw/config.json`          | `gw sync <branch> .env`               |
-| Stuck in loop            | `task.md` iteration history    | Try alternative approach, ask user    |
-| Tests keep failing       | `task.md` test results         | Focus on ONE failure, escalate at 7+  |
-| Build fails              | Error message                  | Fix types/imports, check dependencies |
+| Issue              | Check                       | Recovery                              |
+| ------------------ | --------------------------- | ------------------------------------- |
+| Wrong worktree     | `gw list`, `pwd`            | `gw cd <correct-branch>`              |
+| Command not found  | `which gw`                  | `npm install -g @gw-tools/gw`         |
+| Secrets missing    | `cat .gw/config.json`       | `gw sync <branch> .env`               |
+| Stuck in loop      | `task.md` iteration history | Try alternative approach, ask user    |
+| Tests keep failing | `task.md` test results      | Focus on ONE failure, escalate at 7+  |
+| Build fails        | Error message               | Fix types/imports, check dependencies |
 
 ### When to Escalate to User
 

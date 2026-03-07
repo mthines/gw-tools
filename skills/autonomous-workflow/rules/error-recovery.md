@@ -140,14 +140,14 @@ ping registry.npmjs.org
 
 **Common hallucinations and corrections:**
 
-| Hallucinated Command | Correct Command              |
-| -------------------- | ---------------------------- |
-| `gw create`          | `gw checkout` or `gw add`    |
-| `gw switch`          | `gw cd`                      |
-| `gw delete`          | `gw remove`                  |
-| `gw new`             | `gw checkout`                |
-| `gw branch`          | `gw checkout` (creates new)  |
-| `gw copy`            | `gw sync`                    |
+| Hallucinated Command | Correct Command             |
+| -------------------- | --------------------------- |
+| `gw create`          | `gw checkout` or `gw add`   |
+| `gw switch`          | `gw cd`                     |
+| `gw delete`          | `gw remove`                 |
+| `gw new`             | `gw checkout`               |
+| `gw branch`          | `gw checkout` (creates new) |
+| `gw copy`            | `gw sync`                   |
 
 **Recovery:**
 

@@ -173,25 +173,25 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 
 ## Compatibility
 
-| Dependency       | Minimum Version | Notes                              |
-| ---------------- | --------------- | ---------------------------------- |
-| Git              | 2.5+            | Worktree support required          |
-| gw CLI           | 0.20+           | Earlier versions may work          |
-| Claude Code SDK  | 1.x             | Tested with v1.0.x                 |
-| Node.js          | 18+             | For running the agent              |
+| Dependency      | Minimum Version | Notes                     |
+| --------------- | --------------- | ------------------------- |
+| Git             | 2.5+            | Worktree support required |
+| gw CLI          | 0.20+           | Earlier versions may work |
+| Claude Code SDK | 1.x             | Tested with v1.0.x        |
+| Node.js         | 18+             | For running the agent     |
 
 ## Performance Characteristics
 
 Realistic expectations for agent behavior:
 
-| Metric                 | Typical Range | Notes                                    |
-| ---------------------- | ------------- | ---------------------------------------- |
-| Agent turns            | 15-80         | Depends on task complexity               |
-| Files changed          | 3-20          | Soft limit at 20, hard limit at 50       |
-| Test iterations        | 2-8           | Escalates to user at 7+                  |
-| Commits per feature    | 3-10          | Logical, incremental commits             |
-| Success rate (Lite)    | ~90%          | Simple fixes, 1-3 files                  |
-| Success rate (Full)    | ~75%          | Complex features, 4+ files               |
+| Metric              | Typical Range | Notes                              |
+| ------------------- | ------------- | ---------------------------------- |
+| Agent turns         | 15-80         | Depends on task complexity         |
+| Files changed       | 3-20          | Soft limit at 20, hard limit at 50 |
+| Test iterations     | 2-8           | Escalates to user at 7+            |
+| Commits per feature | 3-10          | Logical, incremental commits       |
+| Success rate (Lite) | ~90%          | Simple fixes, 1-3 files            |
+| Success rate (Full) | ~75%          | Complex features, 4+ files         |
 
 **Note:** These are estimates based on typical usage. Actual performance varies by codebase complexity, test suite speed, and task clarity.
 
@@ -199,15 +199,15 @@ Realistic expectations for agent behavior:
 
 The agent defaults to **Sonnet** which handles ~80% of tasks effectively. Consider **Opus** for:
 
-| Use Opus When                                      | Stick with Sonnet When             |
-| -------------------------------------------------- | ---------------------------------- |
-| Architectural changes (new patterns, abstractions) | Bug fixes and small features       |
-| Complex multi-system integrations                  | Single-system changes              |
-| Ambiguous requirements needing inference           | Clear, well-defined requirements   |
-| Large refactoring (10+ files)                      | Focused changes (1-5 files)        |
-| Novel problem domains                              | Familiar patterns in the codebase  |
+| Use Opus When                                      | Stick with Sonnet When            |
+| -------------------------------------------------- | --------------------------------- |
+| Architectural changes (new patterns, abstractions) | Bug fixes and small features      |
+| Complex multi-system integrations                  | Single-system changes             |
+| Ambiguous requirements needing inference           | Clear, well-defined requirements  |
+| Large refactoring (10+ files)                      | Focused changes (1-5 files)       |
+| Novel problem domains                              | Familiar patterns in the codebase |
 
-```typescript
+````typescript
 // Override model for complex tasks
 const myAgent = {
   ...autonomousWorkflowAgent,
@@ -238,7 +238,7 @@ gw init --auto-copy-files .env,secrets/,.env.local
 cd main
 cp .env.example .env
 # Edit .env with your actual secrets
-```
+````
 
 **How it works:**
 
@@ -379,6 +379,7 @@ If the agent hallucinates a `gw` command that doesn't exist:
 3. Manually run the correct command or guide the agent
 
 Common hallucinations:
+
 - `gw create` → should be `gw checkout` or `gw add`
 - `gw switch` → should be `gw cd`
 - `gw delete` → should be `gw remove`
