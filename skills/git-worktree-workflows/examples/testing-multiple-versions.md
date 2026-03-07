@@ -273,7 +273,7 @@ While worktrees are great for local testing, use CI/CD (GitHub Actions, etc.) fo
 ## Next Steps
 
 - Explore [Autonomous Workflow](../../autonomous-workflow/) for end-to-end feature development
-- Set up [Configuration Management](../../config-management/) for environment-specific configs
+- Set up [Configuration Management](../../gw-config-management/) for environment-specific configs
 
 ---
 

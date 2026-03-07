@@ -190,7 +190,7 @@ Phase 7: Cleanup (Optional)
 ## 🔗 Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Learn worktree basics first
-- [config-management](../config-management/) - Configure gw for your project
+- [gw-config-management](../gw-config-management/) - Configure gw for your project
 
 ## 💡 Key Features
 

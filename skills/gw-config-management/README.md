@@ -33,12 +33,12 @@ Select `gw-config-management` from the interactive menu.
 
 - **[SKILL.md](./SKILL.md)** - Comprehensive configuration guide
 
-### Configuration Templates
+### Project-Type Configuration Guides
 
-- **[Next.js Config](./templates/nextjs-config.json)** - For Next.js applications
-- **[Node.js API Config](./templates/nodejs-api-config.json)** - For backend APIs
-- **[Monorepo Config](./templates/monorepo-config.json)** - For monorepo projects
-- **[React SPA Config](./templates/react-spa-config.json)** - For React single-page apps
+- **[Next.js Config](./rules/project-types/nextjs.md)** - For Next.js applications
+- **[Node.js API Config](./rules/project-types/nodejs-api.md)** - For backend APIs
+- **[Monorepo Config](./rules/project-types/monorepo.md)** - For monorepo projects
+- **[React SPA Config](./rules/project-types/react-spa.md)** - For React single-page apps
 
 ### Examples
 
@@ -81,14 +81,14 @@ gw init --root /path/to/repo.git \
         --auto-copy-files .env,.env.local,secrets/
 ```
 
-### Option 3: Use a Template
+### Option 3: Use a Project-Type Guide
 
 ```bash
-# Copy a template
-cp skills/config-management/templates/nextjs-config.json .gw/config.json
+# Check the recommended config for your project type
+# See: ./rules/project-types/nextjs.md (or nodejs-api.md, monorepo.md, react-spa.md)
 
-# Edit for your project
-vim .gw/config.json
+# Then initialize with the recommended settings
+gw init --auto-copy-files .env,.env.local,.vercel/
 ```
 
 ## 🔗 Related Skills
@@ -121,9 +121,9 @@ vim .gw/config.json
 ## 🆘 Need Help?
 
 - Check the [Troubleshooting Guide](./examples/troubleshooting-config.md)
-- Review configuration [templates](./templates/)
+- Review [project-type guides](./rules/project-types/)
 - Ask your AI agent with this skill loaded
-- Open an issue in the [main repository](../../../issues)
+- Open an issue in the [main repository](https://github.com/mthines/gw-tools/issues)
 
 ---
 

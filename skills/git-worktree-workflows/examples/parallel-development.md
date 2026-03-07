@@ -242,7 +242,7 @@ PORT=3002
 
 - Learn about [Testing Multiple Versions](./testing-multiple-versions.md)
 - Explore [Autonomous Workflow](../../autonomous-workflow/)
-- Set up [Configuration Management](../../config-management/)
+- Set up [Configuration Management](../../gw-config-management/)
 
 ---
 
