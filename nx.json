@@ -60,7 +60,7 @@
     }
   ],
   "release": {
-    "projects": ["!utils", "!@gw-tools/source"],
+    "projects": ["*", "!utils", "!@gw-tools/source"],
     "version": {
       "preVersionCommand": "npx nx run-many -t build"
     }

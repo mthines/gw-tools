@@ -1,0 +1,31 @@
+{
+  "name": "autonomous-workflow-agent",
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "sourceRoot": "packages/autonomous-workflow-agent/src",
+  "projectType": "library",
+  "release": {
+    "version": {
+      "manifestRootsToUpdate": ["dist/{projectRoot}"],
+      "currentVersionResolver": "git-tag",
+      "fallbackCurrentVersionResolver": "disk"
+    }
+  },
+  "tags": [],
+  "targets": {
+    "build": {
+      "executor": "@nx/js:tsc",
+      "outputs": ["{options.outputPath}"],
+      "options": {
+        "outputPath": "dist/packages/autonomous-workflow-agent",
+        "main": "packages/autonomous-workflow-agent/src/index.ts",
+        "tsConfig": "packages/autonomous-workflow-agent/tsconfig.lib.json",
+        "assets": ["packages/autonomous-workflow-agent/*.md"]
+      }
+    },
+    "nx-release-publish": {
+      "options": {
+        "packageRoot": "dist/{projectRoot}"
+      }
+    }
+  }
+}

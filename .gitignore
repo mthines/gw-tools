@@ -58,3 +58,4 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 
 .claude/settings.local.json
+.gw/
