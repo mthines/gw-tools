@@ -26,6 +26,20 @@
       "options": {
         "packageRoot": "dist/{projectRoot}"
       }
+    },
+    "release": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["build"],
+      "options": {
+        "command": "npm publish --access public",
+        "cwd": "dist/packages/autonomous-workflow-agent"
+      },
+      "configurations": {
+        "dry-run": {
+          "command": "npm publish --access public --dry-run",
+          "cwd": "dist/packages/autonomous-workflow-agent"
+        }
+      }
     }
   }
 }
