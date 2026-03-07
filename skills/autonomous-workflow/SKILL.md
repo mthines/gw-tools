@@ -217,6 +217,17 @@ while not all_tests_pass:
     4. Safety: warn at 10 iterations, stop at 20
 ```
 
+## Troubleshooting Quick Reference
+
+| Issue                    | Check                       | Recovery                             |
+| ------------------------ | --------------------------- | ------------------------------------ |
+| Wrong worktree           | `gw list`, `pwd`            | `gw cd <correct-branch>`             |
+| gw command not found     | `which gw`                  | `npm install -g @gw-tools/gw`        |
+| Secrets missing          | `cat .gw/config.json`       | `gw sync <branch> .env`              |
+| Agent stuck in loop      | `task.md` iteration history | Try alternative approach, ask user   |
+| Tests keep failing       | `task.md` test results      | Focus on ONE failure, escalate at 7+ |
+| Agent hallucinated cmd   | Error message               | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
+
 ## Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Worktree fundamentals
