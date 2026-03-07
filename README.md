@@ -80,16 +80,11 @@ Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.s
 npx skills add https://github.com/mthines/gw-tools --skill
 ```
 
-```bash
-# Autonomous feature development workflow
-npx skills add https://github.com/mthines/gw-tools --skill @gw-autonomous-workflow
+Available skills:
 
-# Master Git worktrees and gw workflows
-npx skills add https://github.com/mthines/gw-tools --skill @gw-git-worktree-workflows
-
-# Configure gw for your project type (Next.js, monorepos, etc.)
-npx skills add https://github.com/mthines/gw-tools --skill @gw-config-management
-```
+- **autonomous-workflow** - Autonomous feature development from requirements to PR
+- **git-worktree-workflows** - Master Git worktrees and gw workflows
+- **gw-config-management** - Configure gw for your project type (Next.js, monorepos, etc.)
 
 Once installed, your AI agent can:
 
