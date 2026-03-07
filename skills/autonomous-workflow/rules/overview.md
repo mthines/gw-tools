@@ -9,6 +9,23 @@ tags:
 
 # Autonomous Workflow Overview
 
+---
+
+## ⚠️ CRITICAL: First Step - Mode Detection
+
+**Before starting ANY phase, you MUST determine the workflow mode:**
+
+| Mode     | Criteria                             | Artifacts Required  |
+| -------- | ------------------------------------ | ------------------- |
+| **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
+| **Lite** | 1-3 files AND simple/straightforward | No                  |
+
+**For Full Mode:** Create `.gw/{branch-name}/task.md` and `plan.md` BEFORE Phase 1.
+
+**State your mode selection explicitly before proceeding.**
+
+---
+
 ## Overview
 
 Execute complete feature development cycles autonomously—from task intake through tested PR delivery—using isolated Git worktrees.
@@ -51,19 +68,25 @@ See [artifacts-overview](./artifacts-overview.md) for full details.
 ## Phase Flow
 
 ```
-Phase 0: Validation
-    ↓ (user confirms)
-Phase 1: Planning
+┌─────────────────────────────────────────────────────┐
+│  MODE DETECTION ← MANDATORY FIRST STEP              │
+│  Analyze task → Choose Full (4+ files) or Lite      │
+│  Full Mode: Create .gw/{branch}/ artifacts NOW      │
+└─────────────────────────────────────────────────────┘
+    ↓
+Phase 0: Validation + Mode Detection
+    ↓ (user confirms, mode selected, artifacts created)
+Phase 1: Planning (Full: write to plan.md, Lite: mental plan)
     ↓ (plan validated)
 Phase 2: Worktree Setup 🔴 MANDATORY
     ↓ (worktree created)
-Phase 3: Implementation
+Phase 3: Implementation (Full: update task.md, Lite: just code)
     ↓ (code complete)
 Phase 4: Testing & Iteration ← iterate until passing
     ↓ (all tests pass)
 Phase 5: Documentation
     ↓ (docs complete)
-Phase 6: PR Creation
+Phase 6: PR Creation (Full: generate walkthrough.md)
     ↓ (PR delivered)
 Phase 7: Cleanup (optional)
 ```
@@ -120,11 +143,14 @@ Use for simple, focused changes:
 ### Decision Flow
 
 ```
-Is this a complex change?
-├── Yes (4+ files, multiple decisions) → Full Mode with artifacts
+⚠️ DECIDE MODE FIRST (before any work):
+
+Is this a complex change? (4+ files OR architectural)
+├── Yes → Full Mode
+│   └── IMMEDIATELY create: .gw/{branch}/task.md, plan.md
+│   └── Then proceed to Phase 0
 └── No (1-3 files, straightforward)
-    ├── Still want worktree isolation? → Lite Mode with worktree
-    └── Very simple fix? → Direct implementation (no worktree)
+    └── Lite Mode (no artifacts, still use worktree)
 ```
 
 ## Expected Outcomes

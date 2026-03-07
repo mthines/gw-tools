@@ -10,6 +10,23 @@ tags:
 
 # Artifacts Overview
 
+---
+
+## ⚠️ CRITICAL: When to Create Artifacts
+
+**For Full Mode tasks, artifacts MUST be created BEFORE Phase 1 begins.**
+
+```bash
+# Create IMMEDIATELY after mode detection (end of Phase 0)
+mkdir -p .gw/{branch-name}
+touch .gw/{branch-name}/task.md
+touch .gw/{branch-name}/plan.md
+```
+
+**⛔ DO NOT start Phase 1 analysis without these files existing.**
+
+---
+
 ## Overview
 
 The autonomous workflow uses a three-artifact pattern inspired by Google Antigravity for tracking progress, documenting decisions, and generating summaries. These artifacts complement Claude's built-in memory by providing explicit, user-visible files.
@@ -37,11 +54,13 @@ See [overview](./overview.md) for the complete decision flow.
 
 ## Three-Artifact Pattern
 
-| Artifact        | File             | Purpose                                   | Created |
-| --------------- | ---------------- | ----------------------------------------- | ------- |
-| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 1 |
-| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 1 |
-| **Walkthrough** | `walkthrough.md` | Final summary, verification steps         | Phase 6 |
+| Artifact        | File             | Purpose                                   | Created       | Populated |
+| --------------- | ---------------- | ----------------------------------------- | ------------- | --------- |
+| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 0 (end) | Phase 1+  |
+| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 0 (end) | Phase 1   |
+| **Walkthrough** | `walkthrough.md` | Final summary, verification steps         | Phase 6       | Phase 6   |
+
+**Note:** Files are _created_ at mode detection (Phase 0), then _populated_ in Phase 1.
 
 ## File Location
 
@@ -112,7 +131,8 @@ Use templates from `skills/autonomous-workflow/templates/` for consistency:
 
 ## Key Principles
 
-- **Create early**: Initialize `task.md` and `plan.md` at Phase 1
+- **Create BEFORE Phase 1**: Files must exist before analysis begins (created at mode detection)
+- **Populate in Phase 1**: Fill `task.md` and `plan.md` with planning content
 - **Update frequently**: Update `task.md` on every significant change
 - **Generate at end**: Create `walkthrough.md` at Phase 6
 - **User-visible**: These are deliverables, not hidden state
