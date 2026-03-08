@@ -75,6 +75,59 @@ gw remove feature-auth
 
 ---
 
+## 🤖 Autonomous Workflow Agent
+
+**Ship features while you sleep.** The `@gw-tools/autonomous-workflow-agent` handles complete feature development—from task intake to tested PR—in isolated Git worktrees.
+
+[-> See docs <-](packages/autonomous-workflow-agent/README.md)
+
+### What It Does
+
+Give the agent a task and walk away:
+
+1. **Validates** requirements with you before coding
+2. **Plans** implementation by analyzing your codebase
+3. **Isolates** work in a Git worktree (your main branch stays clean)
+4. **Implements** with logical, incremental commits
+5. **Tests** and iterates until green
+6. **Creates** a draft PR with full context
+
+### Quick Install for Claude Code
+
+```bash
+# Prerequisites: gw CLI must be installed first (see above)
+
+# One-liner - installs agent and skill (global)
+mkdir -p ~/.claude/agents && \
+  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
+  -o ~/.claude/agents/autonomous-workflow.md && \
+  npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+```
+
+### For Agent SDK Developers
+
+```bash
+npm install @gw-tools/autonomous-workflow-agent
+```
+
+```typescript
+import { autonomousWorkflowAgent } from '@gw-tools/autonomous-workflow-agent';
+import { query } from '@anthropic-ai/claude-code-sdk';
+
+for await (const message of query({
+  prompt: 'Add user authentication with JWT tokens',
+  options: {
+    agents: { 'autonomous-workflow': autonomousWorkflowAgent },
+  },
+})) {
+  console.log(message);
+}
+```
+
+📖 **Full documentation:** [packages/autonomous-workflow-agent/README.md](packages/autonomous-workflow-agent/README.md)
+
+---
+
 ## 🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)
 
 Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
