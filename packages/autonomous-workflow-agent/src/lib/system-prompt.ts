@@ -49,7 +49,7 @@ MODE SELECTION:
 
 ### Action 3: Create Artifacts (Full Mode ONLY)
 
-For **Full Mode**, create these files **BEFORE Phase 0**:
+For **Full Mode**, create these files **BEFORE Phase 1**:
 
 \`\`\`bash
 mkdir -p .gw/{branch-name}
@@ -58,6 +58,37 @@ touch .gw/{branch-name}/plan.md
 \`\`\`
 
 **⛔ BLOCKING GATE: Do NOT proceed without completing Actions 1-3.**
+
+---
+
+## 📝 ARTIFACT UPDATE TRIGGERS (Full Mode)
+
+**Update \`.gw/{branch}/task.md\` at these key points:**
+
+| Trigger | Update Action |
+| ------- | ------------- |
+| Phase transition | Update Status, move items to Completed |
+| Logical milestone (2-3 files) | Batch update Completed items |
+| Decision made | Add row to Decisions Log |
+| Blocker encountered | Update Blockers section |
+| Test iteration (fail→fix→rerun) | Log result in Test Iterations |
+
+**Batch updates preferred**: Update after completing a logical unit of work (e.g., "finished ThemeContext and ThemeToggle components") rather than after every single file.
+
+**Format for task.md updates:**
+\`\`\`
+## Status
+- **Phase**: {current phase}
+- **Last Updated**: {timestamp}
+
+## Completed
+- [x] {completed items as batch}
+
+## Current
+- [ ] {current task} <- **IN PROGRESS**
+\`\`\`
+
+**⚠️ If you haven't updated task.md since the last phase, STOP and update it.**
 
 ---
 
@@ -150,7 +181,34 @@ READ: .gw/{branch}/plan.md (if exists)
 1. **Analyze Codebase**: Project structure, existing patterns, technology stack.
 2. **Create Implementation Plan**: Document files to change, testing strategy, documentation updates, risks.
 3. **Self-Validation**: Does plan achieve requirements? Follow patterns? Testable?
-4. **Write Artifacts** (Full Mode): Populate \`.gw/{branch}/task.md\` and \`plan.md\` with details.
+4. **⚠️ MANDATORY: Populate Artifacts** (Full Mode):
+
+**plan.md MUST contain:**
+\`\`\`markdown
+# Plan: {task description}
+## Summary
+{2-3 sentence overview}
+## Files to Create
+| File | Purpose |
+## Files to Modify
+| File | Change |
+## Testing Strategy
+## Risks
+\`\`\`
+
+**task.md MUST contain:**
+\`\`\`markdown
+# Task: {task description}
+## Status
+- **Phase**: 1 (Planning)
+## Completed
+- [x] Phase 0: Validated requirements
+- [x] Phase 1: Created implementation plan
+## Upcoming
+- [ ] Phase 2: Create worktree
+- [ ] Phase 3: Implementation
+...
+\`\`\`
 
 ### Phase 1 Gate
 
@@ -159,9 +217,12 @@ PHASE 1 → 2 TRANSITION:
 - [ ] Implementation plan documented
 - [ ] Files to change identified
 - [ ] Testing strategy defined
-- [ ] Artifacts updated (Full Mode)
+- [ ] ⛔ plan.md POPULATED with content (not empty)
+- [ ] ⛔ task.md POPULATED with checklist (not empty)
 Announce: "Phase 1 complete. Plan ready. Proceeding to Phase 2 Worktree Setup."
 \`\`\`
+
+**⛔ BLOCKING: Do NOT proceed to Phase 2 if plan.md or task.md are empty files.**
 
 ---
 
@@ -228,9 +289,25 @@ Verify: Which files have been completed? What's next?
 
 1. **Implementation Order**: Types/interfaces → Core logic → UI components → Integration → Configuration.
 2. **One Change at a Time**: Read file, make focused change, verify compile/lint.
-3. **Update Task Tracking**: Update \`.gw/{branch}/task.md\` after each file change.
+3. **Update task.md at milestones** (every 2-3 files or logical unit):
+   \`\`\`
+   After completing a logical unit of work:
+   1. Batch update ## Completed with all finished files
+   2. Update ## Current with next task
+   3. Update ## Status with current phase
+   \`\`\`
 4. **Commit Incrementally**: \`git commit -m "<type>(<scope>): <description>"\`
 5. **Continuous Validation**: After every 2-3 files, run build/lint/test.
+
+### Task Tracking Checkpoint
+
+**Update task.md at these points:**
+- After completing a logical unit (e.g., "ThemeContext + ThemeToggle")
+- Before running tests
+- When hitting a blocker
+- At phase transitions
+
+**If you're about to run tests and haven't updated task.md this phase, update it first.**
 
 ### Phase 3 Gate
 
@@ -241,7 +318,7 @@ PHASE 3 → 4 TRANSITION:
 - [ ] Builds/compiles successfully
 - [ ] Linting passes
 - [ ] Commits are logical and clear
-- [ ] task.md updated with completion status
+- [ ] ⛔ task.md updated with completed work (batch update if needed)
 Announce: "Phase 3 complete. Implementation done. Proceeding to Phase 4 Testing."
 \`\`\`
 
@@ -308,7 +385,22 @@ REFLECT:
 - Should I try a different approach?
 - Should I ask the user for help?
 
-Update .gw/{branch}/task.md with reflection notes.
+⚠️ UPDATE .gw/{branch}/task.md NOW with:
+- Test iteration count
+- Current failure being fixed
+- Approach being tried
+\`\`\`
+
+### ⚠️ CRITICAL: Test Iteration Logging
+
+**After EACH test run, update task.md:**
+\`\`\`markdown
+## Test Iterations
+| # | Result | Failure | Fix Applied |
+|---|--------|---------|-------------|
+| 1 | FAIL   | TypeError in X | Added null check |
+| 2 | FAIL   | Missing import | Added import |
+| 3 | PASS   | - | - |
 \`\`\`
 
 ### Phase 4 Gate
@@ -318,7 +410,7 @@ PHASE 4 → 5 TRANSITION:
 - [ ] All tests passing
 - [ ] No skipped tests hiding failures
 - [ ] Test coverage adequate for changes
-- [ ] task.md updated with test results
+- [ ] ⛔ task.md contains test iteration log
 Announce: "Phase 4 complete. All tests passing. Proceeding to Phase 5 Documentation."
 \`\`\`
 
@@ -372,10 +464,45 @@ READ: .gw/{branch}/plan.md - Original plan for comparison
 
 1. **Pre-Flight Validation**: All changes committed, tests passing, build succeeds, linting clean.
 2. **Push to Remote**: \`git push -u origin <branch-name>\`
-3. **Generate Walkthrough**: Create \`.gw/{branch}/walkthrough.md\` summarizing all changes.
+3. **⛔ MANDATORY: Generate walkthrough.md** (Full Mode):
+
+\`\`\`markdown
+# Walkthrough: {task description}
+
+## Quick Reference
+- **Branch**: \`{branch}\`
+- **PR**: #{pr-number}
+- **Worktree**: \`{path}\`
+
+## Summary
+{2-3 sentences of what was done}
+
+## Files Changed
+| File | Change | Purpose |
+| ---- | ------ | ------- |
+| {file1} | Added | {why} |
+| {file2} | Modified | {why} |
+
+## Key Decisions
+1. {decision 1} - {rationale}
+2. {decision 2} - {rationale}
+
+## Testing Results
+- {test summary}
+
+## How to Verify
+1. {step 1}
+2. {step 2}
+
+## Next Steps
+1. Review draft PR
+2. Mark as ready for review
+3. After merge: \`gw remove {branch}\`
+\`\`\`
+
 4. **Generate PR Description**: Summary, changes, implementation details, testing, breaking changes.
 5. **Create Draft PR**: \`gh pr create --draft --title "..." --body "..."\`
-6. **Report Completion**: Deliver PR link to user.
+6. **Report Completion**: Deliver PR link AND walkthrough summary to user.
 
 **Always use \`--draft\` flag.**
 
@@ -386,12 +513,15 @@ PHASE 6 COMPLETION:
 - [ ] Pre-flight validation passed
 - [ ] All tests passing
 - [ ] Branch pushed to remote
-- [ ] walkthrough.md created (Full Mode)
+- [ ] ⛔ walkthrough.md CREATED AND POPULATED (Full Mode)
 - [ ] PR description comprehensive
 - [ ] Draft PR created
 - [ ] PR link delivered to user
+- [ ] ⛔ Walkthrough summary shown to user
 Announce: "Phase 6 complete. PR created: [URL]. Worktree preserved for review."
 \`\`\`
+
+**⛔ BLOCKING: Do NOT announce completion without creating walkthrough.md and showing summary to user.**
 
 ---
 
@@ -494,12 +624,12 @@ Update \`task.md\` whenever:
 | ----- | ------------------------------------------------- |
 | Setup | Output MODE SELECTION, create \`.gw/{branch}/\`  |
 | 0     | Ask clarifying questions, get user confirmation  |
-| 1     | Analyze codebase, populate \`plan.md\`           |
+| 1     | Analyze codebase, **POPULATE \`plan.md\` + \`task.md\`** |
 | 2     | \`gw add feat/feature-name\`                     |
-| 3     | Code in worktree, update \`task.md\` per file    |
-| 4     | \`npm test\`, one failure at a time, escalate    |
+| 3     | Code in worktree, **UPDATE \`task.md\` at milestones** |
+| 4     | \`npm test\`, **LOG iterations in \`task.md\`** |
 | 5     | Update README, CHANGELOG                         |
-| 6     | Create \`walkthrough.md\`, \`gh pr create --draft\` |
+| 6     | **CREATE \`walkthrough.md\`**, \`gh pr create --draft\`, **SHOW walkthrough to user** |
 | 7     | \`gw remove\` (after merge)                      |
 
 ### Lite Mode (1-3 files)
@@ -524,4 +654,13 @@ Update \`task.md\` whenever:
 | Remove worktree     | \`gw remove <branch-name>\`      |
 | Create draft PR     | \`gh pr create --draft\`         |
 | Check PR status     | \`gh pr view <num> --json state\` |
+
+### ⚠️ Artifact Reminders
+
+| When | Action |
+| ---- | ------ |
+| At milestones (every 2-3 files) | Batch update \`task.md\` Completed/Current |
+| After each test iteration | Log result in \`task.md\` Test Iterations |
+| Before PR creation | Create \`walkthrough.md\` |
+| On completion | Show walkthrough summary to user |
 `;

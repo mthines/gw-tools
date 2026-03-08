@@ -57,11 +57,27 @@ touch .gw/{branch-name}/plan.md
 
 | File             | Purpose                                | When to Update            |
 | ---------------- | -------------------------------------- | ------------------------- |
-| `task.md`        | Dynamic checklist, decisions, blockers | Throughout implementation |
+| `task.md`        | Dynamic checklist, decisions, blockers | **At milestones (every 2-3 files)** |
 | `plan.md`        | Implementation strategy, file list     | After Phase 1 analysis    |
-| `walkthrough.md` | Final summary for PR                   | Phase 6 only              |
+| `walkthrough.md` | Final summary for PR                   | Phase 6 (MANDATORY)       |
 
 **⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
+
+---
+
+## ⚠️ ARTIFACT UPDATE TRIGGERS (Full Mode)
+
+**Update `.gw/{branch}/task.md` at these key points:**
+
+| Trigger | Update Action |
+| ------- | ------------- |
+| Logical milestone (2-3 files) | Batch update Completed items |
+| Phase transition | Update Status section, move items |
+| Decision made | Add row to Decisions Log |
+| Test iteration (fail→fix→rerun) | Log result in Test Iterations |
+| Blocker encountered | Update Blockers section |
+
+**Batch updates preferred**: Update after completing a logical unit of work rather than after every single file. This reduces overhead while maintaining visibility.
 
 ### Step 3: Announce Mode Selection
 
@@ -176,12 +192,12 @@ Structured templates for consistent artifact generation:
 | Phase             | Command/Action                                                |
 | ----------------- | ------------------------------------------------------------- |
 | 0. Validation     | Ask clarifying questions, get user confirmation               |
-| 1. Planning       | Analyze codebase, create `.gw/{branch}/task.md` and `plan.md` |
+| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md` |
 | 2. Worktree       | `gw add feat/feature-name`                                    |
-| 3. Implementation | Code in worktree, update `task.md` on changes                 |
-| 4. Testing        | `npm test`, iterate until all pass, log in `task.md`          |
+| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**          |
+| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**               |
 | 5. Documentation  | Update README, CHANGELOG                                      |
-| 6. PR Creation    | Generate `walkthrough.md`, `gh pr create --draft`             |
+| 6. PR Creation    | **CREATE `walkthrough.md`**, `gh pr create --draft`, **SHOW walkthrough to user** |
 | 7. Cleanup        | `gw remove feat/feature-name` (after merge)                   |
 
 ### Lite Mode (1-3 files, simple changes)
@@ -212,12 +228,13 @@ Structured templates for consistent artifact generation:
 2. **Create artifacts BEFORE planning (Full Mode)**: `.gw/{branch}/task.md` and `plan.md` are MANDATORY.
 3. **Always validate first (Phase 0)**: Never skip directly to implementation.
 4. **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
-5. **Track progress with artifacts**: Update `.gw/{branch}/task.md` as you work.
+5. **Update task.md at milestones**: Every 2-3 files or at logical checkpoints (not every file).
 6. **Smart worktree detection**: Check if current worktree matches task before creating new.
 7. **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
 8. **Fast feedback loops**: Run tests frequently, fix failures immediately.
 9. **Self-validate continuously**: Check work at every step.
-10. **Stop and ask when blocked**: Don't guess on ambiguity.
+10. **⛔ CREATE walkthrough.md AND SHOW IT at Phase 6**: This is MANDATORY for Full Mode.
+11. **Stop and ask when blocked**: Don't guess on ambiguity.
 
 ## Artifact System
 
@@ -231,6 +248,14 @@ Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{
 
 Files are gitignored and grouped by branch for easy browsing.
 
+### ⚠️ CRITICAL: Artifact Update Requirements
+
+| Artifact | Update Frequency | Blocking Gate |
+| -------- | ---------------- | ------------- |
+| `plan.md` | Once in Phase 1 | ⛔ Must be POPULATED (not empty) before Phase 2 |
+| `task.md` | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions |
+| `walkthrough.md` | Once in Phase 6 | ⛔ Must be CREATED AND SHOWN to user before completion |
+
 ## Workflow Flow
 
 ```
@@ -242,17 +267,21 @@ Files are gitignored and grouped by branch for easy browsing.
     ↓
 Phase 0: Validation ← MANDATORY
     ↓ (user confirms)
-Phase 1: Planning (Full: write to plan.md, Lite: mental plan)
+Phase 1: Planning
+    ⛔ Full Mode: POPULATE plan.md + task.md (not empty!)
     ↓ (plan validated)
 Phase 2: Worktree Setup ← MANDATORY (with smart detection)
     ↓ (worktree created)
-Phase 3: Implementation (Full: update task.md, Lite: just code)
+Phase 3: Implementation
+    📝 Full Mode: UPDATE task.md at milestones (every 2-3 files)
     ↓ (code complete)
 Phase 4: Testing ← iterate until passing
+    📝 Full Mode: LOG each test iteration in task.md
     ↓ (all tests pass)
 Phase 5: Documentation
     ↓ (docs complete)
-Phase 6: PR Creation (Full: generate walkthrough.md)
+Phase 6: PR Creation
+    ⛔ Full Mode: CREATE walkthrough.md + SHOW to user
     ↓ (draft PR delivered)
 Phase 7: Cleanup (optional)
 ```
@@ -289,6 +318,9 @@ while not all_tests_pass:
 | Agent stuck in loop    | `task.md` iteration history | Try alternative approach, ask user                                    |
 | Tests keep failing     | `task.md` test results      | Focus on ONE failure, escalate at 7+                                  |
 | Agent hallucinated cmd | Error message               | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
+| plan.md empty          | `cat .gw/{branch}/plan.md`  | STOP, populate plan.md before proceeding                              |
+| task.md not updated    | `cat .gw/{branch}/task.md`  | Update immediately with all completed work                            |
+| walkthrough.md missing | `ls .gw/{branch}/`          | Create before announcing completion                                   |
 
 ## Related Skills
 
