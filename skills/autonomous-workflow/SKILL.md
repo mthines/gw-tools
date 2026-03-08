@@ -55,11 +55,11 @@ touch .gw/{branch-name}/task.md
 touch .gw/{branch-name}/plan.md
 ```
 
-| File             | Purpose                                | When to Update            |
-| ---------------- | -------------------------------------- | ------------------------- |
+| File             | Purpose                                | When to Update                      |
+| ---------------- | -------------------------------------- | ----------------------------------- |
 | `task.md`        | Dynamic checklist, decisions, blockers | **At milestones (every 2-3 files)** |
-| `plan.md`        | Implementation strategy, file list     | After Phase 1 analysis    |
-| `walkthrough.md` | Final summary for PR                   | Phase 6 (MANDATORY)       |
+| `plan.md`        | Implementation strategy, file list     | After Phase 1 analysis              |
+| `walkthrough.md` | Final summary for PR                   | Phase 6 (MANDATORY)                 |
 
 **⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
 
@@ -69,13 +69,13 @@ touch .gw/{branch-name}/plan.md
 
 **Update `.gw/{branch}/task.md` at these key points:**
 
-| Trigger | Update Action |
-| ------- | ------------- |
-| Logical milestone (2-3 files) | Batch update Completed items |
-| Phase transition | Update Status section, move items |
-| Decision made | Add row to Decisions Log |
-| Test iteration (fail→fix→rerun) | Log result in Test Iterations |
-| Blocker encountered | Update Blockers section |
+| Trigger                         | Update Action                     |
+| ------------------------------- | --------------------------------- |
+| Logical milestone (2-3 files)   | Batch update Completed items      |
+| Phase transition                | Update Status section, move items |
+| Decision made                   | Add row to Decisions Log          |
+| Test iteration (fail→fix→rerun) | Log result in Test Iterations     |
+| Blocker encountered             | Update Blockers section           |
 
 **Batch updates preferred**: Update after completing a logical unit of work rather than after every single file. This reduces overhead while maintaining visibility.
 
@@ -189,16 +189,16 @@ Structured templates for consistent artifact generation:
 
 ### Full Mode (4+ files, complex changes)
 
-| Phase             | Command/Action                                                |
-| ----------------- | ------------------------------------------------------------- |
-| 0. Validation     | Ask clarifying questions, get user confirmation               |
-| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md` |
-| 2. Worktree       | `gw add feat/feature-name`                                    |
-| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**          |
-| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**               |
-| 5. Documentation  | Update README, CHANGELOG                                      |
+| Phase             | Command/Action                                                                    |
+| ----------------- | --------------------------------------------------------------------------------- |
+| 0. Validation     | Ask clarifying questions, get user confirmation                                   |
+| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md`               |
+| 2. Worktree       | `gw add feat/feature-name`                                                        |
+| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                              |
+| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                   |
+| 5. Documentation  | Update README, CHANGELOG                                                          |
 | 6. PR Creation    | **CREATE `walkthrough.md`**, `gh pr create --draft`, **SHOW walkthrough to user** |
-| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                   |
+| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                       |
 
 ### Lite Mode (1-3 files, simple changes)
 
@@ -250,11 +250,11 @@ Files are gitignored and grouped by branch for easy browsing.
 
 ### ⚠️ CRITICAL: Artifact Update Requirements
 
-| Artifact | Update Frequency | Blocking Gate |
-| -------- | ---------------- | ------------- |
-| `plan.md` | Once in Phase 1 | ⛔ Must be POPULATED (not empty) before Phase 2 |
-| `task.md` | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions |
-| `walkthrough.md` | Once in Phase 6 | ⛔ Must be CREATED AND SHOWN to user before completion |
+| Artifact         | Update Frequency                | Blocking Gate                                          |
+| ---------------- | ------------------------------- | ------------------------------------------------------ |
+| `plan.md`        | Once in Phase 1                 | ⛔ Must be POPULATED (not empty) before Phase 2        |
+| `task.md`        | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions    |
+| `walkthrough.md` | Once in Phase 6                 | ⛔ Must be CREATED AND SHOWN to user before completion |
 
 ## Workflow Flow
 
