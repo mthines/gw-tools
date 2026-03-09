@@ -109,6 +109,18 @@
         "title": "Open Walkthrough",
         "icon": "$(book)",
         "category": "GW"
+      },
+      {
+        "command": "gw.clean",
+        "title": "Clean Stale Worktrees",
+        "icon": "$(clear-all)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.sync",
+        "title": "Sync Files to Worktree",
+        "icon": "$(sync)",
+        "category": "GW"
       }
     ],
     "menus": {
@@ -122,6 +134,11 @@
           "command": "gw.createWorktree",
           "when": "view == gwWorktreeExplorer",
           "group": "navigation"
+        },
+        {
+          "command": "gw.clean",
+          "when": "view == gwWorktreeExplorer",
+          "group": "2_actions"
         },
         {
           "command": "gw.refreshAgentTasks",
@@ -144,6 +161,11 @@
           "command": "gw.openWorktree",
           "when": "view == gwWorktreeExplorer && viewItem == worktree",
           "group": "navigation@2"
+        },
+        {
+          "command": "gw.sync",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "group": "actions@1"
         },
         {
           "command": "gw.removeWorktree",

@@ -12,6 +12,21 @@ export interface WorktreeInfo {
 }
 
 /**
+ * Run a shell command and return stdout
+ */
+function exec(command: string, cwd: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    cp.exec(command, { cwd }, (err, stdout, stderr) => {
+      if (err) {
+        reject(new Error(stderr.trim() || err.message));
+        return;
+      }
+      resolve(stdout.trim());
+    });
+  });
+}
+
+/**
  * Parse the porcelain output of `git worktree list --porcelain`
  */
 export function parseWorktreeListOutput(output: string): WorktreeInfo[] {
@@ -93,31 +108,35 @@ export function getGitRoot(cwd: string): Promise<string> {
 }
 
 /**
- * Remove a worktree
+ * Remove a worktree using gw remove
  */
 export function removeWorktree(cwd: string, worktreePath: string): Promise<void> {
-  return new Promise((resolve, reject) => {
-    cp.exec(`git worktree remove "${worktreePath}"`, { cwd }, (err) => {
-      if (err) {
-        reject(new Error(`Failed to remove worktree: ${err.message}`));
-        return;
-      }
-      resolve();
-    });
-  });
+  return exec(`gw remove "${worktreePath}" --yes`, cwd).then(() => undefined);
 }
 
 /**
  * Create a new worktree via gw checkout
  */
 export function createWorktree(cwd: string, branchName: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    cp.exec(`gw checkout ${branchName}`, { cwd }, (err, stdout) => {
-      if (err) {
-        reject(new Error(`Failed to create worktree: ${err.message}`));
-        return;
-      }
-      resolve(stdout.trim());
-    });
-  });
+  return exec(`gw checkout ${branchName}`, cwd);
+}
+
+/**
+ * Clean up stale worktrees via gw clean
+ */
+export function cleanWorktrees(cwd: string, opts: { force?: boolean; dryRun?: boolean } = {}): Promise<string> {
+  const flags: string[] = ['--yes'];
+  if (opts.force) flags.push('--force');
+  if (opts.dryRun) flags.push('--dry-run');
+  return exec(`gw clean ${flags.join(' ')}`, cwd);
+}
+
+/**
+ * Sync files to a worktree via gw sync
+ */
+export function syncWorktree(cwd: string, target?: string, from?: string): Promise<string> {
+  const args: string[] = [];
+  if (target) args.push(target);
+  if (from) args.push('--from', from);
+  return exec(`gw sync ${args.join(' ')}`, cwd);
 }
