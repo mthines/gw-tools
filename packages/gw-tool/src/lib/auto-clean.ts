@@ -210,9 +210,7 @@ export async function promptAndRunAutoClean(): Promise<void> {
 
     // Show prompt
     const worktreeWord = cleanableWorktrees.length === 1 ? 'worktree' : 'worktrees';
-    const response = prompt(
-      `Clean ${cleanableWorktrees.length} ${worktreeWord}? [Y/n]: `
-    );
+    const response = prompt(`Clean ${cleanableWorktrees.length} ${worktreeWord}? [Y/n]: `);
 
     // Handle response (default to yes if empty or Enter)
     if (response === null || response === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes') {
