@@ -210,35 +210,8 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "pr_number=${{ steps.pr.outputs.pr_number }}" >> $GITHUB_OUTPUT
 
-      - name: Comment on PR
-        if: steps.tag.outputs.created == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.tag.outputs.version }}"
-          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
-
-          gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
-          # 🧪 Beta Release \`v${VERSION}\`
-
-          A beta release has been created for this PR.
-
-          ### Installation
-
-          **npm:**
-          \`\`\`bash
-          npm install -g @gw-tools/gw@beta
-          \`\`\`
-
-          **Homebrew:**
-          \`\`\`bash
-          brew install mthines/gw-tools/gw-beta
-          \`\`\`
-
-          ---
-          📦 [View Release](https://github.com/mthines/gw-tools/releases/tag/v${VERSION})
-          EOF
-          )"
+      # Note: PR comment is posted by the release job after successful publish,
+      # to avoid duplicate comments and ensure the release is actually available.
 
   auto-tag:
     # Run on push to main OR manual dispatch with force_release
@@ -507,18 +480,21 @@ jobs:
           VERSION="${{ steps.version.outputs.version }}"
           if gh release view "$VERSION" &>/dev/null; then
             echo "exists=true" >> $GITHUB_OUTPUT
-            echo "::notice::⚠️ Release $VERSION already exists (likely created by auto-tag workflow)"
+            echo "::notice::⏭️ Release $VERSION already exists - skipping build and publish steps"
+            echo "This is expected when a tag push triggers a duplicate workflow run."
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
       - name: Checkout release tag
+        if: steps.check_release.outputs.exists == 'false'
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           echo "Checking out tag: $VERSION"
           git checkout "$VERSION"
 
       - name: Run release (build, GitHub release, Homebrew)
+        if: steps.check_release.outputs.exists == 'false'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
@@ -531,14 +507,18 @@ jobs:
         run: npx nx run @gw-tools/gw-tool:release:ci
 
       - name: Update npm for OIDC support
-        if: github.event_name != 'workflow_dispatch' || inputs.force_release
+        if: |
+          steps.check_release.outputs.exists == 'false' &&
+          (github.event_name != 'workflow_dispatch' || inputs.force_release)
         run: |
           echo "Current npm version: $(npm --version)"
           npm install -g npm@latest
           echo "Updated npm version: $(npm --version)"
 
       - name: Publish to npm
-        if: github.event_name != 'workflow_dispatch' || inputs.force_release
+        if: |
+          steps.check_release.outputs.exists == 'false' &&
+          (github.event_name != 'workflow_dispatch' || inputs.force_release)
         working-directory: dist/packages/gw-tool/npm
         run: |
           VERSION="${{ steps.version.outputs.version }}"
@@ -564,7 +544,9 @@ jobs:
           fi
 
       - name: Comment on PR (beta releases)
-        if: contains(steps.version.outputs.version, '-beta.')
+        if: |
+          steps.check_release.outputs.exists == 'false' &&
+          contains(steps.version.outputs.version, '-beta.')
         uses: actions/github-script@v7
         with:
           script: |
