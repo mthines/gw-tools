@@ -112,9 +112,7 @@ export class ArtifactWatcher implements vscode.Disposable {
     // Auto-open walkthrough when created
     if (filename === 'walkthrough.md' && !this.knownWalkthroughs.has(uri.fsPath)) {
       this.knownWalkthroughs.add(uri.fsPath);
-      const autoOpen = vscode.workspace
-        .getConfiguration('gw')
-        .get<boolean>('autoOpenWalkthrough', true);
+      const autoOpen = vscode.workspace.getConfiguration('gw').get<boolean>('autoOpenWalkthrough', true);
       if (autoOpen) {
         this.openWalkthrough(uri);
       }
@@ -134,9 +132,7 @@ export class ArtifactWatcher implements vscode.Disposable {
         preview: false,
         viewColumn: vscode.ViewColumn.One,
       });
-      vscode.window.showInformationMessage(
-        `Walkthrough generated: ${path.basename(path.dirname(uri.fsPath))}`
-      );
+      vscode.window.showInformationMessage(`Walkthrough generated: ${path.basename(path.dirname(uri.fsPath))}`);
     } catch {
       // ignore open errors
     }

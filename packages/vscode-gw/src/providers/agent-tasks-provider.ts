@@ -251,27 +251,19 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     if (task) {
       // Current (expanded by default to show what's happening now)
       if (task.current.length > 0) {
-        const currentItems = task.current.map(
-          (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress)
-        );
-        children.push(
-          new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded)
-        );
+        const currentItems = task.current.map((t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress));
+        children.push(new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded));
       }
 
       // Completed
       if (task.completed.length > 0) {
-        const completedItems = task.completed.map(
-          (t) => new TaskCheckboxItem(t.label, t.completed, false)
-        );
+        const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false));
         children.push(new TaskGroupItem('Completed', 'pass', completedItems));
       }
 
       // Upcoming
       if (task.upcoming.length > 0) {
-        const upcomingItems = task.upcoming.map(
-          (t) => new TaskCheckboxItem(t.label, t.completed, false)
-        );
+        const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false));
         children.push(new TaskGroupItem('Upcoming', 'circle-large-outline', upcomingItems));
       }
 
@@ -290,12 +282,8 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
 
       // Decisions
       if (task.decisions.length > 0) {
-        const decisionItems = task.decisions.map(
-          (d) => new DecisionItem(d.decision, d.rationale, d.phase)
-        );
-        children.push(
-          new TaskGroupItem('Decisions', 'lightbulb', decisionItems as unknown as TaskCheckboxItem[])
-        );
+        const decisionItems = task.decisions.map((d) => new DecisionItem(d.decision, d.rationale, d.phase));
+        children.push(new TaskGroupItem('Decisions', 'lightbulb', decisionItems as unknown as TaskCheckboxItem[]));
       }
     }
 

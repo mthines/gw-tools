@@ -62,11 +62,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand('gw.removeWorktree', async (item: WorktreeItem) => {
       const branch = item.worktree.branch;
-      const confirm = await vscode.window.showWarningMessage(
-        `Remove worktree "${branch}"?`,
-        { modal: true },
-        'Remove'
-      );
+      const confirm = await vscode.window.showWarningMessage(`Remove worktree "${branch}"?`, { modal: true }, 'Remove');
       if (confirm !== 'Remove') return;
 
       try {
@@ -146,13 +142,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Push all disposables
-  context.subscriptions.push(
-    worktreeView,
-    agentTasksView,
-    artifactWatcher,
-    workspaceWatcher,
-    ...commands
-  );
+  context.subscriptions.push(worktreeView, agentTasksView, artifactWatcher, workspaceWatcher, ...commands);
 }
 
 export function deactivate(): void {

@@ -100,7 +100,10 @@ function parseCheckboxItems(section: string): TaskItem[] {
       const completed = match[1].toLowerCase() === 'x';
       let label = match[2].trim();
       const inProgress = label.includes('**IN PROGRESS**') || label.includes('<- **IN PROGRESS**');
-      label = label.replace(/<-\s*\*\*IN PROGRESS\*\*/, '').replace(/\*\*IN PROGRESS\*\*/, '').trim();
+      label = label
+        .replace(/<-\s*\*\*IN PROGRESS\*\*/, '')
+        .replace(/\*\*IN PROGRESS\*\*/, '')
+        .trim();
       items.push({ label, completed, inProgress });
     }
   }
@@ -181,15 +184,11 @@ export function parseTaskMd(content: string): ParsedTask {
     .filter((l) => l.trim().startsWith('-'))
     .map((l) => l.replace(/^[-*]\s+/, '').trim());
 
-  const blockerLines = blockersSection
-    .split('\n')
-    .filter((l) => l.trim().length > 0 && !l.trim().startsWith('<!--'));
+  const blockerLines = blockersSection.split('\n').filter((l) => l.trim().length > 0 && !l.trim().startsWith('<!--'));
   const blockers =
     blockerLines.length === 1 && blockerLines[0].trim().toLowerCase() === 'none'
       ? []
-      : blockerLines
-          .filter((l) => l.trim().toLowerCase() !== 'none')
-          .map((l) => l.replace(/^[-*]\s+/, '').trim());
+      : blockerLines.filter((l) => l.trim().toLowerCase() !== 'none').map((l) => l.replace(/^[-*]\s+/, '').trim());
 
   return {
     frontmatter: frontmatter as TaskFrontmatter,

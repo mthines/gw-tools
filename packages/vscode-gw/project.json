@@ -17,9 +17,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["build"],
       "options": {
-        "commands": [
-          "npx @vscode/vsce package --no-dependencies -o ../../dist/packages/vscode-gw/"
-        ],
+        "commands": ["npx @vscode/vsce package --no-dependencies -o ../../dist/packages/vscode-gw/"],
         "cwd": "packages/vscode-gw"
       }
     },
