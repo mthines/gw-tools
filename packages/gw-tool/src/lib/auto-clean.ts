@@ -3,6 +3,7 @@
  * Runs automatically on configured commands with cooldown
  */
 
+import { isProtectedBranch } from './branch-protection.ts';
 import { loadConfig, saveConfig } from './config.ts';
 import {
   getWorktreeAgeDays,
@@ -55,8 +56,8 @@ async function getCleanableWorktrees(threshold: number, defaultBranch: string): 
   const cleanable: CleanableWorktree[] = [];
 
   for (const wt of nonBareWorktrees) {
-    // Never clean the defaultBranch worktree - it's the source for file syncing
-    if (wt.branch === defaultBranch) {
+    // Never clean protected branches (defaultBranch, gw_root)
+    if (isProtectedBranch(wt.branch, defaultBranch)) {
       continue;
     }
 
@@ -199,11 +200,18 @@ export async function promptAndRunAutoClean(): Promise<void> {
       return;
     }
 
-    // Show prompt
+    // Show list of branches that will be deleted
     console.log();
+    console.log(`${output.bold('🧹 Found stale worktrees to clean:')}\n`);
+    for (const wt of cleanableWorktrees) {
+      console.log(`  ${output.errorSymbol()} ${output.path(wt.branch || wt.path)} (${wt.ageDays} days old)`);
+    }
+    console.log();
+
+    // Show prompt
     const worktreeWord = cleanableWorktrees.length === 1 ? 'worktree' : 'worktrees';
     const response = prompt(
-      `🧹 Found ${cleanableWorktrees.length} stale ${worktreeWord} (${threshold}+ days old). Clean them up? [Y/n]: `
+      `Clean ${cleanableWorktrees.length} ${worktreeWord}? [Y/n]: `
     );
 
     // Handle response (default to yes if empty or Enter)
