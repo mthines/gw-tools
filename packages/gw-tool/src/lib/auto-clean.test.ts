@@ -459,3 +459,35 @@ Deno.test('promptAndRunAutoClean - no prompt when no cleanable worktrees exist',
     await repo.cleanup();
   }
 });
+
+Deno.test('executeAutoClean - never removes gw_root worktree', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a gw_root worktree
+    const gwRootPath = await repo.createWorktree('gw_root', 'gw_root');
+
+    // Make it old
+    await makeWorktreeOld(gwRootPath, 10);
+
+    // Create config with auto-clean enabled (1 day threshold)
+    const config = createConfigWithAutoClean(repo.path, 1);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const removedCount = await executeAutoClean();
+      // Should NOT remove the gw_root worktree (it's protected)
+      assertEquals(removedCount, 0);
+
+      // Verify the gw_root worktree still exists
+      const worktrees = await repo.listWorktrees();
+      assertEquals(worktrees.includes(gwRootPath), true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});

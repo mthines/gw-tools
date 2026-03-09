@@ -3,6 +3,7 @@
  * Remove stale worktrees based on age threshold
  */
 
+import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
   getWorktreeAgeDays,
@@ -154,9 +155,9 @@ export async function executeClean(args: string[]): Promise<void> {
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
-  // Filter out bare repository, default branch, and gw_root
+  // Filter out bare repository and protected branches
   const defaultBranch = config.defaultBranch || 'main';
-  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && wt.branch !== defaultBranch && wt.branch !== 'gw_root');
+  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && !isProtectedBranch(wt.branch, defaultBranch));
 
   if (nonBareWorktrees.length === 0) {
     console.log('No worktrees found.\n');
