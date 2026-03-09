@@ -170,9 +170,7 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!target) {
         // Show picker with available worktrees
         const worktrees = await listWorktrees(workspacePath);
-        const picks = worktrees
-          .filter((w) => !w.bare)
-          .map((w) => ({ label: w.branch, description: w.path }));
+        const picks = worktrees.filter((w) => !w.bare).map((w) => ({ label: w.branch, description: w.path }));
 
         if (picks.length === 0) {
           vscode.window.showWarningMessage('No worktrees available to sync.');
