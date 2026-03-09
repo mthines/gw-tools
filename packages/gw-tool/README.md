@@ -1014,14 +1014,19 @@ gw init --auto-clean --auto-copy-files .env --post-checkout "pnpm install"
 
 - Prompts after `gw checkout` and `gw list` commands when stale worktrees are detected
 - Only prompts once per 24 hours (cooldown)
-- **Never removes the `defaultBranch` worktree** - it's protected as the source for file syncing
+- **Never removes the `defaultBranch` or `gw_root` worktrees** - they're protected
 - Checks for worktrees older than `cleanThreshold` with:
   - No uncommitted changes
   - No staged files
   - No unpushed commits
-- Shows interactive prompt when stale worktrees are found:
+- Shows list of branches before prompting:
   ```
-  🧹 Found 2 stale worktrees (7+ days old). Clean them up? [Y/n]:
+  🧹 Found stale worktrees to clean:
+
+    ✗ feat/old-feature (10 days old)
+    ✗ fix/bug-123 (8 days old)
+
+  Clean 2 worktrees? [Y/n]:
   ```
 - Press Enter or `y` to remove them, or `n` to skip
 - Shows brief summary after cleanup: `✓ Removed 2 stale worktrees`
