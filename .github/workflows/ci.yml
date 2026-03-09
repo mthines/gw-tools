@@ -22,6 +22,10 @@ on:
         description: 'Force autonomous-workflow-agent release even without source changes (actual publish)'
         type: boolean
         default: false
+      create_beta:
+        description: 'Create beta release for the selected branch (must have an open PR)'
+        type: boolean
+        default: false
       version:
         description: 'Version to simulate (e.g., 0.28.1) - only for test_release dry-runs, ignored by force_release'
         type: string
@@ -74,8 +78,10 @@ jobs:
       - run: npx nx run @gw-tools/gw-tool:test:ci
 
   auto-tag-beta:
-    # Run on non-draft PRs to create beta releases
-    if: github.event_name == 'pull_request' && github.event.pull_request.draft == false
+    # Run on non-draft PRs to create beta releases, or manual trigger with create_beta
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (github.event_name == 'workflow_dispatch' && inputs.create_beta)
     needs: test
     runs-on: ubuntu-latest
     permissions:
@@ -89,14 +95,46 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: ${{ github.event.pull_request.head.sha }}
+          # For PR events use the PR head SHA, for workflow_dispatch use the selected branch
+          ref: ${{ github.event.pull_request.head.sha || github.ref }}
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Detect PR info
+        id: pr
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Get PR info from current branch
+            PR_INFO=$(gh pr view --json number,baseRefName,state 2>/dev/null || echo "")
+            if [ -z "$PR_INFO" ]; then
+              echo "::error::No PR found for branch ${{ github.ref_name }}. create_beta requires a branch with an open PR."
+              exit 1
+            fi
+
+            PR_STATE=$(echo "$PR_INFO" | jq -r '.state')
+            if [ "$PR_STATE" != "OPEN" ]; then
+              echo "::error::PR is not open (state: $PR_STATE). create_beta requires an open PR."
+              exit 1
+            fi
+
+            PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number')
+            BASE_REF=$(echo "$PR_INFO" | jq -r '.baseRefName')
+
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+            echo "::notice::📋 Detected PR #$PR_NUMBER (base: $BASE_REF)"
+          else
+            # Use PR event context
+            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+            echo "base_ref=${{ github.base_ref }}" >> $GITHUB_OUTPUT
+          fi
 
       - name: Check for releasable changes
         id: check
         run: |
           # Check if gw-tool source files changed in this PR
-          CHANGED=$(git diff --name-only origin/${{ github.base_ref }}...HEAD -- packages/gw-tool/src/)
+          CHANGED=$(git diff --name-only origin/${{ steps.pr.outputs.base_ref }}...HEAD -- packages/gw-tool/src/)
 
           if [ -z "$CHANGED" ]; then
             echo "::notice::⏭️ No source changes in packages/gw-tool/src/"
@@ -113,13 +151,14 @@ jobs:
         if: steps.check.outputs.should_release == 'true'
         id: version
         run: |
-          PR_NUMBER="${{ github.event.pull_request.number }}"
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+          BASE_REF="${{ steps.pr.outputs.base_ref }}"
 
           echo "📦 Source files changed:"
           echo "${{ steps.check.outputs.changed_files }}"
 
           # Get commits for version determination
-          COMMITS=$(git log origin/${{ github.base_ref }}...HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          COMMITS=$(git log origin/${BASE_REF}...HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
 
           # Determine bump type from conventional commits
           BUMP_TYPE="patch"
@@ -169,7 +208,7 @@ jobs:
           echo "::notice::🏷️ Created beta tag v$NEW_VERSION"
           echo "created=true" >> $GITHUB_OUTPUT
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
+          echo "pr_number=${{ steps.pr.outputs.pr_number }}" >> $GITHUB_OUTPUT
 
   auto-tag:
     # Run on push to main OR manual dispatch with force_release
@@ -372,7 +411,8 @@ jobs:
           # Pass context as env vars to avoid GitHub expression substitution issues in bash
           GH_REF: ${{ github.ref }}
           GH_REF_NAME: ${{ github.ref_name }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
+          # Use auto-tag-beta output for PR number (works for both PR events and workflow_dispatch)
+          PR_NUMBER: ${{ needs.auto-tag-beta.outputs.pr_number || github.event.pull_request.number }}
           INPUT_VERSION: ${{ inputs.version }}
           AUTO_TAG_CREATED: ${{ needs.auto-tag.outputs.created }}
           AUTO_TAG_BETA_CREATED: ${{ needs.auto-tag-beta.outputs.created }}
