@@ -5,6 +5,9 @@
   "references": [
     {
       "path": "./packages/gw-tool"
+    },
+    {
+      "path": "./packages/autonomous-workflow-agent"
     }
   ]
 }
