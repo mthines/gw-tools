@@ -34,24 +34,24 @@ The extension adds a "GW Worktrees" activity bar icon with two views:
 
 ## Commands
 
-| Command | Description |
-| --- | --- |
-| `GW: Refresh Worktrees` | Refresh the worktree list |
-| `GW: Create Worktree` | Create a new worktree via `gw checkout` |
-| `GW: Open Worktree in New Window` | Open selected worktree in a new VS Code window |
-| `GW: Open Worktree in Current Window` | Switch to selected worktree |
-| `GW: Remove Worktree` | Remove a worktree (with confirmation) |
-| `GW: Open Plan` | Open the plan.md for an agent branch |
-| `GW: Open Task File` | Open the task.md for an agent branch |
-| `GW: Open Walkthrough` | Open the walkthrough.md for a completed branch |
+| Command                               | Description                                    |
+| ------------------------------------- | ---------------------------------------------- |
+| `GW: Refresh Worktrees`               | Refresh the worktree list                      |
+| `GW: Create Worktree`                 | Create a new worktree via `gw checkout`        |
+| `GW: Open Worktree in New Window`     | Open selected worktree in a new VS Code window |
+| `GW: Open Worktree in Current Window` | Switch to selected worktree                    |
+| `GW: Remove Worktree`                 | Remove a worktree (with confirmation)          |
+| `GW: Open Plan`                       | Open the plan.md for an agent branch           |
+| `GW: Open Task File`                  | Open the task.md for an agent branch           |
+| `GW: Open Walkthrough`                | Open the walkthrough.md for a completed branch |
 
 ## Settings
 
-| Setting | Default | Description |
-| --- | --- | --- |
-| `gw.autoOpenWalkthrough` | `true` | Auto-open walkthrough.md when created |
-| `gw.watchInterval` | `3000` | File watch interval in milliseconds |
-| `gw.showBareWorktree` | `false` | Show bare repository in worktree list |
+| Setting                  | Default | Description                           |
+| ------------------------ | ------- | ------------------------------------- |
+| `gw.autoOpenWalkthrough` | `true`  | Auto-open walkthrough.md when created |
+| `gw.watchInterval`       | `3000`  | File watch interval in milliseconds   |
+| `gw.showBareWorktree`    | `false` | Show bare repository in worktree list |
 
 ## Development
 
