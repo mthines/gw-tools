@@ -151,6 +151,11 @@ if [ "$DRY_RUN" = "true" ]; then
   echo -e "${YELLOW}[DRY RUN] Would create GitHub release v${VERSION}${NC}"
   echo -e "${YELLOW}[DRY RUN] Changelog:${NC}"
   echo "$CHANGELOG" | head -10
+elif gh release view "v${VERSION}" &>/dev/null; then
+  # Release already exists - this can happen when auto-tag creates a tag which triggers
+  # a second workflow run. The first run creates the release, this run should skip.
+  echo -e "${YELLOW}⚠️  Release v${VERSION} already exists, skipping creation${NC}"
+  echo -e "${YELLOW}   (This is expected when auto-tag triggers a tag-push workflow)${NC}"
 else
   gh release create "v${VERSION}" \
     $PRERELEASE_FLAG \
@@ -226,20 +231,25 @@ else
   git config user.email "github-actions[bot]@users.noreply.github.com"
   git add "$FORMULA_FILE"
 
-  if [ "$IS_PRERELEASE" = true ]; then
-    git commit -m "gw-beta: update to v$VERSION"
+  # Check if there are actual changes to commit
+  if git diff --cached --quiet; then
+    echo -e "${YELLOW}⚠️  Homebrew formula already at v${VERSION}, skipping${NC}"
   else
-    git commit -m "gw: update to v$VERSION"
-  fi
+    if [ "$IS_PRERELEASE" = true ]; then
+      git commit -m "gw-beta: update to v$VERSION"
+    else
+      git commit -m "gw: update to v$VERSION"
+    fi
 
-  # Ensure we use token auth for push (some CI environments have credential helpers that override)
-  git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mthines/homebrew-gw-tools.git"
-  git push origin main
+    # Ensure we use token auth for push (some CI environments have credential helpers that override)
+    git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mthines/homebrew-gw-tools.git"
+    git push origin main
+
+    echo -e "${GREEN}✅ Homebrew formula updated${NC}"
+  fi
 
   cd "$WORKSPACE_ROOT"
   rm -rf "$HOMEBREW_TAP_DIR"
-
-  echo -e "${GREEN}✅ Homebrew formula updated${NC}"
 fi
 
 # =============================================================================
@@ -299,13 +309,18 @@ EOF
       git config user.name "github-actions[bot]"
       git config user.email "github-actions[bot]@users.noreply.github.com"
       git add PKGBUILD .SRCINFO
-      git commit -m "Update to v$VERSION"
-      git push
+
+      # Check if there are actual changes to commit
+      if git diff --cached --quiet; then
+        echo -e "${YELLOW}⚠️  AUR package already at v${VERSION}, skipping${NC}"
+      else
+        git commit -m "Update to v$VERSION"
+        git push
+        echo -e "${GREEN}✅ AUR package updated${NC}"
+      fi
 
       cd "$WORKSPACE_ROOT"
       rm -rf "$AUR_DIR"
-
-      echo -e "${GREEN}✅ AUR package updated${NC}"
     else
       echo -e "${YELLOW}⚠️  Failed to clone AUR repository${NC}"
     fi
