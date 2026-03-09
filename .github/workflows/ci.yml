@@ -5,31 +5,31 @@ on:
     branches:
       - main
     tags:
-      - "v*"
-      - "!v*-beta.*" # Beta tags are released by the PR workflow, not tag push
+      - 'v*'
+      - '!v*-beta.*' # Beta tags are released by the PR workflow, not tag push
   pull_request:
   workflow_dispatch:
     inputs:
       test_release:
-        description: "Test release job (dry-run, no actual publishing)"
+        description: 'Test release job (dry-run, no actual publishing)'
         type: boolean
         default: false
       force_release:
-        description: "Force gw-tool release even without source changes (actual publish)"
+        description: 'Force gw-tool release even without source changes (actual publish)'
         type: boolean
         default: false
       force_release_agent:
-        description: "Force autonomous-workflow-agent release even without source changes (actual publish)"
+        description: 'Force autonomous-workflow-agent release even without source changes (actual publish)'
         type: boolean
         default: false
       create_beta:
-        description: "Create beta release for the selected branch (must have an open PR)"
+        description: 'Create beta release for the selected branch (must have an open PR)'
         type: boolean
         default: false
       version:
-        description: "Version to simulate (e.g., 0.28.1) - only for test_release dry-runs, ignored by force_release"
+        description: 'Version to simulate (e.g., 0.28.1) - only for test_release dry-runs, ignored by force_release'
         type: string
-        default: "0.0.0-test"
+        default: '0.0.0-test'
 
 # Default permissions for all jobs
 permissions:
@@ -57,7 +57,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -430,8 +430,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
 
@@ -514,7 +514,7 @@ jobs:
           RELEASE_VERSION: ${{ steps.version.outputs.version }}
           # DRY_RUN only for test_release, NOT for force_release
           DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && !inputs.force_release && 'true' || 'false' }}
-          SKIP_NPM: "true"
+          SKIP_NPM: 'true'
         run: npx nx run @gw-tools/gw-tool:release:ci
 
       - name: Update npm for OIDC support
@@ -599,7 +599,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -685,8 +685,8 @@ jobs:
         if: steps.check.outputs.should_release == 'true'
         with:
           node-version: 20
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
         if: steps.check.outputs.should_release == 'true'
