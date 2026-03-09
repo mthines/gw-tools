@@ -1020,6 +1020,7 @@ gw init --auto-clean --auto-copy-files .env --post-checkout "pnpm install"
   - No staged files
   - No unpushed commits
 - Shows list of branches before prompting:
+
   ```
   🧹 Found stale worktrees to clean:
 
@@ -1028,6 +1029,7 @@ gw init --auto-clean --auto-copy-files .env --post-checkout "pnpm install"
 
   Clean 2 worktrees? [Y/n]:
   ```
+
 - Press Enter or `y` to remove them, or `n` to skip
 - Shows brief summary after cleanup: `✓ Removed 2 stale worktrees`
 - Never interrupts or fails the main command
