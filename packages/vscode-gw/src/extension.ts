@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-provider';
 import { ArtifactWatcher } from './watchers/artifact-watcher';
-import { removeWorktree, createWorktree } from './parsers/git-worktree';
+import { removeWorktree, createWorktree, cleanWorktrees, syncWorktree, listWorktrees } from './parsers/git-worktree';
 
 export function activate(context: vscode.ExtensionContext): void {
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -131,6 +131,72 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(wtPath));
       } else {
         vscode.window.showWarningMessage(`No walkthrough.md found for ${item.branchName}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.clean', async () => {
+      const dryRunFirst = await cleanWorktrees(workspacePath, { dryRun: true });
+      if (!dryRunFirst || dryRunFirst.includes('No worktrees to clean')) {
+        vscode.window.showInformationMessage('No stale worktrees to clean.');
+        return;
+      }
+
+      const choice = await vscode.window.showWarningMessage(
+        'Clean stale worktrees?',
+        { modal: true, detail: dryRunFirst },
+        'Clean',
+        'Force Clean'
+      );
+      if (!choice) return;
+
+      try {
+        await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: 'Cleaning worktrees...' },
+          async () => {
+            const result = await cleanWorktrees(workspacePath, { force: choice === 'Force Clean' });
+            vscode.window.showInformationMessage(result || 'Worktrees cleaned.');
+          }
+        );
+        worktreeProvider.refresh();
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to clean worktrees: ${msg}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.sync', async (item?: WorktreeItem) => {
+      let target = item?.worktree.branch;
+
+      if (!target) {
+        // Show picker with available worktrees
+        const worktrees = await listWorktrees(workspacePath);
+        const picks = worktrees
+          .filter((w) => !w.bare)
+          .map((w) => ({ label: w.branch, description: w.path }));
+
+        if (picks.length === 0) {
+          vscode.window.showWarningMessage('No worktrees available to sync.');
+          return;
+        }
+
+        const picked = await vscode.window.showQuickPick(picks, {
+          placeHolder: 'Select target worktree to sync files to',
+        });
+        if (!picked) return;
+        target = picked.label;
+      }
+
+      try {
+        await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Syncing to ${target}...` },
+          async () => {
+            const result = await syncWorktree(workspacePath, target);
+            vscode.window.showInformationMessage(result || `Synced to ${target}`);
+          }
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to sync: ${msg}`);
       }
     }),
   ];
