@@ -82,6 +82,13 @@
       ]
     },
     "members": {
+      "packages/autonomous-workflow-agent": {
+        "packageJson": {
+          "dependencies": [
+            "npm:tslib@^2.3.0"
+          ]
+        }
+      },
       "packages/gw-tool": {
         "dependencies": [
           "jsr:@std/assert@1.0.10",
