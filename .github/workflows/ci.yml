@@ -210,6 +210,36 @@ jobs:
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
           echo "pr_number=${{ steps.pr.outputs.pr_number }}" >> $GITHUB_OUTPUT
 
+      - name: Comment on PR
+        if: steps.tag.outputs.created == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.tag.outputs.version }}"
+          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
+
+          gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
+## 🧪 Beta Release \`v${VERSION}\`
+
+A beta release has been created for this PR.
+
+### Installation
+
+**npm:**
+\`\`\`bash
+npm install -g @gw-tools/gw@beta
+\`\`\`
+
+**Homebrew:**
+\`\`\`bash
+brew install mthines/gw-tools/gw-beta
+\`\`\`
+
+---
+📦 [View Release](https://github.com/mthines/gw-tools/releases/tag/v${VERSION})
+EOF
+)"
+
   auto-tag:
     # Run on push to main OR manual dispatch with force_release
     if: |
