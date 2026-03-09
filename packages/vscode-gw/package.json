@@ -1,0 +1,193 @@
+{
+  "name": "@gw-tools/vscode-gw",
+  "displayName": "GW Worktrees",
+  "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
+  "version": "0.1.0",
+  "publisher": "gw-tools",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/mthines/gw-tools.git",
+    "directory": "packages/vscode-gw"
+  },
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other",
+    "SCM Providers"
+  ],
+  "keywords": [
+    "git",
+    "worktree",
+    "gw",
+    "agent",
+    "workflow"
+  ],
+  "activationEvents": [
+    "workspaceContains:.git",
+    "workspaceContains:.gw"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "gw-worktrees",
+          "title": "GW Worktrees",
+          "icon": "$(git-branch)"
+        }
+      ]
+    },
+    "views": {
+      "gw-worktrees": [
+        {
+          "id": "gwWorktreeExplorer",
+          "name": "Worktrees",
+          "icon": "$(git-branch)",
+          "contextualTitle": "GW Worktrees"
+        },
+        {
+          "id": "gwAgentTasks",
+          "name": "Agent Tasks",
+          "icon": "$(tasklist)",
+          "contextualTitle": "Agent Tasks"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "gw.refreshWorktrees",
+        "title": "Refresh Worktrees",
+        "icon": "$(refresh)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.openWorktree",
+        "title": "Open Worktree in New Window",
+        "icon": "$(window)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.openWorktreeInCurrentWindow",
+        "title": "Open Worktree in Current Window",
+        "icon": "$(folder-opened)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.removeWorktree",
+        "title": "Remove Worktree",
+        "icon": "$(trash)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.createWorktree",
+        "title": "Create Worktree",
+        "icon": "$(add)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.refreshAgentTasks",
+        "title": "Refresh Agent Tasks",
+        "icon": "$(refresh)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.openPlan",
+        "title": "Open Plan",
+        "icon": "$(notebook)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.openTask",
+        "title": "Open Task File",
+        "icon": "$(tasklist)",
+        "category": "GW"
+      },
+      {
+        "command": "gw.openWalkthrough",
+        "title": "Open Walkthrough",
+        "icon": "$(book)",
+        "category": "GW"
+      }
+    ],
+    "menus": {
+      "view/title": [
+        {
+          "command": "gw.refreshWorktrees",
+          "when": "view == gwWorktreeExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "gw.createWorktree",
+          "when": "view == gwWorktreeExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "gw.refreshAgentTasks",
+          "when": "view == gwAgentTasks",
+          "group": "navigation"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "gw.openWorktree",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "group": "inline@1"
+        },
+        {
+          "command": "gw.openWorktreeInCurrentWindow",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "group": "navigation@1"
+        },
+        {
+          "command": "gw.openWorktree",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "group": "navigation@2"
+        },
+        {
+          "command": "gw.removeWorktree",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "group": "danger@1"
+        },
+        {
+          "command": "gw.openPlan",
+          "when": "view == gwAgentTasks && viewItem == agentBranch",
+          "group": "inline@1"
+        },
+        {
+          "command": "gw.openWalkthrough",
+          "when": "view == gwAgentTasks && viewItem == agentBranchCompleted",
+          "group": "inline@1"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "GW Worktrees",
+      "properties": {
+        "gw.autoOpenWalkthrough": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open walkthrough.md when it is created"
+        },
+        "gw.watchInterval": {
+          "type": "number",
+          "default": 3000,
+          "description": "Interval in milliseconds for watching file changes (task.md, plan.md, etc.)"
+        },
+        "gw.showBareWorktree": {
+          "type": "boolean",
+          "default": false,
+          "description": "Show the bare repository entry in the worktree list"
+        }
+      }
+    }
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "esbuild": "^0.25.0"
+  },
+  "dependencies": {
+    "tslib": "^2.3.0"
+  }
+}
