@@ -62,9 +62,26 @@ nx build vscode-gw
 # Package as .vsix
 nx package vscode-gw
 
+# Release to VS Code Marketplace + Open VSX
+nx release vscode-gw
+
+# Dry-run release (verify PAT, show what would publish)
+nx release vscode-gw --configuration=dry-run
+
 # Watch mode for development
 cd packages/vscode-gw && node esbuild.config.mjs --watch
 ```
+
+### Publishing
+
+The extension is published to both marketplaces on merge to `main` (when source changes are detected) or via manual workflow dispatch with `force_release_vscode`.
+
+| Marketplace | Secret Required |
+| --- | --- |
+| [VS Code Marketplace](https://marketplace.visualstudio.com/) | `VSCE_PAT` - [Create a PAT](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#get-a-personal-access-token) |
+| [Open VSX Registry](https://open-vsx.org/) | `OVSX_PAT` - [Create a token](https://open-vsx.org/user-settings/tokens) |
+
+Tags follow the pattern `vscode-gw-v{version}` (e.g., `vscode-gw-v0.2.0`).
 
 ## How It Works
 

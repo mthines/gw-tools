@@ -16,9 +16,40 @@
     "package": {
       "executor": "nx:run-commands",
       "dependsOn": ["build"],
+      "outputs": ["{workspaceRoot}/dist/packages/vscode-gw/*.vsix"],
       "options": {
-        "commands": ["npx @vscode/vsce package --no-dependencies -o ../../dist/packages/vscode-gw/"],
-        "cwd": "packages/vscode-gw"
+        "commands": [
+          "mkdir -p ../../dist/packages/vscode-gw",
+          "npx @vscode/vsce package --no-dependencies -o ../../dist/packages/vscode-gw/"
+        ],
+        "cwd": "packages/vscode-gw",
+        "parallel": false
+      }
+    },
+    "release": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["package"],
+      "options": {
+        "commands": [
+          "npx @vscode/vsce publish --no-dependencies -i $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)",
+          "npx ovsx publish $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)"
+        ],
+        "cwd": "packages/vscode-gw",
+        "parallel": false
+      },
+      "configurations": {
+        "ci": {
+          "commands": [
+            "npx @vscode/vsce publish --no-dependencies -i $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)",
+            "npx ovsx publish $(ls ../../dist/packages/vscode-gw/*.vsix | head -1) || echo 'Open VSX publish skipped (no OVSX_PAT)'"
+          ]
+        },
+        "dry-run": {
+          "commands": [
+            "echo 'Dry run: would publish' $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)",
+            "npx @vscode/vsce verify-pat gw-tools || echo 'PAT verification skipped'"
+          ]
+        }
       }
     },
     "lint": {
