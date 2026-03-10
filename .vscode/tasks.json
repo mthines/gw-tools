@@ -2,6 +2,28 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "label": "Watch vscode-gw",
+      "type": "shell",
+      "command": "nx",
+      "args": ["run", "vscode-gw:dev"],
+      "isBackground": true,
+      "problemMatcher": {
+        "pattern": {
+          "regexp": "^✘ \\[ERROR\\] (.*)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^Watching for changes\\.\\.\\.$",
+          "endsPattern": "^Watching for changes\\.\\.\\.$"
+        }
+      },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "dedicated"
+      }
+    },
+    {
       "label": "Release gw-tool",
       "type": "shell",
       "command": "nx",

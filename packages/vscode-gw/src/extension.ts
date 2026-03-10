@@ -50,23 +50,83 @@ export function activate(context: vscode.ExtensionContext): void {
       agentTasksProvider.refresh();
     }),
 
-    vscode.commands.registerCommand('gw.openWorktree', async (item: WorktreeItem) => {
-      const uri = vscode.Uri.file(item.worktree.path);
+    vscode.commands.registerCommand('gw.openWorktree', async (item?: WorktreeItem) => {
+      let worktreePath = item?.worktree?.path;
+
+      if (!worktreePath) {
+        // No item provided, show picker
+        const worktrees = await listWorktrees(workspacePath);
+        const picks = worktrees.filter((w) => !w.bare).map((w) => ({ label: w.branch, description: w.path, path: w.path }));
+
+        if (picks.length === 0) {
+          vscode.window.showWarningMessage('No worktrees available.');
+          return;
+        }
+
+        const picked = await vscode.window.showQuickPick(picks, {
+          placeHolder: 'Select worktree to open in new window',
+        });
+        if (!picked) return;
+        worktreePath = picked.path;
+      }
+
+      const uri = vscode.Uri.file(worktreePath);
       await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
     }),
 
-    vscode.commands.registerCommand('gw.openWorktreeInCurrentWindow', async (item: WorktreeItem) => {
-      const uri = vscode.Uri.file(item.worktree.path);
+    vscode.commands.registerCommand('gw.openWorktreeInCurrentWindow', async (item?: WorktreeItem) => {
+      let worktreePath = item?.worktree?.path;
+
+      if (!worktreePath) {
+        // No item provided, show picker
+        const worktrees = await listWorktrees(workspacePath);
+        const picks = worktrees.filter((w) => !w.bare).map((w) => ({ label: w.branch, description: w.path, path: w.path }));
+
+        if (picks.length === 0) {
+          vscode.window.showWarningMessage('No worktrees available.');
+          return;
+        }
+
+        const picked = await vscode.window.showQuickPick(picks, {
+          placeHolder: 'Select worktree to open in current window',
+        });
+        if (!picked) return;
+        worktreePath = picked.path;
+      }
+
+      const uri = vscode.Uri.file(worktreePath);
       await vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
     }),
 
-    vscode.commands.registerCommand('gw.removeWorktree', async (item: WorktreeItem) => {
-      const branch = item.worktree.branch;
+    vscode.commands.registerCommand('gw.removeWorktree', async (item?: WorktreeItem) => {
+      let branch = item?.worktree?.branch;
+      let worktreePath = item?.worktree?.path;
+
+      if (!branch || !worktreePath) {
+        // No item provided, show picker
+        const worktrees = await listWorktrees(workspacePath);
+        const picks = worktrees
+          .filter((w) => !w.bare)
+          .map((w) => ({ label: w.branch, description: w.path, path: w.path }));
+
+        if (picks.length === 0) {
+          vscode.window.showWarningMessage('No removable worktrees available.');
+          return;
+        }
+
+        const picked = await vscode.window.showQuickPick(picks, {
+          placeHolder: 'Select worktree to remove',
+        });
+        if (!picked) return;
+        branch = picked.label;
+        worktreePath = picked.path;
+      }
+
       const confirm = await vscode.window.showWarningMessage(`Remove worktree "${branch}"?`, { modal: true }, 'Remove');
       if (confirm !== 'Remove') return;
 
       try {
-        await removeWorktree(workspacePath, item.worktree.path);
+        await removeWorktree(workspacePath, worktreePath);
         worktreeProvider.refresh();
         vscode.window.showInformationMessage(`Removed worktree: ${branch}`);
       } catch (err) {
@@ -107,7 +167,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('gw.openPlan', (item: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openPlan', (item?: AgentBranchItem) => {
+      if (!item?.gwDir) {
+        vscode.window.showWarningMessage('Please select an agent task branch first.');
+        return;
+      }
       const planPath = path.join(item.gwDir, 'plan.md');
       if (fs.existsSync(planPath)) {
         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(planPath));
@@ -116,7 +180,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('gw.openTask', (item: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openTask', (item?: AgentBranchItem) => {
+      if (!item?.gwDir) {
+        vscode.window.showWarningMessage('Please select an agent task branch first.');
+        return;
+      }
       const taskPath = path.join(item.gwDir, 'task.md');
       if (fs.existsSync(taskPath)) {
         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(taskPath));
@@ -125,7 +193,11 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('gw.openWalkthrough', (item: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openWalkthrough', (item?: AgentBranchItem) => {
+      if (!item?.gwDir) {
+        vscode.window.showWarningMessage('Please select an agent task branch first.');
+        return;
+      }
       const wtPath = path.join(item.gwDir, 'walkthrough.md');
       if (fs.existsSync(wtPath)) {
         vscode.commands.executeCommand('vscode.open', vscode.Uri.file(wtPath));

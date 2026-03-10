@@ -23,6 +23,17 @@ export class AgentBranchItem extends vscode.TreeItem {
     this.description = this.getDescription();
     this.tooltip = this.getTooltip();
     this.iconPath = this.getIcon();
+
+    // Click to open task.md (or walkthrough.md if completed)
+    const targetFile = hasWalkthrough ? 'walkthrough.md' : 'task.md';
+    const filePath = path.join(gwDir, targetFile);
+    if (fs.existsSync(filePath)) {
+      this.command = {
+        command: 'vscode.open',
+        title: `Open ${targetFile}`,
+        arguments: [vscode.Uri.file(filePath)],
+      };
+    }
   }
 
   private getDescription(): string {
@@ -64,11 +75,20 @@ export class TaskGroupItem extends vscode.TreeItem {
     public readonly groupLabel: string,
     public readonly groupIcon: string,
     public readonly items: TaskCheckboxItem[],
-    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed
+    collapsibleState: vscode.TreeItemCollapsibleState = vscode.TreeItemCollapsibleState.Collapsed,
+    public readonly taskFilePath?: string
   ) {
     super(groupLabel, collapsibleState);
     this.iconPath = new vscode.ThemeIcon(groupIcon);
     this.description = `${items.length}`;
+
+    if (taskFilePath) {
+      this.command = {
+        command: 'vscode.open',
+        title: 'Open Task',
+        arguments: [vscode.Uri.file(taskFilePath)],
+      };
+    }
   }
 }
 
@@ -76,7 +96,8 @@ export class TaskCheckboxItem extends vscode.TreeItem {
   constructor(
     label: string,
     public readonly completed: boolean,
-    public readonly inProgress: boolean
+    public readonly inProgress: boolean,
+    public readonly taskFilePath?: string
   ) {
     super(label, vscode.TreeItemCollapsibleState.None);
 
@@ -87,6 +108,14 @@ export class TaskCheckboxItem extends vscode.TreeItem {
       this.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor('charts.green'));
     } else {
       this.iconPath = new vscode.ThemeIcon('circle-large-outline');
+    }
+
+    if (taskFilePath) {
+      this.command = {
+        command: 'vscode.open',
+        title: 'Open Task',
+        arguments: [vscode.Uri.file(taskFilePath)],
+      };
     }
   }
 }
@@ -108,18 +137,34 @@ export class PlanSummaryItem extends vscode.TreeItem {
 }
 
 export class DecisionItem extends vscode.TreeItem {
-  constructor(decision: string, rationale: string, phase: string) {
+  constructor(decision: string, rationale: string, phase: string, taskFilePath?: string) {
     super(decision, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon('lightbulb');
     this.description = `Phase ${phase}`;
     this.tooltip = new vscode.MarkdownString(`**${decision}**\n\n${rationale}\n\n*Phase ${phase}*`);
+
+    if (taskFilePath) {
+      this.command = {
+        command: 'vscode.open',
+        title: 'Open Task',
+        arguments: [vscode.Uri.file(taskFilePath)],
+      };
+    }
   }
 }
 
 export class BlockerItem extends vscode.TreeItem {
-  constructor(blocker: string) {
+  constructor(blocker: string, taskFilePath?: string) {
     super(blocker, vscode.TreeItemCollapsibleState.None);
     this.iconPath = new vscode.ThemeIcon('error', new vscode.ThemeColor('charts.red'));
+
+    if (taskFilePath) {
+      this.command = {
+        command: 'vscode.open',
+        title: 'Open Task',
+        arguments: [vscode.Uri.file(taskFilePath)],
+      };
+    }
   }
 }
 
@@ -247,43 +292,45 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   private getBranchChildren(branch: AgentBranchItem): AgentTaskTreeItem[] {
     const children: AgentTaskTreeItem[] = [];
     const task = branch.task;
+    const taskFilePath = path.join(branch.gwDir, 'task.md');
 
     if (task) {
       // Current (expanded by default to show what's happening now)
       if (task.current.length > 0) {
-        const currentItems = task.current.map((t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress));
-        children.push(new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded));
+        const currentItems = task.current.map((t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath));
+        children.push(new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded, taskFilePath));
       }
 
       // Completed
       if (task.completed.length > 0) {
-        const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false));
-        children.push(new TaskGroupItem('Completed', 'pass', completedItems));
+        const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
+        children.push(new TaskGroupItem('Completed', 'pass', completedItems, vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
       }
 
       // Upcoming
       if (task.upcoming.length > 0) {
-        const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false));
-        children.push(new TaskGroupItem('Upcoming', 'circle-large-outline', upcomingItems));
+        const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
+        children.push(new TaskGroupItem('Upcoming', 'circle-large-outline', upcomingItems, vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
       }
 
       // Blockers
       if (task.blockers.length > 0) {
-        const blockerItems = task.blockers.map((b) => new BlockerItem(b));
+        const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
         children.push(
           new TaskGroupItem(
             'Blockers',
             'error',
             blockerItems as unknown as TaskCheckboxItem[],
-            vscode.TreeItemCollapsibleState.Expanded
+            vscode.TreeItemCollapsibleState.Expanded,
+            taskFilePath
           )
         );
       }
 
       // Decisions
       if (task.decisions.length > 0) {
-        const decisionItems = task.decisions.map((d) => new DecisionItem(d.decision, d.rationale, d.phase));
-        children.push(new TaskGroupItem('Decisions', 'lightbulb', decisionItems as unknown as TaskCheckboxItem[]));
+        const decisionItems = task.decisions.map((d) => new DecisionItem(d.decision, d.rationale, d.phase, taskFilePath));
+        children.push(new TaskGroupItem('Decisions', 'lightbulb', decisionItems as unknown as TaskCheckboxItem[], vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
       }
     }
 
