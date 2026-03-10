@@ -25,6 +25,7 @@ npx tsc --noEmit --noFallthroughCasesInSwitch  # Find switch fallthrough
 ```
 
 **Recommended tsconfig.json for Bug Hunting**:
+
 ```json
 {
   "compilerOptions": {
@@ -58,6 +59,7 @@ npx eslint src/ --ext .ts --rule '@typescript-eslint/no-misused-promises: error'
 ```
 
 **Recommended ESLint Rules for Bug Hunting**:
+
 ```json
 {
   "rules": {
@@ -118,8 +120,7 @@ function analyzeFile(sourceFile: ts.SourceFile) {
     // Find call expressions that return Promise but aren't awaited
     if (ts.isCallExpression(node)) {
       const parent = node.parent;
-      if (!ts.isAwaitExpression(parent) &&
-          !ts.isReturnStatement(parent)) {
+      if (!ts.isAwaitExpression(parent) && !ts.isReturnStatement(parent)) {
         // Potential unhandled promise
         const pos = sourceFile.getLineAndCharacterOfPosition(node.getStart());
         console.log(`Potential unhandled promise at line ${pos.line + 1}`);
@@ -138,6 +139,7 @@ function analyzeFile(sourceFile: ts.SourceFile) {
 Built-in Chrome DevTools for the Extension Host.
 
 **Opening Developer Tools**:
+
 - Command Palette: "Developer: Toggle Developer Tools"
 - Opens Chrome DevTools for Extension Host process
 
@@ -166,6 +168,7 @@ Built-in Chrome DevTools for the Extension Host.
 ### Memory Profiling
 
 **Heap Snapshot Analysis**:
+
 ```
 1. Open Developer Tools
 2. Go to Memory tab
@@ -176,6 +179,7 @@ Built-in Chrome DevTools for the Extension Host.
 ```
 
 **Allocation Timeline**:
+
 ```
 1. Memory tab > Allocation instrumentation on timeline
 2. Start recording
@@ -185,6 +189,7 @@ Built-in Chrome DevTools for the Extension Host.
 ```
 
 **Key Metrics to Watch**:
+
 - `Shallow Size`: Memory held by object itself
 - `Retained Size`: Memory that would be freed if object is GC'd
 - `Distance`: Number of references from GC root
@@ -192,6 +197,7 @@ Built-in Chrome DevTools for the Extension Host.
 ### Performance Profiling
 
 **CPU Profile**:
+
 ```
 1. Performance tab
 2. Click Record
@@ -201,6 +207,7 @@ Built-in Chrome DevTools for the Extension Host.
 ```
 
 **Extension Host Profiler**:
+
 ```bash
 # Start VS Code with profiling
 code --prof-startup
@@ -218,6 +225,7 @@ For debugging WebView content.
 ```
 
 **Common WebView Debugging Tasks**:
+
 - Inspect DOM structure
 - Check CSS applied
 - Monitor network requests from WebView
@@ -230,10 +238,7 @@ Add temporary logging for investigation.
 
 ```typescript
 // Wrap function to trace calls
-function trace<T extends (...args: any[]) => any>(
-  name: string,
-  fn: T
-): T {
+function trace<T extends (...args: any[]) => any>(name: string, fn: T): T {
   return ((...args: Parameters<T>) => {
     console.log(`[TRACE] ${name} called with:`, args);
     const start = performance.now();
@@ -313,10 +318,7 @@ Track event listener registration.
 
 ```typescript
 // Debug wrapper for event registration
-function trackListeners<T extends vscode.Disposable>(
-  source: string,
-  disposable: T
-): T {
+function trackListeners<T extends vscode.Disposable>(source: string, disposable: T): T {
   const original = disposable.dispose.bind(disposable);
   let disposed = false;
 
@@ -355,6 +357,7 @@ npx c8 report --reporter=text-summary
 ```
 
 **Coverage Targets for Bug-Prone Areas**:
+
 - Error handlers: 100%
 - Edge cases: 100%
 - Async operations: 90%+
@@ -383,7 +386,12 @@ function fuzz(fn: (input: string) => void, iterations = 1000): void {
     () => '',
     () => ' '.repeat(Math.random() * 100),
     () => 'a'.repeat(Math.random() * 10000),
-    () => String.fromCharCode(...Array(100).fill(0).map(() => Math.random() * 65535)),
+    () =>
+      String.fromCharCode(
+        ...Array(100)
+          .fill(0)
+          .map(() => Math.random() * 65535)
+      ),
     () => '../'.repeat(Math.random() * 10),
     () => '<script>alert(1)</script>',
     () => '${process.exit()}',
@@ -445,16 +453,16 @@ jobs:
 
 ## Tool Selection Guide
 
-| Bug Type | Primary Tool | Secondary Tool |
-|----------|-------------|----------------|
-| Type errors | tsc --strict | ESLint |
-| Memory leaks | Heap Snapshot | Custom tracking |
-| Race conditions | Code review | Runtime tracing |
-| Null references | strictNullChecks | Grep patterns |
-| Unhandled promises | ESLint | Grep patterns |
-| Performance | Performance tab | CPU profiler |
-| Security | Grep + ESLint | Manual review |
-| WebView issues | WebView DevTools | Console logs |
+| Bug Type           | Primary Tool     | Secondary Tool  |
+| ------------------ | ---------------- | --------------- |
+| Type errors        | tsc --strict     | ESLint          |
+| Memory leaks       | Heap Snapshot    | Custom tracking |
+| Race conditions    | Code review      | Runtime tracing |
+| Null references    | strictNullChecks | Grep patterns   |
+| Unhandled promises | ESLint           | Grep patterns   |
+| Performance        | Performance tab  | CPU profiler    |
+| Security           | Grep + ESLint    | Manual review   |
+| WebView issues     | WebView DevTools | Console logs    |
 
 ## Quick Reference
 

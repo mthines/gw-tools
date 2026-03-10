@@ -25,6 +25,7 @@ class MyClass {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class MyClass implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
@@ -38,7 +39,7 @@ class MyClass implements vscode.Disposable {
   }
 
   dispose(): void {
-    this.disposables.forEach(d => d.dispose());
+    this.disposables.forEach((d) => d.dispose());
   }
 }
 ```
@@ -64,6 +65,7 @@ class Poller {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class Poller implements vscode.Disposable {
   private timerId: NodeJS.Timeout | undefined;
@@ -104,6 +106,7 @@ class DataProcessor {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class DataProcessor {
   private largeData: LargeObject;
@@ -170,6 +173,7 @@ class TerminalManager {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class TerminalManager {
   private terminals: Map<number, Terminal> = new Map();
@@ -221,6 +225,7 @@ class StateManager {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class StateManager {
   private state: AppState;
@@ -257,6 +262,7 @@ async function processItems(items: Item[]): Promise<void> {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 // Sequential processing
 async function processItems(items: Item[]): Promise<void> {
@@ -270,7 +276,7 @@ async function processItems(items: Item[]): Promise<void> {
   const BATCH_SIZE = 5;
   for (let i = 0; i < items.length; i += BATCH_SIZE) {
     const batch = items.slice(i, i + BATCH_SIZE);
-    await Promise.all(batch.map(item => processItem(item)));
+    await Promise.all(batch.map((item) => processItem(item)));
   }
 }
 ```
@@ -292,6 +298,7 @@ terminal.write(data); // Crash if undefined!
 ```
 
 **Fix Pattern**:
+
 ```typescript
 const terminal = this.terminals.get(id);
 if (!terminal) {
@@ -321,6 +328,7 @@ const fontSize = config.terminal.fontSize; // Crash if terminal undefined!
 ```
 
 **Fix Pattern**:
+
 ```typescript
 const fontSize = config.terminal?.fontSize ?? DEFAULT_FONT_SIZE;
 ```
@@ -340,6 +348,7 @@ const lastItem = items[items.length - 1]; // Undefined if empty
 ```
 
 **Fix Pattern**:
+
 ```typescript
 const firstItem = items[0];
 if (firstItem === undefined) {
@@ -370,6 +379,7 @@ try {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 try {
   await riskyOperation();
@@ -387,7 +397,7 @@ try {
 
 ```typescript
 // BUG PATTERN
-someAsyncFunction().then(result => {
+someAsyncFunction().then((result) => {
   processResult(result);
 });
 // No .catch() - unhandled rejection!
@@ -397,10 +407,11 @@ someAsyncFunction().then(result => {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 someAsyncFunction()
-  .then(result => processResult(result))
-  .catch(error => {
+  .then((result) => processResult(result))
+  .catch((error) => {
     console.error('Async operation failed:', error);
     vscode.window.showErrorMessage(`Operation failed: ${error.message}`);
   });
@@ -431,6 +442,7 @@ async function activate(context: vscode.ExtensionContext) {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 async function activate(context: vscode.ExtensionContext) {
   try {
@@ -438,9 +450,7 @@ async function activate(context: vscode.ExtensionContext) {
     registerCommands(context);
   } catch (error) {
     console.error('Extension activation failed:', error);
-    vscode.window.showErrorMessage(
-      `Extension failed to activate: ${error.message}`
-    );
+    vscode.window.showErrorMessage(`Extension failed to activate: ${error.message}`);
     throw error; // Let VS Code know activation failed
   }
 }
@@ -468,6 +478,7 @@ class MyPanel {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class MyPanel {
   private ready = false;
@@ -524,6 +535,7 @@ getHtml() {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 getHtml(webview: vscode.Webview) {
   const nonce = getNonce();
@@ -601,6 +613,7 @@ class FormState {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 class FormState {
   private state = {
@@ -609,8 +622,7 @@ class FormState {
   };
 
   private get isValid(): boolean {
-    return this.validateName(this.state.name) &&
-           this.validateEmail(this.state.email);
+    return this.validateName(this.state.name) && this.validateEmail(this.state.email);
   }
 
   updateField(field: keyof typeof this.state, value: string) {
@@ -639,6 +651,7 @@ async function runCommand(userInput: string) {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 async function runCommand(userInput: string) {
   const { execFile } = require('child_process');
@@ -664,6 +677,7 @@ async function readFile(filename: string) {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 async function readFile(filename: string) {
   const basePath = path.resolve('./data');
@@ -694,6 +708,7 @@ if (text.includes('github copilot')) {
 ```
 
 **Fix Pattern**:
+
 ```typescript
 // Use word boundary regex
 if (/(^|\s)github copilot(\s|$)/i.test(text)) {

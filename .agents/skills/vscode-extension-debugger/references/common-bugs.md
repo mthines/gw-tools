@@ -7,18 +7,20 @@
 **Symptoms**: Memory usage grows over time, extension becomes slow
 
 **Bug Pattern**:
+
 ```typescript
 // Event listener created but never disposed
-vscode.workspace.onDidChangeTextDocument(e => {
+vscode.workspace.onDidChangeTextDocument((e) => {
   processDocument(e.document);
 });
 ```
 
 **Fix**:
+
 ```typescript
 // Register in subscriptions
 context.subscriptions.push(
-  vscode.workspace.onDidChangeTextDocument(e => {
+  vscode.workspace.onDidChangeTextDocument((e) => {
     processDocument(e.document);
   })
 );
@@ -29,6 +31,7 @@ context.subscriptions.push(
 **Symptoms**: Callbacks continue executing after extension should be idle
 
 **Bug Pattern**:
+
 ```typescript
 setInterval(() => {
   updateStatus();
@@ -36,6 +39,7 @@ setInterval(() => {
 ```
 
 **Fix**:
+
 ```typescript
 const timer = setInterval(() => {
   updateStatus();
@@ -43,7 +47,7 @@ const timer = setInterval(() => {
 
 // Dispose when done
 context.subscriptions.push({
-  dispose: () => clearInterval(timer)
+  dispose: () => clearInterval(timer),
 });
 ```
 
@@ -52,6 +56,7 @@ context.subscriptions.push({
 **Symptoms**: Multiple WebView instances accumulate
 
 **Bug Pattern**:
+
 ```typescript
 function showPanel() {
   const panel = vscode.window.createWebviewPanel(...);
@@ -60,6 +65,7 @@ function showPanel() {
 ```
 
 **Fix**:
+
 ```typescript
 private panel: vscode.WebviewPanel | undefined;
 
@@ -81,6 +87,7 @@ function showPanel() {
 **Symptoms**: System resources exhausted, "too many open files" errors
 
 **Bug Pattern**:
+
 ```typescript
 function watchProject() {
   // Creates new watcher without disposing old one
@@ -89,6 +96,7 @@ function watchProject() {
 ```
 
 **Fix**:
+
 ```typescript
 private watcher: vscode.FileSystemWatcher | undefined;
 
@@ -106,6 +114,7 @@ function watchProject() {
 **Symptoms**: Multiple terminals created when only one requested
 
 **Bug Pattern**:
+
 ```typescript
 private isCreating = false;
 
@@ -119,6 +128,7 @@ async createTerminal() {
 ```
 
 **Fix**:
+
 ```typescript
 private creationPromise: Promise<void> | null = null;
 
@@ -141,6 +151,7 @@ async createTerminal() {
 **Symptoms**: Stale configuration values used
 
 **Bug Pattern**:
+
 ```typescript
 let config = vscode.workspace.getConfiguration('myExt');
 
@@ -151,6 +162,7 @@ function getSetting() {
 ```
 
 **Fix**:
+
 ```typescript
 function getSetting() {
   // Always get fresh configuration
@@ -163,6 +175,7 @@ function getSetting() {
 **Symptoms**: Lost updates, inconsistent state
 
 **Bug Pattern**:
+
 ```typescript
 async updateState(key: string, value: any) {
   const current = await this.context.globalState.get('state') || {};
@@ -173,6 +186,7 @@ async updateState(key: string, value: any) {
 ```
 
 **Fix**:
+
 ```typescript
 private updateQueue = Promise.resolve();
 
@@ -193,6 +207,7 @@ async updateState(key: string, value: any) {
 **Symptoms**: Initial messages lost, WebView shows stale data
 
 **Bug Pattern**:
+
 ```typescript
 function createWebview() {
   panel.webview.html = getHtml();
@@ -201,11 +216,12 @@ function createWebview() {
 ```
 
 **Fix**:
+
 ```typescript
 function createWebview() {
   panel.webview.html = getHtml();
 
-  panel.webview.onDidReceiveMessage(msg => {
+  panel.webview.onDidReceiveMessage((msg) => {
     if (msg.type === 'ready') {
       panel.webview.postMessage({ type: 'init', data });
     }
@@ -218,18 +234,18 @@ function createWebview() {
 **Symptoms**: Styles/scripts don't load, console shows CSP violations
 
 **Bug Pattern**:
+
 ```html
-<meta http-equiv="Content-Security-Policy"
-  content="default-src 'none';">
-<link href="${styleUri}" rel="stylesheet">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none';" />
+<link href="${styleUri}" rel="stylesheet" />
 <!-- Blocked by CSP! -->
 ```
 
 **Fix**:
+
 ```html
-<meta http-equiv="Content-Security-Policy"
-  content="default-src 'none'; style-src ${webview.cspSource};">
-<link href="${styleUri}" rel="stylesheet">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource};" />
+<link href="${styleUri}" rel="stylesheet" />
 ```
 
 ### 10. Invalid Resource URI
@@ -237,16 +253,16 @@ function createWebview() {
 **Symptoms**: Resources 404, paths don't resolve
 
 **Bug Pattern**:
+
 ```typescript
 const scriptPath = path.join(extensionPath, 'media', 'script.js');
 // Direct path doesn't work in WebView
 ```
 
 **Fix**:
+
 ```typescript
-const scriptUri = webview.asWebviewUri(
-  vscode.Uri.joinPath(extensionUri, 'media', 'script.js')
-);
+const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'media', 'script.js'));
 ```
 
 ## Activation Bugs
@@ -256,6 +272,7 @@ const scriptUri = webview.asWebviewUri(
 **Symptoms**: Extension doesn't activate when expected
 
 **Bug Pattern**:
+
 ```json
 {
   "activationEvents": ["onCommand:myExt.doSomething"]
@@ -264,12 +281,10 @@ const scriptUri = webview.asWebviewUri(
 ```
 
 **Fix**:
+
 ```json
 {
-  "activationEvents": [
-    "onCommand:myExt.doSomething",
-    "onView:myExtView"
-  ]
+  "activationEvents": ["onCommand:myExt.doSomething", "onView:myExtView"]
 }
 ```
 
@@ -278,6 +293,7 @@ const scriptUri = webview.asWebviewUri(
 **Symptoms**: VS Code startup delayed
 
 **Bug Pattern**:
+
 ```typescript
 export function activate(context) {
   const data = fs.readFileSync(largePath); // Blocks!
@@ -286,6 +302,7 @@ export function activate(context) {
 ```
 
 **Fix**:
+
 ```typescript
 export async function activate(context) {
   // Non-blocking initialization
@@ -301,6 +318,7 @@ export async function activate(context) {
 **Symptoms**: Extension silently fails to activate
 
 **Bug Pattern**:
+
 ```typescript
 export async function activate(context) {
   await riskyOperation(); // Unhandled rejection crashes activation
@@ -308,6 +326,7 @@ export async function activate(context) {
 ```
 
 **Fix**:
+
 ```typescript
 export async function activate(context) {
   try {
@@ -326,18 +345,23 @@ export async function activate(context) {
 **Symptoms**: Runtime type errors, undefined is not a function
 
 **Bug Pattern**:
+
 ```typescript
-function process(data) { // Implicit any
-  return data.map(x => x.value); // Runtime error if data is undefined
+function process(data) {
+  // Implicit any
+  return data.map((x) => x.value); // Runtime error if data is undefined
 }
 ```
 
 **Fix**:
+
 ```typescript
-interface Item { value: string; }
+interface Item {
+  value: string;
+}
 
 function process(data: Item[] | undefined): string[] {
-  return data?.map(x => x.value) ?? [];
+  return data?.map((x) => x.value) ?? [];
 }
 ```
 
@@ -346,17 +370,17 @@ function process(data: Item[] | undefined): string[] {
 **Symptoms**: Runtime crashes on unexpected data
 
 **Bug Pattern**:
+
 ```typescript
 const config = message.config as Config; // Dangerous!
 config.setting.nested.value; // Crash if structure differs
 ```
 
 **Fix**:
+
 ```typescript
 function isConfig(obj: unknown): obj is Config {
-  return obj !== null &&
-    typeof obj === 'object' &&
-    'setting' in obj;
+  return obj !== null && typeof obj === 'object' && 'setting' in obj;
 }
 
 if (isConfig(message.config)) {
@@ -371,6 +395,7 @@ if (isConfig(message.config)) {
 **Symptoms**: Messages ignored, handler never triggered
 
 **Bug Pattern**:
+
 ```typescript
 // Extension sends
 panel.webview.postMessage({ type: 'UPDATE', data });
@@ -380,10 +405,11 @@ if (message.type === 'update') { // Case mismatch!
 ```
 
 **Fix**:
+
 ```typescript
 // Define shared constants
 const MessageTypes = {
-  UPDATE: 'update'
+  UPDATE: 'update',
 } as const;
 
 // Use consistently
@@ -395,18 +421,19 @@ panel.webview.postMessage({ type: MessageTypes.UPDATE, data });
 **Symptoms**: Crashes on malformed messages, security vulnerabilities
 
 **Bug Pattern**:
+
 ```typescript
-webview.onDidReceiveMessage(message => {
+webview.onDidReceiveMessage((message) => {
   const id = message.terminalId; // Could be anything!
   terminals.get(id).write(message.data);
 });
 ```
 
 **Fix**:
+
 ```typescript
-webview.onDidReceiveMessage(message => {
-  if (typeof message.terminalId !== 'number' ||
-      typeof message.data !== 'string') {
+webview.onDidReceiveMessage((message) => {
+  if (typeof message.terminalId !== 'number' || typeof message.data !== 'string') {
     console.warn('Invalid message format');
     return;
   }
@@ -428,12 +455,14 @@ webview.onDidReceiveMessage(message => {
 **Symptoms**: "Cannot write to disposed terminal" errors
 
 **Bug Pattern**:
+
 ```typescript
 terminal.sendText(command);
 // Terminal might be closed by user
 ```
 
 **Fix**:
+
 ```typescript
 if (!this.isTerminalAlive(terminal)) {
   console.warn('Terminal no longer available');
@@ -447,16 +476,18 @@ terminal.sendText(command);
 **Symptoms**: Commands sent before shell prompt, output garbled
 
 **Bug Pattern**:
+
 ```typescript
 const terminal = vscode.window.createTerminal();
 terminal.sendText('ls'); // Shell might not be ready!
 ```
 
 **Fix**:
+
 ```typescript
 const terminal = vscode.window.createTerminal();
 // Wait for shell initialization
-await new Promise(resolve => setTimeout(resolve, 500));
+await new Promise((resolve) => setTimeout(resolve, 500));
 terminal.sendText('ls');
 
 // Or use shell integration when available
@@ -467,6 +498,7 @@ terminal.sendText('ls');
 **Symptoms**: Wrong terminal receives commands
 
 **Bug Pattern**:
+
 ```typescript
 let terminalId = 0;
 function createTerminal() {
@@ -476,6 +508,7 @@ function createTerminal() {
 ```
 
 **Fix**:
+
 ```typescript
 // Use ID recycling with proper tracking
 class TerminalIdManager {

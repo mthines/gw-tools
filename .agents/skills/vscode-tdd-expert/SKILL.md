@@ -167,10 +167,10 @@ describe('WebView Provider Tests', () => {
       webview: {
         html: '',
         postMessage: vi.fn().mockResolvedValue(true),
-        onDidReceiveMessage: vi.fn()
+        onDidReceiveMessage: vi.fn(),
       },
       onDidDispose: vi.fn(),
-      dispose: vi.fn()
+      dispose: vi.fn(),
     };
   });
 
@@ -189,7 +189,7 @@ describe('WebView Provider Tests', () => {
     // Assert
     expect(mockPanel.webview.postMessage).toHaveBeenCalledWith({
       type: 'response',
-      success: true
+      success: true,
     });
   });
 });
@@ -233,8 +233,7 @@ describe('TerminalManager Tests', () => {
     }
 
     // Act & Assert
-    await expect(terminalManager.createTerminal())
-      .rejects.toThrow('Maximum terminal limit reached');
+    await expect(terminalManager.createTerminal()).rejects.toThrow('Maximum terminal limit reached');
   });
 });
 ```
@@ -296,11 +295,7 @@ describe('Extension Activation Tests', () => {
 
   it('RED: should register all commands', async () => {
     // Arrange
-    const expectedCommands = [
-      'extension.createTerminal',
-      'extension.deleteTerminal',
-      'extension.togglePanel'
-    ];
+    const expectedCommands = ['extension.createTerminal', 'extension.deleteTerminal', 'extension.togglePanel'];
 
     // Act
     const commands = await vscode.commands.getCommands();
@@ -327,19 +322,19 @@ export function createMockExtensionContext(): vscode.ExtensionContext {
     workspaceState: {
       get: vi.fn(),
       update: vi.fn().mockResolvedValue(undefined),
-      keys: vi.fn().mockReturnValue([])
+      keys: vi.fn().mockReturnValue([]),
     },
     globalState: {
       get: vi.fn(),
       update: vi.fn().mockResolvedValue(undefined),
       keys: vi.fn().mockReturnValue([]),
-      setKeysForSync: vi.fn()
+      setKeysForSync: vi.fn(),
     },
     secrets: {
       get: vi.fn().mockResolvedValue(undefined),
       store: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(undefined),
-      onDidChange: vi.fn()
+      onDidChange: vi.fn(),
     },
     extensionUri: vscode.Uri.file('/mock/extension'),
     extensionPath: '/mock/extension',
@@ -353,7 +348,7 @@ export function createMockExtensionContext(): vscode.ExtensionContext {
     asAbsolutePath: (path: string) => `/mock/extension/${path}`,
     environmentVariableCollection: {} as any,
     extension: {} as any,
-    languageModelAccessInformation: {} as any
+    languageModelAccessInformation: {} as any,
   } as vscode.ExtensionContext;
 }
 
@@ -367,7 +362,7 @@ export function createMockTerminal(): vscode.Terminal {
     sendText: vi.fn(),
     show: vi.fn(),
     hide: vi.fn(),
-    dispose: vi.fn()
+    dispose: vi.fn(),
   } as unknown as vscode.Terminal;
 }
 ```
@@ -387,7 +382,7 @@ export function stubWindowMethods() {
     showQuickPick: vi.spyOn(vscode.window, 'showQuickPick'),
     showInputBox: vi.spyOn(vscode.window, 'showInputBox'),
     createTerminal: vi.spyOn(vscode.window, 'createTerminal'),
-    createWebviewPanel: vi.spyOn(vscode.window, 'createWebviewPanel')
+    createWebviewPanel: vi.spyOn(vscode.window, 'createWebviewPanel'),
   };
 }
 ```
@@ -462,8 +457,7 @@ it('RED: should handle invalid shell path', async () => {
   const invalidPath = '/nonexistent/shell';
 
   // Act & Assert
-  await expect(manager.createTerminal({ shellPath: invalidPath }))
-    .rejects.toThrow('Shell not found');
+  await expect(manager.createTerminal({ shellPath: invalidPath })).rejects.toThrow('Shell not found');
 });
 ```
 
@@ -486,10 +480,10 @@ export default defineConfig({
         branches: 80,
         functions: 80,
         lines: 80,
-        statements: 80
-      }
-    }
-  }
+        statements: 80,
+      },
+    },
+  },
 });
 ```
 
@@ -520,7 +514,7 @@ function runTddQualityGate(): boolean {
     { name: 'Unit Tests', cmd: 'npm run test:unit' },
     { name: 'Coverage Threshold', cmd: 'npx vitest run --coverage' },
     { name: 'Type Check', cmd: 'npm run compile' },
-    { name: 'Lint', cmd: 'npm run lint' }
+    { name: 'Lint', cmd: 'npm run lint' },
   ];
 
   for (const check of checks) {
@@ -595,8 +589,12 @@ describe('TerminalManager Tests', () => {
 
 ```typescript
 // BAD - Tests depend on each other
-it('should create terminal', () => { /* creates terminal */ });
-it('should delete the terminal', () => { /* uses terminal from previous test */ });
+it('should create terminal', () => {
+  /* creates terminal */
+});
+it('should delete the terminal', () => {
+  /* uses terminal from previous test */
+});
 
 // GOOD - Each test is independent
 it('should create terminal', () => {
@@ -664,6 +662,7 @@ afterEach(async () => {
 ## Resources
 
 For detailed reference documentation, see:
+
 - `references/testing-patterns.md` - VS Code-specific test patterns
 - `references/mock-strategies.md` - Mocking VS Code API
 - `references/coverage-guide.md` - Coverage configuration and analysis
