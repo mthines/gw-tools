@@ -1,0 +1,35 @@
+{
+  "version": 1,
+  "skills": {
+    "vscode-bug-hunter": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "a6a3a2aa3d58ec5334a777a34034427584888842ac64c0ee385f2099271e027d"
+    },
+    "vscode-extension-debugger": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "48aa8410cbf86c17d62300623af5855d75c7eb515413c5bd8e5bbd9f0ae90a5b"
+    },
+    "vscode-extension-expert": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "75c47e6af1766e54520759124efb1a66cfae9f739a2a8039b4c253b1bdfe0391"
+    },
+    "vscode-extension-refactorer": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "0c3615e4f0710e77eb7366c8756cb6ce01b9f53e606fadbf1a04c4cb52585a9f"
+    },
+    "vscode-tdd-expert": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "c3e3f44ec4bf6c293e6d8a0bcc02627bc4db0efa7d071ba9610592601529f2b9"
+    },
+    "vscode-test-setup": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "computedHash": "62d445997c862c328cf7fdae92f92f962f9ecd71b1f0b83f9eaac554b3809dbd"
+    }
+  }
+}
