@@ -124,6 +124,20 @@
       }
     ],
     "menus": {
+      "commandPalette": [
+        {
+          "command": "gw.openPlan",
+          "when": "false"
+        },
+        {
+          "command": "gw.openTask",
+          "when": "false"
+        },
+        {
+          "command": "gw.openWalkthrough",
+          "when": "false"
+        }
+      ],
       "view/title": [
         {
           "command": "gw.refreshWorktrees",

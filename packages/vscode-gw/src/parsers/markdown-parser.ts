@@ -85,17 +85,24 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, string
   return { frontmatter, body: match[2] };
 }
 
-function extractSection(body: string, heading: string): string {
-  const regex = new RegExp(`^## ${heading}\\s*\\n([\\s\\S]*?)(?=^## |$)`, 'm');
-  const match = body.match(regex);
-  return match ? match[1].trim() : '';
+function extractSection(body: string, heading: string | string[]): string {
+  const headings = Array.isArray(heading) ? heading : [heading];
+  for (const h of headings) {
+    const regex = new RegExp(`^## ${h}\\s*\\n([\\s\\S]*?)(?=^## |$)`, 'm');
+    const match = body.match(regex);
+    if (match) {
+      return match[1].trim();
+    }
+  }
+  return '';
 }
 
 function parseCheckboxItems(section: string): TaskItem[] {
   const items: TaskItem[] = [];
   const lines = section.split('\n');
   for (const line of lines) {
-    const match = line.match(/^[-*]\s+\[([ xX])\]\s+(.+)/);
+    // Support both top-level and nested checkbox items (with indentation)
+    const match = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.+)/);
     if (match) {
       const completed = match[1].toLowerCase() === 'x';
       let label = match[2].trim();
@@ -146,15 +153,31 @@ function parseTableRows(section: string, columnCount: number): string[][] {
 export function parseTaskMd(content: string): ParsedTask {
   const { frontmatter, body } = parseFrontmatter(content);
 
+  // Try to extract task name from title if not in frontmatter
+  if (!frontmatter.task) {
+    const titleMatch = body.match(/^#\s+Task:\s*(.+)/m);
+    if (titleMatch) {
+      frontmatter.task = titleMatch[1].trim();
+    }
+  }
+
   const statusSection = extractSection(body, 'Status');
   let phase: string | undefined;
   let phaseName: string | undefined;
   let lastUpdated: string | undefined;
 
+  // Support both "**Phase**: N (Name)" and "Phase N: Name" formats
   const phaseMatch = statusSection.match(/\*\*Phase\*\*:\s*(\d+)\s*\(([^)]+)\)/);
   if (phaseMatch) {
     phase = phaseMatch[1];
     phaseName = phaseMatch[2];
+  } else {
+    // Try alternate format: "Phase N: Name" (e.g., "Phase 6: Complete - PR Created!")
+    const altPhaseMatch = statusSection.match(/Phase\s*(\d+):\s*(.+)/);
+    if (altPhaseMatch) {
+      phase = altPhaseMatch[1];
+      phaseName = altPhaseMatch[2].trim();
+    }
   }
 
   const updatedMatch = statusSection.match(/\*\*Last Updated\*\*:\s*(.+)/);
@@ -162,12 +185,13 @@ export function parseTaskMd(content: string): ParsedTask {
     lastUpdated = updatedMatch[1].trim();
   }
 
-  const completedSection = extractSection(body, 'Completed');
-  const currentSection = extractSection(body, 'Current');
-  const upcomingSection = extractSection(body, 'Upcoming');
-  const decisionsSection = extractSection(body, 'Decisions Log');
-  const discoveriesSection = extractSection(body, 'Discoveries');
-  const blockersSection = extractSection(body, 'Blockers');
+  // Support alternate section names
+  const completedSection = extractSection(body, ['Completed', 'Completed Items']);
+  const currentSection = extractSection(body, ['Current', 'In Progress']);
+  const upcomingSection = extractSection(body, ['Upcoming', 'TODO', 'To Do']);
+  const decisionsSection = extractSection(body, ['Decisions Log', 'Decisions', 'Key Findings']);
+  const discoveriesSection = extractSection(body, ['Discoveries', 'Notes']);
+  const blockersSection = extractSection(body, ['Blockers', 'Current Blockers']);
 
   const decisions: TaskDecision[] = [];
   const decisionRows = parseTableRows(decisionsSection, 3);
