@@ -132,7 +132,16 @@ jobs:
 
       - name: Check for releasable changes
         id: check
+        env:
+          CREATE_BETA: ${{ inputs.create_beta }}
         run: |
+          # Manual create_beta bypasses change detection (like force_release for stable)
+          if [ "$CREATE_BETA" = "true" ]; then
+            echo "::notice::🚀 Manual create_beta - skipping change detection"
+            echo "should_release=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           # Check if gw-tool source files changed in this PR
           CHANGED=$(git diff --name-only origin/${{ steps.pr.outputs.base_ref }}...HEAD -- packages/gw-tool/src/)
 
