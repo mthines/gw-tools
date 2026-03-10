@@ -75,5 +75,6 @@
       "inputs": ["production", "^production"]
     }
   },
-  "nxCloudId": "697451dbb12521140b7d1408"
+  "nxCloudId": "697451dbb12521140b7d1408",
+  "neverConnectToCloud": true
 }
