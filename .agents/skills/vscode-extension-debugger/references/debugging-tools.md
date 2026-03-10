@@ -7,6 +7,7 @@
 The primary debugging environment for VS Code extensions.
 
 **Setup** (`.vscode/launch.json`):
+
 ```json
 {
   "version": "0.2.0",
@@ -24,6 +25,7 @@ The primary debugging environment for VS Code extensions.
 ```
 
 **Features**:
+
 - Set breakpoints in TypeScript source
 - Inspect variables and call stack
 - Step through code execution
@@ -31,6 +33,7 @@ The primary debugging environment for VS Code extensions.
 - Hot reload with extension host restart
 
 **Tips**:
+
 - Use `debugger;` statement for programmatic breakpoints
 - Enable "Caught Exceptions" for comprehensive error catching
 - Use conditional breakpoints for specific scenarios
@@ -40,21 +43,25 @@ The primary debugging environment for VS Code extensions.
 Chrome DevTools for the VS Code renderer process.
 
 **Console Tab**:
+
 - Extension host logs appear here
 - Filter by `[Extension]` prefix for your extension
 - Check for unhandled promise rejections
 
 **Network Tab**:
+
 - Monitor WebView resource loading
 - Debug CSP issues
 - Track API requests
 
 **Performance Tab**:
+
 - Profile extension startup time
 - Identify slow operations
 - Memory snapshots for leak detection
 
 **Memory Tab**:
+
 - Heap snapshots for memory analysis
 - Allocation timelines
 - Retained object inspection
@@ -64,11 +71,13 @@ Chrome DevTools for the VS Code renderer process.
 Command: `Developer: Open Webview Developer Tools`
 
 **Access**:
+
 1. Focus the WebView
 2. Open Command Palette (Cmd/Ctrl+Shift+P)
 3. Run "Developer: Open Webview Developer Tools"
 
 **Features**:
+
 - Full Chrome DevTools for WebView content
 - DOM inspection and modification
 - JavaScript debugging within WebView
@@ -76,6 +85,7 @@ Command: `Developer: Open Webview Developer Tools`
 - Console for WebView-side logging
 
 **Common Uses**:
+
 - Debug WebView JavaScript errors
 - Inspect CSS and layout issues
 - Monitor message passing
@@ -88,6 +98,7 @@ Command: `Developer: Open Webview Developer Tools`
 Built into this extension, accessible via `Ctrl+Shift+D`.
 
 **Displays**:
+
 - System state (READY/BUSY)
 - Active terminal count
 - Terminal slot status (1-5)
@@ -96,6 +107,7 @@ Built into this extension, accessible via `Ctrl+Shift+D`.
 - Message throughput
 
 **Usage**:
+
 ```typescript
 // Toggle debug panel visibility
 document.addEventListener('keydown', (e) => {
@@ -114,7 +126,7 @@ enum LogLevel {
   DEBUG = 0,
   INFO = 1,
   WARN = 2,
-  ERROR = 3
+  ERROR = 3,
 }
 
 class Logger {
@@ -146,7 +158,7 @@ class Logger {
   error(message: string, error?: Error): void {
     console.error(`[${this.component}] ERROR: ${message}`, {
       message: error?.message,
-      stack: error?.stack
+      stack: error?.stack,
     });
   }
 }
@@ -179,12 +191,12 @@ const reporter = new TelemetryReporter(connectionString);
 
 // Track events
 reporter.sendTelemetryEvent('terminalCreated', {
-  shellType: 'bash'
+  shellType: 'bash',
 });
 
 // Track errors
 reporter.sendTelemetryErrorEvent('terminalCreationFailed', {
-  errorMessage: error.message
+  errorMessage: error.message,
 });
 
 // Dispose on deactivation
@@ -204,6 +216,7 @@ context.subscriptions.push(reporter);
 7. Compare snapshots using "Comparison" view
 
 **What to Look For**:
+
 - Growing number of objects between snapshots
 - Detached DOM trees (in WebViews)
 - Unreleased event listeners
@@ -255,6 +268,7 @@ process() {
 5. Analyze flame chart
 
 **Key Metrics**:
+
 - Self time: Time in function itself
 - Total time: Time including callees
 - Identify hot paths and optimize
@@ -333,10 +347,7 @@ done();
   "type": "node",
   "request": "launch",
   "program": "${workspaceFolder}/node_modules/vitest/vitest.mjs",
-  "args": [
-    "run",
-    "--reporter", "verbose"
-  ],
+  "args": ["run", "--reporter", "verbose"],
   "internalConsoleOptions": "openOnSessionStart"
 }
 ```
@@ -368,12 +379,10 @@ vscode.commands.registerCommand('myExt.showDiagnostics', () => {
     activationTime: activationDuration,
     terminalCount: terminals.size,
     memoryUsage: process.memoryUsage(),
-    uptime: process.uptime()
+    uptime: process.uptime(),
   };
 
-  vscode.window.showInformationMessage(
-    JSON.stringify(diagnostics, null, 2)
-  );
+  vscode.window.showInformationMessage(JSON.stringify(diagnostics, null, 2));
 });
 ```
 
@@ -381,19 +390,19 @@ vscode.commands.registerCommand('myExt.showDiagnostics', () => {
 
 ```typescript
 vscode.commands.registerCommand('myExt.inspectState', async () => {
-  const globalState = context.globalState.keys().map(key => ({
+  const globalState = context.globalState.keys().map((key) => ({
     key,
-    value: context.globalState.get(key)
+    value: context.globalState.get(key),
   }));
 
-  const workspaceState = context.workspaceState.keys().map(key => ({
+  const workspaceState = context.workspaceState.keys().map((key) => ({
     key,
-    value: context.workspaceState.get(key)
+    value: context.workspaceState.get(key),
   }));
 
   const doc = await vscode.workspace.openTextDocument({
     content: JSON.stringify({ globalState, workspaceState }, null, 2),
-    language: 'json'
+    language: 'json',
   });
 
   vscode.window.showTextDocument(doc);
@@ -410,7 +419,7 @@ process.on('uncaughtException', (error) => {
   // Log to telemetry
   reporter.sendTelemetryErrorEvent('uncaughtException', {
     message: error.message,
-    stack: error.stack
+    stack: error.stack,
   });
 });
 
@@ -418,7 +427,7 @@ process.on('unhandledRejection', (reason) => {
   console.error('[Extension] Unhandled rejection:', reason);
   // Log to telemetry
   reporter.sendTelemetryErrorEvent('unhandledRejection', {
-    reason: String(reason)
+    reason: String(reason),
   });
 });
 ```
@@ -426,10 +435,7 @@ process.on('unhandledRejection', (reason) => {
 ### Error Boundary Pattern
 
 ```typescript
-function withErrorBoundary<T extends (...args: any[]) => any>(
-  fn: T,
-  errorHandler: (error: Error) => void
-): T {
+function withErrorBoundary<T extends (...args: any[]) => any>(fn: T, errorHandler: (error: Error) => void): T {
   return ((...args: Parameters<T>) => {
     try {
       const result = fn(...args);
@@ -444,11 +450,8 @@ function withErrorBoundary<T extends (...args: any[]) => any>(
 }
 
 // Usage
-const safeCreateTerminal = withErrorBoundary(
-  createTerminal,
-  (error) => {
-    vscode.window.showErrorMessage(`Failed to create terminal: ${error.message}`);
-    logger.error('Terminal creation failed', error);
-  }
-);
+const safeCreateTerminal = withErrorBoundary(createTerminal, (error) => {
+  vscode.window.showErrorMessage(`Failed to create terminal: ${error.message}`);
+  logger.error('Terminal creation failed', error);
+});
 ```

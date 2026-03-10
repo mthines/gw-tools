@@ -135,7 +135,7 @@ class TerminalManager {
   }
 
   dispose(): void {
-    this.terminals.forEach(t => t.dispose());
+    this.terminals.forEach((t) => t.dispose());
     this.terminals.clear();
   }
 }
@@ -186,7 +186,7 @@ class VSCodeTerminalAdapter implements ITerminal {
   }
 
   blur(): void {
-    this.terminal.show(true);  // preserveFocus = true
+    this.terminal.show(true); // preserveFocus = true
   }
 
   close(): void {
@@ -214,7 +214,7 @@ class BaseTerminal implements ITerminal {
   write(data: string): void {
     // Basic write implementation
   }
-  dispose(): void { }
+  dispose(): void {}
 }
 
 // Decorator base class
@@ -288,7 +288,7 @@ terminal = new BufferedTerminal(terminal, 16);
 terminal = new LoggingTerminal(terminal);
 terminal = new MetricsTerminal(terminal);
 
-terminal.write('Hello');  // Logged, buffered, metrics tracked
+terminal.write('Hello'); // Logged, buffered, metrics tracked
 ```
 
 ### Facade Pattern
@@ -298,30 +298,30 @@ Provide a simplified interface to a complex subsystem.
 ```typescript
 // Complex subsystems
 class TerminalProcess {
-  spawn(shell: string, args: string[]): void { }
-  write(data: string): void { }
-  resize(cols: number, rows: number): void { }
-  kill(): void { }
+  spawn(shell: string, args: string[]): void {}
+  write(data: string): void {}
+  resize(cols: number, rows: number): void {}
+  kill(): void {}
 }
 
 class TerminalRenderer {
-  initialize(container: HTMLElement): void { }
-  render(buffer: string): void { }
-  setTheme(theme: Theme): void { }
-  dispose(): void { }
+  initialize(container: HTMLElement): void {}
+  render(buffer: string): void {}
+  setTheme(theme: Theme): void {}
+  dispose(): void {}
 }
 
 class TerminalSerializer {
-  serialize(state: TerminalState): string { }
-  deserialize(data: string): TerminalState { }
-  saveToStorage(state: TerminalState): Promise<void> { }
-  loadFromStorage(): Promise<TerminalState | undefined> { }
+  serialize(state: TerminalState): string {}
+  deserialize(data: string): TerminalState {}
+  saveToStorage(state: TerminalState): Promise<void> {}
+  loadFromStorage(): Promise<TerminalState | undefined> {}
 }
 
 class TerminalConfig {
-  getShell(): string { }
-  getTheme(): Theme { }
-  getDimensions(): { cols: number; rows: number } { }
+  getShell(): string {}
+  getTheme(): Theme {}
+  getDimensions(): { cols: number; rows: number } {}
 }
 
 // Facade provides simple interface
@@ -375,8 +375,12 @@ class TerminalFacade {
     this.renderer.dispose();
   }
 
-  private getState(): TerminalState { /* ... */ }
-  private applyState(state: TerminalState): void { /* ... */ }
+  private getState(): TerminalState {
+    /* ... */
+  }
+  private applyState(state: TerminalState): void {
+    /* ... */
+  }
 }
 
 // Usage - simple interface
@@ -434,11 +438,11 @@ class SplitContainer implements ITerminalComponent {
 
   render(): void {
     // Render container with children
-    this.children.forEach(child => child.render());
+    this.children.forEach((child) => child.render());
   }
 
   dispose(): void {
-    this.children.forEach(child => child.dispose());
+    this.children.forEach((child) => child.dispose());
     this.children = [];
   }
 
@@ -463,8 +467,8 @@ rightSplit.add(topTerminal);
 rightSplit.add(bottomTerminal);
 
 // Treat uniformly
-root.render();   // Renders all terminals
-root.dispose();  // Disposes all terminals
+root.render(); // Renders all terminals
+root.dispose(); // Disposes all terminals
 ```
 
 ## Behavioral Patterns
@@ -484,10 +488,7 @@ type EventMap = {
 class TerminalEventEmitter {
   private listeners = new Map<keyof EventMap, Set<Function>>();
 
-  on<K extends keyof EventMap>(
-    event: K,
-    callback: (data: EventMap[K]) => void
-  ): vscode.Disposable {
+  on<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): vscode.Disposable {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -496,14 +497,11 @@ class TerminalEventEmitter {
     return {
       dispose: () => {
         this.listeners.get(event)?.delete(callback);
-      }
+      },
     };
   }
 
-  once<K extends keyof EventMap>(
-    event: K,
-    callback: (data: EventMap[K]) => void
-  ): vscode.Disposable {
+  once<K extends keyof EventMap>(event: K, callback: (data: EventMap[K]) => void): vscode.Disposable {
     const disposable = this.on(event, (data) => {
       disposable.dispose();
       callback(data);
@@ -512,7 +510,7 @@ class TerminalEventEmitter {
   }
 
   emit<K extends keyof EventMap>(event: K, data: EventMap[K]): void {
-    this.listeners.get(event)?.forEach(callback => {
+    this.listeners.get(event)?.forEach((callback) => {
       try {
         callback(data);
       } catch (error) {
@@ -535,7 +533,7 @@ const subscription = emitter.on('terminal:output', ({ id, data }) => {
 
 emitter.emit('terminal:output', { id: 1, data: 'Hello World' });
 
-subscription.dispose();  // Cleanup
+subscription.dispose(); // Cleanup
 ```
 
 ### Strategy Pattern
@@ -554,7 +552,7 @@ interface IScrollbackStrategy {
 class CompressedScrollback implements IScrollbackStrategy {
   save(buffer: string[]): string {
     const content = buffer.join('\n');
-    return compress(content);  // Use compression
+    return compress(content); // Use compression
   }
 
   restore(data: string): string[] {
@@ -563,7 +561,7 @@ class CompressedScrollback implements IScrollbackStrategy {
   }
 
   getMaxSize(): number {
-    return 100000;  // Can store more when compressed
+    return 100000; // Can store more when compressed
   }
 }
 
@@ -577,7 +575,7 @@ class PlainScrollback implements IScrollbackStrategy {
   }
 
   getMaxSize(): number {
-    return 10000;  // Less storage without compression
+    return 10000; // Less storage without compression
   }
 }
 
@@ -695,10 +693,7 @@ class ResizeCommand implements ICommand {
 
   undo(): void {
     if (this.previousDimensions) {
-      this.terminal.resize(
-        this.previousDimensions.cols,
-        this.previousDimensions.rows
-      );
+      this.terminal.resize(this.previousDimensions.cols, this.previousDimensions.rows);
     }
   }
 }
@@ -743,9 +738,9 @@ history.execute(new CreateTerminalCommand(manager));
 history.execute(new WriteCommand(terminal, 'Hello'));
 history.execute(new ResizeCommand(terminal, 120, 40));
 
-history.undo();  // Undo resize
-history.undo();  // Undo write
-history.redo();  // Redo write
+history.undo(); // Undo resize
+history.undo(); // Undo write
+history.redo(); // Redo write
 ```
 
 ### State Pattern

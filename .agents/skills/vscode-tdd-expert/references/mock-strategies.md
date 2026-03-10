@@ -64,10 +64,7 @@ export class MockExtensionContext implements vscode.ExtensionContext {
 
   constructor() {
     this.workspaceState = new MockMemento();
-    this.globalState = Object.assign(
-      new MockMemento(),
-      { setKeysForSync: vi.fn() }
-    );
+    this.globalState = Object.assign(new MockMemento(), { setKeysForSync: vi.fn() });
     this.secrets = new MockSecretStorage();
     this.extensionUri = vscode.Uri.file('/mock/extension');
     this.extensionPath = '/mock/extension';
@@ -86,7 +83,7 @@ export class MockExtensionContext implements vscode.ExtensionContext {
       packageJSON: {},
       extensionKind: vscode.ExtensionKind.Workspace,
       exports: undefined,
-      activate: vi.fn().mockResolvedValue(undefined)
+      activate: vi.fn().mockResolvedValue(undefined),
     };
     this.environmentVariableCollection = {
       persistent: true,
@@ -98,11 +95,11 @@ export class MockExtensionContext implements vscode.ExtensionContext {
       forEach: vi.fn(),
       delete: vi.fn(),
       clear: vi.fn(),
-      getScoped: vi.fn()
+      getScoped: vi.fn(),
     } as any;
     this.languageModelAccessInformation = {
       onDidChange: vi.fn(),
-      canSendRequest: vi.fn().mockReturnValue(true)
+      canSendRequest: vi.fn().mockReturnValue(true),
     } as any;
   }
 
@@ -391,7 +388,7 @@ export function stubWindowAPI(): WindowStubs {
     createOutputChannel: vi.spyOn(vscode.window, 'createOutputChannel') as unknown as Mock,
     createStatusBarItem: vi.spyOn(vscode.window, 'createStatusBarItem') as unknown as Mock,
     withProgress: vi.spyOn(vscode.window, 'withProgress') as unknown as Mock,
-    setStatusBarMessage: vi.spyOn(vscode.window, 'setStatusBarMessage') as unknown as Mock
+    setStatusBarMessage: vi.spyOn(vscode.window, 'setStatusBarMessage') as unknown as Mock,
   };
 }
 
@@ -435,7 +432,7 @@ export function stubWorkspaceAPI(): WorkspaceStubs {
     findFiles: vi.spyOn(vscode.workspace, 'findFiles') as unknown as Mock,
     createFileSystemWatcher: vi.spyOn(vscode.workspace, 'createFileSystemWatcher') as unknown as Mock,
     applyEdit: vi.spyOn(vscode.workspace, 'applyEdit') as unknown as Mock,
-    saveAll: vi.spyOn(vscode.workspace, 'saveAll') as unknown as Mock
+    saveAll: vi.spyOn(vscode.workspace, 'saveAll') as unknown as Mock,
   };
 }
 
@@ -456,17 +453,19 @@ export class MockConfiguration implements vscode.WorkspaceConfiguration {
     return this.values.has(section);
   }
 
-  inspect<T>(section: string): {
-    key: string;
-    defaultValue?: T;
-    globalValue?: T;
-    workspaceValue?: T;
-    workspaceFolderValue?: T;
-  } | undefined {
+  inspect<T>(section: string):
+    | {
+        key: string;
+        defaultValue?: T;
+        globalValue?: T;
+        workspaceValue?: T;
+        workspaceFolderValue?: T;
+      }
+    | undefined {
     return {
       key: section,
       defaultValue: this.values.get(section),
-      globalValue: this.values.get(section)
+      globalValue: this.values.get(section),
     };
   }
 
@@ -505,17 +504,19 @@ export class MockCommandRegistry {
   }
 
   private setupMocks(): void {
-    this.registerCommandMock = vi.spyOn(vscode.commands, 'registerCommand')
+    this.registerCommandMock = vi
+      .spyOn(vscode.commands, 'registerCommand')
       .mockImplementation((command: string, callback: (...args: any[]) => any) => {
         this.commands.set(command, callback);
         return {
           dispose: () => {
             this.commands.delete(command);
-          }
+          },
         };
       }) as unknown as Mock;
 
-    this.executeCommandMock = vi.spyOn(vscode.commands, 'executeCommand')
+    this.executeCommandMock = vi
+      .spyOn(vscode.commands, 'executeCommand')
       .mockImplementation(async (command: string, ...args: any[]) => {
         const handler = this.commands.get(command);
         if (handler) {
@@ -524,10 +525,9 @@ export class MockCommandRegistry {
         throw new Error(`Command not found: ${command}`);
       }) as unknown as Mock;
 
-    this.getCommandsMock = vi.spyOn(vscode.commands, 'getCommands')
-      .mockImplementation(async () => {
-        return Array.from(this.commands.keys());
-      }) as unknown as Mock;
+    this.getCommandsMock = vi.spyOn(vscode.commands, 'getCommands').mockImplementation(async () => {
+      return Array.from(this.commands.keys());
+    }) as unknown as Mock;
   }
 
   // Test helpers
@@ -565,7 +565,7 @@ export class MockFileSystem {
             type: vscode.FileType.File,
             ctime: Date.now(),
             mtime: Date.now(),
-            size: this.files.get(path)!.length
+            size: this.files.get(path)!.length,
           });
         }
         if (this.directories.has(path)) {
@@ -573,7 +573,7 @@ export class MockFileSystem {
             type: vscode.FileType.Directory,
             ctime: Date.now(),
             mtime: Date.now(),
-            size: 0
+            size: 0,
           });
         }
         throw vscode.FileSystemError.FileNotFound(uri);
@@ -641,7 +641,7 @@ export class MockFileSystem {
         return Promise.resolve(entries);
       }),
 
-      isWritableFileSystem: vi.fn().mockReturnValue(true)
+      isWritableFileSystem: vi.fn().mockReturnValue(true),
     };
   }
 

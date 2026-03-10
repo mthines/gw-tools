@@ -8,15 +8,15 @@ on:
   workflow_dispatch:
     inputs:
       force_gw:
-        description: "Force gw-tool release"
+        description: 'Force gw-tool release'
         type: boolean
         default: false
       force_agent:
-        description: "Force agent release"
+        description: 'Force agent release'
         type: boolean
         default: false
       dry_run:
-        description: "Dry run (no publishing)"
+        description: 'Dry run (no publishing)'
         type: boolean
         default: false
 
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -185,7 +185,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -215,7 +215,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
+          cache: 'pnpm'
 
       - run: pnpm install --frozen-lockfile
 
@@ -474,8 +474,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
 
@@ -485,7 +485,7 @@ jobs:
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
           RELEASE_VERSION: ${{ needs.version-gw.outputs.tag }}
-          SKIP_NPM: "true"
+          SKIP_NPM: 'true'
         run: npx nx run @gw-tools/gw-tool:release:ci
 
       - name: Update npm
@@ -560,8 +560,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
-          registry-url: "https://registry.npmjs.org"
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - run: pnpm install --frozen-lockfile
 

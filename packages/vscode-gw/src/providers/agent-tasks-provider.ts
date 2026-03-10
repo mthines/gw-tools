@@ -297,20 +297,42 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     if (task) {
       // Current (expanded by default to show what's happening now)
       if (task.current.length > 0) {
-        const currentItems = task.current.map((t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath));
-        children.push(new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded, taskFilePath));
+        const currentItems = task.current.map(
+          (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath)
+        );
+        children.push(
+          new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded, taskFilePath)
+        );
       }
 
       // Completed
       if (task.completed.length > 0) {
-        const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
-        children.push(new TaskGroupItem('Completed', 'pass', completedItems, vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
+        const completedItems = task.completed.map(
+          (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
+        );
+        children.push(
+          new TaskGroupItem(
+            'Completed',
+            'pass',
+            completedItems,
+            vscode.TreeItemCollapsibleState.Collapsed,
+            taskFilePath
+          )
+        );
       }
 
       // Upcoming
       if (task.upcoming.length > 0) {
         const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
-        children.push(new TaskGroupItem('Upcoming', 'circle-large-outline', upcomingItems, vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
+        children.push(
+          new TaskGroupItem(
+            'Upcoming',
+            'circle-large-outline',
+            upcomingItems,
+            vscode.TreeItemCollapsibleState.Collapsed,
+            taskFilePath
+          )
+        );
       }
 
       // Blockers
@@ -329,8 +351,18 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
 
       // Decisions
       if (task.decisions.length > 0) {
-        const decisionItems = task.decisions.map((d) => new DecisionItem(d.decision, d.rationale, d.phase, taskFilePath));
-        children.push(new TaskGroupItem('Decisions', 'lightbulb', decisionItems as unknown as TaskCheckboxItem[], vscode.TreeItemCollapsibleState.Collapsed, taskFilePath));
+        const decisionItems = task.decisions.map(
+          (d) => new DecisionItem(d.decision, d.rationale, d.phase, taskFilePath)
+        );
+        children.push(
+          new TaskGroupItem(
+            'Decisions',
+            'lightbulb',
+            decisionItems as unknown as TaskCheckboxItem[],
+            vscode.TreeItemCollapsibleState.Collapsed,
+            taskFilePath
+          )
+        );
       }
     }
 

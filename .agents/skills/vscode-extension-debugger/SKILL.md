@@ -33,14 +33,14 @@ This skill enables systematic debugging and bug fixing for VS Code extensions. I
 
 2. **Classify Bug Type**
 
-   | Category | Symptoms | Priority |
-   |----------|----------|----------|
-   | Crash | Extension host crash, unhandled rejection | P0 |
-   | Memory Leak | Increasing memory usage over time | P0 |
-   | Data Loss | State not persisted, data corruption | P0 |
-   | Functionality | Feature not working as expected | P1 |
-   | Performance | Slow response, UI lag | P1 |
-   | UI/UX | Visual glitches, incorrect display | P2 |
+   | Category      | Symptoms                                  | Priority |
+   | ------------- | ----------------------------------------- | -------- |
+   | Crash         | Extension host crash, unhandled rejection | P0       |
+   | Memory Leak   | Increasing memory usage over time         | P0       |
+   | Data Loss     | State not persisted, data corruption      | P0       |
+   | Functionality | Feature not working as expected           | P1       |
+   | Performance   | Slow response, UI lag                     | P1       |
+   | UI/UX         | Visual glitches, incorrect display        | P2       |
 
 3. **Create Minimal Reproduction**
    - Isolate the failing scenario
@@ -60,7 +60,7 @@ try {
   console.error('[DEBUG] Error details:', {
     message: error.message,
     stack: error.stack,
-    context: currentContext
+    context: currentContext,
   });
   throw error;
 }
@@ -69,6 +69,7 @@ try {
 #### Common Root Cause Patterns
 
 **1. Dispose Handler Issues**
+
 ```typescript
 // Bug: Missing dispose registration
 const listener = vscode.workspace.onDidChangeConfiguration(...);
@@ -81,6 +82,7 @@ context.subscriptions.push(
 ```
 
 **2. Race Conditions**
+
 ```typescript
 // Bug: Concurrent operations conflict
 async function createTerminal() {
@@ -106,12 +108,13 @@ async function createTerminal(): Promise<void> {
 ```
 
 **3. WebView Message Timing**
+
 ```typescript
 // Bug: Message sent before WebView ready
 panel.webview.postMessage({ type: 'init', data });
 
 // Fix: Wait for ready signal
-panel.webview.onDidReceiveMessage(msg => {
+panel.webview.onDidReceiveMessage((msg) => {
   if (msg.type === 'ready') {
     panel.webview.postMessage({ type: 'init', data });
   }
@@ -119,6 +122,7 @@ panel.webview.onDidReceiveMessage(msg => {
 ```
 
 **4. Null/Undefined Reference**
+
 ```typescript
 // Bug: Assuming object exists
 const terminal = this.terminals.get(id);
@@ -134,6 +138,7 @@ terminal.write(data);
 ```
 
 **5. Async/Await Errors**
+
 ```typescript
 // Bug: Unhandled promise rejection
 someAsyncFunction(); // No await, no catch!
@@ -162,6 +167,7 @@ try {
 #### Safe Fix Patterns
 
 **Pattern 1: Guard Clause**
+
 ```typescript
 async function processTerminal(id: number): Promise<void> {
   // Early validation
@@ -181,6 +187,7 @@ async function processTerminal(id: number): Promise<void> {
 ```
 
 **Pattern 2: Try-Catch-Finally**
+
 ```typescript
 async function safeOperation(): Promise<void> {
   const resource = await acquireResource();
@@ -196,11 +203,9 @@ async function safeOperation(): Promise<void> {
 ```
 
 **Pattern 3: Timeout Protection**
+
 ```typescript
-async function operationWithTimeout<T>(
-  operation: Promise<T>,
-  timeoutMs: number
-): Promise<T> {
+async function operationWithTimeout<T>(operation: Promise<T>, timeoutMs: number): Promise<T> {
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error('Operation timed out')), timeoutMs)
   );
@@ -213,17 +218,14 @@ async function operationWithTimeout<T>(
 #### Testing Strategy
 
 1. **Unit Test the Fix**
+
 ```typescript
 describe('Bug Fix: Terminal creation race condition', () => {
   it('should handle concurrent creation requests', async () => {
     const manager = new TerminalManager();
 
     // Simulate concurrent requests
-    const results = await Promise.all([
-      manager.createTerminal(),
-      manager.createTerminal(),
-      manager.createTerminal()
-    ]);
+    const results = await Promise.all([manager.createTerminal(), manager.createTerminal(), manager.createTerminal()]);
 
     // Verify only expected terminals created
     expect(manager.getTerminalCount()).toBe(expectedCount);
@@ -246,6 +248,7 @@ describe('Bug Fix: Terminal creation race condition', () => {
 ### Memory Leaks
 
 **Detection**
+
 ```typescript
 // Add disposal tracking
 class ResourceManager implements vscode.Disposable {
@@ -279,6 +282,7 @@ class ResourceManager implements vscode.Disposable {
 ```
 
 **Common Causes**
+
 - Event listeners not removed
 - Timers not cleared
 - WebView panels not disposed
@@ -287,6 +291,7 @@ class ResourceManager implements vscode.Disposable {
 ### WebView Issues
 
 **Communication Failures**
+
 ```typescript
 // Implement message queue for reliability
 class MessageQueue {
@@ -315,6 +320,7 @@ class MessageQueue {
 ```
 
 **Rendering Problems**
+
 - Check CSP (Content Security Policy)
 - Verify resource URIs use webview.asWebviewUri()
 - Ensure styles load correctly
@@ -323,6 +329,7 @@ class MessageQueue {
 ### Activation Issues
 
 **Debugging Activation**
+
 ```typescript
 export async function activate(context: vscode.ExtensionContext) {
   console.log('[Extension] Activation started');
@@ -339,15 +346,14 @@ export async function activate(context: vscode.ExtensionContext) {
     console.log('[Extension] Activation complete');
   } catch (error) {
     console.error('[Extension] Activation failed:', error);
-    vscode.window.showErrorMessage(
-      `Extension activation failed: ${error.message}`
-    );
+    vscode.window.showErrorMessage(`Extension activation failed: ${error.message}`);
     throw error;
   }
 }
 ```
 
 **Common Causes**
+
 - Incorrect activation events in package.json
 - Exceptions during initialization
 - Missing dependencies
@@ -356,10 +362,11 @@ export async function activate(context: vscode.ExtensionContext) {
 ### TypeScript Errors
 
 **Type Safety Fixes**
+
 ```typescript
 // Bug: Implicit any and unsafe access
 function processData(data) {
-  return data.items.map(item => item.value);
+  return data.items.map((item) => item.value);
 }
 
 // Fix: Explicit types and null safety
@@ -372,7 +379,7 @@ interface Data {
 }
 
 function processData(data: Data): string[] {
-  return data.items?.map(item => item.value) ?? [];
+  return data.items?.map((item) => item.value) ?? [];
 }
 ```
 
@@ -415,9 +422,9 @@ const logger = {
   error: (component: string, message: string, error: Error) => {
     console.error(`[${component}] ${message}:`, {
       message: error.message,
-      stack: error.stack
+      stack: error.stack,
     });
-  }
+  },
 };
 ```
 
@@ -443,6 +450,7 @@ const logger = {
 ## Resources
 
 For detailed reference documentation:
+
 - `references/common-bugs.md` - Catalog of common VS Code extension bugs
 - `references/debugging-tools.md` - Comprehensive debugging tool guide
 - `references/fix-patterns.md` - Proven fix implementation patterns

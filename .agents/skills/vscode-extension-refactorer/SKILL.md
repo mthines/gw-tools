@@ -27,18 +27,18 @@ This skill enables systematic and safe refactoring of VS Code extension code. It
 
 #### Code Smell Detection
 
-| Smell | Indicators | Refactoring |
-|-------|------------|-------------|
-| Long Method | >50 lines, multiple responsibilities | Extract Method |
-| Large Class | >500 lines, >10 public methods | Extract Class |
-| Duplicate Code | Similar blocks in 2+ places | Extract Function/Class |
-| Feature Envy | Method uses other class data extensively | Move Method |
-| Data Clumps | Same parameters passed together | Introduce Parameter Object |
-| Primitive Obsession | Overuse of primitives for domain concepts | Replace with Value Object |
-| Long Parameter List | >4 parameters | Introduce Parameter Object |
-| Divergent Change | Class changes for multiple reasons | Extract Class (SRP) |
-| Shotgun Surgery | One change requires many file edits | Move Method, Inline Class |
-| God Class | Class knows/does too much | Extract Class, Delegate |
+| Smell               | Indicators                                | Refactoring                |
+| ------------------- | ----------------------------------------- | -------------------------- |
+| Long Method         | >50 lines, multiple responsibilities      | Extract Method             |
+| Large Class         | >500 lines, >10 public methods            | Extract Class              |
+| Duplicate Code      | Similar blocks in 2+ places               | Extract Function/Class     |
+| Feature Envy        | Method uses other class data extensively  | Move Method                |
+| Data Clumps         | Same parameters passed together           | Introduce Parameter Object |
+| Primitive Obsession | Overuse of primitives for domain concepts | Replace with Value Object  |
+| Long Parameter List | >4 parameters                             | Introduce Parameter Object |
+| Divergent Change    | Class changes for multiple reasons        | Extract Class (SRP)        |
+| Shotgun Surgery     | One change requires many file edits       | Move Method, Inline Class  |
+| God Class           | Class knows/does too much                 | Extract Class, Delegate    |
 
 #### Impact Assessment
 
@@ -56,7 +56,7 @@ interface RefactoringAssessment {
 
   // Dependencies
   internalDependents: string[];
-  externalDependents: string[];  // Other extensions, APIs
+  externalDependents: string[]; // Other extensions, APIs
 }
 ```
 
@@ -65,6 +65,7 @@ interface RefactoringAssessment {
 #### Extract Method
 
 **Before**:
+
 ```typescript
 async function processTerminals(): Promise<void> {
   // Validation logic (10 lines)
@@ -96,6 +97,7 @@ async function processTerminals(): Promise<void> {
 ```
 
 **After**:
+
 ```typescript
 async function processTerminals(): Promise<void> {
   this.validateTerminals();
@@ -136,30 +138,32 @@ private handleErrorResults(): void {
 #### Extract Class
 
 **Before** (God Class):
+
 ```typescript
 class TerminalManager {
   // Terminal management (proper responsibility)
   private terminals: Map<number, Terminal>;
-  createTerminal(): Terminal { }
-  disposeTerminal(id: number): void { }
+  createTerminal(): Terminal {}
+  disposeTerminal(id: number): void {}
 
   // UI concerns (wrong place)
   private statusBarItem: vscode.StatusBarItem;
-  updateStatusBar(): void { }
-  showNotification(msg: string): void { }
+  updateStatusBar(): void {}
+  showNotification(msg: string): void {}
 
   // Persistence concerns (wrong place)
-  saveState(): void { }
-  loadState(): void { }
-  migrateOldState(): void { }
+  saveState(): void {}
+  loadState(): void {}
+  migrateOldState(): void {}
 
   // Configuration concerns (wrong place)
-  getConfig(key: string): unknown { }
-  updateConfig(key: string, value: unknown): void { }
+  getConfig(key: string): unknown {}
+  updateConfig(key: string, value: unknown): void {}
 }
 ```
 
 **After** (Single Responsibility):
+
 ```typescript
 // Core terminal management
 class TerminalManager {
@@ -190,28 +194,29 @@ class TerminalManager {
 class TerminalUIManager {
   private statusBarItem: vscode.StatusBarItem;
 
-  updateStatusBar(count: number): void { }
-  showNotification(msg: string): void { }
+  updateStatusBar(count: number): void {}
+  showNotification(msg: string): void {}
 }
 
 // Persistence responsibility
 class TerminalPersistence {
-  saveState(state: TerminalState): void { }
-  loadState(): TerminalState { }
-  migrateOldState(): void { }
+  saveState(state: TerminalState): void {}
+  loadState(): TerminalState {}
+  migrateOldState(): void {}
 }
 
 // Configuration responsibility
 class TerminalConfig {
-  getShellPath(): string { }
-  get(key: string): unknown { }
-  update(key: string, value: unknown): void { }
+  getShellPath(): string {}
+  get(key: string): unknown {}
+  update(key: string, value: unknown): void {}
 }
 ```
 
 #### Replace Conditional with Polymorphism
 
 **Before**:
+
 ```typescript
 function handleMessage(message: Message): void {
   switch (message.type) {
@@ -238,6 +243,7 @@ function handleMessage(message: Message): void {
 ```
 
 **After**:
+
 ```typescript
 interface MessageHandler {
   handle(message: Message): void;
@@ -275,7 +281,7 @@ class MessageRouter {
     ['create', new CreateHandler()],
     ['write', new WriteHandler()],
     ['resize', new ResizeHandler()],
-    ['dispose', new DisposeHandler()]
+    ['dispose', new DisposeHandler()],
   ]);
 
   route(message: Message): void {
@@ -292,6 +298,7 @@ class MessageRouter {
 #### Introduce Parameter Object
 
 **Before**:
+
 ```typescript
 function createTerminal(
   shell: string,
@@ -310,6 +317,7 @@ createTerminal('/bin/bash', '/home', {}, 80, 24, 1000, 'Main');
 ```
 
 **After**:
+
 ```typescript
 interface TerminalOptions {
   shell: string;
@@ -326,7 +334,7 @@ interface TerminalOptions {
 const DEFAULT_OPTIONS: Partial<TerminalOptions> = {
   env: {},
   dimensions: { cols: 80, rows: 24 },
-  scrollback: 1000
+  scrollback: 1000,
 };
 
 function createTerminal(options: TerminalOptions): Terminal {
@@ -338,7 +346,7 @@ function createTerminal(options: TerminalOptions): Terminal {
 createTerminal({
   shell: '/bin/bash',
   cwd: '/home',
-  name: 'Main'
+  name: 'Main',
 });
 ```
 
@@ -435,9 +443,7 @@ class ServiceContainer {
 // Usage
 const container = new ServiceContainer();
 container.register('config', new ConfigService());
-container.registerFactory('terminal', () => new TerminalService(
-  container.get('config')
-));
+container.registerFactory('terminal', () => new TerminalService(container.get('config')));
 ```
 
 #### Disposable Chain Pattern
@@ -487,6 +493,7 @@ export function activate(context: vscode.ExtensionContext) {
 #### Replace `any` with Proper Types
 
 **Before**:
+
 ```typescript
 function processMessage(message: any): any {
   if (message.type === 'data') {
@@ -497,6 +504,7 @@ function processMessage(message: any): any {
 ```
 
 **After**:
+
 ```typescript
 interface DataMessage {
   type: 'data';
@@ -514,7 +522,7 @@ type Message = DataMessage | ErrorMessage;
 
 function processMessage(message: Message): string[] | null {
   if (message.type === 'data') {
-    return message.payload.items.map(item => item.value);
+    return message.payload.items.map((item) => item.value);
   }
   return null;
 }
@@ -523,6 +531,7 @@ function processMessage(message: Message): string[] | null {
 #### Discriminated Unions
 
 **Before**:
+
 ```typescript
 interface TerminalState {
   status: string;
@@ -544,6 +553,7 @@ function render(state: TerminalState): void {
 ```
 
 **After**:
+
 ```typescript
 type TerminalState =
   | { status: 'idle' }
@@ -576,6 +586,7 @@ function render(state: TerminalState): void {
 #### Generic Constraints
 
 **Before**:
+
 ```typescript
 class Repository<T> {
   private items: T[] = [];
@@ -592,6 +603,7 @@ class Repository<T> {
 ```
 
 **After**:
+
 ```typescript
 interface Identifiable {
   id: number;
@@ -605,7 +617,7 @@ class Repository<T extends Identifiable> {
   }
 
   findById(id: number): T | undefined {
-    return this.items.find(item => item.id === id); // Type-safe
+    return this.items.find((item) => item.id === id); // Type-safe
   }
 
   update(id: number, updates: Partial<Omit<T, 'id'>>): boolean {
@@ -672,7 +684,7 @@ src/terminal/
 ```typescript
 // Before: Tight coupling
 class TerminalManager {
-  private ui = new UIManager();  // Direct instantiation
+  private ui = new UIManager(); // Direct instantiation
   private config = new ConfigManager();
 }
 
@@ -686,10 +698,7 @@ class TerminalManager {
 
 // Factory handles wiring
 function createTerminalManager(): TerminalManager {
-  return new TerminalManager(
-    new UIManager(),
-    new ConfigManager()
-  );
+  return new TerminalManager(new UIManager(), new ConfigManager());
 }
 ```
 
@@ -721,6 +730,7 @@ async function loadData(): Promise<Data> {
 ## Resources
 
 For detailed reference documentation:
+
 - `references/code-smells.md` - Complete code smell catalog with examples
 - `references/design-patterns.md` - VS Code-specific design pattern implementations
 - `references/type-patterns.md` - Advanced TypeScript type patterns

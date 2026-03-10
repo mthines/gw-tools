@@ -33,15 +33,15 @@ function createSessionId(id: string): SessionId {
 }
 
 // Usage - compiler prevents mixing
-function getTerminal(id: TerminalId): Terminal { }
-function getSession(id: SessionId): Session { }
+function getTerminal(id: TerminalId): Terminal {}
+function getSession(id: SessionId): Session {}
 
 const terminalId = createTerminalId(1);
 const sessionId = createSessionId('abc-123-def');
 
-getTerminal(terminalId);  // OK
-getTerminal(sessionId);   // Error: Argument of type 'SessionId' is not assignable to 'TerminalId'
-getTerminal(1);           // Error: Argument of type 'number' is not assignable to 'TerminalId'
+getTerminal(terminalId); // OK
+getTerminal(sessionId); // Error: Argument of type 'SessionId' is not assignable to 'TerminalId'
+getTerminal(1); // Error: Argument of type 'number' is not assignable to 'TerminalId'
 ```
 
 ### Discriminated Unions
@@ -65,16 +65,17 @@ function renderState(state: TerminalState): string {
       return 'Terminal ready';
 
     case 'initializing':
-      return `Loading... ${state.progress}%`;  // progress is available
+      return `Loading... ${state.progress}%`; // progress is available
 
     case 'running':
-      return `PID: ${state.pid}, started: ${state.startTime}`;  // pid and startTime available
+      return `PID: ${state.pid}, started: ${state.startTime}`; // pid and startTime available
 
     case 'paused':
-      return 'Paused';  // resumeCallback available for resume button
+      return 'Paused'; // resumeCallback available for resume button
 
     case 'error':
-      if (state.recoverable) {  // recoverable is available
+      if (state.recoverable) {
+        // recoverable is available
         return `Error (recoverable): ${state.error.message}`;
       }
       return `Fatal error: ${state.error.message}`;
@@ -100,7 +101,7 @@ type Message =
 function handleMessage(message: Message): void {
   switch (message.type) {
     case 'create':
-      createTerminal(message.config);  // config available
+      createTerminal(message.config); // config available
       break;
     case 'write':
       writeToTerminal(message.terminalId, message.data);
@@ -112,7 +113,7 @@ function handleMessage(message: Message): void {
       disposeTerminal(message.terminalId);
       break;
     case 'batch':
-      message.messages.forEach(handleMessage);  // Recursive
+      message.messages.forEach(handleMessage); // Recursive
       break;
   }
 }
@@ -196,38 +197,27 @@ type Command =
   | `view:${'show' | 'hide'}`;
 
 // Event types
-type TerminalEvent =
-  | `terminal.${number}.created`
-  | `terminal.${number}.disposed`
-  | `terminal.${number}.output`;
+type TerminalEvent = `terminal.${number}.created` | `terminal.${number}.disposed` | `terminal.${number}.output`;
 
 // CSS class names
-type TerminalClass =
-  | `terminal-${number}`
-  | `terminal-${'active' | 'inactive' | 'focused'}`;
+type TerminalClass = `terminal-${number}` | `terminal-${'active' | 'inactive' | 'focused'}`;
 
 // Configuration paths
-type ConfigPath =
-  | `terminal.${string}`
-  | `editor.${string}`
-  | `workbench.${string}`;
+type ConfigPath = `terminal.${string}` | `editor.${string}` | `workbench.${string}`;
 
 // Type-safe event emitter
 type EventHandlers = {
   [K in TerminalEvent]: (data: unknown) => void;
 };
 
-function on<E extends TerminalEvent>(
-  event: E,
-  handler: EventHandlers[E]
-): void {
+function on<E extends TerminalEvent>(event: E, handler: EventHandlers[E]): void {
   // ...
 }
 
 // Usage
-on('terminal.1.created', (data) => { });  // OK
-on('terminal.2.output', (data) => { });   // OK
-on('terminal.invalid', (data) => { });    // Error: not a valid event
+on('terminal.1.created', (data) => {}); // OK
+on('terminal.2.output', (data) => {}); // OK
+on('terminal.invalid', (data) => {}); // Error: not a valid event
 ```
 
 ## Utility Type Patterns
@@ -237,11 +227,7 @@ on('terminal.invalid', (data) => { });    // Error: not a valid event
 Make nested objects immutable.
 
 ```typescript
-type DeepReadonly<T> = T extends (infer U)[]
-  ? DeepReadonlyArray<U>
-  : T extends object
-  ? DeepReadonlyObject<T>
-  : T;
+type DeepReadonly<T> = T extends (infer U)[] ? DeepReadonlyArray<U> : T extends object ? DeepReadonlyObject<T> : T;
 
 interface DeepReadonlyArray<T> extends ReadonlyArray<DeepReadonly<T>> {}
 
@@ -267,12 +253,12 @@ type ImmutableConfig = DeepReadonly<TerminalConfig>;
 const config: ImmutableConfig = {
   shell: '/bin/bash',
   env: { PATH: '/usr/bin', HOME: '/home' },
-  dimensions: { cols: 80, rows: 24 }
+  dimensions: { cols: 80, rows: 24 },
 };
 
-config.shell = 'zsh';              // Error: readonly
-config.env.PATH = '/usr/local';    // Error: nested readonly
-config.dimensions.cols = 120;      // Error: nested readonly
+config.shell = 'zsh'; // Error: readonly
+config.env.PATH = '/usr/local'; // Error: nested readonly
+config.dimensions.cols = 120; // Error: nested readonly
 ```
 
 ### Deep Partial
@@ -280,9 +266,7 @@ config.dimensions.cols = 120;      // Error: nested readonly
 Make nested properties optional.
 
 ```typescript
-type DeepPartial<T> = T extends object
-  ? { [P in keyof T]?: DeepPartial<T[P]> }
-  : T;
+type DeepPartial<T> = T extends object ? { [P in keyof T]?: DeepPartial<T[P]> } : T;
 
 // Usage for configuration updates
 interface TerminalOptions {
@@ -323,10 +307,10 @@ interface Terminal {
 }
 
 // Standard Omit allows invalid keys
-type BadOmit = Omit<Terminal, 'invalid'>;  // No error!
+type BadOmit = Omit<Terminal, 'invalid'>; // No error!
 
 // StrictOmit catches errors
-type GoodOmit = StrictOmit<Terminal, 'id'>;           // OK
+type GoodOmit = StrictOmit<Terminal, 'id'>; // OK
 type BadStrictOmit = StrictOmit<Terminal, 'invalid'>; // Error!
 ```
 
@@ -348,8 +332,8 @@ interface TerminalOptions {
 type RequiredTerminalOptions = RequiredKeys<TerminalOptions, 'shell' | 'cwd'>;
 
 const options: RequiredTerminalOptions = {
-  shell: '/bin/bash',  // Required
-  cwd: '/home',        // Required
+  shell: '/bin/bash', // Required
+  cwd: '/home', // Required
   // name and env are still optional
 };
 ```
@@ -370,11 +354,14 @@ interface InternalTerminal {
 }
 
 // Create public API with cleaner names
-type PublicTerminal = PickAndRename<InternalTerminal, {
-  id: 'terminalId';
-  name: 'terminalName';
-  pid: 'processId';
-}>;
+type PublicTerminal = PickAndRename<
+  InternalTerminal,
+  {
+    id: 'terminalId';
+    name: 'terminalName';
+    pid: 'processId';
+  }
+>;
 
 // Result: { id: number; name: string; pid: number; }
 ```
@@ -395,7 +382,7 @@ type BuilderState = {
 type RequiredState = {
   shell: true;
   cwd: true;
-  env: boolean;  // Optional
+  env: boolean; // Optional
 };
 
 class TerminalBuilder<State extends BuilderState = { shell: false; cwd: false; env: false }> {
@@ -425,22 +412,13 @@ class TerminalBuilder<State extends BuilderState = { shell: false; cwd: false; e
 // Usage
 const builder = new TerminalBuilder();
 
-builder.build();  // Error: missing shell and cwd
+builder.build(); // Error: missing shell and cwd
 
-builder
-  .shell('/bin/bash')
-  .build();  // Error: missing cwd
+builder.shell('/bin/bash').build(); // Error: missing cwd
 
-builder
-  .shell('/bin/bash')
-  .cwd('/home')
-  .build();  // OK!
+builder.shell('/bin/bash').cwd('/home').build(); // OK!
 
-builder
-  .shell('/bin/bash')
-  .cwd('/home')
-  .env({ PATH: '/usr/bin' })
-  .build();  // OK!
+builder.shell('/bin/bash').cwd('/home').env({ PATH: '/usr/bin' }).build(); // OK!
 ```
 
 ### Conditional Types
@@ -451,34 +429,34 @@ Type transformations based on conditions.
 // Extract return type of async functions
 type UnwrapPromise<T> = T extends Promise<infer U> ? U : T;
 
-type Result = UnwrapPromise<Promise<string>>;  // string
-type Same = UnwrapPromise<number>;             // number
+type Result = UnwrapPromise<Promise<string>>; // string
+type Same = UnwrapPromise<number>; // number
 
 // Extract element type from arrays
 type UnwrapArray<T> = T extends (infer U)[] ? U : T;
 
-type Element = UnwrapArray<string[]>;  // string
-type Same = UnwrapArray<number>;       // number
+type Element = UnwrapArray<string[]>; // string
+type Same = UnwrapArray<number>; // number
 
 // Conditional property types
-type MessagePayload<T extends string> =
-  T extends 'create' ? { config: TerminalConfig } :
-  T extends 'write' ? { terminalId: number; data: string } :
-  T extends 'resize' ? { terminalId: number; cols: number; rows: number } :
-  T extends 'dispose' ? { terminalId: number } :
-  never;
+type MessagePayload<T extends string> = T extends 'create'
+  ? { config: TerminalConfig }
+  : T extends 'write'
+    ? { terminalId: number; data: string }
+    : T extends 'resize'
+      ? { terminalId: number; cols: number; rows: number }
+      : T extends 'dispose'
+        ? { terminalId: number }
+        : never;
 
-function sendMessage<T extends string>(
-  type: T,
-  payload: MessagePayload<T>
-): void {
+function sendMessage<T extends string>(type: T, payload: MessagePayload<T>): void {
   // ...
 }
 
 // Type-safe calls
-sendMessage('create', { config: terminalConfig });  // OK
-sendMessage('write', { terminalId: 1, data: 'hello' });  // OK
-sendMessage('write', { config: terminalConfig });  // Error: wrong payload type
+sendMessage('create', { config: terminalConfig }); // OK
+sendMessage('write', { terminalId: 1, data: 'hello' }); // OK
+sendMessage('write', { config: terminalConfig }); // Error: wrong payload type
 ```
 
 ### Mapped Types with Modifiers
@@ -523,13 +501,7 @@ Types that reference themselves.
 
 ```typescript
 // JSON type
-type JSONValue =
-  | string
-  | number
-  | boolean
-  | null
-  | JSONValue[]
-  | { [key: string]: JSONValue };
+type JSONValue = string | number | boolean | null | JSONValue[] | { [key: string]: JSONValue };
 
 // Tree structure
 interface TreeNode<T> {
@@ -543,12 +515,11 @@ type NestedConfig = {
 };
 
 // Path type for nested objects
-type Path<T, Key extends keyof T = keyof T> =
-  Key extends string
-    ? T[Key] extends Record<string, any>
-      ? Key | `${Key}.${Path<T[Key]>}`
-      : Key
-    : never;
+type Path<T, Key extends keyof T = keyof T> = Key extends string
+  ? T[Key] extends Record<string, any>
+    ? Key | `${Key}.${Path<T[Key]>}`
+    : Key
+  : never;
 
 interface Config {
   terminal: {
@@ -573,32 +544,25 @@ Extract types from complex structures.
 
 ```typescript
 // Extract function parameters
-type Parameters<T extends (...args: any) => any> =
-  T extends (...args: infer P) => any ? P : never;
+type Parameters<T extends (...args: any) => any> = T extends (...args: infer P) => any ? P : never;
 
 // Extract return type
-type ReturnType<T extends (...args: any) => any> =
-  T extends (...args: any) => infer R ? R : never;
+type ReturnType<T extends (...args: any) => any> = T extends (...args: any) => infer R ? R : never;
 
 // Extract promise value
-type Awaited<T> =
-  T extends Promise<infer U>
-    ? U extends Promise<any>
-      ? Awaited<U>
-      : U
-    : T;
+type Awaited<T> = T extends Promise<infer U> ? (U extends Promise<any> ? Awaited<U> : U) : T;
 
 // Extract event handler argument type
 type EventPayload<T> = T extends (payload: infer P) => void ? P : never;
 
 type Handler = (event: { id: number; data: string }) => void;
-type Payload = EventPayload<Handler>;  // { id: number; data: string }
+type Payload = EventPayload<Handler>; // { id: number; data: string }
 
 // Extract array element type
 type ArrayElement<T> = T extends readonly (infer E)[] ? E : never;
 
-type Numbers = ArrayElement<number[]>;  // number
-type Mixed = ArrayElement<[string, number, boolean]>;  // string | number | boolean
+type Numbers = ArrayElement<number[]>; // number
+type Mixed = ArrayElement<[string, number, boolean]>; // string | number | boolean
 ```
 
 ### Type-Safe Event System
@@ -618,10 +582,7 @@ interface EventMap {
 class TypedEventEmitter<Events extends Record<string, any>> {
   private listeners = new Map<keyof Events, Set<Function>>();
 
-  on<K extends keyof Events>(
-    event: K,
-    callback: (data: Events[K]) => void
-  ): () => void {
+  on<K extends keyof Events>(event: K, callback: (data: Events[K]) => void): () => void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, new Set());
     }
@@ -629,15 +590,12 @@ class TypedEventEmitter<Events extends Record<string, any>> {
     return () => this.off(event, callback);
   }
 
-  off<K extends keyof Events>(
-    event: K,
-    callback: (data: Events[K]) => void
-  ): void {
+  off<K extends keyof Events>(event: K, callback: (data: Events[K]) => void): void {
     this.listeners.get(event)?.delete(callback);
   }
 
   emit<K extends keyof Events>(event: K, data: Events[K]): void {
-    this.listeners.get(event)?.forEach(cb => cb(data));
+    this.listeners.get(event)?.forEach((cb) => cb(data));
   }
 }
 
@@ -646,17 +604,17 @@ const emitter = new TypedEventEmitter<EventMap>();
 
 // Type-safe subscription
 emitter.on('terminal:created', (data) => {
-  console.log(data.id, data.name);  // data is typed correctly
+  console.log(data.id, data.name); // data is typed correctly
 });
 
 // Type-safe emit
 emitter.emit('terminal:output', {
   id: 1,
   data: 'Hello',
-  timestamp: new Date()
+  timestamp: new Date(),
 });
 
 // Type errors for wrong data
-emitter.emit('terminal:created', { id: 1 });  // Error: missing 'name'
-emitter.emit('invalid:event', {});  // Error: invalid event name
+emitter.emit('terminal:created', { id: 1 }); // Error: missing 'name'
+emitter.emit('invalid:event', {}); // Error: invalid event name
 ```

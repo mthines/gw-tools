@@ -2,18 +2,18 @@
 
 ## Overview
 
-| Feature | Vitest | Mocha | Jest |
-|---------|--------|-------|------|
-| Built-in assertions | Yes | No (use Chai) | Yes |
-| Mocking | Yes (vi) | No (use Sinon) | Yes |
-| Snapshot testing | Yes | No | Yes |
-| Watch mode | Yes (excellent) | Yes | Yes (better than Mocha) |
-| Parallel execution | Yes | Yes (v8+) | Yes |
-| Code coverage | Yes (v8/c8) | No (use c8/nyc) | Yes |
-| TypeScript support | Native | Via ts-node | Via ts-jest |
-| VS Code integration | Community | Official support | Community |
-| ESM support | Native | Limited | Limited |
-| Speed | Fastest | Fast | Moderate |
+| Feature             | Vitest          | Mocha            | Jest                    |
+| ------------------- | --------------- | ---------------- | ----------------------- |
+| Built-in assertions | Yes             | No (use Chai)    | Yes                     |
+| Mocking             | Yes (vi)        | No (use Sinon)   | Yes                     |
+| Snapshot testing    | Yes             | No               | Yes                     |
+| Watch mode          | Yes (excellent) | Yes              | Yes (better than Mocha) |
+| Parallel execution  | Yes             | Yes (v8+)        | Yes                     |
+| Code coverage       | Yes (v8/c8)     | No (use c8/nyc)  | Yes                     |
+| TypeScript support  | Native          | Via ts-node      | Via ts-jest             |
+| VS Code integration | Community       | Official support | Community               |
+| ESM support         | Native          | Limited          | Limited                 |
+| Speed               | Fastest         | Fast             | Moderate                |
 
 ## Recommendation for VS Code Extensions
 
@@ -26,10 +26,12 @@
 5. **Modern**: Native ESM support, no CommonJS workarounds
 
 **Use Mocha** only when:
+
 - Running VS Code extension host tests via `@vscode/test-electron` (requires Mocha)
 - Existing legacy test suites that haven't been migrated
 
 **Use Jest** when:
+
 - Building pure Node.js libraries
 - Team already familiar with Jest ecosystem
 
@@ -102,6 +104,7 @@ describe('MyComponent', () => {
 ### When Still Needed
 
 Mocha is still required for:
+
 - `@vscode/test-electron` E2E tests (VS Code extension host)
 - `@vscode/test-cli` integration tests
 
@@ -161,23 +164,39 @@ vi.restoreAllMocks();
 
 ```typescript
 // Mocha
-before(() => { /* ... */ });
-beforeEach(() => { /* ... */ });
-afterEach(() => { /* ... */ });
-after(() => { /* ... */ });
+before(() => {
+  /* ... */
+});
+beforeEach(() => {
+  /* ... */
+});
+afterEach(() => {
+  /* ... */
+});
+after(() => {
+  /* ... */
+});
 
 // Vitest
-beforeAll(() => { /* ... */ });
-beforeEach(() => { /* ... */ });
-afterEach(() => { /* ... */ });
-afterAll(() => { /* ... */ });
+beforeAll(() => {
+  /* ... */
+});
+beforeEach(() => {
+  /* ... */
+});
+afterEach(() => {
+  /* ... */
+});
+afterAll(() => {
+  /* ... */
+});
 ```
 
 ### Timeouts
 
 ```typescript
 // Mocha
-it('slow test', function() {
+it('slow test', function () {
   this.timeout(5000);
   // ...
 });
@@ -193,22 +212,22 @@ it('slow test', async () => {
 ### Test Execution Time (1000 tests)
 
 | Framework | Time | Memory |
-|-----------|------|--------|
-| Vitest | ~8s | ~120MB |
-| Mocha | ~15s | ~150MB |
-| Jest | ~20s | ~300MB |
+| --------- | ---- | ------ |
+| Vitest    | ~8s  | ~120MB |
+| Mocha     | ~15s | ~150MB |
+| Jest      | ~20s | ~300MB |
 
 ## Decision Matrix
 
-| Criteria | Weight | Vitest | Mocha | Jest |
-|----------|--------|--------|-------|------|
-| Speed | 5 | ★★★★★ (5) | ★★★ (3) | ★★★ (3) |
-| TypeScript support | 5 | ★★★★★ (5) | ★★★ (3) | ★★★★ (4) |
-| Built-in features | 4 | ★★★★★ (5) | ★★ (2) | ★★★★★ (5) |
-| VS Code E2E compat | 3 | ★★★ (3) | ★★★★★ (5) | ★★★ (3) |
-| ESM support | 4 | ★★★★★ (5) | ★★★ (3) | ★★★ (3) |
-| Ease of setup | 4 | ★★★★★ (5) | ★★★ (3) | ★★★★ (4) |
-| **Total** | | **119/125** | **79/125** | **93/125** |
+| Criteria           | Weight | Vitest      | Mocha      | Jest       |
+| ------------------ | ------ | ----------- | ---------- | ---------- |
+| Speed              | 5      | ★★★★★ (5)   | ★★★ (3)    | ★★★ (3)    |
+| TypeScript support | 5      | ★★★★★ (5)   | ★★★ (3)    | ★★★★ (4)   |
+| Built-in features  | 4      | ★★★★★ (5)   | ★★ (2)     | ★★★★★ (5)  |
+| VS Code E2E compat | 3      | ★★★ (3)     | ★★★★★ (5)  | ★★★ (3)    |
+| ESM support        | 4      | ★★★★★ (5)   | ★★★ (3)    | ★★★ (3)    |
+| Ease of setup      | 4      | ★★★★★ (5)   | ★★★ (3)    | ★★★★ (4)   |
+| **Total**          |        | **119/125** | **79/125** | **93/125** |
 
 > Scoring: Each star = 1 point (1–5 scale). Total = sum of (weight × star rating) for each criterion. Maximum possible = 125 (sum of all weights × 5).
 

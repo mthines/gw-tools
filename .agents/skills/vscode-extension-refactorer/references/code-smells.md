@@ -5,55 +5,64 @@
 ### 1. God Class
 
 **Indicators**:
+
 - Class exceeds 500 lines
 - More than 10 public methods
 - Multiple unrelated responsibilities
 - High coupling with many other classes
 
 **Example**:
+
 ```typescript
 // God Class - Does everything
 class Extension {
   // Terminal management
-  createTerminal(): void { }
-  disposeTerminal(): void { }
+  createTerminal(): void {}
+  disposeTerminal(): void {}
 
   // UI management
-  updateStatusBar(): void { }
-  showPanel(): void { }
+  updateStatusBar(): void {}
+  showPanel(): void {}
 
   // Configuration
-  loadConfig(): void { }
-  saveConfig(): void { }
+  loadConfig(): void {}
+  saveConfig(): void {}
 
   // File watching
-  watchFiles(): void { }
-  onFileChange(): void { }
+  watchFiles(): void {}
+  onFileChange(): void {}
 
   // Commands
-  registerCommands(): void { }
-  executeCommand(): void { }
+  registerCommands(): void {}
+  executeCommand(): void {}
 }
 ```
 
 **Refactoring**:
+
 - Extract Class: Create separate classes for each responsibility
 - Use Coordinator pattern to orchestrate
 
 ### 2. Long Method
 
 **Indicators**:
+
 - Method exceeds 50 lines
 - Multiple levels of nesting
 - Multiple sequential responsibilities
 - Difficult to test in isolation
 
 **Example**:
+
 ```typescript
 async function handleMessage(message: Message): Promise<void> {
   // Validation (20 lines)
-  if (!message) { throw new Error('No message'); }
-  if (!message.type) { throw new Error('No type'); }
+  if (!message) {
+    throw new Error('No message');
+  }
+  if (!message.type) {
+    throw new Error('No type');
+  }
   // ... more validation
 
   // Parsing (15 lines)
@@ -79,17 +88,20 @@ async function handleMessage(message: Message): Promise<void> {
 ```
 
 **Refactoring**:
+
 - Extract Method: Create focused methods
 - Replace conditional with polymorphism
 
 ### 3. Feature Envy
 
 **Indicators**:
+
 - Method uses more data from another class than its own
 - Extensive use of getters from other objects
 - Logic that should belong to the data's owner
 
 **Example**:
+
 ```typescript
 class TerminalRenderer {
   render(terminal: Terminal): void {
@@ -110,63 +122,78 @@ class TerminalRenderer {
 ```
 
 **Refactoring**:
+
 - Move Method: Move logic to the class that owns the data
 - Extract Method: Create a method on Terminal that does this work
 
 ### 4. Data Clumps
 
 **Indicators**:
+
 - Same group of parameters passed together repeatedly
 - Related fields always used together
 - Parallel arrays or multiple related primitives
 
 **Example**:
+
 ```typescript
 // Same parameters everywhere
-function createTerminal(cols: number, rows: number, scrollback: number): void { }
-function resizeTerminal(cols: number, rows: number): void { }
-function validateDimensions(cols: number, rows: number): boolean { }
-function logDimensions(cols: number, rows: number): void { }
+function createTerminal(cols: number, rows: number, scrollback: number): void {}
+function resizeTerminal(cols: number, rows: number): void {}
+function validateDimensions(cols: number, rows: number): boolean {}
+function logDimensions(cols: number, rows: number): void {}
 ```
 
 **Refactoring**:
+
 - Introduce Parameter Object: Create Dimensions interface
+
 ```typescript
 interface Dimensions {
   cols: number;
   rows: number;
 }
 
-function createTerminal(dimensions: Dimensions, scrollback: number): void { }
-function resizeTerminal(dimensions: Dimensions): void { }
+function createTerminal(dimensions: Dimensions, scrollback: number): void {}
+function resizeTerminal(dimensions: Dimensions): void {}
 ```
 
 ### 5. Primitive Obsession
 
 **Indicators**:
+
 - Using primitives for domain concepts
 - String/number used where object would be clearer
 - Type checks using typeof instead of proper types
 
 **Example**:
+
 ```typescript
 // Using primitives for rich domain concepts
 function processTerminal(
-  id: number,           // Should be TerminalId
-  status: string,       // Should be TerminalStatus enum
-  output: string,       // Should be TerminalOutput
-  timestamp: number     // Should be Date or Timestamp
+  id: number, // Should be TerminalId
+  status: string, // Should be TerminalStatus enum
+  output: string, // Should be TerminalOutput
+  timestamp: number // Should be Date or Timestamp
 ): void {
-  if (status === 'running') { }  // Magic string
-  if (id > 0 && id <= 5) { }     // Magic numbers
+  if (status === 'running') {
+  } // Magic string
+  if (id > 0 && id <= 5) {
+  } // Magic numbers
 }
 ```
 
 **Refactoring**:
+
 - Replace with Value Object
+
 ```typescript
 type TerminalId = Brand<number, 'TerminalId'>;
-enum TerminalStatus { Idle, Running, Disposing }
+enum TerminalStatus {
+  Idle,
+  Running,
+  Disposing,
+}
 
 interface TerminalOutput {
   content: string;
@@ -174,11 +201,7 @@ interface TerminalOutput {
   type: 'stdout' | 'stderr';
 }
 
-function processTerminal(
-  id: TerminalId,
-  status: TerminalStatus,
-  output: TerminalOutput
-): void { }
+function processTerminal(id: TerminalId, status: TerminalStatus, output: TerminalOutput): void {}
 ```
 
 ## Coupling Smells
@@ -186,11 +209,13 @@ function processTerminal(
 ### 6. Inappropriate Intimacy
 
 **Indicators**:
+
 - Class accesses private/internal details of another
 - Bidirectional dependencies
 - Circular references between classes
 
 **Example**:
+
 ```typescript
 class TerminalManager {
   private webview: WebviewManager;
@@ -203,44 +228,40 @@ class TerminalManager {
 }
 
 class WebviewManager {
-  _internalState: any;  // Exposed internal state
+  _internalState: any; // Exposed internal state
   _messageQueue: any[]; // Exposed internal queue
 
-  private manager: TerminalManager;  // Circular reference
+  private manager: TerminalManager; // Circular reference
 }
 ```
 
 **Refactoring**:
+
 - Extract Interface: Define clear public contracts
 - Use events/callbacks instead of direct access
 
 ### 7. Message Chains
 
 **Indicators**:
+
 - Long chains of method calls: a.b().c().d()
 - Navigation through object graph
 - Coupling to internal structure
 
 **Example**:
+
 ```typescript
 // Long chain navigating structure
-const output = terminal
-  .getProcess()
-  .getBuffer()
-  .getActiveBuffer()
-  .getLine(0)
-  .getText();
+const output = terminal.getProcess().getBuffer().getActiveBuffer().getLine(0).getText();
 
 // Accessing nested configuration
-const fontSize = config
-  .get('editor')
-  .get('terminal')
-  .get('font')
-  .get('size');
+const fontSize = config.get('editor').get('terminal').get('font').get('size');
 ```
 
 **Refactoring**:
+
 - Hide Delegate: Create methods that encapsulate navigation
+
 ```typescript
 class Terminal {
   getOutputText(): string {
@@ -255,30 +276,33 @@ const output = terminal.getOutputText();
 ### 8. Middle Man
 
 **Indicators**:
+
 - Class that only delegates to another class
 - Methods that just forward calls
 - No added value or transformation
 
 **Example**:
+
 ```typescript
 class TerminalProxy {
   private terminal: Terminal;
 
   write(data: string): void {
-    this.terminal.write(data);  // Just forwarding
+    this.terminal.write(data); // Just forwarding
   }
 
   resize(cols: number, rows: number): void {
-    this.terminal.resize(cols, rows);  // Just forwarding
+    this.terminal.resize(cols, rows); // Just forwarding
   }
 
   dispose(): void {
-    this.terminal.dispose();  // Just forwarding
+    this.terminal.dispose(); // Just forwarding
   }
 }
 ```
 
 **Refactoring**:
+
 - Remove Middle Man: Use Terminal directly
 - Or add real value (logging, validation, transformation)
 
@@ -287,48 +311,54 @@ class TerminalProxy {
 ### 9. Divergent Change
 
 **Indicators**:
+
 - Class changes for multiple unrelated reasons
 - Different features require changes to same class
 - Violation of Single Responsibility Principle
 
 **Example**:
+
 ```typescript
 class Terminal {
   // Changes when terminal behavior changes
-  write(data: string): void { }
-  resize(cols: number, rows: number): void { }
+  write(data: string): void {}
+  resize(cols: number, rows: number): void {}
 
   // Changes when rendering changes
-  render(): HTMLElement { }
-  applyTheme(theme: Theme): void { }
+  render(): HTMLElement {}
+  applyTheme(theme: Theme): void {}
 
   // Changes when persistence changes
-  serialize(): string { }
-  deserialize(data: string): void { }
+  serialize(): string {}
+  deserialize(data: string): void {}
 
   // Changes when configuration changes
-  loadConfig(): void { }
-  applyConfig(): void { }
+  loadConfig(): void {}
+  applyConfig(): void {}
 }
 ```
 
 **Refactoring**:
+
 - Extract Class: Separate concerns
+
 ```typescript
-class Terminal { }           // Core behavior
-class TerminalRenderer { }   // Rendering
-class TerminalSerializer { } // Persistence
-class TerminalConfig { }     // Configuration
+class Terminal {} // Core behavior
+class TerminalRenderer {} // Rendering
+class TerminalSerializer {} // Persistence
+class TerminalConfig {} // Configuration
 ```
 
 ### 10. Shotgun Surgery
 
 **Indicators**:
+
 - Single change requires edits to many files
 - Related logic scattered across codebase
 - No central location for a concept
 
 **Example**:
+
 ```typescript
 // Adding a new message type requires changes in:
 // 1. message-types.ts
@@ -336,20 +366,24 @@ type MessageType = 'create' | 'write' | 'resize' | 'NEW_TYPE';
 
 // 2. message-handler.ts
 switch (message.type) {
-  case 'NEW_TYPE': handleNewType(); break;
+  case 'NEW_TYPE':
+    handleNewType();
+    break;
 }
 
 // 3. webview-handler.ts
-if (message.type === 'NEW_TYPE') { }
+if (message.type === 'NEW_TYPE') {
+}
 
 // 4. message-validator.ts
-const validators = { 'NEW_TYPE': validateNewType };
+const validators = { NEW_TYPE: validateNewType };
 
 // 5. message-logger.ts
-const loggers = { 'NEW_TYPE': logNewType };
+const loggers = { NEW_TYPE: logNewType };
 ```
 
 **Refactoring**:
+
 - Move Method: Centralize related logic
 - Use polymorphism with handler registry
 
@@ -358,11 +392,13 @@ const loggers = { 'NEW_TYPE': logNewType };
 ### 11. Conditional Complexity
 
 **Indicators**:
+
 - Nested if/else statements
 - Long switch statements
 - Type checking with instanceof/typeof
 
 **Example**:
+
 ```typescript
 function process(item: unknown): void {
   if (item instanceof Terminal) {
@@ -384,6 +420,7 @@ function process(item: unknown): void {
 ```
 
 **Refactoring**:
+
 - Replace Conditional with Polymorphism
 - Use Strategy pattern
 - Introduce Guard Clauses
@@ -391,32 +428,36 @@ function process(item: unknown): void {
 ### 12. Parallel Inheritance
 
 **Indicators**:
+
 - Creating subclass in one hierarchy requires subclass in another
 - Mirror class structures
 - Coupled hierarchies
 
 **Example**:
+
 ```typescript
 // Every terminal type needs a renderer type
-class BashTerminal extends Terminal { }
-class BashTerminalRenderer extends TerminalRenderer { }
+class BashTerminal extends Terminal {}
+class BashTerminalRenderer extends TerminalRenderer {}
 
-class ZshTerminal extends Terminal { }
-class ZshTerminalRenderer extends TerminalRenderer { }
+class ZshTerminal extends Terminal {}
+class ZshTerminalRenderer extends TerminalRenderer {}
 
-class PowerShellTerminal extends Terminal { }
-class PowerShellTerminalRenderer extends TerminalRenderer { }
+class PowerShellTerminal extends Terminal {}
+class PowerShellTerminalRenderer extends TerminalRenderer {}
 ```
 
 **Refactoring**:
+
 - Collapse Hierarchy: Merge if possible
 - Use composition over inheritance
+
 ```typescript
 class Terminal {
   constructor(
     private shell: ShellAdapter,
     private renderer: TerminalRenderer
-  ) { }
+  ) {}
 }
 ```
 
@@ -425,28 +466,31 @@ class Terminal {
 ### 13. Inconsistent Naming
 
 **Indicators**:
+
 - Similar concepts with different names
 - Mixed naming conventions
 - Unclear abbreviations
 
 **Example**:
+
 ```typescript
 // Inconsistent naming for similar concepts
-class TerminalMgr { }      // Abbreviated
-class WebviewManager { }   // Full word
-class UICtrl { }           // Different abbreviation
+class TerminalMgr {} // Abbreviated
+class WebviewManager {} // Full word
+class UICtrl {} // Different abbreviation
 
 // Mixed conventions
-function getTerminal(): Terminal { }
-function fetchWebview(): Webview { }
-function retrieveConfig(): Config { }
+function getTerminal(): Terminal {}
+function fetchWebview(): Webview {}
+function retrieveConfig(): Config {}
 
 // Unclear abbreviations
-const termProc = getTermProc();  // What's Proc?
-const wvMsgQ = new WvMsgQ();     // What's Wv? MsgQ?
+const termProc = getTermProc(); // What's Proc?
+const wvMsgQ = new WvMsgQ(); // What's Wv? MsgQ?
 ```
 
 **Refactoring**:
+
 - Rename consistently
 - Use full words or standardized abbreviations
 - Follow project naming conventions
@@ -454,11 +498,13 @@ const wvMsgQ = new WvMsgQ();     // What's Wv? MsgQ?
 ### 14. Comments as Deodorant
 
 **Indicators**:
+
 - Comments explaining what code does
 - Comments apologizing for code
 - TODO comments that never get done
 
 **Example**:
+
 ```typescript
 // Calculate the terminal size based on container
 // dimensions and font metrics
@@ -474,16 +520,15 @@ function calc(c: HTMLElement, f: Font): { w: number; h: number } {
 ```
 
 **Refactoring**:
+
 - Rename to be self-documenting
 - Extract Method with descriptive name
+
 ```typescript
-function calculateTerminalDimensions(
-  container: HTMLElement,
-  fontMetrics: FontMetrics
-): TerminalDimensions {
+function calculateTerminalDimensions(container: HTMLElement, fontMetrics: FontMetrics): TerminalDimensions {
   return {
     cols: Math.floor(container.clientWidth / fontMetrics.charWidth),
-    rows: Math.floor(container.clientHeight / fontMetrics.lineHeight)
+    rows: Math.floor(container.clientHeight / fontMetrics.lineHeight),
   };
 }
 ```
@@ -493,11 +538,13 @@ function calculateTerminalDimensions(
 ### 15. Unnecessary Computation
 
 **Indicators**:
+
 - Same value calculated multiple times
 - Expensive operations in loops
 - No caching of stable values
 
 **Example**:
+
 ```typescript
 function render(terminals: Terminal[]): void {
   for (const terminal of terminals) {
@@ -512,8 +559,10 @@ function render(terminals: Terminal[]): void {
 ```
 
 **Refactoring**:
+
 - Cache calculations
 - Move invariants outside loops
+
 ```typescript
 function render(terminals: Terminal[]): void {
   // Calculate once
@@ -530,14 +579,16 @@ function render(terminals: Terminal[]): void {
 ### 16. Memory Leaks
 
 **Indicators**:
+
 - Event listeners without cleanup
 - Closures capturing large objects
 - Growing collections without bounds
 
 **Example**:
+
 ```typescript
 class Terminal {
-  private history: string[] = [];  // Unbounded growth
+  private history: string[] = []; // Unbounded growth
 
   constructor() {
     // Listener never removed
@@ -550,12 +601,13 @@ class Terminal {
   }
 
   write(data: string): void {
-    this.history.push(data);  // Never trimmed
+    this.history.push(data); // Never trimmed
   }
 }
 ```
 
 **Refactoring**:
+
 - Add dispose handlers
 - Bound collection sizes
 - Track and clean up resources

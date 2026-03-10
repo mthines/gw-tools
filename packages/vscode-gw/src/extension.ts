@@ -56,7 +56,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!worktreePath) {
         // No item provided, show picker
         const worktrees = await listWorktrees(workspacePath);
-        const picks = worktrees.filter((w) => !w.bare).map((w) => ({ label: w.branch, description: w.path, path: w.path }));
+        const picks = worktrees
+          .filter((w) => !w.bare)
+          .map((w) => ({ label: w.branch, description: w.path, path: w.path }));
 
         if (picks.length === 0) {
           vscode.window.showWarningMessage('No worktrees available.');
@@ -80,7 +82,9 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!worktreePath) {
         // No item provided, show picker
         const worktrees = await listWorktrees(workspacePath);
-        const picks = worktrees.filter((w) => !w.bare).map((w) => ({ label: w.branch, description: w.path, path: w.path }));
+        const picks = worktrees
+          .filter((w) => !w.bare)
+          .map((w) => ({ label: w.branch, description: w.path, path: w.path }));
 
         if (picks.length === 0) {
           vscode.window.showWarningMessage('No worktrees available.');
