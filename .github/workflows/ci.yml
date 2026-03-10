@@ -2,38 +2,23 @@ name: CI
 
 on:
   push:
-    branches:
-      - main
-    tags:
-      - 'v*'
-      - '!v*-beta.*' # Beta tags are released by the PR workflow, not tag push
+    branches: [main]
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
     inputs:
-      test_release:
-        description: 'Test release job (dry-run, no actual publishing)'
+      force_gw:
+        description: "Force gw-tool release"
         type: boolean
         default: false
-      force_release:
-        description: 'Force gw-tool release even without source changes (actual publish)'
+      force_agent:
+        description: "Force agent release"
         type: boolean
         default: false
-      force_release_agent:
-        description: 'Force autonomous-workflow-agent release even without source changes (actual publish)'
+      dry_run:
+        description: "Dry run (no publishing)"
         type: boolean
         default: false
-      force_release_vscode:
-        description: 'Force vscode-gw extension release even without source changes (actual publish)'
-        type: boolean
-        default: false
-      create_beta:
-        description: 'Create beta release for the selected branch (must have an open PR)'
-        type: boolean
-        default: false
-      version:
-        description: 'Version to simulate (e.g., 0.28.1) - only for test_release dry-runs, ignored by force_release'
-        type: string
-        default: '0.0.0-test'
 
 # Default permissions for all jobs
 permissions:
@@ -41,16 +26,155 @@ permissions:
   contents: read
 
 jobs:
-  test:
+  # =============================================================================
+  # Step 1: Detect which projects have changes
+  # =============================================================================
+  detect-changes:
+    runs-on: ubuntu-latest
+    outputs:
+      gw_changed: ${{ steps.detect.outputs.gw_changed }}
+      agent_changed: ${{ steps.detect.outputs.agent_changed }}
+      is_beta: ${{ steps.detect.outputs.is_beta }}
+      pr_number: ${{ steps.detect.outputs.pr_number }}
+      base_ref: ${{ steps.detect.outputs.base_ref }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --tags --force
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Detect changes
+        id: detect
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          FORCE_GW: ${{ inputs.force_gw }}
+          FORCE_AGENT: ${{ inputs.force_agent }}
+        run: |
+          # Determine context
+          IS_BETA="false"
+          PR_NUMBER=""
+          BASE_REF="main"
+
+          if [ "${{ github.event_name }}" = "push" ]; then
+            # Push to main - find last stable tag as base
+            LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1 || echo "")
+            if [ -n "$LAST_STABLE_TAG" ]; then
+              BASE_REF="$LAST_STABLE_TAG"
+            else
+              # No tags yet, use HEAD~1
+              BASE_REF="HEAD~1"
+            fi
+            echo "::notice::Push to main - comparing against $BASE_REF"
+
+          elif [ "${{ github.event_name }}" = "pull_request" ]; then
+            # PR - use PR base branch
+            BASE_REF="origin/${{ github.base_ref }}"
+            PR_NUMBER="${{ github.event.pull_request.number }}"
+            # Beta only for non-draft PRs
+            if [ "${{ github.event.pull_request.draft }}" = "false" ]; then
+              IS_BETA="true"
+            fi
+            echo "::notice::PR #$PR_NUMBER - comparing against $BASE_REF (draft=${{ github.event.pull_request.draft }})"
+
+          elif [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Manual trigger
+            if [ "${{ github.ref }}" = "refs/heads/main" ]; then
+              # Main branch - find last stable tag
+              LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1 || echo "")
+              if [ -n "$LAST_STABLE_TAG" ]; then
+                BASE_REF="$LAST_STABLE_TAG"
+              else
+                BASE_REF="HEAD~1"
+              fi
+            else
+              # Non-main branch - check for open PR
+              PR_INFO=$(gh pr view --json number,baseRefName,state 2>/dev/null || echo "")
+              if [ -n "$PR_INFO" ]; then
+                PR_STATE=$(echo "$PR_INFO" | jq -r '.state')
+                if [ "$PR_STATE" = "OPEN" ]; then
+                  PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number')
+                  BASE_REF="origin/$(echo "$PR_INFO" | jq -r '.baseRefName')"
+                  IS_BETA="true"
+                  echo "::notice::Manual trigger with open PR #$PR_NUMBER"
+                fi
+              fi
+              # If no PR, use HEAD~1
+              if [ -z "$PR_NUMBER" ]; then
+                BASE_REF="HEAD~1"
+              fi
+            fi
+            echo "::notice::Manual trigger - comparing against $BASE_REF"
+          fi
+
+          # Skip release commit
+          COMMIT_MSG=$(git log -1 --pretty=%s)
+          if [[ "$COMMIT_MSG" =~ ^chore\((gw|autonomous-workflow-agent)\):\ release ]]; then
+            echo "::notice::Skipping - this is a release commit"
+            echo "gw_changed=false" >> $GITHUB_OUTPUT
+            echo "agent_changed=false" >> $GITHUB_OUTPUT
+            echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
+            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+            echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # Use Nx to detect affected projects
+          echo "::group::Nx affected projects"
+          AFFECTED=$(npx nx show projects --affected --base="$BASE_REF" 2>/dev/null || echo "")
+          echo "Affected projects: $AFFECTED"
+          echo "::endgroup::"
+
+          # Check for gw-tool changes
+          GW_CHANGED="false"
+          if [ "$FORCE_GW" = "true" ]; then
+            GW_CHANGED="true"
+            echo "::notice::gw-tool: force release enabled"
+          elif echo "$AFFECTED" | grep -q "@gw-tools/gw-tool"; then
+            GW_CHANGED="true"
+            echo "::notice::gw-tool: changes detected"
+          else
+            echo "::notice::gw-tool: no changes"
+          fi
+
+          # Check for agent changes
+          AGENT_CHANGED="false"
+          if [ "$FORCE_AGENT" = "true" ]; then
+            AGENT_CHANGED="true"
+            echo "::notice::autonomous-workflow-agent: force release enabled"
+          elif echo "$AFFECTED" | grep -q "autonomous-workflow-agent"; then
+            AGENT_CHANGED="true"
+            echo "::notice::autonomous-workflow-agent: changes detected"
+          else
+            echo "::notice::autonomous-workflow-agent: no changes"
+          fi
+
+          # Output results
+          echo "gw_changed=$GW_CHANGED" >> $GITHUB_OUTPUT
+          echo "agent_changed=$AGENT_CHANGED" >> $GITHUB_OUTPUT
+          echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
+          echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+          echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+
+  # =============================================================================
+  # Step 2: Test jobs (run in parallel)
+  # =============================================================================
+  test-gw:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.gw_changed == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-
-      # This enables task distribution via Nx Cloud
-      # Run this command as early as possible, before dependencies are installed
-      # Learn more at https://nx.dev/ci/reference/nx-cloud-cli#npx-nxcloud-startcirun
-      # Uncomment this line to enable task distribution
-      # - run: npx nx start-ci-run --distribute-on="3 linux-medium-js" --stop-agents-after="typecheck"
 
       - uses: denoland/setup-deno@v2
         with:
@@ -61,108 +185,99 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
+          cache: "pnpm"
 
       - run: pnpm install --frozen-lockfile
 
-      # Configure git for tests that create commits
       - name: Configure git
         run: |
           git config --global user.email "ci@gw-tools.dev"
           git config --global user.name "CI"
 
-      # Check formatting (warn but don't block)
       - name: Check formatting
         run: |
           if ! npx nx format:check --base="remotes/origin/main" 2>/dev/null; then
             echo "::warning::Formatting issues detected. Run 'nx format:write' locally to fix."
           fi
 
-      # Use Deno-compatible targets (test) instead of tsc-based (build, typecheck)
-      - run: npx nx run @gw-tools/gw-tool:test:ci
+      - name: Test gw-tool
+        run: npx nx run @gw-tools/gw-tool:test:ci
 
-  auto-tag-beta:
-    # Run on non-draft PRs to create beta releases, or manual trigger with create_beta
+  test-agent:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.agent_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: "pnpm"
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build agent package
+        run: npx nx build autonomous-workflow-agent
+
+      - name: Test agent package
+        run: npx nx test autonomous-workflow-agent
+
+      - name: Lint agent package
+        run: npx nx lint autonomous-workflow-agent
+
+  # =============================================================================
+  # Step 3: Version jobs (calculate version, create tag)
+  # =============================================================================
+  version-gw:
+    needs: [detect-changes, test-gw]
+    # Run if:
+    # - Tests passed (or were skipped because no changes)
+    # - gw changed OR force release
+    # - Not a dry run
+    # - Push to main (stable) OR non-draft PR (beta) OR manual with open PR (beta)
     if: |
-      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
-      (github.event_name == 'workflow_dispatch' && inputs.create_beta)
-    needs: test
+      always() &&
+      (needs.test-gw.result == 'success' || needs.test-gw.result == 'skipped') &&
+      needs.detect-changes.outputs.gw_changed == 'true' &&
+      !inputs.dry_run &&
+      (
+        (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
+        (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+        (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || needs.detect-changes.outputs.pr_number != ''))
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
     outputs:
-      created: ${{ steps.tag.outputs.created || 'false' }}
-      version: ${{ steps.tag.outputs.version || '' }}
-      pr_number: ${{ steps.tag.outputs.pr_number || '' }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      created: ${{ steps.tag.outputs.created }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # For PR events use the PR head SHA, for workflow_dispatch use the selected branch
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Detect PR info
-        id: pr
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            # Get PR info from current branch
-            PR_INFO=$(gh pr view --json number,baseRefName,state 2>/dev/null || echo "")
-            if [ -z "$PR_INFO" ]; then
-              echo "::error::No PR found for branch ${{ github.ref_name }}. create_beta requires a branch with an open PR."
-              exit 1
-            fi
+      - name: Fetch all tags
+        run: git fetch --tags --force
 
-            PR_STATE=$(echo "$PR_INFO" | jq -r '.state')
-            if [ "$PR_STATE" != "OPEN" ]; then
-              echo "::error::PR is not open (state: $PR_STATE). create_beta requires an open PR."
-              exit 1
-            fi
-
-            PR_NUMBER=$(echo "$PR_INFO" | jq -r '.number')
-            BASE_REF=$(echo "$PR_INFO" | jq -r '.baseRefName')
-
-            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
-            echo "::notice::📋 Detected PR #$PR_NUMBER (base: $BASE_REF)"
-          else
-            # Use PR event context
-            echo "pr_number=${{ github.event.pull_request.number }}" >> $GITHUB_OUTPUT
-            echo "base_ref=${{ github.base_ref }}" >> $GITHUB_OUTPUT
-          fi
-
-      - name: Check for releasable changes
-        id: check
-        run: |
-          # Check if gw-tool source files changed in this PR
-          CHANGED=$(git diff --name-only origin/${{ steps.pr.outputs.base_ref }}...HEAD -- packages/gw-tool/src/)
-
-          if [ -z "$CHANGED" ]; then
-            echo "::notice::⏭️ No source changes in packages/gw-tool/src/"
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "should_release=true" >> $GITHUB_OUTPUT
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Calculate beta version
-        if: steps.check.outputs.should_release == 'true'
+      - name: Calculate version
         id: version
+        env:
+          IS_BETA: ${{ needs.detect-changes.outputs.is_beta }}
+          PR_NUMBER: ${{ needs.detect-changes.outputs.pr_number }}
+          BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
         run: |
-          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
-          BASE_REF="${{ steps.pr.outputs.base_ref }}"
-
-          echo "📦 Source files changed:"
-          echo "${{ steps.check.outputs.changed_files }}"
+          echo "::group::Commit analysis"
 
           # Get commits for version determination
-          COMMITS=$(git log origin/${BASE_REF}...HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          COMMITS=$(git log "${BASE_REF}"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/ 2>/dev/null || git log HEAD~10..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          echo "Commits since $BASE_REF:"
+          echo "$COMMITS"
 
           # Determine bump type from conventional commits
           BUMP_TYPE="patch"
@@ -171,13 +286,16 @@ jobs:
           elif echo "$COMMITS" | grep -q "^feat"; then
             BUMP_TYPE="minor"
           fi
+          echo "Bump type: $BUMP_TYPE"
+          echo "::endgroup::"
 
-          # Get current version and calculate base version
+          # Get current version
           CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
           # Strip any existing prerelease suffix
           BASE_CURRENT=$(echo "$CURRENT" | sed -E 's/-.*$//')
           IFS='.' read -ra V <<< "$BASE_CURRENT"
 
+          # Calculate new version
           case "$BUMP_TYPE" in
             major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
             minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
@@ -186,156 +304,100 @@ jobs:
 
           BASE_VERSION="${V[0]}.${V[1]}.${V[2]}"
 
-          # Find next beta number for this PR
-          EXISTING_BETAS=$(git tag -l "v${BASE_VERSION}-beta.${PR_NUMBER}.*" | wc -l)
-          BETA_NUM=$((EXISTING_BETAS + 1))
+          if [ "$IS_BETA" = "true" ] && [ -n "$PR_NUMBER" ]; then
+            # Beta version: v{version}-beta.{pr#}.{n}
+            EXISTING=$(git tag -l "v${BASE_VERSION}-beta.${PR_NUMBER}.*" | wc -l | tr -d ' ')
+            BETA_NUM=$((EXISTING + 1))
+            NEW_VERSION="${BASE_VERSION}-beta.${PR_NUMBER}.${BETA_NUM}"
+            echo "::notice::Beta version: $NEW_VERSION"
+          else
+            # Stable version
+            NEW_VERSION="$BASE_VERSION"
+            echo "::notice::Stable version: $NEW_VERSION"
+          fi
 
-          NEW_VERSION="${BASE_VERSION}-beta.${PR_NUMBER}.${BETA_NUM}"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$NEW_VERSION" >> $GITHUB_OUTPUT
 
-          echo "::notice::🧪 Beta version: $NEW_VERSION ($BUMP_TYPE bump, PR #$PR_NUMBER)"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
-
-      - name: Create beta tag
-        if: steps.check.outputs.should_release == 'true'
+      - name: Create tag
         id: tag
         run: |
-          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+          IS_BETA="${{ needs.detect-changes.outputs.is_beta }}"
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Create tag (don't modify package.json for betas - just tag the commit)
-          git tag -a "v$NEW_VERSION" -m "Beta release v$NEW_VERSION"
-          git push origin "v$NEW_VERSION"
+          if [ "$IS_BETA" = "true" ]; then
+            # Beta: just tag, don't update package.json
+            git tag -a "$TAG" -m "Beta release $TAG"
+            git push origin "$TAG"
+            echo "::notice::Created beta tag $TAG"
+          else
+            # Stable: update package.json, commit, then tag
+            cd packages/gw-tool/npm
+            sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+            cd -
 
-          echo "::notice::🏷️ Created beta tag v$NEW_VERSION"
+            git add packages/gw-tool/npm/package.json
+            git commit -m "chore(gw): release $TAG"
+            git tag -a "$TAG" -m "Release $TAG"
+            git push origin main
+            git push origin "$TAG"
+            echo "::notice::Created stable release $TAG"
+          fi
+
           echo "created=true" >> $GITHUB_OUTPUT
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "pr_number=${{ steps.pr.outputs.pr_number }}" >> $GITHUB_OUTPUT
 
-      - name: Comment on PR
-        if: steps.tag.outputs.created == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          VERSION="${{ steps.tag.outputs.version }}"
-          PR_NUMBER="${{ steps.pr.outputs.pr_number }}"
-
-          gh pr comment "$PR_NUMBER" --body "$(cat <<EOF
-          # 🧪 Beta Release \`v${VERSION}\`
-
-          A beta release has been created for this PR.
-
-          ### Installation
-
-          **npm:**
-          \`\`\`bash
-          npm install -g @gw-tools/gw@beta
-          \`\`\`
-
-          **Homebrew:**
-          \`\`\`bash
-          brew install mthines/gw-tools/gw-beta
-          \`\`\`
-
-          ---
-          📦 [View Release](https://github.com/mthines/gw-tools/releases/tag/v${VERSION})
-          EOF
-          )"
-
-  auto-tag:
-    # Run on push to main OR manual dispatch with force_release
+  version-agent:
+    # Waits for gw release to complete to avoid git push race conditions
+    needs: [detect-changes, test-agent, release-gw]
+    # Agent only releases stable versions from main branch
     if: |
-      (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-      (github.event_name == 'workflow_dispatch' && inputs.force_release)
-    needs: test
+      always() &&
+      (needs.test-agent.result == 'success' || needs.test-agent.result == 'skipped') &&
+      (needs.release-gw.result == 'success' || needs.release-gw.result == 'skipped') &&
+      needs.detect-changes.outputs.agent_changed == 'true' &&
+      !inputs.dry_run &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_agent))
     runs-on: ubuntu-latest
     permissions:
       contents: write
     outputs:
-      created: ${{ steps.tag.outputs.created || 'false' }}
-      version: ${{ steps.tag.outputs.version || '' }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      created: ${{ steps.tag.outputs.created }}
     steps:
-      # Use PAT to allow tag push to trigger release workflow
-      # Falls back to GITHUB_TOKEN if GH_PAT not set (but release won't auto-trigger)
+      # Checkout latest main to include any commits from gw release
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          ref: main
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Check for releasable changes
-        id: check
-        env:
-          FORCE_RELEASE: ${{ inputs.force_release }}
+      - name: Fetch latest main and tags
         run: |
-          # Force release bypasses all checks
-          if [ "$FORCE_RELEASE" = "true" ]; then
-            echo "::notice::🚀 Force release enabled - skipping change detection"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            LAST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1)
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Skip if this is a release commit
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          if [[ "$COMMIT_MSG" =~ ^chore\(gw\):\ release\ v ]]; then
-            echo "reason=release-commit" >> $GITHUB_OUTPUT
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Check if gw-tool source files changed since last STABLE tag
-          # (exclude beta tags - beta releases shouldn't block stable releases)
-          LAST_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1)
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-
-          if [ -z "$LAST_TAG" ]; then
-            CHANGED=$(git diff --name-only HEAD~1 -- packages/gw-tool/src/)
-          else
-            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/gw-tool/src/)
-          fi
-
-          if [ -z "$CHANGED" ]; then
-            echo "reason=no-source-changes" >> $GITHUB_OUTPUT
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          echo "should_release=true" >> $GITHUB_OUTPUT
-          echo "changed_files<<EOF" >> $GITHUB_OUTPUT
-          echo "$CHANGED" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
-
-      - name: Skip - No release needed
-        if: steps.check.outputs.should_release == 'false'
-        run: |
-          if [ "${{ steps.check.outputs.reason }}" = "release-commit" ]; then
-            echo "::notice::⏭️ Skipping release - this is already a release commit"
-          else
-            echo "::notice::⏭️ No release needed - no source changes in packages/gw-tool/src/ since ${{ steps.check.outputs.last_tag || 'initial commit' }}"
-          fi
-          echo "created=false" >> $GITHUB_OUTPUT
-        id: skip
+          git fetch origin main --tags --force
+          git reset --hard origin/main
+          echo "::notice::Checked out main at $(git rev-parse --short HEAD)"
 
       - name: Calculate version
-        if: steps.check.outputs.should_release == 'true'
         id: version
+        env:
+          BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
         run: |
-          LAST_TAG="${{ steps.check.outputs.last_tag }}"
+          # Get commits for version determination
+          LAST_AGENT_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1 || echo "")
 
-          echo "📦 Source files changed:"
-          echo "${{ steps.check.outputs.changed_files }}"
-
-          # Get commits since last tag for version determination
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+          if [ -n "$LAST_AGENT_TAG" ]; then
+            COMMITS=$(git log "$LAST_AGENT_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
           else
-            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/gw-tool/)
+            COMMITS=$(git log HEAD~10..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
           fi
 
-          # Determine bump type from conventional commits
+          # Determine bump type
           BUMP_TYPE="patch"
           if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
             BUMP_TYPE="major"
@@ -343,11 +405,9 @@ jobs:
             BUMP_TYPE="minor"
           fi
 
-          # Get current version and calculate new version
-          CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
-          # Strip any existing prerelease suffix (e.g., -beta.x)
-          BASE_CURRENT=$(echo "$CURRENT" | sed -E 's/-.*$//')
-          IFS='.' read -ra V <<< "$BASE_CURRENT"
+          # Get current version
+          CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          IFS='.' read -ra V <<< "$CURRENT"
 
           case "$BUMP_TYPE" in
             major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
@@ -357,73 +417,53 @@ jobs:
 
           NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
 
-          echo "::notice::📦 Version bump: $CURRENT → $NEW_VERSION ($BUMP_TYPE)"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "bump_type=$BUMP_TYPE" >> $GITHUB_OUTPUT
+          echo "::notice::autonomous-workflow-agent: $CURRENT -> $NEW_VERSION ($BUMP_TYPE)"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=autonomous-workflow-agent-v$NEW_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Create release tag
-        if: steps.check.outputs.should_release == 'true'
+      - name: Create tag
         id: tag
         run: |
-          NEW_VERSION="${{ steps.version.outputs.new_version }}"
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
 
-          # Update package.json version
-          cd packages/gw-tool/npm
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
-          cd -
-
-          # Commit and tag
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/gw-tool/npm/package.json
-          git commit -m "chore(gw): release v$NEW_VERSION"
-          git tag -a "v$NEW_VERSION" -m "Release v$NEW_VERSION"
 
-          # Push commit and tag
+          # Update package.json
+          cd packages/autonomous-workflow-agent
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+          cd -
+
+          git add packages/autonomous-workflow-agent/package.json
+          git commit -m "chore(autonomous-workflow-agent): release v$VERSION"
+          git tag -a "$TAG" -m "Release autonomous-workflow-agent v$VERSION"
           git push origin main
-          git push origin "v$NEW_VERSION"
+          git push origin "$TAG"
 
-          echo "::notice::🏷️ Created and pushed tag v$NEW_VERSION"
+          echo "::notice::Created tag $TAG"
           echo "created=true" >> $GITHUB_OUTPUT
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
-  release:
-    # Run when:
-    # 1. Tag push (v*) - direct tag push triggers release
-    # 2. auto-tag created a new stable version
-    # 3. auto-tag-beta created a new beta version
-    # 4. Manual dispatch with test_release=true - dry-run testing
-    needs: [test, auto-tag, auto-tag-beta]
-    # Note: Beta tag pushes are skipped here - beta releases are handled by the PR workflow
-    # that created the tag. Only stable tag pushes trigger release from tag event.
+  # =============================================================================
+  # Step 4: Release jobs
+  # =============================================================================
+  release-gw:
+    needs: [detect-changes, version-gw]
     if: |
       always() &&
-      needs.test.result == 'success' &&
-      (
-        (startsWith(github.ref, 'refs/tags/v') && !contains(github.ref, '-beta.')) ||
-        needs.auto-tag.outputs.created == 'true' ||
-        needs.auto-tag-beta.outputs.created == 'true' ||
-        (github.event_name == 'workflow_dispatch' && inputs.test_release)
-      )
+      needs.version-gw.outputs.created == 'true'
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
-      contents: write # For creating GitHub releases
-      id-token: write # For npm trusted publishing (OIDC)
-      pull-requests: write # For commenting on PRs
+      contents: write
+      id-token: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          # Use PAT to ensure we can see tags just pushed by auto-tag jobs
+          ref: ${{ needs.version-gw.outputs.tag }}
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Fetch all tags
-        run: |
-          git fetch --tags --force
-          echo "::group::Available tags"
-          git tag -l "v*" --sort=-version:refname | head -20
-          echo "::endgroup::"
 
       - uses: denoland/setup-deno@v2
         with:
@@ -434,108 +474,29 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Determine version
-        id: version
-        env:
-          # Pass context as env vars to avoid GitHub expression substitution issues in bash
-          GH_REF: ${{ github.ref }}
-          GH_REF_NAME: ${{ github.ref_name }}
-          # Use auto-tag-beta output for PR number (works for both PR events and workflow_dispatch)
-          PR_NUMBER: ${{ needs.auto-tag-beta.outputs.pr_number || github.event.pull_request.number }}
-          INPUT_VERSION: ${{ inputs.version }}
-          AUTO_TAG_CREATED: ${{ needs.auto-tag.outputs.created }}
-          AUTO_TAG_BETA_CREATED: ${{ needs.auto-tag-beta.outputs.created }}
-        run: |
-          echo "::group::Debug context"
-          echo "GH_REF: $GH_REF"
-          echo "GH_REF_NAME: $GH_REF_NAME"
-          echo "PR_NUMBER: $PR_NUMBER"
-          echo "INPUT_VERSION: $INPUT_VERSION"
-          echo "AUTO_TAG_CREATED: $AUTO_TAG_CREATED"
-          echo "AUTO_TAG_BETA_CREATED: $AUTO_TAG_BETA_CREATED"
-          echo "::endgroup::"
-
-          VERSION=""
-
-          # Priority 1: Direct tag push
-          if [[ "$GH_REF" == refs/tags/v* ]]; then
-            VERSION="$GH_REF_NAME"
-            echo "::notice::Using direct tag push: $VERSION"
-
-          # Priority 2: auto-tag-beta created a beta tag (detect from git)
-          elif [[ "$AUTO_TAG_BETA_CREATED" == "true" && -n "$PR_NUMBER" ]]; then
-            # Find the most recent beta tag for this PR
-            VERSION=$(git tag -l "v*-beta.${PR_NUMBER}.*" --sort=-version:refname | head -1)
-            if [ -n "$VERSION" ]; then
-              echo "::notice::Found beta tag for PR #$PR_NUMBER: $VERSION"
-            else
-              echo "::error::auto-tag-beta reported created=true but no tag found for PR #$PR_NUMBER"
-              exit 1
-            fi
-
-          # Priority 3: auto-tag created a stable tag (detect from git)
-          elif [[ "$AUTO_TAG_CREATED" == "true" ]]; then
-            # Find the most recent stable tag (exclude betas)
-            VERSION=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -1)
-            if [ -n "$VERSION" ]; then
-              echo "::notice::Found stable tag: $VERSION"
-            else
-              echo "::error::auto-tag reported created=true but no stable tag found"
-              exit 1
-            fi
-
-          # Priority 4: Manual dispatch with test version
-          elif [[ -n "$INPUT_VERSION" ]]; then
-            VERSION="v$INPUT_VERSION"
-            echo "::notice::Using manual input version: $VERSION"
-
-          else
-            echo "::error::No version could be determined!"
-            echo "This usually means release was triggered without a valid tag."
-            exit 1
-          fi
-
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "::notice::Final version for release: $VERSION"
-
-      - name: Checkout release tag
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          echo "Checking out tag: $VERSION"
-          git checkout "$VERSION"
-
-      - name: Run release (build, GitHub release, Homebrew)
+      - name: Run release script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           HOMEBREW_TAP_TOKEN: ${{ secrets.HOMEBREW_TAP_TOKEN }}
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
-          # Use custom env var name to avoid conflict with GitHub's built-in GITHUB_REF_NAME
-          RELEASE_VERSION: ${{ steps.version.outputs.version }}
-          # DRY_RUN only for test_release, NOT for force_release
-          DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && !inputs.force_release && 'true' || 'false' }}
-          SKIP_NPM: 'true'
+          RELEASE_VERSION: ${{ needs.version-gw.outputs.tag }}
+          SKIP_NPM: "true"
         run: npx nx run @gw-tools/gw-tool:release:ci
 
-      - name: Update npm for OIDC support
-        if: github.event_name != 'workflow_dispatch' || inputs.force_release
-        run: |
-          echo "Current npm version: $(npm --version)"
-          npm install -g npm@latest
-          echo "Updated npm version: $(npm --version)"
+      - name: Update npm
+        run: npm install -g npm@latest
 
       - name: Publish to npm
-        if: github.event_name != 'workflow_dispatch' || inputs.force_release
         working-directory: dist/packages/gw-tool/npm
         run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          VERSION="${VERSION#v}"  # Remove v prefix
+          VERSION="${{ needs.version-gw.outputs.version }}"
 
-          # Update version in package.json
+          # Update version in dist package.json
           sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
           echo "Publishing @gw-tools/gw@$VERSION"
 
@@ -549,428 +510,70 @@ jobs:
           fi
 
       - name: Comment on PR (beta releases)
-        if: contains(steps.version.outputs.version, '-beta.')
+        if: contains(needs.version-gw.outputs.version, '-beta.')
         uses: actions/github-script@v7
         with:
           script: |
-            const version = '${{ steps.version.outputs.version }}'.replace(/^v/, '');
+            const version = '${{ needs.version-gw.outputs.version }}';
+            const prNumber = '${{ needs.detect-changes.outputs.pr_number }}';
+            const body = `## 🧪 Beta Release Published
 
-            // Extract PR number from version (e.g., "0.29.0-beta.27.5" -> "27")
-            const match = version.match(/-beta\.(\d+)\./);
-            if (!match) {
-              console.log('Could not extract PR number from version:', version);
-              return;
-            }
-            const prNumber = match[1];
+            **Version:** \`${version}\`
 
-            const body = [
-              '## 🧪 Beta Release Published',
-              '',
-              `**Version:** \`${version}\``,
-              '',
-              '### Install',
-              '```bash',
-              '# npm',
-              'npm install @gw-tools/gw@beta',
-              '',
-              '# homebrew',
-              'brew install mthines/gw-tools/gw-beta',
-              '```',
-              '',
-              `[View Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version})`
-            ].join('\n');
+            ### Install
+            \`\`\`bash
+            # npm
+            npm install @gw-tools/gw@beta
+
+            # homebrew
+            brew install mthines/gw-tools/gw-beta
+            \`\`\`
+
+            [View Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version})`;
 
             await github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: parseInt(prNumber),
-              body
+              body: body.split('\n').map(line => line.trim()).join('\n')
             });
 
-  # ============================================================================
-  # Autonomous Workflow Agent Package
-  # ============================================================================
-  # Separate pipeline for @gw-tools/autonomous-workflow-agent npm package.
-  # Simpler than gw-tool: Node.js only, no binaries, no Homebrew/AUR.
-
-  test-agent:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build agent package
-        run: npx nx build autonomous-workflow-agent
-
-      - name: Test agent package
-        run: npx nx test autonomous-workflow-agent
-
-      - name: Lint agent package
-        run: npx nx lint autonomous-workflow-agent
-
   release-agent:
-    # Run on push to main OR manual dispatch with force_release_agent
-    # Waits for gw-tool pipeline to avoid git push race conditions
+    needs: [detect-changes, version-agent]
     if: |
       always() &&
-      needs.test-agent.result == 'success' &&
-      (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped') &&
-      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
-      (
-        (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-        (github.event_name == 'workflow_dispatch' && inputs.force_release_agent)
-      )
-    needs: [test-agent, auto-tag, release]
+      needs.version-agent.outputs.created == 'true'
     runs-on: ubuntu-latest
     environment: npm-publish
     permissions:
       contents: write
       id-token: write
     steps:
-      # Checkout latest main to include any commits from auto-tag job
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
+          ref: ${{ needs.version-agent.outputs.tag }}
           token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
 
-      - name: Check for releasable changes
-        id: check
-        env:
-          FORCE_RELEASE: ${{ inputs.force_release_agent }}
-        run: |
-          # Force release bypasses all checks
-          if [ "$FORCE_RELEASE" = "true" ]; then
-            echo "::notice::🚀 Force release enabled - skipping change detection"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            LAST_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1)
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Skip if this is a release commit
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          if [[ "$COMMIT_MSG" =~ ^chore\(autonomous-workflow-agent\):\ release ]]; then
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "::notice::⏭️ Skipping - this is already a release commit"
-            exit 0
-          fi
-
-          # Check for changes since last agent tag
-          LAST_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1)
-
-          if [ -z "$LAST_TAG" ]; then
-            CHANGED=$(git diff --name-only HEAD~1 -- packages/autonomous-workflow-agent/)
-          else
-            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/autonomous-workflow-agent/)
-          fi
-
-          if [ -z "$CHANGED" ]; then
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "::notice::⏭️ No changes in packages/autonomous-workflow-agent/"
-            exit 0
-          fi
-
-          echo "should_release=true" >> $GITHUB_OUTPUT
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-
       - uses: pnpm/action-setup@v4
-        if: steps.check.outputs.should_release == 'true'
 
       - uses: actions/setup-node@v4
-        if: steps.check.outputs.should_release == 'true'
         with:
           node-version: 20
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
+          cache: "pnpm"
+          registry-url: "https://registry.npmjs.org"
 
       - run: pnpm install --frozen-lockfile
-        if: steps.check.outputs.should_release == 'true'
-
-      - name: Calculate version
-        if: steps.check.outputs.should_release == 'true'
-        id: version
-        run: |
-          LAST_TAG="${{ steps.check.outputs.last_tag }}"
-
-          # Get commits for version determination
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
-          else
-            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
-          fi
-
-          # Determine bump type from conventional commits
-          BUMP_TYPE="patch"
-          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
-            BUMP_TYPE="major"
-          elif echo "$COMMITS" | grep -q "^feat"; then
-            BUMP_TYPE="minor"
-          fi
-
-          # Get current version from package.json
-          CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
-          IFS='.' read -ra V <<< "$CURRENT"
-
-          case "$BUMP_TYPE" in
-            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
-            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
-            patch) V[2]=$((V[2] + 1)) ;;
-          esac
-
-          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
-
-          echo "::notice::📦 autonomous-workflow-agent: $CURRENT → $NEW_VERSION ($BUMP_TYPE)"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
 
       - name: Build package
-        if: steps.check.outputs.should_release == 'true'
         run: npx nx build autonomous-workflow-agent
 
-      - name: Create release tag
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          NEW_VERSION="${{ steps.version.outputs.new_version }}"
-
-          # Update package.json version
-          cd packages/autonomous-workflow-agent
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
-          cd -
-
-          # Commit and tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/autonomous-workflow-agent/package.json
-          git commit -m "chore(autonomous-workflow-agent): release v$NEW_VERSION"
-          git tag -a "autonomous-workflow-agent-v$NEW_VERSION" -m "Release autonomous-workflow-agent v$NEW_VERSION"
-
-          git push origin main
-          git push origin "autonomous-workflow-agent-v$NEW_VERSION"
-
-          echo "::notice::🏷️ Created tag autonomous-workflow-agent-v$NEW_VERSION"
-
-      - name: Update npm for OIDC support
-        if: steps.check.outputs.should_release == 'true'
+      - name: Update npm
         run: npm install -g npm@latest
 
       - name: Publish to npm
-        if: steps.check.outputs.should_release == 'true'
         working-directory: dist/packages/autonomous-workflow-agent
         run: |
-          VERSION="${{ steps.version.outputs.new_version }}"
+          VERSION="${{ needs.version-agent.outputs.version }}"
           echo "Publishing @gw-tools/autonomous-workflow-agent@$VERSION"
           npm publish --provenance --access public
-
-  # ============================================================================
-  # VS Code Extension: @gw-tools/vscode-gw
-  # ============================================================================
-  # Publishes to VS Code Marketplace and Open VSX Registry.
-  # Uses VSCE_PAT secret for VS Code Marketplace and OVSX_PAT for Open VSX.
-
-  test-vscode:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build extension
-        run: npx nx build vscode-gw
-
-      - name: Package extension
-        run: npx nx package vscode-gw
-
-      - name: Lint extension
-        run: npx nx lint vscode-gw
-
-      - name: Verify .vsix was created
-        run: ls -la dist/packages/vscode-gw/*.vsix
-
-  release-vscode:
-    # Run on push to main OR manual dispatch with force_release_vscode
-    # Waits for gw-tool pipeline to avoid git push race conditions
-    if: |
-      always() &&
-      needs.test-vscode.result == 'success' &&
-      (needs.auto-tag.result == 'success' || needs.auto-tag.result == 'skipped') &&
-      (needs.release.result == 'success' || needs.release.result == 'skipped') &&
-      (needs.release-agent.result == 'success' || needs.release-agent.result == 'skipped') &&
-      (
-        (github.ref == 'refs/heads/main' && github.event_name == 'push') ||
-        (github.event_name == 'workflow_dispatch' && inputs.force_release_vscode)
-      )
-    needs: [test-vscode, auto-tag, release, release-agent]
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Check for releasable changes
-        id: check
-        env:
-          FORCE_RELEASE: ${{ inputs.force_release_vscode }}
-        run: |
-          # Force release bypasses all checks
-          if [ "$FORCE_RELEASE" = "true" ]; then
-            echo "::notice::🚀 Force release enabled - skipping change detection"
-            echo "should_release=true" >> $GITHUB_OUTPUT
-            LAST_TAG=$(git tag -l "vscode-gw-v*" --sort=-version:refname | head -n 1)
-            echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          # Skip if this is a release commit
-          COMMIT_MSG=$(git log -1 --pretty=%s)
-          if [[ "$COMMIT_MSG" =~ ^chore\(vscode-gw\):\ release ]]; then
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "::notice::⏭️ Skipping - this is already a release commit"
-            exit 0
-          fi
-
-          # Check for changes since last vscode-gw tag
-          LAST_TAG=$(git tag -l "vscode-gw-v*" --sort=-version:refname | head -n 1)
-
-          if [ -z "$LAST_TAG" ]; then
-            CHANGED=$(git diff --name-only HEAD~1 -- packages/vscode-gw/)
-          else
-            CHANGED=$(git diff --name-only "$LAST_TAG"..HEAD -- packages/vscode-gw/)
-          fi
-
-          if [ -z "$CHANGED" ]; then
-            echo "should_release=false" >> $GITHUB_OUTPUT
-            echo "::notice::⏭️ No changes in packages/vscode-gw/"
-            exit 0
-          fi
-
-          echo "should_release=true" >> $GITHUB_OUTPUT
-          echo "last_tag=$LAST_TAG" >> $GITHUB_OUTPUT
-
-      - uses: pnpm/action-setup@v4
-        if: steps.check.outputs.should_release == 'true'
-
-      - uses: actions/setup-node@v4
-        if: steps.check.outputs.should_release == 'true'
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-        if: steps.check.outputs.should_release == 'true'
-
-      - name: Calculate version
-        if: steps.check.outputs.should_release == 'true'
-        id: version
-        run: |
-          LAST_TAG="${{ steps.check.outputs.last_tag }}"
-
-          # Get commits for version determination
-          if [ -z "$LAST_TAG" ]; then
-            COMMITS=$(git log --pretty=format:"%s" --no-merges -- packages/vscode-gw/)
-          else
-            COMMITS=$(git log "$LAST_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/vscode-gw/)
-          fi
-
-          # Determine bump type from conventional commits
-          BUMP_TYPE="patch"
-          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
-            BUMP_TYPE="major"
-          elif echo "$COMMITS" | grep -q "^feat"; then
-            BUMP_TYPE="minor"
-          fi
-
-          # Get current version from package.json
-          CURRENT=$(node -p "require('./packages/vscode-gw/package.json').version")
-          IFS='.' read -ra V <<< "$CURRENT"
-
-          case "$BUMP_TYPE" in
-            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
-            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
-            patch) V[2]=$((V[2] + 1)) ;;
-          esac
-
-          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
-
-          echo "::notice::📦 vscode-gw: $CURRENT → $NEW_VERSION ($BUMP_TYPE)"
-          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-
-      - name: Build and package extension
-        if: steps.check.outputs.should_release == 'true'
-        run: npx nx package vscode-gw
-
-      - name: Create release tag
-        if: steps.check.outputs.should_release == 'true'
-        run: |
-          NEW_VERSION="${{ steps.version.outputs.new_version }}"
-
-          # Update package.json version
-          cd packages/vscode-gw
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$NEW_VERSION\"/" package.json
-          cd -
-
-          # Commit and tag
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add packages/vscode-gw/package.json
-          git commit -m "chore(vscode-gw): release v$NEW_VERSION"
-          git tag -a "vscode-gw-v$NEW_VERSION" -m "Release vscode-gw v$NEW_VERSION"
-
-          git push origin main
-          git push origin "vscode-gw-v$NEW_VERSION"
-
-          echo "::notice::🏷️ Created tag vscode-gw-v$NEW_VERSION"
-
-      - name: Publish to VS Code Marketplace
-        if: steps.check.outputs.should_release == 'true'
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
-        run: |
-          VSIX_FILE=$(ls dist/packages/vscode-gw/*.vsix | head -1)
-          echo "Publishing $VSIX_FILE to VS Code Marketplace"
-          npx @vscode/vsce publish --no-dependencies -i "$VSIX_FILE"
-
-      - name: Publish to Open VSX Registry
-        if: steps.check.outputs.should_release == 'true'
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
-        run: |
-          VSIX_FILE=$(ls dist/packages/vscode-gw/*.vsix | head -1)
-          echo "Publishing $VSIX_FILE to Open VSX"
-          npx ovsx publish "$VSIX_FILE" || echo "::warning::Open VSX publish failed (OVSX_PAT may not be configured)"
-
-      - name: Create GitHub Release
-        if: steps.check.outputs.should_release == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          NEW_VERSION="${{ steps.version.outputs.new_version }}"
-          VSIX_FILE=$(ls dist/packages/vscode-gw/*.vsix | head -1)
-
-          gh release create "vscode-gw-v$NEW_VERSION" \
-            "$VSIX_FILE" \
-            --title "GW Worktrees VS Code Extension v$NEW_VERSION" \
-            --notes "## GW Worktrees v$NEW_VERSION
-
-          Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gw-tools.gw-worktrees) or download the \`.vsix\` file below.
-
-          ### Changes
-          See [commit history](https://github.com/mthines/gw-tools/compare/vscode-gw-v${{ steps.check.outputs.last_tag || '0.0.0' }}...vscode-gw-v$NEW_VERSION) for details."
