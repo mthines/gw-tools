@@ -278,7 +278,11 @@
         "gw.agentTasksSortBy": {
           "type": "string",
           "default": "date",
-          "enum": ["date", "name", "status"],
+          "enum": [
+            "date",
+            "name",
+            "status"
+          ],
           "enumDescriptions": [
             "Sort by modification date",
             "Sort by branch name",
@@ -289,7 +293,10 @@
         "gw.agentTasksSortOrder": {
           "type": "string",
           "default": "desc",
-          "enum": ["asc", "desc"],
+          "enum": [
+            "asc",
+            "desc"
+          ],
           "enumDescriptions": [
             "Ascending (oldest/A-Z first)",
             "Descending (newest/Z-A first)"
@@ -300,8 +307,10 @@
     }
   },
   "devDependencies": {
+    "@types/node": "20.19.9",
     "@types/vscode": "^1.85.0",
-    "esbuild": "^0.25.0"
+    "esbuild": "^0.25.0",
+    "vitest": "4.0.9"
   },
   "dependencies": {
     "tslib": "^2.3.0"
