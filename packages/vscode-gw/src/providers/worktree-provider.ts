@@ -10,7 +10,7 @@ export class WorktreeItem extends vscode.TreeItem {
   constructor(
     public readonly worktree: WorktreeInfo,
     public readonly isCurrentWorktree: boolean,
-    public readonly isCleanable: boolean = false
+    public readonly isCleanable = false
   ) {
     super(worktree.branch || path.basename(worktree.path), vscode.TreeItemCollapsibleState.None);
 
