@@ -15,6 +15,10 @@ on:
         description: 'Force agent release'
         type: boolean
         default: false
+      force_vscode:
+        description: 'Force VS Code extension release'
+        type: boolean
+        default: false
       dry_run:
         description: 'Dry run (no publishing)'
         type: boolean
@@ -34,6 +38,7 @@ jobs:
     outputs:
       gw_changed: ${{ steps.detect.outputs.gw_changed }}
       agent_changed: ${{ steps.detect.outputs.agent_changed }}
+      vscode_changed: ${{ steps.detect.outputs.vscode_changed }}
       is_beta: ${{ steps.detect.outputs.is_beta }}
       pr_number: ${{ steps.detect.outputs.pr_number }}
       base_ref: ${{ steps.detect.outputs.base_ref }}
@@ -60,6 +65,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_GW: ${{ inputs.force_gw }}
           FORCE_AGENT: ${{ inputs.force_agent }}
+          FORCE_VSCODE: ${{ inputs.force_vscode }}
         run: |
           # Determine context
           IS_BETA="false"
@@ -119,10 +125,11 @@ jobs:
 
           # Skip release commit
           COMMIT_MSG=$(git log -1 --pretty=%s)
-          if [[ "$COMMIT_MSG" =~ ^chore\((gw|autonomous-workflow-agent)\):\ release ]]; then
+          if [[ "$COMMIT_MSG" =~ ^chore\((gw|autonomous-workflow-agent|vscode-gw)\):\ release ]]; then
             echo "::notice::Skipping - this is a release commit"
             echo "gw_changed=false" >> $GITHUB_OUTPUT
             echo "agent_changed=false" >> $GITHUB_OUTPUT
+            echo "vscode_changed=false" >> $GITHUB_OUTPUT
             echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
             echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
             echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
@@ -159,9 +166,22 @@ jobs:
             echo "::notice::autonomous-workflow-agent: no changes"
           fi
 
+          # Check for VS Code extension changes
+          VSCODE_CHANGED="false"
+          if [ "$FORCE_VSCODE" = "true" ]; then
+            VSCODE_CHANGED="true"
+            echo "::notice::vscode-gw: force release enabled"
+          elif echo "$AFFECTED" | grep -q "vscode-gw"; then
+            VSCODE_CHANGED="true"
+            echo "::notice::vscode-gw: changes detected"
+          else
+            echo "::notice::vscode-gw: no changes"
+          fi
+
           # Output results
           echo "gw_changed=$GW_CHANGED" >> $GITHUB_OUTPUT
           echo "agent_changed=$AGENT_CHANGED" >> $GITHUB_OUTPUT
+          echo "vscode_changed=$VSCODE_CHANGED" >> $GITHUB_OUTPUT
           echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
@@ -227,6 +247,34 @@ jobs:
 
       - name: Lint agent package
         run: npx nx lint autonomous-workflow-agent
+
+  test-vscode:
+    needs: detect-changes
+    if: needs.detect-changes.outputs.vscode_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build VS Code extension
+        run: npx nx build vscode-gw
+
+      - name: Test VS Code extension
+        run: npx nx test vscode-gw
+
+      - name: Lint VS Code extension
+        run: npx nx lint vscode-gw
+
+      - name: Package VS Code extension
+        run: npx nx package vscode-gw
 
   # =============================================================================
   # Step 3: Version jobs (calculate version, create tag)
@@ -444,6 +492,100 @@ jobs:
           echo "::notice::Created tag $TAG"
           echo "created=true" >> $GITHUB_OUTPUT
 
+  version-vscode:
+    # Waits for agent release to complete to avoid git push race conditions
+    needs: [detect-changes, test-vscode, release-agent]
+    # VS Code extension only releases stable versions from main branch
+    if: |
+      always() &&
+      (needs.test-vscode.result == 'success' || needs.test-vscode.result == 'skipped') &&
+      (needs.release-agent.result == 'success' || needs.release-agent.result == 'skipped') &&
+      needs.detect-changes.outputs.vscode_changed == 'true' &&
+      !inputs.dry_run &&
+      github.ref == 'refs/heads/main' &&
+      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_vscode))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      created: ${{ steps.tag.outputs.created }}
+    steps:
+      # Checkout latest main to include any commits from previous releases
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: main
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - name: Fetch latest main and tags
+        run: |
+          git fetch origin main --tags --force
+          git reset --hard origin/main
+          echo "::notice::Checked out main at $(git rev-parse --short HEAD)"
+
+      - name: Calculate version
+        id: version
+        env:
+          BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
+        run: |
+          # Get commits for version determination
+          LAST_VSCODE_TAG=$(git tag -l "vscode-gw-v*" --sort=-version:refname | head -n 1 || echo "")
+
+          if [ -n "$LAST_VSCODE_TAG" ]; then
+            COMMITS=$(git log "$LAST_VSCODE_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/vscode-gw/)
+          else
+            COMMITS=$(git log HEAD~10..HEAD --pretty=format:"%s" --no-merges -- packages/vscode-gw/)
+          fi
+
+          # Determine bump type
+          BUMP_TYPE="patch"
+          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
+            BUMP_TYPE="major"
+          elif echo "$COMMITS" | grep -q "^feat"; then
+            BUMP_TYPE="minor"
+          fi
+
+          # Get current version
+          CURRENT=$(cat packages/vscode-gw/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          IFS='.' read -ra V <<< "$CURRENT"
+
+          case "$BUMP_TYPE" in
+            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
+            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
+            patch) V[2]=$((V[2] + 1)) ;;
+          esac
+
+          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+
+          echo "::notice::vscode-gw: $CURRENT -> $NEW_VERSION ($BUMP_TYPE)"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=vscode-gw-v$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Create tag
+        id: tag
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Update package.json
+          cd packages/vscode-gw
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+          cd -
+
+          git add packages/vscode-gw/package.json
+          git commit -m "chore(vscode-gw): release v$VERSION"
+          git tag -a "$TAG" -m "Release vscode-gw v$VERSION"
+          git push origin main
+          git push origin "$TAG"
+
+          echo "::notice::Created tag $TAG"
+          echo "created=true" >> $GITHUB_OUTPUT
+
   # =============================================================================
   # Step 4: Release jobs
   # =============================================================================
@@ -493,6 +635,8 @@ jobs:
 
       - name: Publish to npm
         working-directory: dist/packages/gw-tool/npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION="${{ needs.version-gw.outputs.version }}"
 
@@ -573,7 +717,79 @@ jobs:
 
       - name: Publish to npm
         working-directory: dist/packages/autonomous-workflow-agent
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
           VERSION="${{ needs.version-agent.outputs.version }}"
           echo "Publishing @gw-tools/autonomous-workflow-agent@$VERSION"
           npm publish --provenance --access public
+
+  release-vscode:
+    needs: [detect-changes, version-vscode]
+    if: |
+      always() &&
+      needs.version-vscode.outputs.created == 'true'
+    runs-on: ubuntu-latest
+    environment: vscode-publish
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ needs.version-vscode.outputs.tag }}
+          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Update version in package.json
+        run: |
+          VERSION="${{ needs.version-vscode.outputs.version }}"
+          cd packages/vscode-gw
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
+
+      - name: Package VS Code extension
+        run: npx nx package vscode-gw
+
+      - name: Publish to VS Code Marketplace
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          VERSION="${{ needs.version-vscode.outputs.version }}"
+          VSIX_FILE=$(ls dist/packages/vscode-gw/*.vsix | head -1)
+          echo "Publishing gw-worktrees@$VERSION to VS Code Marketplace"
+          npx @vscode/vsce publish --no-dependencies -i "$VSIX_FILE"
+
+      - name: Publish to Open VSX
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        if: env.OVSX_PAT != ''
+        run: |
+          VERSION="${{ needs.version-vscode.outputs.version }}"
+          VSIX_FILE=$(ls dist/packages/vscode-gw/*.vsix | head -1)
+          echo "Publishing gw-worktrees@$VERSION to Open VSX"
+          npx ovsx publish "$VSIX_FILE"
+
+      - name: Create GitHub Release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ needs.version-vscode.outputs.version }}';
+            const tag = '${{ needs.version-vscode.outputs.tag }}';
+
+            await github.rest.repos.createRelease({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              tag_name: tag,
+              name: `VS Code Extension v${version}`,
+              body: `## gw - Git Worktrees v${version}\n\nInstall from:\n- [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=gw-tools.gw-worktrees)\n- [Open VSX](https://open-vsx.org/extension/gw-tools/gw-worktrees)`,
+              draft: false,
+              prerelease: false
+            });
