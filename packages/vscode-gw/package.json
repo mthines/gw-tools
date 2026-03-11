@@ -10,6 +10,7 @@
     "url": "https://github.com/mthines/gw-tools.git",
     "directory": "packages/vscode-gw"
   },
+  "icon": "icon.png",
   "engines": {
     "vscode": "^1.85.0"
   },
