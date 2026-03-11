@@ -65,6 +65,12 @@ gw clean --use-autoclean-threshold
 
 # Force removal (skips safety checks)
 gw clean --force
+
+# Get JSON output for scripting (exits without prompting)
+gw clean --json
+
+# Skip confirmation prompt (auto-confirm removal)
+gw clean --yes
 ```
 
 ### Safety Checks

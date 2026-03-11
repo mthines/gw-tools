@@ -24,12 +24,16 @@ function parseCleanArgs(args: string[]): {
   force: boolean;
   dryRun: boolean;
   useThreshold: boolean;
+  json: boolean;
+  yes: boolean;
 } {
   return {
     help: args.includes('--help') || args.includes('-h'),
     force: args.includes('--force') || args.includes('-f'),
     dryRun: args.includes('--dry-run') || args.includes('-n'),
     useThreshold: args.includes('--use-autoclean-threshold'),
+    json: args.includes('--json'),
+    yes: args.includes('--yes') || args.includes('-y'),
   };
 }
 
@@ -53,6 +57,8 @@ Options:
   -f, --force                Skip safety checks (uncommitted changes, unpushed commits)
                              WARNING: This may result in data loss
   -n, --dry-run              Preview what would be removed without actually removing
+  --json                     Output results as JSON and exit (implies --dry-run)
+  -y, --yes                  Skip confirmation prompt
   -h, --help                 Show this help message
 
 Safety Features:
@@ -136,10 +142,13 @@ export async function executeClean(args: string[]): Promise<void> {
   const { config } = await loadConfig();
   const threshold = config.cleanThreshold ?? 7;
 
-  if (parsed.useThreshold) {
-    output.info(`Checking for worktrees older than ${threshold} days...`);
-  } else {
-    output.info(`Checking for safe worktrees to clean...`);
+  // Suppress output in JSON mode
+  if (!parsed.json) {
+    if (parsed.useThreshold) {
+      output.info(`Checking for worktrees older than ${threshold} days...`);
+    } else {
+      output.info(`Checking for safe worktrees to clean...`);
+    }
   }
 
   // Prune stale worktree metadata before listing
@@ -149,7 +158,9 @@ export async function executeClean(args: string[]): Promise<void> {
   } catch {
     // Don't fail the entire command if prune fails
     // Just continue with whatever worktrees git can list
-    console.error(output.dim('Warning: Failed to prune worktree metadata'));
+    if (!parsed.json) {
+      console.error(output.dim('Warning: Failed to prune worktree metadata'));
+    }
   }
 
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
@@ -160,11 +171,17 @@ export async function executeClean(args: string[]): Promise<void> {
   const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && !isProtectedBranch(wt.branch, defaultBranch));
 
   if (nonBareWorktrees.length === 0) {
+    if (parsed.json) {
+      console.log(JSON.stringify({ cleanable: [], skipped: [] }));
+      Deno.exit(0);
+    }
     console.log('No worktrees found.\n');
     Deno.exit(0);
   }
 
-  console.log(`Found ${nonBareWorktrees.length} worktree(s)\n`);
+  if (!parsed.json) {
+    console.log(`Found ${nonBareWorktrees.length} worktree(s)\n`);
+  }
 
   // Analyze each worktree
   const analyzed: CleanableWorktree[] = [];
@@ -206,6 +223,27 @@ export async function executeClean(args: string[]): Promise<void> {
   // Separate cleanable and skipped
   const toClean = analyzed.filter((wt) => wt.canClean);
   const toSkip = analyzed.filter((wt) => !wt.canClean);
+
+  // JSON mode - output and exit without prompting
+  if (parsed.json) {
+    const jsonOutput = {
+      cleanable: toClean.map((wt) => ({
+        branch: wt.branch,
+        path: wt.path,
+        ageDays: wt.ageDays,
+        hasUncommitted: wt.hasUncommitted,
+        hasUnpushed: wt.hasUnpushed,
+      })),
+      skipped: toSkip.map((wt) => ({
+        branch: wt.branch,
+        path: wt.path,
+        ageDays: wt.ageDays,
+        reason: wt.reason || 'unknown',
+      })),
+    };
+    console.log(JSON.stringify(jsonOutput));
+    Deno.exit(0);
+  }
 
   // Display results
   if (toClean.length === 0) {
@@ -253,12 +291,14 @@ export async function executeClean(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  // Prompt for confirmation
-  const confirmed = await confirm(`Remove ${toClean.length} worktree(s)?`);
+  // Prompt for confirmation (skip with --yes)
+  if (!parsed.yes) {
+    const confirmed = await confirm(`Remove ${toClean.length} worktree(s)?`);
 
-  if (!confirmed) {
-    console.log('\nCancelled.\n');
-    Deno.exit(0);
+    if (!confirmed) {
+      console.log('\nCancelled.\n');
+      Deno.exit(0);
+    }
   }
 
   // Remove worktrees
