@@ -22,6 +22,8 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 
 [-> See docs <-](packages/gw-tool/README.md)
 
+**VS Code users:** Install the [gw-worktrees extension](https://marketplace.visualstudio.com/items?itemName=mthines.gw-worktrees) for integrated worktree management.
+
 ### Installation
 
 Install the `gw` CLI tool, then add shell integration to your shell config for commands like `gw cd`:
