@@ -346,12 +346,42 @@ export function activate(context: vscode.ExtensionContext): void {
       }
 
       const options: SortOption[] = [
-        { label: '$(calendar) Date (newest first)', description: 'Most recently modified at top', sortBy: 'date', sortOrder: 'desc' },
-        { label: '$(calendar) Date (oldest first)', description: 'Oldest modified at top', sortBy: 'date', sortOrder: 'asc' },
-        { label: '$(case-sensitive) Name (A-Z)', description: 'Alphabetical ascending', sortBy: 'name', sortOrder: 'asc' },
-        { label: '$(case-sensitive) Name (Z-A)', description: 'Alphabetical descending', sortBy: 'name', sortOrder: 'desc' },
-        { label: '$(pulse) Status (in-progress first)', description: 'Active tasks at top', sortBy: 'status', sortOrder: 'desc' },
-        { label: '$(pass-filled) Status (completed first)', description: 'Completed tasks at top', sortBy: 'status', sortOrder: 'asc' },
+        {
+          label: '$(calendar) Date (newest first)',
+          description: 'Most recently modified at top',
+          sortBy: 'date',
+          sortOrder: 'desc',
+        },
+        {
+          label: '$(calendar) Date (oldest first)',
+          description: 'Oldest modified at top',
+          sortBy: 'date',
+          sortOrder: 'asc',
+        },
+        {
+          label: '$(case-sensitive) Name (A-Z)',
+          description: 'Alphabetical ascending',
+          sortBy: 'name',
+          sortOrder: 'asc',
+        },
+        {
+          label: '$(case-sensitive) Name (Z-A)',
+          description: 'Alphabetical descending',
+          sortBy: 'name',
+          sortOrder: 'desc',
+        },
+        {
+          label: '$(pulse) Status (in-progress first)',
+          description: 'Active tasks at top',
+          sortBy: 'status',
+          sortOrder: 'desc',
+        },
+        {
+          label: '$(pass-filled) Status (completed first)',
+          description: 'Completed tasks at top',
+          sortBy: 'status',
+          sortOrder: 'asc',
+        },
       ];
 
       // Mark current selection
