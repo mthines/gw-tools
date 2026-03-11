@@ -151,3 +151,11 @@ Once installed, your AI agent can:
 - Create tested PRs from isolated worktrees
 
 📖 **Skill documentation:** [skills/README.md](skills/README.md)
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+While not required beyond keeping the license file, we appreciate a mention or link back to [gw-tools](https://github.com/mthines/gw-tools) if you find it useful in your own projects.

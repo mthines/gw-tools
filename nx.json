@@ -74,5 +74,8 @@
       "dependsOn": ["^build"],
       "inputs": ["production", "^production"]
     }
+  },
+  "tui": {
+    "enabled": false
   }
 }
