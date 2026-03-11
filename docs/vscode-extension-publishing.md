@@ -142,10 +142,10 @@ Still in the environment settings:
 
 Both tokens expire and should be rotated periodically:
 
-| Token | Max Lifetime | Rotation Steps |
-|-------|--------------|----------------|
-| VSCE_PAT | 1 year | Create new PAT in Azure DevOps, update GitHub secret |
-| OVSX_PAT | No expiry | Revoke old token in Open VSX, create new one, update GitHub secret |
+| Token    | Max Lifetime | Rotation Steps                                                     |
+| -------- | ------------ | ------------------------------------------------------------------ |
+| VSCE_PAT | 1 year       | Create new PAT in Azure DevOps, update GitHub secret               |
+| OVSX_PAT | No expiry    | Revoke old token in Open VSX, create new one, update GitHub secret |
 
 Set calendar reminders to rotate tokens before they expire.
 

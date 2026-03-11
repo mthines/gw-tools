@@ -404,18 +404,12 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
       const currentItems = task.current.map(
         (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath)
       );
-      const completedItems = task.completed.map(
-        (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
-      );
-      const upcomingItems = task.upcoming.map(
-        (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
-      );
+      const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
+      const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
       const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
 
       // Add Tasks summary (groups Current/Completed/Upcoming inside)
-      children.push(
-        new TasksSummaryItem(currentItems, completedItems, upcomingItems, blockerItems, taskFilePath)
-      );
+      children.push(new TasksSummaryItem(currentItems, completedItems, upcomingItems, blockerItems, taskFilePath));
 
       // Blockers shown at branch level for visibility
       if (task.blockers.length > 0) {
