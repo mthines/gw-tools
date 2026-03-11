@@ -1,9 +1,16 @@
+# Source and config files
 .vscode/**
 src/**
 node_modules/**
 tsconfig.json
 esbuild.config.mjs
 eslint.config.mjs
+project.json
+vitest.config.*
 **/*.ts
 **/*.map
 .gitignore
+
+# Parent directory files (when packaged from monorepo)
+../**
+../../**
