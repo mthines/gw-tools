@@ -375,12 +375,13 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
         case 'name':
           result = a.name.localeCompare(b.name);
           break;
-        case 'status':
+        case 'status': {
           // Status priority: in-progress > active (not completed) > completed
           const statusA = a.hasInProgress ? 2 : a.hasWalkthrough ? 0 : 1;
           const statusB = b.hasInProgress ? 2 : b.hasWalkthrough ? 0 : 1;
           result = statusB - statusA; // Higher priority first by default (desc)
           break;
+        }
         case 'date':
         default:
           result = b.mtime - a.mtime; // Newer first by default (desc)
