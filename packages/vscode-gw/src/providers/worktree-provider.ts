@@ -4,12 +4,13 @@
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import { listWorktrees, WorktreeInfo } from '../parsers/git-worktree';
+import { listWorktrees, getCleanableWorktrees, WorktreeInfo } from '../parsers/git-worktree';
 
 export class WorktreeItem extends vscode.TreeItem {
   constructor(
     public readonly worktree: WorktreeInfo,
-    public readonly isCurrentWorktree: boolean
+    public readonly isCurrentWorktree: boolean,
+    public readonly isCleanable: boolean = false
   ) {
     super(worktree.branch || path.basename(worktree.path), vscode.TreeItemCollapsibleState.None);
 
@@ -34,6 +35,9 @@ export class WorktreeItem extends vscode.TreeItem {
     }
     if (this.worktree.bare) {
       parts.push('bare');
+    }
+    if (this.isCleanable) {
+      parts.push('cleanable');
     }
     const shortPath = this.worktree.path.replace(/^.*\//, '');
     if (shortPath !== this.worktree.branch) {
@@ -60,6 +64,9 @@ export class WorktreeItem extends vscode.TreeItem {
     if (this.isCurrentWorktree) {
       return new vscode.ThemeIcon('check', new vscode.ThemeColor('charts.green'));
     }
+    if (this.isCleanable) {
+      return new vscode.ThemeIcon('trash', new vscode.ThemeColor('charts.yellow'));
+    }
     return new vscode.ThemeIcon('git-branch');
   }
 }
@@ -70,6 +77,7 @@ export class WorktreeProvider implements vscode.TreeDataProvider<WorktreeItem> {
 
   private worktrees: WorktreeInfo[] = [];
   private currentWorkspacePath: string | undefined;
+  private hasShownUpdateNotification = false;
 
   constructor() {
     this.currentWorkspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -95,13 +103,40 @@ export class WorktreeProvider implements vscode.TreeDataProvider<WorktreeItem> {
       return [];
     }
 
+    // Get cleanable worktrees (with timeout protection for older gw versions)
+    let cleanablePaths: Set<string> = new Set();
+    try {
+      const cleanResult = await getCleanableWorktrees(cwd);
+
+      // Check if gw timed out (likely older version without --json support)
+      if (cleanResult.timedOut && !this.hasShownUpdateNotification) {
+        this.hasShownUpdateNotification = true;
+        vscode.window
+          .showWarningMessage(
+            'gw clean --json timed out. Consider updating to the latest version of gw for better VS Code integration.',
+            'Update gw',
+            'Dismiss'
+          )
+          .then((choice) => {
+            if (choice === 'Update gw') {
+              vscode.env.openExternal(vscode.Uri.parse('https://github.com/mthines/gw-tools#installation'));
+            }
+          });
+      }
+
+      cleanablePaths = new Set(cleanResult.cleanable.map((c) => c.path));
+    } catch {
+      // Ignore errors, just won't show cleanable indicators
+    }
+
     const showBare = vscode.workspace.getConfiguration('gw').get<boolean>('showBareWorktree', false);
 
     return this.worktrees
       .filter((wt) => showBare || !wt.bare)
       .map((wt) => {
         const isCurrent = wt.path === this.currentWorkspacePath;
-        return new WorktreeItem(wt, isCurrent);
+        const isCleanable = cleanablePaths.has(wt.path);
+        return new WorktreeItem(wt, isCurrent, isCleanable);
       });
   }
 }

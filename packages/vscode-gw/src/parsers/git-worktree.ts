@@ -14,15 +14,27 @@ export interface WorktreeInfo {
 /**
  * Run a shell command and return stdout
  */
-function exec(command: string, cwd: string): Promise<string> {
+function exec(command: string, cwd: string, timeoutMs?: number): Promise<string> {
   return new Promise((resolve, reject) => {
-    cp.exec(command, { cwd }, (err, stdout, stderr) => {
+    const child = cp.exec(command, { cwd, timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
+        // Check if it was a timeout (killed)
+        if (err.killed || err.signal === 'SIGTERM') {
+          reject(new Error('TIMEOUT'));
+          return;
+        }
         reject(new Error(stderr.trim() || err.message));
         return;
       }
       resolve(stdout.trim());
     });
+
+    // Also set up a manual timeout in case the process hangs without being killed
+    if (timeoutMs) {
+      setTimeout(() => {
+        child.kill('SIGTERM');
+      }, timeoutMs);
+    }
   });
 }
 
@@ -139,4 +151,45 @@ export function syncWorktree(cwd: string, target?: string, from?: string): Promi
   if (target) args.push(target);
   if (from) args.push('--from', from);
   return exec(`gw sync ${args.join(' ')}`, cwd);
+}
+
+/**
+ * Info about a cleanable worktree
+ */
+export interface CleanableWorktreeInfo {
+  branch: string;
+  path: string;
+  ageDays: number;
+  hasUncommitted: boolean;
+  hasUnpushed: boolean;
+}
+
+/**
+ * Result from gw clean --json
+ */
+export interface CleanCheckResult {
+  cleanable: CleanableWorktreeInfo[];
+  skipped: { branch: string; path: string; ageDays: number; reason: string }[];
+  /** True if the command timed out (likely older gw version without --json support) */
+  timedOut?: boolean;
+}
+
+/** Timeout for gw clean --json command (5 seconds) */
+const GW_CLEAN_TIMEOUT_MS = 5000;
+
+/**
+ * Check which worktrees are cleanable via gw clean --json
+ * Times out after 5 seconds for older gw versions without --json support
+ */
+export async function getCleanableWorktrees(cwd: string): Promise<CleanCheckResult> {
+  try {
+    const output = await exec('gw clean --json', cwd, GW_CLEAN_TIMEOUT_MS);
+    return JSON.parse(output) as CleanCheckResult;
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    if (message === 'TIMEOUT') {
+      return { cleanable: [], skipped: [], timedOut: true };
+    }
+    return { cleanable: [], skipped: [] };
+  }
 }

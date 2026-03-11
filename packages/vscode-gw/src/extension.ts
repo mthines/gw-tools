@@ -15,6 +15,20 @@ import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-pro
 import { ArtifactWatcher } from './watchers/artifact-watcher';
 import { removeWorktree, createWorktree, cleanWorktrees, syncWorktree, listWorktrees } from './parsers/git-worktree';
 
+/**
+ * Open a markdown file, respecting the preview setting
+ */
+async function openMarkdownFile(filePath: string): Promise<void> {
+  const usePreview = vscode.workspace.getConfiguration('gw').get<boolean>('openMarkdownInPreview', false);
+  const uri = vscode.Uri.file(filePath);
+
+  if (usePreview) {
+    await vscode.commands.executeCommand('markdown.showPreview', uri);
+  } else {
+    await vscode.commands.executeCommand('vscode.open', uri);
+  }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspacePath) return;
@@ -48,6 +62,79 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand('gw.refreshAgentTasks', () => {
       agentTasksProvider.refresh();
+    }),
+
+    vscode.commands.registerCommand('gw.switchWorktree', async () => {
+      const worktrees = await listWorktrees(workspacePath);
+      const currentPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+      interface WorktreeQuickPickItem extends vscode.QuickPickItem {
+        worktreePath: string;
+      }
+
+      const openInNewWindowButton: vscode.QuickInputButton = {
+        iconPath: new vscode.ThemeIcon('empty-window'),
+        tooltip: 'Open in New Window',
+      };
+
+      const items: WorktreeQuickPickItem[] = worktrees
+        .filter((w) => !w.bare)
+        .map((w) => {
+          const isCurrent = w.path === currentPath;
+          return {
+            label: `${isCurrent ? '$(check) ' : ''}${w.branch}`,
+            description: isCurrent ? 'current' : path.basename(w.path),
+            detail: w.path,
+            worktreePath: w.path,
+            buttons: isCurrent ? [] : [openInNewWindowButton],
+          };
+        });
+
+      if (items.length === 0) {
+        vscode.window.showWarningMessage('No worktrees available.');
+        return;
+      }
+
+      const quickPick = vscode.window.createQuickPick<WorktreeQuickPickItem>();
+      quickPick.items = items;
+      quickPick.placeholder = 'Select worktree to switch to (click button for new window)';
+      quickPick.title = 'Switch Worktree';
+      quickPick.matchOnDescription = true;
+      quickPick.matchOnDetail = true;
+
+      quickPick.onDidAccept(() => {
+        const selected = quickPick.selectedItems[0];
+        if (selected && selected.worktreePath !== currentPath) {
+          const uri = vscode.Uri.file(selected.worktreePath);
+          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+        }
+        quickPick.hide();
+      });
+
+      quickPick.onDidTriggerItemButton((e) => {
+        const uri = vscode.Uri.file(e.item.worktreePath);
+        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        quickPick.hide();
+      });
+
+      quickPick.onDidHide(() => quickPick.dispose());
+      quickPick.show();
+    }),
+
+    vscode.commands.registerCommand('gw.focus', () => {
+      // Focus the gw sidebar (worktrees view by default)
+      worktreeView.reveal(undefined as unknown as WorktreeItem, { focus: true, expand: true }).catch(() => {
+        // If reveal fails (no items), just focus the view
+        vscode.commands.executeCommand('gwWorktreeExplorer.focus');
+      });
+    }),
+
+    vscode.commands.registerCommand('gw.focusWorktrees', () => {
+      vscode.commands.executeCommand('gwWorktreeExplorer.focus');
+    }),
+
+    vscode.commands.registerCommand('gw.focusAgentTasks', () => {
+      vscode.commands.executeCommand('gwAgentTasks.focus');
     }),
 
     vscode.commands.registerCommand('gw.openWorktree', async (item?: WorktreeItem) => {
@@ -171,40 +258,46 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('gw.openPlan', (item?: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openMarkdown', async (filePath: string) => {
+      if (filePath && fs.existsSync(filePath)) {
+        await openMarkdownFile(filePath);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.openPlan', async (item?: AgentBranchItem) => {
       if (!item?.gwDir) {
         vscode.window.showWarningMessage('Please select an agent task branch first.');
         return;
       }
       const planPath = path.join(item.gwDir, 'plan.md');
       if (fs.existsSync(planPath)) {
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(planPath));
+        await openMarkdownFile(planPath);
       } else {
         vscode.window.showWarningMessage(`No plan.md found for ${item.branchName}`);
       }
     }),
 
-    vscode.commands.registerCommand('gw.openTask', (item?: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openTask', async (item?: AgentBranchItem) => {
       if (!item?.gwDir) {
         vscode.window.showWarningMessage('Please select an agent task branch first.');
         return;
       }
       const taskPath = path.join(item.gwDir, 'task.md');
       if (fs.existsSync(taskPath)) {
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(taskPath));
+        await openMarkdownFile(taskPath);
       } else {
         vscode.window.showWarningMessage(`No task.md found for ${item.branchName}`);
       }
     }),
 
-    vscode.commands.registerCommand('gw.openWalkthrough', (item?: AgentBranchItem) => {
+    vscode.commands.registerCommand('gw.openWalkthrough', async (item?: AgentBranchItem) => {
       if (!item?.gwDir) {
         vscode.window.showWarningMessage('Please select an agent task branch first.');
         return;
       }
       const wtPath = path.join(item.gwDir, 'walkthrough.md');
       if (fs.existsSync(wtPath)) {
-        vscode.commands.executeCommand('vscode.open', vscode.Uri.file(wtPath));
+        await openMarkdownFile(wtPath);
       } else {
         vscode.window.showWarningMessage(`No walkthrough.md found for ${item.branchName}`);
       }
@@ -238,6 +331,46 @@ export function activate(context: vscode.ExtensionContext): void {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to clean worktrees: ${msg}`);
       }
+    }),
+
+    vscode.commands.registerCommand('gw.sortAgentTasks', async () => {
+      const config = vscode.workspace.getConfiguration('gw');
+      const currentSortBy = config.get<string>('agentTasksSortBy', 'date');
+      const currentSortOrder = config.get<string>('agentTasksSortOrder', 'desc');
+
+      interface SortOption {
+        label: string;
+        description: string;
+        sortBy: 'date' | 'name' | 'status';
+        sortOrder: 'asc' | 'desc';
+      }
+
+      const options: SortOption[] = [
+        { label: '$(calendar) Date (newest first)', description: 'Most recently modified at top', sortBy: 'date', sortOrder: 'desc' },
+        { label: '$(calendar) Date (oldest first)', description: 'Oldest modified at top', sortBy: 'date', sortOrder: 'asc' },
+        { label: '$(case-sensitive) Name (A-Z)', description: 'Alphabetical ascending', sortBy: 'name', sortOrder: 'asc' },
+        { label: '$(case-sensitive) Name (Z-A)', description: 'Alphabetical descending', sortBy: 'name', sortOrder: 'desc' },
+        { label: '$(pulse) Status (in-progress first)', description: 'Active tasks at top', sortBy: 'status', sortOrder: 'desc' },
+        { label: '$(pass-filled) Status (completed first)', description: 'Completed tasks at top', sortBy: 'status', sortOrder: 'asc' },
+      ];
+
+      // Mark current selection
+      const currentKey = `${currentSortBy}-${currentSortOrder}`;
+      const picks = options.map((opt) => ({
+        ...opt,
+        picked: `${opt.sortBy}-${opt.sortOrder}` === currentKey,
+      }));
+
+      const selected = await vscode.window.showQuickPick(picks, {
+        placeHolder: 'Select sort order for Agent Tasks',
+        title: 'Sort Agent Tasks',
+      });
+
+      if (!selected) return;
+
+      await config.update('agentTasksSortBy', selected.sortBy, vscode.ConfigurationTarget.Workspace);
+      await config.update('agentTasksSortOrder', selected.sortOrder, vscode.ConfigurationTarget.Workspace);
+      agentTasksProvider.refresh();
     }),
 
     vscode.commands.registerCommand('gw.sync', async (item?: WorktreeItem) => {

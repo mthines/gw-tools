@@ -17,7 +17,7 @@ export class AgentBranchItem extends vscode.TreeItem {
     public readonly plan: ParsedPlan | undefined,
     public readonly hasWalkthrough: boolean
   ) {
-    super(branchName, vscode.TreeItemCollapsibleState.Expanded);
+    super(branchName, vscode.TreeItemCollapsibleState.Collapsed);
 
     this.contextValue = hasWalkthrough ? 'agentBranchCompleted' : 'agentBranch';
     this.description = this.getDescription();
@@ -29,9 +29,9 @@ export class AgentBranchItem extends vscode.TreeItem {
     const filePath = path.join(gwDir, targetFile);
     if (fs.existsSync(filePath)) {
       this.command = {
-        command: 'vscode.open',
+        command: 'gw.openMarkdown',
         title: `Open ${targetFile}`,
-        arguments: [vscode.Uri.file(filePath)],
+        arguments: [filePath],
       };
     }
   }
@@ -61,7 +61,8 @@ export class AgentBranchItem extends vscode.TreeItem {
 
   private getIcon(): vscode.ThemeIcon {
     if (this.hasWalkthrough) {
-      return new vscode.ThemeIcon('pass-filled', new vscode.ThemeColor('charts.green'));
+      // Completed branches use dimmer icon (no color = default gray)
+      return new vscode.ThemeIcon('pass-filled');
     }
     if (this.task?.blockers && this.task.blockers.length > 0) {
       return new vscode.ThemeIcon('warning', new vscode.ThemeColor('charts.yellow'));
@@ -84,9 +85,9 @@ export class TaskGroupItem extends vscode.TreeItem {
 
     if (taskFilePath) {
       this.command = {
-        command: 'vscode.open',
+        command: 'gw.openMarkdown',
         title: 'Open Task',
-        arguments: [vscode.Uri.file(taskFilePath)],
+        arguments: [taskFilePath],
       };
     }
   }
@@ -102,7 +103,7 @@ export class TaskCheckboxItem extends vscode.TreeItem {
     super(label, vscode.TreeItemCollapsibleState.None);
 
     if (inProgress) {
-      this.iconPath = new vscode.ThemeIcon('sync~spin', new vscode.ThemeColor('charts.blue'));
+      this.iconPath = new vscode.ThemeIcon('pulse', new vscode.ThemeColor('charts.blue'));
       this.description = 'in progress';
     } else if (completed) {
       this.iconPath = new vscode.ThemeIcon('pass', new vscode.ThemeColor('charts.green'));
@@ -112,11 +113,42 @@ export class TaskCheckboxItem extends vscode.TreeItem {
 
     if (taskFilePath) {
       this.command = {
-        command: 'vscode.open',
+        command: 'gw.openMarkdown',
         title: 'Open Task',
-        arguments: [vscode.Uri.file(taskFilePath)],
+        arguments: [taskFilePath],
       };
     }
+  }
+}
+
+export class TasksSummaryItem extends vscode.TreeItem {
+  constructor(
+    public readonly currentItems: TaskCheckboxItem[],
+    public readonly completedItems: TaskCheckboxItem[],
+    public readonly upcomingItems: TaskCheckboxItem[],
+    public readonly blockerItems: BlockerItem[],
+    public readonly taskFilePath: string
+  ) {
+    super('Tasks', vscode.TreeItemCollapsibleState.Collapsed);
+    this.iconPath = new vscode.ThemeIcon('tasklist');
+
+    // Bubble up current task status
+    const inProgressTask = currentItems.find((t) => t.inProgress);
+    if (inProgressTask) {
+      this.description = inProgressTask.label as string;
+    } else if (currentItems.length > 0) {
+      this.description = `${currentItems.length} current`;
+    } else if (upcomingItems.length > 0) {
+      this.description = `${upcomingItems.length} upcoming`;
+    } else {
+      this.description = `${completedItems.length} completed`;
+    }
+
+    this.command = {
+      command: 'gw.openMarkdown',
+      title: 'Open Task',
+      arguments: [taskFilePath],
+    };
   }
 }
 
@@ -129,9 +161,9 @@ export class PlanSummaryItem extends vscode.TreeItem {
     this.iconPath = new vscode.ThemeIcon('notebook');
     this.description = plan.complexity || '';
     this.command = {
-      command: 'vscode.open',
+      command: 'gw.openMarkdown',
       title: 'Open Plan',
-      arguments: [vscode.Uri.file(planFilePath)],
+      arguments: [planFilePath],
     };
   }
 }
@@ -145,9 +177,9 @@ export class DecisionItem extends vscode.TreeItem {
 
     if (taskFilePath) {
       this.command = {
-        command: 'vscode.open',
+        command: 'gw.openMarkdown',
         title: 'Open Task',
-        arguments: [vscode.Uri.file(taskFilePath)],
+        arguments: [taskFilePath],
       };
     }
   }
@@ -160,9 +192,9 @@ export class BlockerItem extends vscode.TreeItem {
 
     if (taskFilePath) {
       this.command = {
-        command: 'vscode.open',
+        command: 'gw.openMarkdown',
         title: 'Open Task',
-        arguments: [vscode.Uri.file(taskFilePath)],
+        arguments: [taskFilePath],
       };
     }
   }
@@ -172,6 +204,7 @@ type AgentTaskTreeItem =
   | AgentBranchItem
   | TaskGroupItem
   | TaskCheckboxItem
+  | TasksSummaryItem
   | PlanSummaryItem
   | DecisionItem
   | BlockerItem;
@@ -230,6 +263,11 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
       return this.getBranchChildren(element);
     }
 
+    // Tasks summary level: show task groups (Current, Completed, Upcoming)
+    if (element instanceof TasksSummaryItem) {
+      return this.getTasksSummaryChildren(element);
+    }
+
     // Group level: show individual task items
     if (element instanceof TaskGroupItem) {
       return element.items;
@@ -246,7 +284,15 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   private getBranchItems(): AgentBranchItem[] {
     if (!this.gwRoot) return [];
 
-    const items: AgentBranchItem[] = [];
+    interface BranchItemWithMeta {
+      item: AgentBranchItem;
+      mtime: number;
+      name: string;
+      hasWalkthrough: boolean;
+      hasInProgress: boolean;
+    }
+
+    const items: BranchItemWithMeta[] = [];
 
     try {
       const entries = fs.readdirSync(this.gwRoot, { withFileTypes: true });
@@ -259,34 +305,92 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
         const planPath = path.join(branchDir, 'plan.md');
         const walkthroughPath = path.join(branchDir, 'walkthrough.md');
 
+        // Filter: require at least task.md or plan.md to be valid
+        const hasTaskFile = fs.existsSync(taskPath);
+        const hasPlanFile = fs.existsSync(planPath);
+        if (!hasTaskFile && !hasPlanFile) {
+          continue; // Skip directories without valid artifacts
+        }
+
         let task: ParsedTask | undefined;
         let plan: ParsedPlan | undefined;
+        let latestMtime = 0;
 
-        if (fs.existsSync(taskPath)) {
+        if (hasTaskFile) {
           try {
             task = parseTaskMd(fs.readFileSync(taskPath, 'utf-8'));
+            const stat = fs.statSync(taskPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
           } catch {
             // ignore parse errors
           }
         }
 
-        if (fs.existsSync(planPath)) {
+        if (hasPlanFile) {
           try {
             plan = parsePlanMd(fs.readFileSync(planPath, 'utf-8'));
+            const stat = fs.statSync(planPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
           } catch {
             // ignore parse errors
           }
         }
 
         const hasWalkthrough = fs.existsSync(walkthroughPath);
+        if (hasWalkthrough) {
+          try {
+            const stat = fs.statSync(walkthroughPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
+          } catch {
+            // ignore stat errors
+          }
+        }
 
-        items.push(new AgentBranchItem(entry.name, branchDir, task, plan, hasWalkthrough));
+        // Check if any task is in progress
+        const hasInProgress = task?.current.some((t) => t.inProgress) ?? false;
+
+        items.push({
+          item: new AgentBranchItem(entry.name, branchDir, task, plan, hasWalkthrough),
+          mtime: latestMtime,
+          name: entry.name.toLowerCase(),
+          hasWalkthrough,
+          hasInProgress,
+        });
       }
     } catch {
       // .gw directory unreadable
     }
 
-    return items;
+    // Get sort settings from configuration
+    const config = vscode.workspace.getConfiguration('gw');
+    const sortBy = config.get<string>('agentTasksSortBy', 'date');
+    const sortOrder = config.get<string>('agentTasksSortOrder', 'desc');
+    const isAsc = sortOrder === 'asc';
+
+    // Sort based on settings
+    items.sort((a, b) => {
+      let result = 0;
+
+      switch (sortBy) {
+        case 'name':
+          result = a.name.localeCompare(b.name);
+          break;
+        case 'status':
+          // Status priority: in-progress > active (not completed) > completed
+          const statusA = a.hasInProgress ? 2 : a.hasWalkthrough ? 0 : 1;
+          const statusB = b.hasInProgress ? 2 : b.hasWalkthrough ? 0 : 1;
+          result = statusB - statusA; // Higher priority first by default (desc)
+          break;
+        case 'date':
+        default:
+          result = b.mtime - a.mtime; // Newer first by default (desc)
+          break;
+      }
+
+      return isAsc ? -result : result;
+    });
+
+    return items.map((i) => i.item);
   }
 
   private getBranchChildren(branch: AgentBranchItem): AgentTaskTreeItem[] {
@@ -295,49 +399,25 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     const taskFilePath = path.join(branch.gwDir, 'task.md');
 
     if (task) {
-      // Current (expanded by default to show what's happening now)
-      if (task.current.length > 0) {
-        const currentItems = task.current.map(
-          (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath)
-        );
-        children.push(
-          new TaskGroupItem('Current', 'play', currentItems, vscode.TreeItemCollapsibleState.Expanded, taskFilePath)
-        );
-      }
+      // Build task items for the summary
+      const currentItems = task.current.map(
+        (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath)
+      );
+      const completedItems = task.completed.map(
+        (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
+      );
+      const upcomingItems = task.upcoming.map(
+        (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
+      );
+      const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
 
-      // Completed
-      if (task.completed.length > 0) {
-        const completedItems = task.completed.map(
-          (t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath)
-        );
-        children.push(
-          new TaskGroupItem(
-            'Completed',
-            'pass',
-            completedItems,
-            vscode.TreeItemCollapsibleState.Collapsed,
-            taskFilePath
-          )
-        );
-      }
+      // Add Tasks summary (groups Current/Completed/Upcoming inside)
+      children.push(
+        new TasksSummaryItem(currentItems, completedItems, upcomingItems, blockerItems, taskFilePath)
+      );
 
-      // Upcoming
-      if (task.upcoming.length > 0) {
-        const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
-        children.push(
-          new TaskGroupItem(
-            'Upcoming',
-            'circle-large-outline',
-            upcomingItems,
-            vscode.TreeItemCollapsibleState.Collapsed,
-            taskFilePath
-          )
-        );
-      }
-
-      // Blockers
+      // Blockers shown at branch level for visibility
       if (task.blockers.length > 0) {
-        const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
         children.push(
           new TaskGroupItem(
             'Blockers',
@@ -370,6 +450,51 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     if (branch.plan) {
       const planPath = path.join(branch.gwDir, 'plan.md');
       children.push(new PlanSummaryItem(branch.plan, planPath));
+    }
+
+    return children;
+  }
+
+  private getTasksSummaryChildren(summary: TasksSummaryItem): AgentTaskTreeItem[] {
+    const children: AgentTaskTreeItem[] = [];
+
+    // Current (expanded by default)
+    if (summary.currentItems.length > 0) {
+      children.push(
+        new TaskGroupItem(
+          'Current',
+          'play',
+          summary.currentItems,
+          vscode.TreeItemCollapsibleState.Expanded,
+          summary.taskFilePath
+        )
+      );
+    }
+
+    // Completed
+    if (summary.completedItems.length > 0) {
+      children.push(
+        new TaskGroupItem(
+          'Completed',
+          'pass',
+          summary.completedItems,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          summary.taskFilePath
+        )
+      );
+    }
+
+    // Upcoming
+    if (summary.upcomingItems.length > 0) {
+      children.push(
+        new TaskGroupItem(
+          'Upcoming',
+          'circle-large-outline',
+          summary.upcomingItems,
+          vscode.TreeItemCollapsibleState.Collapsed,
+          summary.taskFilePath
+        )
+      );
     }
 
     return children;
