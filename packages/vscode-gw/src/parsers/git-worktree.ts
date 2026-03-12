@@ -106,6 +106,87 @@ export function listWorktrees(cwd: string): Promise<WorktreeInfo[]> {
 }
 
 /**
+ * Get the configured default branch from .gw/config.json
+ * Falls back to 'main' if not configured or file doesn't exist
+ */
+export async function getDefaultBranch(cwd: string): Promise<string> {
+  try {
+    const output = await exec('cat .gw/config.json', cwd);
+    const config = JSON.parse(output);
+    return config.defaultBranch || 'main';
+  } catch {
+    // Config doesn't exist or is invalid, fall back to main
+    return 'main';
+  }
+}
+
+/**
+ * Branch information
+ */
+export interface BranchInfo {
+  name: string;
+  isRemote: boolean;
+  isCurrent: boolean;
+  commitHash?: string;
+  commitMessage?: string;
+  authorName?: string;
+  relativeDate?: string;
+}
+
+/**
+ * List all git branches (local and remote) with commit info
+ */
+export async function listBranches(cwd: string): Promise<BranchInfo[]> {
+  // Use for-each-ref to get branch info with commit details
+  // Format: refname|objectname:short|subject|authorname|committerdate:relative
+  const format = '%(refname)|%(objectname:short)|%(subject)|%(authorname)|%(committerdate:relative)';
+  const output = await exec(`git for-each-ref --format='${format}' refs/heads refs/remotes`, cwd);
+  const lines = output.split('\n').filter((line) => line.trim());
+
+  // Get current branch name
+  let currentBranch = '';
+  try {
+    currentBranch = await exec('git rev-parse --abbrev-ref HEAD', cwd);
+  } catch {
+    // Ignore - might be in detached HEAD state
+  }
+
+  return lines
+    .map((line) => {
+      const [refname, commitHash, commitMessage, authorName, relativeDate] = line.split('|');
+
+      // Parse refname to get clean branch name and determine if remote
+      let name = refname;
+      let isRemote = false;
+
+      if (refname.startsWith('refs/heads/')) {
+        name = refname.replace('refs/heads/', '');
+      } else if (refname.startsWith('refs/remotes/')) {
+        name = refname.replace('refs/remotes/', '');
+        isRemote = true;
+      }
+
+      // Skip HEAD pointer entries
+      if (name.endsWith('/HEAD')) {
+        return null;
+      }
+
+      const isCurrent = name === currentBranch;
+
+      return {
+        name,
+        isRemote,
+        isCurrent,
+        commitHash,
+        commitMessage,
+        authorName,
+        relativeDate,
+      };
+    })
+    .filter((b): b is BranchInfo => b !== null);
+}
+
+/**
  * Get the git root directory for a given path
  */
 export function getGitRoot(cwd: string): Promise<string> {
@@ -190,11 +271,12 @@ export interface UpdateResult {
  */
 export async function updateWorktree(
   cwd: string,
-  opts: { merge?: boolean; rebase?: boolean } = {}
+  opts: { merge?: boolean; rebase?: boolean; from?: string } = {}
 ): Promise<UpdateResult> {
   const args: string[] = [];
   if (opts.merge) args.push('--merge');
   if (opts.rebase) args.push('--rebase');
+  if (opts.from) args.push('--from', opts.from);
 
   try {
     const output = await exec(`gw update ${args.join(' ')}`, cwd);

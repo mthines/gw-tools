@@ -19,6 +19,8 @@ import {
   cleanWorktrees,
   syncWorktree,
   listWorktrees,
+  listBranches,
+  getDefaultBranch,
   updateWorktree,
   stripAnsi,
   hasUncommittedChanges,
@@ -491,6 +493,133 @@ export function activate(context: vscode.ExtensionContext): void {
         }
       } else {
         vscode.window.showErrorMessage(`Failed to update: ${result.message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.updateFrom', async () => {
+      const [branches, defaultBranch] = await Promise.all([
+        listBranches(workspacePath),
+        getDefaultBranch(workspacePath),
+      ]);
+
+      // Helper to check if branch is the default branch
+      const isDefaultBranch = (name: string): boolean => {
+        const baseName = name.replace(/^origin\//, '');
+        return baseName === defaultBranch;
+      };
+
+      // Sort: default branch first, then local, then remote; exclude current branch
+      const sortedBranches = branches
+        .filter((b) => !b.isCurrent)
+        .sort((a, b) => {
+          // Default branch always first
+          const aIsDefault = isDefaultBranch(a.name);
+          const bIsDefault = isDefaultBranch(b.name);
+          if (aIsDefault !== bIsDefault) return aIsDefault ? -1 : 1;
+
+          // Then local before remote
+          if (a.isRemote !== b.isRemote) return a.isRemote ? 1 : -1;
+          return a.name.localeCompare(b.name);
+        });
+
+      if (sortedBranches.length === 0) {
+        vscode.window.showWarningMessage('No branches available.');
+        return;
+      }
+
+      const picks = sortedBranches.map((b) => ({
+        label: `$(git-branch) ${b.name}`,
+        description: b.relativeDate || '',
+        detail: b.authorName && b.commitHash && b.commitMessage
+          ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
+          : undefined,
+        branch: b.name,
+      }));
+
+      const picked = await vscode.window.showQuickPick(picks, {
+        placeHolder: 'Select branch to update from',
+        title: 'Update From Branch',
+        matchOnDescription: true,
+        matchOnDetail: true,
+      });
+
+      if (!picked) return;
+
+      const result = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: `Updating from ${picked.branch}...`, cancellable: false },
+        async () => {
+          return await updateWorktree(workspacePath, { from: picked.branch });
+        }
+      );
+
+      if (result.success) {
+        if (result.alreadyUpToDate) {
+          vscode.window.showInformationMessage('Already up to date');
+        } else {
+          vscode.window.showInformationMessage(`Updated from ${picked.branch}`);
+        }
+      } else if (result.conflicted) {
+        const action = await vscode.window.showWarningMessage(
+          'Merge conflict detected. Resolve conflicts in the editor, then commit.',
+          'Open Source Control'
+        );
+        if (action === 'Open Source Control') {
+          vscode.commands.executeCommand('workbench.view.scm');
+        }
+      } else {
+        vscode.window.showErrorMessage(`Failed to update: ${result.message}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.syncFrom', async () => {
+      const [worktrees, defaultBranch] = await Promise.all([
+        listWorktrees(workspacePath),
+        getDefaultBranch(workspacePath),
+      ]);
+      const currentPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+
+      // Exclude current worktree and bare repos
+      const otherWorktrees = worktrees.filter((w) => !w.bare && w.path !== currentPath);
+
+      if (otherWorktrees.length === 0) {
+        vscode.window.showWarningMessage('No other worktrees available to sync from.');
+        return;
+      }
+
+      // Sort: default branch first, then alphabetically
+      const sortedWorktrees = otherWorktrees.sort((a, b) => {
+        const aIsDefault = a.branch === defaultBranch;
+        const bIsDefault = b.branch === defaultBranch;
+        if (aIsDefault !== bIsDefault) return aIsDefault ? -1 : 1;
+        return a.branch.localeCompare(b.branch);
+      });
+
+      const picks = sortedWorktrees.map((w) => ({
+        label: w.branch,
+        description: path.basename(w.path),
+        detail: w.path,
+      }));
+
+      const picked = await vscode.window.showQuickPick(picks, {
+        placeHolder: 'Select worktree to sync files from',
+        title: 'Sync From Worktree',
+        matchOnDescription: true,
+        matchOnDetail: true,
+      });
+
+      if (!picked) return;
+
+      try {
+        await vscode.window.withProgress(
+          { location: vscode.ProgressLocation.Notification, title: `Syncing from ${picked.label}...` },
+          async () => {
+            const result = await syncWorktree(workspacePath, undefined, picked.label);
+            vscode.window.showInformationMessage(stripAnsi(result) || `Synced from ${picked.label}`);
+          }
+        );
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to sync: ${stripAnsi(msg)}`);
       }
     }),
   ];
