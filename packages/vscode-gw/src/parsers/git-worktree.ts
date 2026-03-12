@@ -128,10 +128,24 @@ export function getGitRoot(cwd: string): Promise<string> {
 }
 
 /**
+ * Check if a worktree has uncommitted changes
+ */
+export async function hasUncommittedChanges(worktreePath: string): Promise<boolean> {
+  try {
+    const output = await exec('git status --porcelain', worktreePath);
+    return output.length > 0;
+  } catch {
+    // If we can't check status, assume it might have changes
+    return true;
+  }
+}
+
+/**
  * Remove a worktree using gw remove
  */
-export function removeWorktree(cwd: string, worktreePath: string): Promise<void> {
-  return exec(`gw remove "${worktreePath}" --yes`, cwd).then(() => undefined);
+export function removeWorktree(cwd: string, worktreePath: string, force = false): Promise<void> {
+  const flags = force ? '--yes --force' : '--yes';
+  return exec(`gw remove "${worktreePath}" ${flags}`, cwd).then(() => undefined);
 }
 
 /**

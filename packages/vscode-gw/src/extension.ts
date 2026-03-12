@@ -21,6 +21,7 @@ import {
   listWorktrees,
   updateWorktree,
   stripAnsi,
+  hasUncommittedChanges,
 } from './parsers/git-worktree';
 
 /**
@@ -223,11 +224,29 @@ export function activate(context: vscode.ExtensionContext): void {
         worktreePath = picked.path;
       }
 
-      const confirm = await vscode.window.showWarningMessage(`Remove worktree "${branch}"?`, { modal: true }, 'Remove');
-      if (confirm !== 'Remove') return;
+      // Check if worktree has uncommitted changes
+      const hasDirtyChanges = await hasUncommittedChanges(worktreePath);
+
+      let confirm: string | undefined;
+      let forceRemove = false;
+
+      if (hasDirtyChanges) {
+        // Show warning with force option
+        confirm = await vscode.window.showWarningMessage(
+          `Remove worktree "${branch}"?\n\nThis worktree has uncommitted changes that will be lost.`,
+          { modal: true },
+          'Force Remove'
+        );
+        forceRemove = confirm === 'Force Remove';
+      } else {
+        // Standard confirmation
+        confirm = await vscode.window.showWarningMessage(`Remove worktree "${branch}"?`, { modal: true }, 'Remove');
+      }
+
+      if (!confirm) return;
 
       try {
-        await removeWorktree(workspacePath, worktreePath);
+        await removeWorktree(workspacePath, worktreePath, forceRemove);
         worktreeProvider.refresh();
         vscode.window.showInformationMessage(`Removed worktree: ${branch}`);
       } catch (err) {
