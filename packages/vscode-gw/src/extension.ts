@@ -530,9 +530,10 @@ export function activate(context: vscode.ExtensionContext): void {
       const picks = sortedBranches.map((b) => ({
         label: `$(git-branch) ${b.name}`,
         description: b.relativeDate || '',
-        detail: b.authorName && b.commitHash && b.commitMessage
-          ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
-          : undefined,
+        detail:
+          b.authorName && b.commitHash && b.commitMessage
+            ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
+            : undefined,
         branch: b.name,
       }));
 
@@ -546,7 +547,11 @@ export function activate(context: vscode.ExtensionContext): void {
       if (!picked) return;
 
       const result = await vscode.window.withProgress(
-        { location: vscode.ProgressLocation.Notification, title: `Updating from ${picked.branch}...`, cancellable: false },
+        {
+          location: vscode.ProgressLocation.Notification,
+          title: `Updating from ${picked.branch}...`,
+          cancellable: false,
+        },
         async () => {
           return await updateWorktree(workspacePath, { from: picked.branch });
         }
