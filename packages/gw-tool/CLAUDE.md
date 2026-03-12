@@ -56,6 +56,7 @@ src/
 ### Config Migrations (IMPORTANT)
 
 When changing `.gw/config.json` schema, add a migration in `config-migrations.ts`:
+
 1. Increment `CURRENT_CONFIG_VERSION`
 2. Add migration to `MIGRATIONS` array
 3. Update types in `types.ts`
@@ -65,6 +66,7 @@ Never add backwards-compatibility code in commands - migrations handle it.
 ## Documentation Requirements
 
 When adding/changing features, update:
+
 1. `packages/gw-tool/README.md` - User-facing docs
 2. Help text in command file's `show<Name>Help()` function
 3. Root `CLAUDE.md` if it affects the overall project

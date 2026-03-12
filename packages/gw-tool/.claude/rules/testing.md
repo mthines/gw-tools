@@ -14,6 +14,7 @@ deno test --allow-all src/lib/config.test.ts  # Run specific test file
 ## Test Structure
 
 Tests are colocated with source files:
+
 - `src/lib/config.ts` → `src/lib/config.test.ts`
 - `src/commands/checkout.ts` → `src/commands/checkout.test.ts`
 

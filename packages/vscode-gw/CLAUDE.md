@@ -42,9 +42,10 @@ src/
 ## Extension Manifest
 
 All commands, views, settings, and keybindings are defined in `package.json`:
+
 - Commands: `contributes.commands`
 - Views: `contributes.views` (gwWorktreeExplorer, gwAgentTasks)
-- Settings: `contributes.configuration` (gw.* namespace)
+- Settings: `contributes.configuration` (gw.\* namespace)
 - Keybindings: `contributes.keybindings`
 
 ## Code Style

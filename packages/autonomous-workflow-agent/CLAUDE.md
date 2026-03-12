@@ -35,7 +35,7 @@ agents/
 
 - **AgentDefinition** - Interface matching Claude Agent SDK's expected shape
 - **systemPrompt** - The large prompt string exported for custom agent builds
-- **agents/*.md** - Markdown files Claude Code loads as subagents
+- **agents/\*.md** - Markdown files Claude Code loads as subagents
 
 ## Gotchas
 
