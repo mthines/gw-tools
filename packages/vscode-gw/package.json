@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
-  "version": "0.3.0",
+  "version": "0.7.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -152,6 +152,12 @@
         "title": "Focus Agent Tasks View",
         "icon": "$(tasklist)",
         "category": "gw"
+      },
+      {
+        "command": "gw.update",
+        "title": "Update Worktree",
+        "icon": "$(cloud-download)",
+        "category": "gw"
       }
     ],
     "menus": {
@@ -182,6 +188,11 @@
         },
         {
           "command": "gw.clean",
+          "when": "view == gwWorktreeExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "gw.update",
           "when": "view == gwWorktreeExplorer",
           "group": "navigation"
         },

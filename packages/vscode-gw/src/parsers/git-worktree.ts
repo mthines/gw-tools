@@ -4,6 +4,14 @@
 
 import * as cp from 'child_process';
 
+/**
+ * Strip ANSI escape codes from a string
+ */
+export function stripAnsi(str: string): string {
+  // eslint-disable-next-line no-control-regex
+  return str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
+}
+
 export interface WorktreeInfo {
   path: string;
   branch: string;
@@ -151,6 +159,53 @@ export function syncWorktree(cwd: string, target?: string, from?: string): Promi
   if (target) args.push(target);
   if (from) args.push('--from', from);
   return exec(`gw sync ${args.join(' ')}`, cwd);
+}
+
+/**
+ * Result from gw update command
+ */
+export interface UpdateResult {
+  success: boolean;
+  message: string;
+  conflicted: boolean;
+  alreadyUpToDate: boolean;
+}
+
+/**
+ * Update current worktree with latest changes from default branch via gw update
+ */
+export async function updateWorktree(
+  cwd: string,
+  opts: { merge?: boolean; rebase?: boolean } = {}
+): Promise<UpdateResult> {
+  const args: string[] = [];
+  if (opts.merge) args.push('--merge');
+  if (opts.rebase) args.push('--rebase');
+
+  try {
+    const output = await exec(`gw update ${args.join(' ')}`, cwd);
+    const cleanOutput = stripAnsi(output);
+
+    return {
+      success: true,
+      message: cleanOutput,
+      conflicted: false,
+      alreadyUpToDate: cleanOutput.toLowerCase().includes('already up to date'),
+    };
+  } catch (err) {
+    const rawMessage = err instanceof Error ? err.message : String(err);
+    const cleanMessage = stripAnsi(rawMessage);
+    const isConflict =
+      cleanMessage.toLowerCase().includes('conflict') ||
+      cleanMessage.toLowerCase().includes('fix conflicts');
+
+    return {
+      success: false,
+      message: cleanMessage,
+      conflicted: isConflict,
+      alreadyUpToDate: false,
+    };
+  }
 }
 
 /**

@@ -13,7 +13,7 @@ import * as fs from 'fs';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-provider';
 import { ArtifactWatcher } from './watchers/artifact-watcher';
-import { removeWorktree, createWorktree, cleanWorktrees, syncWorktree, listWorktrees } from './parsers/git-worktree';
+import { removeWorktree, createWorktree, cleanWorktrees, syncWorktree, listWorktrees, updateWorktree } from './parsers/git-worktree';
 
 /**
  * Open a markdown file, respecting the preview setting
@@ -434,6 +434,33 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to sync: ${msg}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.update', async () => {
+      const result = await vscode.window.withProgress(
+        { location: vscode.ProgressLocation.Notification, title: 'Updating worktree...', cancellable: false },
+        async () => {
+          return await updateWorktree(workspacePath);
+        }
+      );
+
+      if (result.success) {
+        if (result.alreadyUpToDate) {
+          vscode.window.showInformationMessage('Already up to date');
+        } else {
+          vscode.window.showInformationMessage('Worktree updated successfully');
+        }
+      } else if (result.conflicted) {
+        const action = await vscode.window.showWarningMessage(
+          'Merge conflict detected. Resolve conflicts in the editor, then commit.',
+          'Open Source Control'
+        );
+        if (action === 'Open Source Control') {
+          vscode.commands.executeCommand('workbench.view.scm');
+        }
+      } else {
+        vscode.window.showErrorMessage(`Failed to update: ${result.message}`);
       }
     }),
   ];

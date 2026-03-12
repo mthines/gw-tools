@@ -51,8 +51,7 @@
       "dependsOn": ["package"],
       "options": {
         "commands": [
-          "npx @vscode/vsce publish --no-dependencies -i $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)",
-          "npx ovsx publish $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)"
+          "npx @vscode/vsce publish --no-dependencies -i $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)"
         ],
         "cwd": "packages/vscode-gw",
         "parallel": false
@@ -70,6 +69,14 @@
             "npx @vscode/vsce verify-pat gw-tools || echo 'PAT verification skipped'"
           ]
         }
+      }
+    },
+    "publish": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["release"],
+      "options": {
+        "commands": ["npx ovsx publish $(ls ../../dist/packages/vscode-gw/*.vsix | head -1)"],
+        "cwd": "packages/vscode-gw"
       }
     },
     "lint": {
