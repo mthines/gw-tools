@@ -196,8 +196,7 @@ export async function updateWorktree(
     const rawMessage = err instanceof Error ? err.message : String(err);
     const cleanMessage = stripAnsi(rawMessage);
     const isConflict =
-      cleanMessage.toLowerCase().includes('conflict') ||
-      cleanMessage.toLowerCase().includes('fix conflicts');
+      cleanMessage.toLowerCase().includes('conflict') || cleanMessage.toLowerCase().includes('fix conflicts');
 
     return {
       success: false,

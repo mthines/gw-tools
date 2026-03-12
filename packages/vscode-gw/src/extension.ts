@@ -13,7 +13,14 @@ import * as fs from 'fs';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-provider';
 import { ArtifactWatcher } from './watchers/artifact-watcher';
-import { removeWorktree, createWorktree, cleanWorktrees, syncWorktree, listWorktrees, updateWorktree } from './parsers/git-worktree';
+import {
+  removeWorktree,
+  createWorktree,
+  cleanWorktrees,
+  syncWorktree,
+  listWorktrees,
+  updateWorktree,
+} from './parsers/git-worktree';
 
 /**
  * Open a markdown file, respecting the preview setting
