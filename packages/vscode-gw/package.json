@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
-  "version": "0.9.0",
+  "version": "0.11.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
