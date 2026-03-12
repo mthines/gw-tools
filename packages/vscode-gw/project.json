@@ -5,6 +5,18 @@
   "projectType": "application",
   "tags": ["vscode-extension"],
   "targets": {
+    "version": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "./scripts/version.sh",
+        "cwd": "packages/vscode-gw"
+      },
+      "configurations": {
+        "dry-run": {
+          "command": "./scripts/version.sh --dry-run"
+        }
+      }
+    },
     "build": {
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/dist"],
