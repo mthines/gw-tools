@@ -21,7 +21,7 @@ export class WorktreeItem extends vscode.TreeItem {
 
     if (!worktree.bare) {
       this.command = {
-        command: 'gw.openWorktreeInCurrentWindow',
+        command: 'gw.openWorktree',
         title: 'Open Worktree',
         arguments: [this],
       };

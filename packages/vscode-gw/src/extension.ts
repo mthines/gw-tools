@@ -72,9 +72,9 @@ export function activate(context: vscode.ExtensionContext): void {
         worktreePath: string;
       }
 
-      const openInNewWindowButton: vscode.QuickInputButton = {
-        iconPath: new vscode.ThemeIcon('empty-window'),
-        tooltip: 'Open in New Window',
+      const openInSameWindowButton: vscode.QuickInputButton = {
+        iconPath: new vscode.ThemeIcon('window'),
+        tooltip: 'Open in Same Window',
       };
 
       const items: WorktreeQuickPickItem[] = worktrees
@@ -86,7 +86,7 @@ export function activate(context: vscode.ExtensionContext): void {
             description: isCurrent ? 'current' : path.basename(w.path),
             detail: w.path,
             worktreePath: w.path,
-            buttons: isCurrent ? [] : [openInNewWindowButton],
+            buttons: isCurrent ? [] : [openInSameWindowButton],
           };
         });
 
@@ -97,7 +97,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const quickPick = vscode.window.createQuickPick<WorktreeQuickPickItem>();
       quickPick.items = items;
-      quickPick.placeholder = 'Select worktree to switch to (click button for new window)';
+      quickPick.placeholder = 'Select worktree to switch to (click button for same window)';
       quickPick.title = 'Switch Worktree';
       quickPick.matchOnDescription = true;
       quickPick.matchOnDetail = true;
@@ -106,14 +106,14 @@ export function activate(context: vscode.ExtensionContext): void {
         const selected = quickPick.selectedItems[0];
         if (selected && selected.worktreePath !== currentPath) {
           const uri = vscode.Uri.file(selected.worktreePath);
-          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
         }
         quickPick.hide();
       });
 
       quickPick.onDidTriggerItemButton((e) => {
         const uri = vscode.Uri.file(e.item.worktreePath);
-        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
         quickPick.hide();
       });
 
