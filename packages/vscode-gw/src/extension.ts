@@ -20,6 +20,7 @@ import {
   syncWorktree,
   listWorktrees,
   updateWorktree,
+  stripAnsi,
 } from './parsers/git-worktree';
 
 /**
@@ -130,10 +131,12 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand('gw.focus', () => {
       // Focus the gw sidebar (worktrees view by default)
-      worktreeView.reveal(undefined as unknown as WorktreeItem, { focus: true, expand: true }).catch(() => {
-        // If reveal fails (no items), just focus the view
-        vscode.commands.executeCommand('gwWorktreeExplorer.focus');
-      });
+      Promise.resolve(worktreeView.reveal(undefined as unknown as WorktreeItem, { focus: true, expand: true })).catch(
+        () => {
+          // If reveal fails (no items), just focus the view
+          vscode.commands.executeCommand('gwWorktreeExplorer.focus');
+        }
+      );
     }),
 
     vscode.commands.registerCommand('gw.focusWorktrees', () => {
@@ -229,7 +232,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(`Removed worktree: ${branch}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to remove worktree: ${msg}`);
+        vscode.window.showErrorMessage(`Failed to remove worktree: ${stripAnsi(msg)}`);
       }
     }),
 
@@ -261,7 +264,7 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showInformationMessage(`Created worktree: ${branchName}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to create worktree: ${msg}`);
+        vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
       }
     }),
 
@@ -311,15 +314,16 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.clean', async () => {
-      const dryRunFirst = await cleanWorktrees(workspacePath, { dryRun: true });
-      if (!dryRunFirst || dryRunFirst.includes('No worktrees to clean')) {
+      const dryRunRaw = await cleanWorktrees(workspacePath, { dryRun: true });
+      const dryRunOutput = stripAnsi(dryRunRaw);
+      if (!dryRunOutput || dryRunOutput.includes('No worktrees to clean')) {
         vscode.window.showInformationMessage('No stale worktrees to clean.');
         return;
       }
 
       const choice = await vscode.window.showWarningMessage(
         'Clean stale worktrees?',
-        { modal: true, detail: dryRunFirst },
+        { modal: true, detail: dryRunOutput },
         'Clean',
         'Force Clean'
       );
@@ -330,13 +334,13 @@ export function activate(context: vscode.ExtensionContext): void {
           { location: vscode.ProgressLocation.Notification, title: 'Cleaning worktrees...' },
           async () => {
             const result = await cleanWorktrees(workspacePath, { force: choice === 'Force Clean' });
-            vscode.window.showInformationMessage(result || 'Worktrees cleaned.');
+            vscode.window.showInformationMessage(stripAnsi(result) || 'Worktrees cleaned.');
           }
         );
         worktreeProvider.refresh();
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to clean worktrees: ${msg}`);
+        vscode.window.showErrorMessage(`Failed to clean worktrees: ${stripAnsi(msg)}`);
       }
     }),
 
@@ -435,12 +439,12 @@ export function activate(context: vscode.ExtensionContext): void {
           { location: vscode.ProgressLocation.Notification, title: `Syncing to ${target}...` },
           async () => {
             const result = await syncWorktree(workspacePath, target);
-            vscode.window.showInformationMessage(result || `Synced to ${target}`);
+            vscode.window.showInformationMessage(stripAnsi(result) || `Synced to ${target}`);
           }
         );
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to sync: ${msg}`);
+        vscode.window.showErrorMessage(`Failed to sync: ${stripAnsi(msg)}`);
       }
     }),
 

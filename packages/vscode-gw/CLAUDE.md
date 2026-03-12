@@ -54,6 +54,7 @@ All commands, views, settings, and keybindings are defined in `package.json`:
 - Commands accept optional TreeItem for context menu invocation
 - Fall back to QuickPick when no item provided
 - Use `openMarkdownFile()` helper for consistent markdown opening behavior
+- **Always use `stripAnsi()` on CLI output** before displaying in notifications, dialogs, or error messages. The `gw` CLI outputs colored text with ANSI escape codes that VS Code doesn't render.
 
 ## Testing
 
