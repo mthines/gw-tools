@@ -20,6 +20,7 @@
     "build": {
       "executor": "nx:run-commands",
       "outputs": ["{projectRoot}/dist"],
+      "dependsOn": ["version"],
       "options": {
         "command": "node esbuild.config.mjs",
         "cwd": "packages/vscode-gw"
