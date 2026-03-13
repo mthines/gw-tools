@@ -4,7 +4,7 @@
   "deno.lint": true,
   "deno.config": "./packages/gw-tool/deno.json",
   "deno.importMap": "./packages/gw-tool/deno.json",
-  "deno.testing.args": ["--allow-all"],
+  "deno.testing.args": ["--allow-all", "--no-check"],
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true
@@ -14,5 +14,8 @@
     "editor.formatOnSave": true
   },
   "deno.codeLens.test": true,
-  "deno.codeLens.testArgs": ["--allow-all"]
+  "deno.codeLens.testArgs": ["--allow-all", "--no-check"],
+
+  // Disable Jest entirely - this project uses Deno/Vitest for testing
+  "jest.enable": false
 }
