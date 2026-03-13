@@ -2,7 +2,7 @@
  * Tests for pr.ts command
  */
 
-import { assertEquals } from '$std/assert';
+import { assertEquals } from '@std/assert';
 import { executePr } from './pr.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';

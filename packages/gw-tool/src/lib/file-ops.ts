@@ -2,7 +2,7 @@
  * File and directory operations for copying secrets
  */
 
-import { dirname, join } from '$std/path';
+import { dirname, join } from '@std/path';
 import { isDirectory, pathExists } from './path-resolver.ts';
 import type { CopyResult } from './types.ts';
 

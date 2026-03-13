@@ -2,7 +2,7 @@
  * CLI argument parsing and help text
  */
 
-import { parseArgs as denoParseArgs } from '$std/cli/parse-args';
+import { parseArgs as denoParseArgs } from '@std/cli/parse-args';
 import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
 import { VERSION } from './version.ts';
 

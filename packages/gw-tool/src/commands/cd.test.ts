@@ -2,8 +2,8 @@
  * Tests for cd.ts command
  */
 
-import { assertEquals, assertStringIncludes } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals, assertStringIncludes } from '@std/assert';
+import { join } from '@std/path';
 import { executeCd } from './cd.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

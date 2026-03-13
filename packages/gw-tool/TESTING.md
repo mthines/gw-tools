@@ -114,7 +114,7 @@ assertEquals(exitCode, 1, 'Should exit with error code');
 ### Test Template
 
 ```typescript
-import { assertEquals } from '$std/assert';
+import { assertEquals } from '@std/assert';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { executeCommand } from './command.ts';

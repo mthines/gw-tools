@@ -24,7 +24,7 @@ nx run gw-tool:release           # Automated release
 ## Code Style
 
 - **Files**: kebab-case (`install-shell.ts`, not `installShell.ts`)
-- **Imports**: Always include `.ts` extension, use `$std/` aliases for Deno stdlib
+- **Imports**: Always include `.ts` extension, use `@std/` for Deno stdlib (via JSR)
 - **Formatting**: 2 spaces, double quotes, semicolons required, 80 char line width
 - **Types**: Define in `src/lib/types.ts` with JSDoc comments
 - **Output**: Use `* as output from '../lib/output.ts'` for colored CLI messages

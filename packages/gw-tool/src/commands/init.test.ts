@@ -2,8 +2,8 @@
  * Tests for init.ts command
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals, assertRejects } from '@std/assert';
+import { join } from '@std/path';
 import { executeInit } from './init.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

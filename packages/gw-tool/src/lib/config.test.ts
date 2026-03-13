@@ -2,8 +2,8 @@
  * Tests for config.ts
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals, assertRejects } from '@std/assert';
+import { join } from '@std/path';
 import { loadConfig, saveConfig, saveConfigTemplate } from './config.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import {

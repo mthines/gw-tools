@@ -2,8 +2,8 @@
  * Tests for checkout.ts command
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { executeCheckout } from './checkout.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

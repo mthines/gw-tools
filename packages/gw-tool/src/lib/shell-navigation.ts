@@ -3,7 +3,7 @@
  * Enables shell integration to navigate to worktrees without buffering output
  */
 
-import { join } from '$std/path';
+import { join } from '@std/path';
 
 /**
  * Signal to shell integration that it should navigate to a path

@@ -2,7 +2,7 @@
  * Tests for prune command
  */
 
-import { assertArrayIncludes, assertEquals } from '$std/assert';
+import { assertArrayIncludes, assertEquals } from '@std/assert';
 import {
   getCurrentWorktreePath,
   hasBranchUnpushedCommits,
@@ -10,7 +10,7 @@ import {
   listWorktrees,
 } from '../lib/git-utils.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { join } from '$std/path';
+import { join } from '@std/path';
 
 Deno.test('getCurrentWorktreePath - should return empty string when not in a worktree', async () => {
   const testRepo = new GitTestRepo();

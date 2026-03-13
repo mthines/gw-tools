@@ -3,7 +3,7 @@
  * Initializes the gw configuration for a repository
  */
 
-import { join, resolve } from '$std/path';
+import { join, resolve } from '@std/path';
 import { saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';

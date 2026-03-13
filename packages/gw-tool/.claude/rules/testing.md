@@ -40,7 +40,7 @@ Deno.test('my test', async () => {
 Use Deno's standard assertions:
 
 ```typescript
-import { assertEquals, assertExists, assertRejects } from '$std/assert';
+import { assertEquals, assertExists, assertRejects } from '@std/assert';
 ```
 
 ## Config Migration Tests

@@ -2,8 +2,8 @@
  * Test fixtures for creating configs and test data
  */
 
-import { join } from '$std/path';
-import { parse as parseJsonc } from '$std/jsonc';
+import { join } from '@std/path';
+import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from '../lib/types.ts';
 
 /**

@@ -3,8 +3,8 @@
  * Config is stored at .gw/config.json (searched walking up from cwd)
  */
 
-import { join, resolve } from '$std/path';
-import { parse as parseJsonc } from '$std/jsonc';
+import { join, resolve } from '@std/path';
+import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from './types.ts';
 import { findGitRoot, pathExists } from './path-resolver.ts';
 import { runMigrations, CURRENT_CONFIG_VERSION } from './config-migrations.ts';

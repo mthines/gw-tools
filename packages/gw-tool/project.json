@@ -5,13 +5,24 @@
   "projectType": "library",
   "tags": [],
   "targets": {
-    "check": {
+    "setup": {
       "executor": "nx:run-commands",
       "cache": true,
       "inputs": [
+        "{projectRoot}/deno.json",
+        "{projectRoot}/deno.lock"
+      ],
+      "options": {
+        "command": "deno cache src/main.ts",
+        "cwd": "packages/gw-tool"
+      }
+    },
+    "check": {
+      "executor": "nx:run-commands",
+      "dependsOn": ["setup"],
+      "cache": true,
+      "inputs": [
         "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/src/**/*.test.ts",
-        "{projectRoot}/src/**/*.spec.ts",
         "{projectRoot}/deno.json",
         "{projectRoot}/deno.lock"
       ],
@@ -22,11 +33,10 @@
     },
     "test": {
       "executor": "nx:run-commands",
+      "dependsOn": ["setup"],
       "cache": true,
       "inputs": [
         "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/src/**/*.test.ts",
-        "{projectRoot}/src/**/*.spec.ts",
         "{projectRoot}/deno.json",
         "{projectRoot}/deno.lock"
       ],
@@ -78,6 +88,7 @@
     },
     "compile": {
       "executor": "nx:run-commands",
+      "dependsOn": ["setup"],
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool"],
       "options": {
         "command": "deno compile --allow-all --no-npm --output ../../dist/packages/gw-tool/gw src/main.ts",
@@ -92,6 +103,7 @@
     },
     "compile-all": {
       "executor": "nx:run-commands",
+      "dependsOn": ["setup"],
       "outputs": ["{workspaceRoot}/dist/packages/gw-tool/binaries"],
       "inputs": ["{projectRoot}/src/**/*.ts", "{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {

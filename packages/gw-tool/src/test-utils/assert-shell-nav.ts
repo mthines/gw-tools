@@ -5,8 +5,8 @@
  * actually navigates to the expected directory.
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { getBashFunction } from '../commands/install-shell.ts';
 
 /**

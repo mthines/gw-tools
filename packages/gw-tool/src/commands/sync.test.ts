@@ -2,7 +2,7 @@
  * Tests for sync (copy) command
  */
 
-import { join } from '$std/path';
+import { join } from '@std/path';
 import { executeCopy } from './sync.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

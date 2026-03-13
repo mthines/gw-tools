@@ -2,8 +2,8 @@
  * Custom assertion helpers for testing
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 
 /**
  * Assert that a file exists

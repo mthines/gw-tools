@@ -2,8 +2,8 @@
  * Tests for shell-integration.ts
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { isShellIntegrationInstalled } from './shell-integration.ts';
 import { TempEnv } from '../test-utils/temp-env.ts';
 

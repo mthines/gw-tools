@@ -2,7 +2,7 @@
  * Tests for branch-protection.ts
  */
 
-import { assertEquals } from '$std/assert';
+import { assertEquals } from '@std/assert';
 import { isProtectedBranch } from './branch-protection.ts';
 
 Deno.test('isProtectedBranch - protects default branch', () => {

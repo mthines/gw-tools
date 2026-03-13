@@ -2,8 +2,8 @@
  * Tests for file-ops.ts
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { copyFiles } from './file-ops.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { assertFileExists, assertFileContent } from '../test-utils/assertions.ts';

@@ -2,8 +2,8 @@
  * Tests for auto-clean.ts
  */
 
-import { assertEquals } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { createConfigWithAutoClean, writeTestConfig, readTestConfig } from '../test-utils/fixtures.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';

@@ -2,8 +2,8 @@
  * Tests for install-shell command
  */
 
-import { assertEquals, assertStringIncludes } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals, assertStringIncludes } from '@std/assert';
+import { join } from '@std/path';
 import { executeInstallShell } from './install-shell.ts';
 import { TempHome } from '../test-utils/temp-env.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';

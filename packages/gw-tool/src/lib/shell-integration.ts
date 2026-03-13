@@ -1,7 +1,7 @@
 /**
  * Shell integration detection utilities
  */
-import { join } from '$std/path';
+import { join } from '@std/path';
 
 /**
  * Check if shell integration is installed (eval-based or legacy file-based)

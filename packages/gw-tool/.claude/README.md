@@ -163,9 +163,9 @@ Every file starts with a JSDoc block describing the module:
 ### Import Style
 
 ```typescript
-// Standard library imports use $std/ aliases (defined in deno.json)
-import { join, resolve } from '$std/path';
-import { parseArgs } from '$std/cli/parse-args';
+// Standard library imports use @std/ aliases (JSR packages via deno.json)
+import { join, resolve } from '@std/path';
+import { parseArgs } from '@std/cli/parse-args';
 
 // Type-only imports use `import type`
 import type { Config, CopyOptions } from './types.ts';
@@ -550,7 +550,7 @@ if (code !== 0) {
 ### Parsing Arguments with Options
 
 ```typescript
-import { parseArgs } from '$std/cli/parse-args';
+import { parseArgs } from '@std/cli/parse-args';
 
 const parsed = parseArgs(args, {
   boolean: ['help', 'dry-run'],

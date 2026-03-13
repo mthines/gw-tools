@@ -2,8 +2,8 @@
  * Tests for path-resolver.ts
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
-import { join, normalize } from '$std/path';
+import { assertEquals, assertRejects } from '@std/assert';
+import { join, normalize } from '@std/path';
 import { resolveWorktreePath, validatePathExists, pathExists, isDirectory } from './path-resolver.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 

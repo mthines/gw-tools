@@ -14,7 +14,7 @@
     "moduleResolution": "bundler",
     "baseUrl": ".",
     "paths": {
-      "$std/*": ["*"]
+      "@std/*": ["*"]
     }
   },
   "include": ["src/**/*.ts"],

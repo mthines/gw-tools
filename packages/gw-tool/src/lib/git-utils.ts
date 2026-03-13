@@ -2,7 +2,7 @@
  * Git utility functions for worktree operations
  */
 
-import { dirname, join } from '$std/path';
+import { join } from '@std/path';
 
 /**
  * Worktree information from git worktree list

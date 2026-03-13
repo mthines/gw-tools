@@ -4,7 +4,7 @@
  */
 
 import * as output from '../lib/output.ts';
-import { join } from '$std/path';
+import { join } from '@std/path';
 
 /**
  * Execute the install-shell command

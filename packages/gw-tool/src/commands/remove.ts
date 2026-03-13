@@ -3,7 +3,7 @@
  * Removes a worktree from the repository
  */
 
-import { resolve } from '$std/path';
+import { resolve } from '@std/path';
 import { executeGitWorktree } from '../lib/git-proxy.ts';
 import { loadConfig } from '../lib/config.ts';
 import {

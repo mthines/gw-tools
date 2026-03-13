@@ -2,7 +2,7 @@
  * Path resolution and validation utilities
  */
 
-import { join, normalize, resolve } from '$std/path';
+import { join, normalize, resolve } from '@std/path';
 
 /**
  * Resolve a worktree path relative to a repository root

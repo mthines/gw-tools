@@ -2,7 +2,7 @@
  * Tests for the show-init command
  */
 
-import { assertEquals } from '$std/assert';
+import { assertEquals } from '@std/assert';
 import { executeShowInit } from './show-init.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
