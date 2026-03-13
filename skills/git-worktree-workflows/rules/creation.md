@@ -34,6 +34,9 @@ gw add feature-payments -b feature-payments
 # Create from different source branch
 gw add feature-auth-social --from feature-auth
 
+# Create from staged files (extract WIP to new branch)
+gw checkout feature-extracted --from-staged
+
 # Create without auto-navigation
 gw add feature-auth --no-cd
 
@@ -86,6 +89,35 @@ git worktree add ../feature-x feature-x
 gw add feature-x
 cp ../.env .env  # Unnecessary if configured
 ```
+
+## Extracting Staged Files (--from-staged)
+
+Use `--from-staged` to extract work-in-progress to a new worktree. This is useful when you've started work that belongs in a different branch:
+
+```bash
+# 1. Stage files you want to extract
+git add src/new-feature.ts tests/new-feature.test.ts
+
+# 2. Create new worktree with staged files
+gw checkout feat/new-feature --from-staged
+
+# 3. Staged files are now in the new worktree
+# Original worktree is unchanged (files remain staged)
+```
+
+### Behavior
+
+- **All staged files**: `gw checkout <branch> --from-staged` copies all staged files
+- **Specific files**: `gw checkout <branch> --from-staged file1 file2` only copies those files
+- **autoCopyFiles still applies**: Config files like `.env` are copied alongside staged files
+- **Deleted files skipped**: Files staged for deletion are skipped
+- **Atomic operation**: If any file fails to copy, the worktree is removed
+
+### Use Cases
+
+- Started feature work but realized it should be a separate branch
+- Need to split a large PR into smaller pieces
+- Want to test changes in isolation without committing first
 
 ## Auto-Copy Configuration
 
