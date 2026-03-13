@@ -37,17 +37,18 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 
 ## Quick Reference
 
-| Task                         | Command                              |
-| ---------------------------- | ------------------------------------ |
-| Create worktree              | `gw add feature-name`                |
-| Create from different branch | `gw add feature-name --from develop` |
-| Navigate to worktree         | `gw cd feature-name`                 |
-| List all worktrees           | `gw list`                            |
-| Remove worktree              | `gw remove feature-name`             |
-| Check out PR                 | `gw pr 123`                          |
-| Update with main             | `gw update`                          |
-| Batch cleanup                | `gw clean`                           |
-| Full cleanup                 | `gw prune`                           |
+| Task                         | Command                                  |
+| ---------------------------- | ---------------------------------------- |
+| Create worktree              | `gw add feature-name`                    |
+| Create from different branch | `gw add feature-name --from develop`     |
+| Create from staged files     | `gw checkout feature-name --from-staged` |
+| Navigate to worktree         | `gw cd feature-name`                     |
+| List all worktrees           | `gw list`                                |
+| Remove worktree              | `gw remove feature-name`                 |
+| Check out PR                 | `gw pr 123`                              |
+| Update with main             | `gw update`                              |
+| Batch cleanup                | `gw clean`                               |
+| Full cleanup                 | `gw prune`                               |
 
 ## Key Principles
 

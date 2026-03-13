@@ -2,7 +2,7 @@
  * Git utility functions for worktree operations
  */
 
-import { join } from '$std/path';
+import { dirname, join } from '$std/path';
 
 /**
  * Worktree information from git worktree list
@@ -674,4 +674,166 @@ export async function deleteLocalBranch(
   }
 
   return { success: false, message: errorOutput || 'Failed to delete branch' };
+}
+
+/**
+ * Information about a staged file
+ */
+export interface StagedFileInfo {
+  /** Relative path to the file */
+  path: string;
+  /** Status: A (added), M (modified), D (deleted), R (renamed), C (copied) */
+  status: 'A' | 'M' | 'D' | 'R' | 'C';
+  /** Original path for renamed/copied files */
+  originalPath?: string;
+}
+
+/**
+ * Get list of staged files in the current worktree
+ * @param worktreePath Optional path to the worktree (defaults to cwd)
+ * @returns Array of staged file info
+ */
+export async function getStagedFiles(worktreePath?: string): Promise<StagedFileInfo[]> {
+  const args = worktreePath
+    ? ['-C', worktreePath, 'diff', '--cached', '--name-status']
+    : ['diff', '--cached', '--name-status'];
+
+  const cmd = new Deno.Command('git', {
+    args,
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const errorMsg = new TextDecoder().decode(stderr).trim();
+    throw new Error(`Failed to get staged files: ${errorMsg}`);
+  }
+
+  const output = new TextDecoder().decode(stdout).trim();
+  if (!output) return [];
+
+  const files: StagedFileInfo[] = [];
+  const lines = output.split('\n');
+
+  for (const line of lines) {
+    if (!line.trim()) continue;
+
+    // Format: STATUS\tFILE or STATUS\tORIGINAL\tNEW (for renames)
+    const parts = line.split('\t');
+    const statusChar = parts[0].charAt(0) as StagedFileInfo['status'];
+
+    if (statusChar === 'R' || statusChar === 'C') {
+      // Renamed or copied: STATUS\toriginal\tnew
+      files.push({
+        status: statusChar,
+        originalPath: parts[1],
+        path: parts[2],
+      });
+    } else {
+      // Added, Modified, Deleted: STATUS\tfile
+      files.push({
+        status: statusChar,
+        path: parts[1],
+      });
+    }
+  }
+
+  return files;
+}
+
+/**
+ * Get the content of a staged file from the git index
+ * @param filePath Relative path to the file
+ * @param worktreePath Optional path to the worktree (defaults to cwd)
+ * @returns File content as Uint8Array (binary-safe)
+ */
+export async function getStagedFileContent(filePath: string, worktreePath?: string): Promise<Uint8Array> {
+  const args = worktreePath ? ['-C', worktreePath, 'show', `:${filePath}`] : ['show', `:${filePath}`];
+
+  const cmd = new Deno.Command('git', {
+    args,
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code, stdout, stderr } = await cmd.output();
+
+  if (code !== 0) {
+    const errorMsg = new TextDecoder().decode(stderr).trim();
+    throw new Error(`Failed to get staged file content for '${filePath}': ${errorMsg}`);
+  }
+
+  return stdout;
+}
+
+/**
+ * Copy staged files from one worktree to another
+ * @param sourceWorktreePath Path to the source worktree
+ * @param targetWorktreePath Path to the target worktree
+ * @param files Optional list of specific files to copy (copies all staged if not provided)
+ * @returns Array of copy results
+ */
+export async function copyStagedFiles(
+  sourceWorktreePath: string,
+  targetWorktreePath: string,
+  files?: string[]
+): Promise<{ path: string; success: boolean; message: string }[]> {
+  // Get all staged files from source
+  const stagedFiles = await getStagedFiles(sourceWorktreePath);
+
+  if (stagedFiles.length === 0) {
+    throw new Error('No staged files to copy');
+  }
+
+  // Filter by specific files if provided
+  let filesToCopy = stagedFiles;
+  if (files && files.length > 0) {
+    filesToCopy = stagedFiles.filter((f) => files.includes(f.path));
+    if (filesToCopy.length === 0) {
+      throw new Error(`None of the specified files are staged: ${files.join(', ')}`);
+    }
+  }
+
+  const results: { path: string; success: boolean; message: string }[] = [];
+
+  for (const file of filesToCopy) {
+    // Skip deletions - nothing to copy
+    if (file.status === 'D') {
+      results.push({
+        path: file.path,
+        success: true,
+        message: `Skipped deleted file: ${file.path}`,
+      });
+      continue;
+    }
+
+    try {
+      // Get content from git index
+      const content = await getStagedFileContent(file.path, sourceWorktreePath);
+
+      // Ensure target directory exists
+      const targetPath = join(targetWorktreePath, file.path);
+      await Deno.mkdir(dirname(targetPath), { recursive: true });
+
+      // Write file
+      await Deno.writeFile(targetPath, content);
+
+      results.push({
+        path: file.path,
+        success: true,
+        message: `Copied: ${file.path}`,
+      });
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      results.push({
+        path: file.path,
+        success: false,
+        message: `Failed to copy ${file.path}: ${errorMsg}`,
+      });
+    }
+  }
+
+  return results;
 }

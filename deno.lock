@@ -60,8 +60,11 @@
         "npm:@types/deno@^2.5.0",
         "npm:@types/jest@30",
         "npm:@types/node@20.19.9",
+        "npm:@types/vscode@^1.109.0",
         "npm:@vitest/coverage-v8@4.0.9",
         "npm:@vitest/ui@4.0.9",
+        "npm:@vscode/vsce@^3.7.1",
+        "npm:esbuild@~0.25.12",
         "npm:eslint@8.57",
         "npm:husky@^9.1.7",
         "npm:jest-environment-node@^30.0.2",
@@ -70,6 +73,7 @@
         "npm:jiti@2.4.2",
         "npm:jsonc-eslint-parser@^2.1.0",
         "npm:nx@22.4.0",
+        "npm:ovsx@~0.10.9",
         "npm:prettier@~3.6.2",
         "npm:ts-jest@^29.4.0",
         "npm:ts-node@10.9.1",
@@ -96,6 +100,17 @@
           "jsr:@std/jsonc@1",
           "jsr:@std/path@1.0.8"
         ]
+      },
+      "packages/vscode-gw": {
+        "packageJson": {
+          "dependencies": [
+            "npm:@types/node@20.19.9",
+            "npm:@types/vscode@^1.85.0",
+            "npm:esbuild@0.25",
+            "npm:tslib@^2.3.0",
+            "npm:vitest@4.0.9"
+          ]
+        }
       }
     }
   }

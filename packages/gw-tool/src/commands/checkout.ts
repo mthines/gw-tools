@@ -6,11 +6,31 @@
 import { promptAndRunAutoClean } from '../lib/auto-clean.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
-import { fetchAndGetStartPoint, listWorktrees } from '../lib/git-utils.ts';
+import {
+  fetchAndGetStartPoint,
+  listWorktrees,
+  getStagedFiles,
+  copyStagedFiles,
+  removeWorktree,
+  getCurrentWorktreePath,
+} from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
+
+/**
+ * Clean up a worktree after an error during --from-staged processing
+ * @param worktreePath Path to the worktree to remove
+ */
+async function cleanupWorktreeOnError(worktreePath: string): Promise<void> {
+  console.log(output.dim('Removing worktree due to error...'));
+  try {
+    await removeWorktree(worktreePath, true);
+  } catch {
+    // Ignore cleanup errors
+  }
+}
 
 /**
  * Check if a branch exists locally
@@ -130,6 +150,7 @@ function parseCheckoutArgs(args: string[]): {
   gitArgs: string[];
   noNavigate: boolean;
   fromBranch?: string;
+  fromStaged: boolean;
 } {
   const result = {
     help: false,
@@ -138,6 +159,7 @@ function parseCheckoutArgs(args: string[]): {
     gitArgs: [] as string[],
     noNavigate: false,
     fromBranch: undefined as string | undefined,
+    fromStaged: false,
   };
 
   // Check for help flag
@@ -151,6 +173,13 @@ function parseCheckoutArgs(args: string[]): {
     result.noNavigate = true;
     // Remove it from args so it doesn't interfere with other parsing
     args = args.filter((a) => a !== '--no-cd');
+  }
+
+  // Check for --from-staged flag
+  if (args.includes('--from-staged')) {
+    result.fromStaged = true;
+    // Remove it from args so it doesn't interfere with other parsing
+    args = args.filter((a) => a !== '--from-staged');
   }
 
   // First positional arg is the worktree name (required)
@@ -235,10 +264,13 @@ specific files as arguments.
 Arguments:
   <branch-name>           Branch name (also used as worktree directory name)
   [files...]              Optional files to copy (overrides config)
+                          With --from-staged: filters which staged files to copy
 
 Options:
   --no-cd                 Don't navigate to the new worktree after creation
   --from <branch>         Create new branch from specified branch instead of defaultBranch
+  --from-staged           Copy staged files from current worktree to new worktree
+                          Use this to extract work-in-progress to a new branch
 
   All git worktree add options are supported:
     -b <branch>           Create a new branch (explicit, overrides auto-create)
@@ -268,6 +300,13 @@ Examples:
   # Create worktree and copy specific files (overrides config)
   gw checkout feat/new-feature .env secrets/
 
+  # Extract staged files to a new worktree
+  # (copies all staged files from current worktree)
+  gw checkout feat/extracted-work --from-staged
+
+  # Extract specific staged files to a new worktree
+  gw checkout feat/extracted-work --from-staged src/new-feature.ts tests/
+
 Aliases:
   gw co                   Short alias for checkout
   gw add                  Backwards-compatible alias
@@ -292,6 +331,18 @@ Network Behavior:
 
   Remote fetch ensures your new branch is based on the latest remote code,
   not an outdated local branch.
+
+Staged Files (--from-staged):
+  The --from-staged flag copies staged files from your current worktree to the
+  new worktree. This is useful when you've started work that belongs in a
+  different branch:
+
+  1. Stage the files you want to extract: git add <files>
+  2. Create new worktree with staged files: gw checkout <branch> --from-staged
+  3. Your staged files are now in the new worktree
+  4. The original worktree is unchanged (files remain staged)
+
+  Note: autoCopyFiles (e.g., .env) are still copied in addition to staged files.
 
 Hooks:
   Pre-checkout and post-checkout hooks can be configured to run before and after
@@ -631,6 +682,69 @@ export async function executeCheckout(args: string[]): Promise<void> {
       const message = error instanceof Error ? error.message : String(error);
       output.warning(`Failed to copy files - ${message}`);
       console.log('Worktree was created successfully, but file copying failed.\n');
+    }
+  }
+
+  // Copy staged files if --from-staged flag is set
+  if (parsed.fromStaged) {
+    console.log(`\nCopying staged files to new worktree...`);
+
+    // Get current worktree path (where staged files are)
+    const sourceWorktreePath = await getCurrentWorktreePath();
+    if (!sourceWorktreePath) {
+      output.error('Could not determine current worktree path');
+      await cleanupWorktreeOnError(worktreePath);
+      Deno.exit(1);
+    }
+
+    // Check if there are staged files
+    const stagedFiles = await getStagedFiles(sourceWorktreePath);
+    if (stagedFiles.length === 0) {
+      output.error('No staged files found. Stage files with "git add" before using --from-staged.');
+      await cleanupWorktreeOnError(worktreePath);
+      Deno.exit(1);
+    }
+
+    try {
+      // If specific files were provided, use those as filter; otherwise copy all staged
+      const filterFiles = parsed.files.length > 0 ? parsed.files : undefined;
+      const results = await copyStagedFiles(sourceWorktreePath, worktreePath, filterFiles);
+
+      // Display results
+      console.log();
+      for (const result of results) {
+        if (result.success) {
+          if (result.message.includes('Skipped')) {
+            console.log(`  ${output.warningSymbol()} ${result.message}`);
+          } else {
+            console.log(`  ${output.checkmark()} ${result.message}`);
+          }
+        } else {
+          console.log(`  ${output.errorSymbol()} ${result.message}`);
+        }
+      }
+
+      // Check if any files failed to copy
+      const failedFiles = results.filter((r) => !r.success && !r.message.includes('Skipped'));
+      if (failedFiles.length > 0) {
+        console.log();
+        output.error(`Failed to copy ${failedFiles.length} staged file(s)`);
+        await cleanupWorktreeOnError(worktreePath);
+        Deno.exit(1);
+      }
+
+      const successCount = results.filter((r) => r.success && !r.message.includes('Skipped')).length;
+      const skippedCount = results.filter((r) => r.message.includes('Skipped')).length;
+      const fileWord = successCount === 1 ? 'file' : 'files';
+      console.log();
+      console.log(
+        `  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.error(`Failed to copy staged files - ${message}`);
+      await cleanupWorktreeOnError(worktreePath);
+      Deno.exit(1);
     }
   }
 
