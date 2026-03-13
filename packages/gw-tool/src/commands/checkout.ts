@@ -742,7 +742,9 @@ export async function executeCheckout(args: string[]): Promise<void> {
       const skippedCount = results.filter((r) => r.message.includes('Skipped')).length;
       const fileWord = successCount === 1 ? 'file' : 'files';
       console.log();
-      console.log(`  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`);
+      console.log(
+        `  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Failed to copy staged files - ${message}`);

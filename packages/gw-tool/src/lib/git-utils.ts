@@ -694,7 +694,9 @@ export interface StagedFileInfo {
  * @returns Array of staged file info
  */
 export async function getStagedFiles(worktreePath?: string): Promise<StagedFileInfo[]> {
-  const args = worktreePath ? ['-C', worktreePath, 'diff', '--cached', '--name-status'] : ['diff', '--cached', '--name-status'];
+  const args = worktreePath
+    ? ['-C', worktreePath, 'diff', '--cached', '--name-status']
+    : ['diff', '--cached', '--name-status'];
 
   const cmd = new Deno.Command('git', {
     args,
@@ -748,9 +750,7 @@ export async function getStagedFiles(worktreePath?: string): Promise<StagedFileI
  * @returns File content as Uint8Array (binary-safe)
  */
 export async function getStagedFileContent(filePath: string, worktreePath?: string): Promise<Uint8Array> {
-  const args = worktreePath
-    ? ['-C', worktreePath, 'show', `:${filePath}`]
-    : ['show', `:${filePath}`];
+  const args = worktreePath ? ['-C', worktreePath, 'show', `:${filePath}`] : ['show', `:${filePath}`];
 
   const cmd = new Deno.Command('git', {
     args,
