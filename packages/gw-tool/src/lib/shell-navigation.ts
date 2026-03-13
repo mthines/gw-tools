@@ -13,10 +13,7 @@ import type { EnvGetter } from './types.ts';
  * @param targetPath Path to navigate to
  * @param env Environment variable getter (defaults to Deno.env for production)
  */
-export async function signalNavigation(
-  targetPath: string,
-  env: EnvGetter = Deno.env
-): Promise<void> {
+export async function signalNavigation(targetPath: string, env: EnvGetter = Deno.env): Promise<void> {
   const home = env.get('HOME') || env.get('USERPROFILE') || '';
   const navFile = join(home, '.gw', 'tmp', 'last-nav');
 

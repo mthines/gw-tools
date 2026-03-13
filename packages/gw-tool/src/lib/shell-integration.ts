@@ -14,9 +14,7 @@ import type { EnvGetter } from './types.ts';
  * @param env Environment variable getter (defaults to Deno.env for production)
  * @returns true if shell integration is detected
  */
-export async function isShellIntegrationInstalled(
-  env: EnvGetter = Deno.env
-): Promise<boolean> {
+export async function isShellIntegrationInstalled(env: EnvGetter = Deno.env): Promise<boolean> {
   const shell = env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
   const home = env.get('HOME') || env.get('USERPROFILE') || '';
