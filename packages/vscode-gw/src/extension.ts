@@ -261,14 +261,94 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.createWorktree', async () => {
-      const branchName = await vscode.window.showInputBox({
-        prompt: 'Enter branch name for new worktree',
-        placeHolder: 'feature/my-feature',
-        validateInput: (value) => {
-          if (!value || value.trim().length === 0) return 'Branch name is required';
-          if (value.includes(' ')) return 'Branch name cannot contain spaces';
-          return null;
-        },
+      const [branches, defaultBranch] = await Promise.all([
+        listBranches(workspacePath),
+        getDefaultBranch(workspacePath),
+      ]);
+
+      const isDefaultBranch = (name: string): boolean => {
+        const baseName = name.replace(/^origin\//, '');
+        return baseName === defaultBranch;
+      };
+
+      // Sort: default branch first, then local before remote, alphabetical
+      const sortedBranches = branches
+        .filter((b) => !b.isCurrent)
+        .sort((a, b) => {
+          const aIsDefault = isDefaultBranch(a.name);
+          const bIsDefault = isDefaultBranch(b.name);
+          if (aIsDefault !== bIsDefault) return aIsDefault ? -1 : 1;
+          if (a.isRemote !== b.isRemote) return a.isRemote ? 1 : -1;
+          return a.name.localeCompare(b.name);
+        });
+
+      interface BranchPickItem extends vscode.QuickPickItem {
+        branch: string;
+      }
+
+      const branchPicks: BranchPickItem[] = sortedBranches.map((b) => ({
+        label: `$(git-branch) ${b.name}`,
+        description: b.relativeDate || '',
+        detail:
+          b.authorName && b.commitHash && b.commitMessage
+            ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
+            : undefined,
+        branch: b.name,
+      }));
+
+      const branchNames = new Set(sortedBranches.map((b) => b.name));
+
+      const branchName = await new Promise<string | undefined>((resolve) => {
+        const qp = vscode.window.createQuickPick<BranchPickItem>();
+        qp.title = 'Create Worktree';
+        qp.placeholder = 'Select a branch or type a new branch name';
+        qp.items = branchPicks;
+        qp.matchOnDescription = true;
+        qp.matchOnDetail = true;
+
+        qp.onDidChangeValue((value) => {
+          const typed = value.trim();
+          // Filter existing branches that match, then prepend a "create new" item if typed name is novel
+          const filtered = branchPicks.filter(
+            (p) =>
+              p.branch.toLowerCase().includes(typed.toLowerCase()) ||
+              (p.description && p.description.toLowerCase().includes(typed.toLowerCase())) ||
+              (p.detail && p.detail.toLowerCase().includes(typed.toLowerCase()))
+          );
+          if (typed.length > 0 && !branchNames.has(typed)) {
+            const createItem: BranchPickItem = {
+              label: `$(plus) Create new branch "${typed}"`,
+              description: 'New worktree from new branch',
+              alwaysShow: true,
+              branch: typed,
+            };
+            qp.items = [createItem, ...filtered];
+          } else {
+            qp.items = filtered.length > 0 ? filtered : branchPicks;
+          }
+        });
+
+        qp.onDidAccept(() => {
+          const selected = qp.selectedItems[0];
+          if (selected) {
+            resolve(selected.branch);
+          } else {
+            const typed = qp.value.trim();
+            if (typed.length > 0 && !typed.includes(' ')) {
+              resolve(typed);
+            } else {
+              resolve(undefined);
+            }
+          }
+          qp.dispose();
+        });
+
+        qp.onDidHide(() => {
+          resolve(undefined);
+          qp.dispose();
+        });
+
+        qp.show();
       });
 
       if (!branchName) return;
