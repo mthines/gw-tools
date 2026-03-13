@@ -20,6 +20,19 @@ import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
 
 /**
+ * Clean up a worktree after an error during --from-staged processing
+ * @param worktreePath Path to the worktree to remove
+ */
+async function cleanupWorktreeOnError(worktreePath: string): Promise<void> {
+  console.log(output.dim('Removing worktree due to error...'));
+  try {
+    await removeWorktree(worktreePath, true);
+  } catch {
+    // Ignore cleanup errors
+  }
+}
+
+/**
  * Check if a branch exists locally
  */
 async function branchExistsLocally(branchName: string): Promise<boolean> {
@@ -680,13 +693,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
     const sourceWorktreePath = await getCurrentWorktreePath();
     if (!sourceWorktreePath) {
       output.error('Could not determine current worktree path');
-      // Remove the created worktree on failure
-      console.log(output.dim('Removing worktree due to error...'));
-      try {
-        await removeWorktree(worktreePath, true);
-      } catch {
-        // Ignore cleanup errors
-      }
+      await cleanupWorktreeOnError(worktreePath);
       Deno.exit(1);
     }
 
@@ -694,13 +701,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
     const stagedFiles = await getStagedFiles(sourceWorktreePath);
     if (stagedFiles.length === 0) {
       output.error('No staged files found. Stage files with "git add" before using --from-staged.');
-      // Remove the created worktree on failure
-      console.log(output.dim('Removing worktree due to error...'));
-      try {
-        await removeWorktree(worktreePath, true);
-      } catch {
-        // Ignore cleanup errors
-      }
+      await cleanupWorktreeOnError(worktreePath);
       Deno.exit(1);
     }
 
@@ -728,13 +729,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
       if (failedFiles.length > 0) {
         console.log();
         output.error(`Failed to copy ${failedFiles.length} staged file(s)`);
-        // Remove the created worktree on failure
-        console.log(output.dim('Removing worktree due to error...'));
-        try {
-          await removeWorktree(worktreePath, true);
-        } catch {
-          // Ignore cleanup errors
-        }
+        await cleanupWorktreeOnError(worktreePath);
         Deno.exit(1);
       }
 
@@ -748,13 +743,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Failed to copy staged files - ${message}`);
-      // Remove the created worktree on failure
-      console.log(output.dim('Removing worktree due to error...'));
-      try {
-        await removeWorktree(worktreePath, true);
-      } catch {
-        // Ignore cleanup errors
-      }
+      await cleanupWorktreeOnError(worktreePath);
       Deno.exit(1);
     }
   }
