@@ -431,6 +431,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 
 - `--no-cd`: Don't navigate to the new worktree after creation
 - `--from <branch>`: Create new branch from specified branch instead of `defaultBranch`
+- `--from-staged`: Copy staged files from current worktree to new worktree (see [Staged Files](#staged-files))
 
 All `git worktree add` options are supported:
 
@@ -484,7 +485,44 @@ gw checkout remote-feature
 # Already on the branch
 gw checkout current-branch
 # Output: Already on 'current-branch'
+
+# Extract staged files to a new worktree
+gw checkout feat/extracted-work --from-staged
+# Output: Copies all staged files from current worktree to new worktree
+
+# Extract specific staged files
+gw checkout feat/extracted-work --from-staged src/new-feature.ts tests/
+# Output: Only copies the specified files (if they are staged)
 ```
+
+#### Staged Files
+
+The `--from-staged` flag allows you to extract staged changes from your current worktree into a new worktree. This is useful when you've started work that belongs in a different branch:
+
+```bash
+# 1. Stage the files you want to extract
+git add src/new-feature.ts tests/new-feature.test.ts
+
+# 2. Create new worktree with staged files
+gw checkout feat/new-feature --from-staged
+
+# 3. Your staged files are now in the new worktree
+# The original worktree is unchanged (files remain staged)
+```
+
+**Behavior:**
+
+- **All staged files**: `gw checkout <branch> --from-staged` copies all staged files
+- **Specific files**: `gw checkout <branch> --from-staged file1 file2` only copies those files (must be staged)
+- **autoCopyFiles still applies**: Config files like `.env` are still copied alongside staged files
+- **Deleted files skipped**: Files staged for deletion are skipped (nothing to copy)
+- **Atomic operation**: If any file fails to copy, the worktree is removed
+
+**Use cases:**
+
+- Started feature work but realized it should be a separate branch
+- Need to split a large PR into smaller pieces
+- Want to test changes in isolation without committing first
 
 #### Auto-Copy Configuration
 

@@ -16,6 +16,7 @@ import { ArtifactWatcher } from './watchers/artifact-watcher';
 import {
   removeWorktree,
   createWorktree,
+  createWorktreeFromStaged,
   cleanWorktrees,
   syncWorktree,
   listWorktrees,
@@ -24,6 +25,7 @@ import {
   updateWorktree,
   stripAnsi,
   hasUncommittedChanges,
+  hasStagedFiles,
 } from './parsers/git-worktree';
 
 /**
@@ -286,6 +288,47 @@ export function activate(context: vscode.ExtensionContext): void {
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+      }
+    }),
+
+    vscode.commands.registerCommand('gw.createWorktreeFromStaged', async () => {
+      // Check if there are staged files first
+      const hasStaged = await hasStagedFiles(workspacePath);
+      if (!hasStaged) {
+        vscode.window.showWarningMessage(
+          'No staged files found. Stage files with "git add" before using this command.'
+        );
+        return;
+      }
+
+      const branchName = await vscode.window.showInputBox({
+        prompt: 'Enter branch name for new worktree (staged files will be copied)',
+        placeHolder: 'feature/extracted-work',
+        validateInput: (value) => {
+          if (!value || value.trim().length === 0) return 'Branch name is required';
+          if (value.includes(' ')) return 'Branch name cannot contain spaces';
+          return null;
+        },
+      });
+
+      if (!branchName) return;
+
+      try {
+        await vscode.window.withProgress(
+          {
+            location: vscode.ProgressLocation.Notification,
+            title: `Creating worktree from staged files: ${branchName}`,
+            cancellable: false,
+          },
+          async () => {
+            await createWorktreeFromStaged(workspacePath, branchName);
+          }
+        );
+        worktreeProvider.refresh();
+        vscode.window.showInformationMessage(`Created worktree with staged files: ${branchName}`);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        vscode.window.showErrorMessage(`Failed to create worktree from staged: ${stripAnsi(msg)}`);
       }
     }),
 

@@ -237,6 +237,25 @@ export function createWorktree(cwd: string, branchName: string): Promise<string>
 }
 
 /**
+ * Create a new worktree from staged files via gw checkout --from-staged
+ */
+export function createWorktreeFromStaged(cwd: string, branchName: string): Promise<string> {
+  return exec(`gw checkout ${branchName} --from-staged`, cwd);
+}
+
+/**
+ * Check if there are staged files in the current worktree
+ */
+export async function hasStagedFiles(cwd: string): Promise<boolean> {
+  try {
+    const output = await exec('git diff --cached --name-only', cwd);
+    return output.trim().length > 0;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Clean up stale worktrees via gw clean
  */
 export function cleanWorktrees(cwd: string, opts: { force?: boolean; dryRun?: boolean } = {}): Promise<string> {

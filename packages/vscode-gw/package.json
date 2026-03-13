@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -170,6 +170,12 @@
         "title": "Sync Files From...",
         "icon": "$(files)",
         "category": "gw"
+      },
+      {
+        "command": "gw.createWorktreeFromStaged",
+        "title": "Create Worktree from Staged Files",
+        "icon": "$(git-stash)",
+        "category": "gw"
       }
     ],
     "menus": {
@@ -195,6 +201,11 @@
         },
         {
           "command": "gw.createWorktree",
+          "when": "view == gwWorktreeExplorer",
+          "group": "navigation"
+        },
+        {
+          "command": "gw.createWorktreeFromStaged",
           "when": "view == gwWorktreeExplorer",
           "group": "navigation"
         },
