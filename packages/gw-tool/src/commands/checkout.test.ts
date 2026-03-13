@@ -530,9 +530,7 @@ Deno.test('checkout command - --from-staged preserves nested directory structure
 
       // Verify nested file was copied with correct path
       const worktreePath = join(repo.path, 'feat-nested');
-      const nestedContent = await Deno.readTextFile(
-        join(worktreePath, 'src/components/Button/index.tsx')
-      );
+      const nestedContent = await Deno.readTextFile(join(worktreePath, 'src/components/Button/index.tsx'));
       assertEquals(nestedContent, 'export const Button = () => {};');
     } finally {
       cwd.restore();

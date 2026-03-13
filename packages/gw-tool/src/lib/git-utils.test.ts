@@ -5,11 +5,7 @@
 import { assertEquals, assertRejects } from '$std/assert';
 import { join } from '$std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import {
-  getStagedFiles,
-  getStagedFileContent,
-  copyStagedFiles,
-} from './git-utils.ts';
+import { getStagedFiles, getStagedFileContent, copyStagedFiles } from './git-utils.ts';
 
 // =============================================================================
 // getStagedFiles tests
@@ -228,7 +224,10 @@ Deno.test('copyStagedFiles - copies all staged files to target', async () => {
     const results = await copyStagedFiles(sourceRepo.path, targetRepo.path);
 
     assertEquals(results.length, 2);
-    assertEquals(results.every((r) => r.success), true);
+    assertEquals(
+      results.every((r) => r.success),
+      true
+    );
 
     // Verify files were copied
     const file1Content = await targetRepo.readFile('file1.txt');
@@ -258,7 +257,10 @@ Deno.test('copyStagedFiles - copies only specified files', async () => {
     const results = await copyStagedFiles(sourceRepo.path, targetRepo.path, ['file1.txt', 'file3.txt']);
 
     assertEquals(results.length, 2);
-    assertEquals(results.every((r) => r.success), true);
+    assertEquals(
+      results.every((r) => r.success),
+      true
+    );
 
     // Verify only specified files were copied
     assertEquals(await targetRepo.fileExists('file1.txt'), true);
