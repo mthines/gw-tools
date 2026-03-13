@@ -38,6 +38,10 @@
         "ci": {
           "command": "deno test --allow-all --ignore=src/commands/pr.test.ts",
           "cwd": "packages/gw-tool"
+        },
+        "parallel": {
+          "command": "deno test --allow-all --parallel src/lib/branch-protection.test.ts src/lib/config-migrations.test.ts src/lib/file-ops.test.ts src/lib/path-resolver.test.ts src/lib/config.test.ts src/lib/shell-integration.test.ts",
+          "cwd": "packages/gw-tool"
         }
       }
     },
