@@ -8,10 +8,7 @@
     "setup": {
       "executor": "nx:run-commands",
       "cache": true,
-      "inputs": [
-        "{projectRoot}/deno.json",
-        "{projectRoot}/deno.lock"
-      ],
+      "inputs": ["{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {
         "command": "deno cache src/main.ts",
         "cwd": "packages/gw-tool"
@@ -21,11 +18,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["setup"],
       "cache": true,
-      "inputs": [
-        "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/deno.json",
-        "{projectRoot}/deno.lock"
-      ],
+      "inputs": ["{projectRoot}/src/**/*.ts", "{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {
         "command": "deno check src/main.ts",
         "cwd": "packages/gw-tool"
@@ -35,11 +28,7 @@
       "executor": "nx:run-commands",
       "dependsOn": ["setup"],
       "cache": true,
-      "inputs": [
-        "{projectRoot}/src/**/*.ts",
-        "{projectRoot}/deno.json",
-        "{projectRoot}/deno.lock"
-      ],
+      "inputs": ["{projectRoot}/src/**/*.ts", "{projectRoot}/deno.json", "{projectRoot}/deno.lock"],
       "options": {
         "command": "deno test --allow-all",
         "cwd": "packages/gw-tool"

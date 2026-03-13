@@ -15,9 +15,7 @@ import { getBashFunction } from '../commands/install-shell.ts';
  *
  * Uses bash with a mock gw that writes the nav file.
  */
-export async function assertShellNavigationWorks(
-  commandName: string,
-): Promise<void> {
+export async function assertShellNavigationWorks(commandName: string): Promise<void> {
   const tempDir = await Deno.makeTempDir({ prefix: 'gw-shell-nav-test-' });
   const fakeHome = join(tempDir, 'home');
   const targetDir = join(tempDir, 'target');
@@ -28,7 +26,7 @@ export async function assertShellNavigationWorks(
   const mockGw = join(tempDir, 'mock-gw');
   await Deno.writeTextFile(
     mockGw,
-    `#!/bin/bash\nmkdir -p "$HOME/.gw/tmp"\necho "${targetDir}" > "$HOME/.gw/tmp/last-nav"\n`,
+    `#!/bin/bash\nmkdir -p "$HOME/.gw/tmp"\necho "${targetDir}" > "$HOME/.gw/tmp/last-nav"\n`
   );
   await Deno.chmod(mockGw, 0o755);
 
@@ -49,11 +47,7 @@ export async function assertShellNavigationWorks(
     const result = await cmd.output();
     const stdout = new TextDecoder().decode(result.stdout).trim();
 
-    assertEquals(
-      stdout,
-      targetDir,
-      `Shell integration should navigate to target dir after "gw ${commandName}"`,
-    );
+    assertEquals(stdout, targetDir, `Shell integration should navigate to target dir after "gw ${commandName}"`);
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }
@@ -63,9 +57,7 @@ export async function assertShellNavigationWorks(
  * Assert that running `gw <commandName>` through the shell integration
  * navigates to git root when the current directory is removed.
  */
-export async function assertShellRemoveNavigationWorks(
-  commandName: string,
-): Promise<void> {
+export async function assertShellRemoveNavigationWorks(commandName: string): Promise<void> {
   const tempDir = await Deno.makeTempDir({ prefix: 'gw-shell-nav-test-' });
   const fakeHome = join(tempDir, 'home');
   const gitRoot = join(tempDir, 'git-root');
@@ -86,7 +78,7 @@ if [[ "$1" == "root" ]]; then
 else
   rm -rf "${removableDir}"
 fi
-`,
+`
   );
   await Deno.chmod(mockGw, 0o755);
 
@@ -98,10 +90,7 @@ fi
   try {
     // Run in a real bash subshell, starting in the removable directory
     const cmd = new Deno.Command('bash', {
-      args: [
-        '-c',
-        `source "${scriptPath}" && cd "${removableDir}" && gw ${commandName} test-arg && pwd`,
-      ],
+      args: ['-c', `source "${scriptPath}" && cd "${removableDir}" && gw ${commandName} test-arg && pwd`],
       env: { HOME: fakeHome, PATH: Deno.env.get('PATH') || '' },
       stdout: 'piped',
       stderr: 'piped',
@@ -113,7 +102,7 @@ fi
     assertEquals(
       stdout,
       gitRoot,
-      `Shell integration should navigate to git root after "gw ${commandName}" removes current dir`,
+      `Shell integration should navigate to git root after "gw ${commandName}" removes current dir`
     );
   } finally {
     await Deno.remove(tempDir, { recursive: true });
