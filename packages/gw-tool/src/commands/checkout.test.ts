@@ -383,3 +383,161 @@ Deno.test('co - shell integration navigates after command', async () => {
 Deno.test('add - shell integration navigates after command', async () => {
   await assertShellNavigationWorks('add');
 });
+
+// =============================================================================
+// --from-staged flag tests
+// =============================================================================
+
+Deno.test('checkout command - --from-staged copies staged files to new worktree', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create and stage some files
+    await repo.createFile('staged-file.txt', 'staged content');
+    await repo.createFile('another-staged.txt', 'more staged content');
+    await repo.runCommand('git', ['add', '.'], repo.path);
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(async () => {
+        await executeCheckout(['feat-from-staged', '--from-staged']);
+      });
+
+      assertEquals(exitCode === undefined || exitCode === 0, true);
+
+      // Verify worktree was created
+      const worktreePath = join(repo.path, 'feat-from-staged');
+      const stat = await Deno.stat(worktreePath);
+      assertEquals(stat.isDirectory, true);
+
+      // Verify staged files were copied
+      const file1Content = await Deno.readTextFile(join(worktreePath, 'staged-file.txt'));
+      const file2Content = await Deno.readTextFile(join(worktreePath, 'another-staged.txt'));
+      assertEquals(file1Content, 'staged content');
+      assertEquals(file2Content, 'more staged content');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --from-staged with specific files only copies those files', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create and stage multiple files
+    await repo.createFile('include-me.txt', 'include content');
+    await repo.createFile('exclude-me.txt', 'exclude content');
+    await repo.runCommand('git', ['add', '.'], repo.path);
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(async () => {
+        await executeCheckout(['feat-specific', '--from-staged', 'include-me.txt']);
+      });
+
+      assertEquals(exitCode === undefined || exitCode === 0, true);
+
+      // Verify worktree was created
+      const worktreePath = join(repo.path, 'feat-specific');
+
+      // Verify only specified file was copied
+      const includeContent = await Deno.readTextFile(join(worktreePath, 'include-me.txt'));
+      assertEquals(includeContent, 'include content');
+
+      // Excluded file should not exist (it's a new worktree from main)
+      let excludeExists = false;
+      try {
+        await Deno.stat(join(worktreePath, 'exclude-me.txt'));
+        excludeExists = true;
+      } catch {
+        excludeExists = false;
+      }
+      assertEquals(excludeExists, false);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --from-staged fails when no files are staged', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Don't stage any files
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(async () => {
+        await executeCheckout(['feat-no-staged', '--from-staged']);
+      });
+
+      // Should fail with exit code 1
+      assertEquals(exitCode, 1);
+
+      // Verify worktree was NOT created (cleaned up after error)
+      let worktreeExists = false;
+      try {
+        await Deno.stat(join(repo.path, 'feat-no-staged'));
+        worktreeExists = true;
+      } catch {
+        worktreeExists = false;
+      }
+      assertEquals(worktreeExists, false);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --from-staged preserves nested directory structure', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create and stage a deeply nested file
+    await repo.createFile('src/components/Button/index.tsx', 'export const Button = () => {};');
+    await repo.runCommand('git', ['add', '.'], repo.path);
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(async () => {
+        await executeCheckout(['feat-nested', '--from-staged']);
+      });
+
+      assertEquals(exitCode === undefined || exitCode === 0, true);
+
+      // Verify nested file was copied with correct path
+      const worktreePath = join(repo.path, 'feat-nested');
+      const nestedContent = await Deno.readTextFile(
+        join(worktreePath, 'src/components/Button/index.tsx')
+      );
+      assertEquals(nestedContent, 'export const Button = () => {};');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
