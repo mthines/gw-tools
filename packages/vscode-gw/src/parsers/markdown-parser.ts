@@ -12,6 +12,7 @@ export interface TaskItem {
   label: string;
   completed: boolean;
   inProgress: boolean;
+  children: TaskItem[];
 }
 
 export interface TaskDecision {
@@ -110,23 +111,40 @@ function extractSection(body: string, heading: string | string[]): string {
 }
 
 function parseCheckboxItems(section: string): TaskItem[] {
-  const items: TaskItem[] = [];
+  const rootItems: TaskItem[] = [];
+  const stack: { indent: number; item: TaskItem }[] = [];
   const lines = section.split('\n');
+
   for (const line of lines) {
-    // Support both top-level and nested checkbox items (with indentation)
-    const match = line.match(/^\s*[-*]\s+\[([ xX])\]\s+(.+)/);
-    if (match) {
-      const completed = match[1].toLowerCase() === 'x';
-      let label = match[2].trim();
-      const inProgress = label.includes('**IN PROGRESS**') || label.includes('<- **IN PROGRESS**');
-      label = label
-        .replace(/<-\s*\*\*IN PROGRESS\*\*/, '')
-        .replace(/\*\*IN PROGRESS\*\*/, '')
-        .trim();
-      items.push({ label, completed, inProgress });
+    const match = line.match(/^(\s*)[-*]\s+\[([ xX])\]\s+(.+)/);
+    if (!match) continue;
+
+    const indent = match[1].length;
+    const completed = match[2].toLowerCase() === 'x';
+    let label = match[3].trim();
+    const inProgress = label.includes('**IN PROGRESS**') || label.includes('<- **IN PROGRESS**');
+    label = label
+      .replace(/<-\s*\*\*IN PROGRESS\*\*/, '')
+      .replace(/\*\*IN PROGRESS\*\*/, '')
+      .trim();
+
+    const item: TaskItem = { label, completed, inProgress, children: [] };
+
+    // Pop stack entries that are at the same or deeper indent level
+    while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+      stack.pop();
     }
+
+    if (stack.length === 0) {
+      rootItems.push(item);
+    } else {
+      stack[stack.length - 1].item.children.push(item);
+    }
+
+    stack.push({ indent, item });
   }
-  return items;
+
+  return rootItems;
 }
 
 function parseTableRows(section: string, columnCount: number): string[][] {

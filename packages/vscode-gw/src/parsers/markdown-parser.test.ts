@@ -94,11 +94,11 @@ task: Test
 `;
       const result = parseTaskMd(content);
       expect(result.completed).toHaveLength(1);
-      expect(result.completed[0]).toEqual({ label: 'Done task', completed: true, inProgress: false });
+      expect(result.completed[0]).toEqual({ label: 'Done task', completed: true, inProgress: false, children: [] });
       expect(result.current).toHaveLength(1);
-      expect(result.current[0]).toEqual({ label: 'Working task', completed: false, inProgress: true });
+      expect(result.current[0]).toEqual({ label: 'Working task', completed: false, inProgress: true, children: [] });
       expect(result.upcoming).toHaveLength(1);
-      expect(result.upcoming[0]).toEqual({ label: 'Future task', completed: false, inProgress: false });
+      expect(result.upcoming[0]).toEqual({ label: 'Future task', completed: false, inProgress: false, children: [] });
     });
 
     it('handles arrow-style in-progress marker', () => {
@@ -128,7 +128,13 @@ task: Test
 - [ ] Next
 `;
       const result = parseTaskMd(content);
-      expect(result.current.length).toBeGreaterThanOrEqual(1);
+      expect(result.current).toHaveLength(1);
+      expect(result.current[0].label).toBe('Main task');
+      expect(result.current[0].children).toHaveLength(2);
+      expect(result.current[0].children[0].label).toBe('Sub task 1');
+      expect(result.current[0].children[0].completed).toBe(false);
+      expect(result.current[0].children[1].label).toBe('Sub task 2');
+      expect(result.current[0].children[1].completed).toBe(true);
     });
 
     it('parses multiple checkbox items in each section', () => {

@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan } from '../parsers/markdown-parser';
+import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan, TaskItem } from '../parsers/markdown-parser';
 
 // -- Tree Item Types --
 
@@ -94,13 +94,20 @@ export class TaskGroupItem extends vscode.TreeItem {
 }
 
 export class TaskCheckboxItem extends vscode.TreeItem {
+  public readonly childItems: TaskCheckboxItem[];
+
   constructor(
     label: string,
     public readonly completed: boolean,
     public readonly inProgress: boolean,
-    public readonly taskFilePath?: string
+    public readonly taskFilePath?: string,
+    children: TaskCheckboxItem[] = []
   ) {
-    super(label, vscode.TreeItemCollapsibleState.None);
+    super(
+      label,
+      children.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
+    );
+    this.childItems = children;
 
     if (inProgress) {
       this.iconPath = new vscode.ThemeIcon('pulse', new vscode.ThemeColor('charts.blue'));
@@ -129,7 +136,7 @@ export class TasksSummaryItem extends vscode.TreeItem {
     public readonly blockerItems: BlockerItem[],
     public readonly taskFilePath: string
   ) {
-    super('Tasks', vscode.TreeItemCollapsibleState.Collapsed);
+    super('Tasks', vscode.TreeItemCollapsibleState.Expanded);
     this.iconPath = new vscode.ThemeIcon('tasklist');
 
     // Bubble up current task status
@@ -273,6 +280,11 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
       return element.items;
     }
 
+    // Checkbox level: show children if any
+    if (element instanceof TaskCheckboxItem) {
+      return element.childItems;
+    }
+
     // Plan level: show file lists
     if (element instanceof PlanSummaryItem) {
       return this.getPlanChildren(element.plan);
@@ -394,18 +406,21 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     return items.map((i) => i.item);
   }
 
+  private taskItemToCheckbox(t: TaskItem, taskFilePath: string): TaskCheckboxItem {
+    const children = t.children.map((c) => this.taskItemToCheckbox(c, taskFilePath));
+    return new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath, children);
+  }
+
   private getBranchChildren(branch: AgentBranchItem): AgentTaskTreeItem[] {
     const children: AgentTaskTreeItem[] = [];
     const task = branch.task;
     const taskFilePath = path.join(branch.gwDir, 'task.md');
 
     if (task) {
-      // Build task items for the summary
-      const currentItems = task.current.map(
-        (t) => new TaskCheckboxItem(t.label, t.completed, t.inProgress, taskFilePath)
-      );
-      const completedItems = task.completed.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
-      const upcomingItems = task.upcoming.map((t) => new TaskCheckboxItem(t.label, t.completed, false, taskFilePath));
+      // Build task items for the summary (preserving hierarchy)
+      const currentItems = task.current.map((t) => this.taskItemToCheckbox(t, taskFilePath));
+      const completedItems = task.completed.map((t) => this.taskItemToCheckbox(t, taskFilePath));
+      const upcomingItems = task.upcoming.map((t) => this.taskItemToCheckbox(t, taskFilePath));
       const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
 
       // Add Tasks summary (groups Current/Completed/Upcoming inside)
