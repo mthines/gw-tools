@@ -2,8 +2,64 @@
  * Utilities for temporarily modifying environment during tests
  */
 
+import type { EnvGetter } from '../lib/types.ts';
+
+/**
+ * Mock environment that doesn't modify Deno.env
+ * For parallel-safe testing - each test gets its own isolated env
+ */
+export class MockEnv implements EnvGetter {
+  private env: Map<string, string>;
+
+  /**
+   * Create a mock environment
+   * @param initial Initial environment values (defaults to empty)
+   */
+  constructor(initial: Record<string, string> = {}) {
+    this.env = new Map(Object.entries(initial));
+  }
+
+  /**
+   * Get an environment variable
+   */
+  get(key: string): string | undefined {
+    return this.env.get(key);
+  }
+
+  /**
+   * Set an environment variable
+   */
+  set(key: string, value: string): void {
+    this.env.set(key, value);
+  }
+
+  /**
+   * Delete an environment variable
+   */
+  delete(key: string): void {
+    this.env.delete(key);
+  }
+
+  /**
+   * Create a MockEnv pre-populated with real Deno.env values
+   * Useful for tests that need real env values as a starting point
+   */
+  static fromDeno(...keys: string[]): MockEnv {
+    const initial: Record<string, string> = {};
+    for (const key of keys) {
+      const value = Deno.env.get(key);
+      if (value !== undefined) {
+        initial[key] = value;
+      }
+    }
+    return new MockEnv(initial);
+  }
+}
+
 /**
  * Save and restore environment variables for tests
+ * NOTE: This modifies global Deno.env - NOT parallel-safe!
+ * Use MockEnv for parallel-safe testing instead.
  */
 export class TempEnv {
   private savedEnv: Map<string, string | undefined> = new Map();

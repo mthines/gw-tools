@@ -89,12 +89,13 @@ async function getCleanableWorktrees(threshold: number, defaultBranch: string): 
  * Execute auto-cleanup if enabled and cooldown has passed
  * Silently removes stale worktrees and updates cooldown timestamp
  *
+ * @param startPath Starting directory for config search (defaults to Deno.cwd())
  * @returns Number of worktrees removed (0 if cleanup didn't run)
  */
-export async function executeAutoClean(): Promise<number> {
+export async function executeAutoClean(startPath?: string): Promise<number> {
   try {
     // Load config
-    const { config, gitRoot } = await loadConfig();
+    const { config, gitRoot } = await loadConfig(startPath);
 
     // Check if auto-clean is enabled
     if (!config.autoClean) {
@@ -147,9 +148,11 @@ export async function executeAutoClean(): Promise<number> {
 /**
  * Run auto-clean and optionally show a brief summary message
  * This is the main entry point for commands to call (synchronous version)
+ *
+ * @param startPath Starting directory for config search (defaults to Deno.cwd())
  */
-export async function runAutoClean(): Promise<void> {
-  const removedCount = await executeAutoClean();
+export async function runAutoClean(startPath?: string): Promise<void> {
+  const removedCount = await executeAutoClean(startPath);
 
   if (removedCount > 0) {
     const worktreeWord = removedCount === 1 ? 'worktree' : 'worktrees';
@@ -172,11 +175,13 @@ export function runAutoCleanBackground(): void {
  * Prompt user to clean stale worktrees interactively
  * Shows a confirmation prompt when stale worktrees are detected
  * Updates cooldown timestamp regardless of user choice to prevent repeated prompts
+ *
+ * @param startPath Starting directory for config search (defaults to Deno.cwd())
  */
-export async function promptAndRunAutoClean(): Promise<void> {
+export async function promptAndRunAutoClean(startPath?: string): Promise<void> {
   try {
     // Load config and check if enabled
-    const { config, gitRoot } = await loadConfig();
+    const { config, gitRoot } = await loadConfig(startPath);
     if (!config.autoClean) {
       return;
     }

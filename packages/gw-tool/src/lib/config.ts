@@ -141,20 +141,21 @@ function validateConfig(data: unknown): data is Config {
 
 /**
  * Load configuration
- * 1. Look for .gw/config.json walking up from cwd
+ * 1. Look for .gw/config.json walking up from startPath (or cwd)
  * 2. If found and has root, use it
  * 3. If not found, try auto-detection with findGitRoot()
  * 4. On auto-detection success, create config with detected root
  * 5. On failure, throw error with instruction to run gw init
  *
+ * @param startPath Starting directory for config search (defaults to Deno.cwd())
  * @returns Config and git root path
  */
-export async function loadConfig(): Promise<{
+export async function loadConfig(startPath?: string): Promise<{
   config: Config;
   gitRoot: string;
 }> {
   // Try to find existing config file
-  const configPath = await findConfigFile();
+  const configPath = await findConfigFile(startPath);
 
   if (configPath) {
     // Config file exists, load it
@@ -187,7 +188,7 @@ export async function loadConfig(): Promise<{
 
       // Config exists but no root - try auto-detection and update config
       try {
-        const detectedRoot = await findGitRoot();
+        const detectedRoot = await findGitRoot(startPath);
         data.root = detectedRoot;
         await saveConfig(detectedRoot, data);
         console.log(`Detected git root and updated config: ${detectedRoot}\n`);
@@ -205,7 +206,7 @@ export async function loadConfig(): Promise<{
 
   // No config file found - try auto-detection
   try {
-    const gitRoot = await findGitRoot();
+    const gitRoot = await findGitRoot(startPath);
 
     // Create config with detected root
     const config = createDefaultConfig();

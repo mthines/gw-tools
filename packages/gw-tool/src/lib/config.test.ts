@@ -14,7 +14,6 @@ import {
   writeTestConfig,
 } from '../test-utils/fixtures.ts';
 import { assertFileExists } from '../test-utils/assertions.ts';
-import { TempCwd } from '../test-utils/temp-env.ts';
 
 Deno.test("saveConfig - creates .gw directory if it doesn't exist", async () => {
   const repo = new GitTestRepo();
@@ -86,14 +85,10 @@ Deno.test('loadConfig - finds config in current directory', async () => {
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -107,18 +102,14 @@ Deno.test('loadConfig - walks up directory tree to find config', async () => {
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
 
-    // Create a subdirectory and change to it
+    // Create a subdirectory
     const subdir = join(repo.path, 'subdir', 'nested');
     await Deno.mkdir(subdir, { recursive: true });
 
-    const cwd = new TempCwd(subdir);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(subdir);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -129,19 +120,15 @@ Deno.test('loadConfig - auto-detects git root if no config exists', async () => 
   try {
     await repo.init();
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      // Config should be auto-created with detected root
-      assertEquals(gitRoot, repo.path);
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    // Config should be auto-created with detected root
+    assertEquals(gitRoot, repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
 
-      // Config file should have been created
-      await assertFileExists(join(repo.path, '.gw', 'config.json'));
-    } finally {
-      cwd.restore();
-    }
+    // Config file should have been created
+    await assertFileExists(join(repo.path, '.gw', 'config.json'));
   } finally {
     await repo.cleanup();
   }
@@ -150,12 +137,8 @@ Deno.test('loadConfig - auto-detects git root if no config exists', async () => 
 Deno.test('loadConfig - throws error if not in a git repo and no config', async () => {
   const tempDir = Deno.makeTempDirSync({ prefix: 'gw-test-noconf-' });
   try {
-    const cwd = new TempCwd(tempDir);
-    try {
-      await assertRejects(() => loadConfig(), Error, 'Could not auto-detect git root');
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    await assertRejects(() => loadConfig(tempDir), Error, 'Could not auto-detect git root');
   } finally {
     await Deno.remove(tempDir, { recursive: true });
   }
@@ -171,19 +154,15 @@ Deno.test('loadConfig - handles config with missing root field', async () => {
     await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
     await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), JSON.stringify(config, null, 2));
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      // Should auto-detect and update config with root
-      assertEquals(gitRoot, repo.path);
-      assertEquals(loaded.root, repo.path);
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    // Should auto-detect and update config with root
+    assertEquals(gitRoot, repo.path);
+    assertEquals(loaded.root, repo.path);
 
-      // Config should be updated with root
-      const saved = await readTestConfig(repo.path);
-      assertEquals(saved.root, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Config should be updated with root
+    const saved = await readTestConfig(repo.path);
+    assertEquals(saved.root, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -203,12 +182,8 @@ Deno.test('loadConfig - validates config structure', async () => {
     await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
     await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), JSON.stringify(invalidConfig, null, 2));
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      await assertRejects(() => loadConfig(), Error, 'Invalid configuration file format');
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    await assertRejects(() => loadConfig(repo.path), Error, 'Invalid configuration file format');
   } finally {
     await repo.cleanup();
   }
@@ -229,16 +204,12 @@ Deno.test('loadConfig - parses JSONC with single-line comments', async () => {
     await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
     await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
-      assertEquals(loaded.cleanThreshold, 7);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
+    assertEquals(loaded.cleanThreshold, 7);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -262,16 +233,12 @@ Deno.test('loadConfig - parses JSONC with multi-line comments', async () => {
     await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
     await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
-      assertEquals(loaded.cleanThreshold, 7);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
+    assertEquals(loaded.cleanThreshold, 7);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -295,17 +262,13 @@ Deno.test('loadConfig - parses JSONC with trailing commas', async () => {
     await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
     await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), jsoncConfig);
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
-      assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
-      assertEquals(loaded.cleanThreshold, 7);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
+    assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
+    assertEquals(loaded.cleanThreshold, 7);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -369,16 +332,12 @@ Deno.test('saveConfigTemplate - template is parseable by loadConfig', async () =
     const config = createMinimalConfig(repo.path);
     await saveConfigTemplate(repo.path, config);
 
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
-      assertEquals(loaded.cleanThreshold, 7);
-      assertEquals(gitRoot, repo.path);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded, gitRoot } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
+    assertEquals(loaded.cleanThreshold, 7);
+    assertEquals(gitRoot, repo.path);
   } finally {
     await repo.cleanup();
   }
@@ -399,14 +358,9 @@ Deno.test('saveConfigTemplate - shows active autoCopyFiles uncommented', async (
     assertEquals(rawContent.includes('".env"'), true);
     assertEquals(rawContent.includes('"secrets/"'), true);
 
-    // Verify it loads correctly
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded } = await loadConfig();
-      assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded } = await loadConfig(repo.path);
+    assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
   } finally {
     await repo.cleanup();
   }
@@ -449,15 +403,10 @@ Deno.test('saveConfigTemplate - shows active hooks uncommented', async () => {
     assertEquals(rawContent.includes('"post": ['), true);
     assertEquals(rawContent.includes('cd {worktreePath} && npm install'), true);
 
-    // Verify it loads correctly
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded } = await loadConfig();
-      assertEquals(loaded.hooks?.checkout?.pre, ['echo pre-checkout']);
-      assertEquals(loaded.hooks?.checkout?.post, ['cd {worktreePath} && npm install']);
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded } = await loadConfig(repo.path);
+    assertEquals(loaded.hooks?.checkout?.pre, ['echo pre-checkout']);
+    assertEquals(loaded.hooks?.checkout?.post, ['cd {worktreePath} && npm install']);
   } finally {
     await repo.cleanup();
   }
@@ -502,15 +451,10 @@ Deno.test('saveConfigTemplate - includes advanced options when configured', asyn
     assertEquals(rawContent.includes('"autoClean": true'), true);
     assertEquals(rawContent.includes('"updateStrategy": "rebase"'), true);
 
-    // Verify it loads correctly
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded } = await loadConfig();
-      assertEquals(loaded.autoClean, true);
-      assertEquals(loaded.updateStrategy, 'rebase');
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded } = await loadConfig(repo.path);
+    assertEquals(loaded.autoClean, true);
+    assertEquals(loaded.updateStrategy, 'rebase');
   } finally {
     await repo.cleanup();
   }
@@ -554,24 +498,19 @@ Deno.test('saveConfigTemplate - preserves all config values', async () => {
 
     await saveConfigTemplate(repo.path, config);
 
-    // Load and verify all values are preserved
-    const cwd = new TempCwd(repo.path);
-    try {
-      const { config: loaded } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
-      assertEquals(loaded.defaultBranch, 'main');
-      assertEquals(loaded.cleanThreshold, 14);
-      assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
-      assertEquals(loaded.hooks?.checkout?.pre, ['echo Creating {worktree}']);
-      assertEquals(loaded.hooks?.checkout?.post, [
-        'cd {worktreePath} && npm install',
-        'cd {worktreePath} && npm run build',
-      ]);
-      assertEquals(loaded.autoClean, true);
-      assertEquals(loaded.updateStrategy, 'rebase');
-    } finally {
-      cwd.restore();
-    }
+    // Use startPath parameter instead of TempCwd (parallel-safe)
+    const { config: loaded } = await loadConfig(repo.path);
+    assertEquals(loaded.root, repo.path);
+    assertEquals(loaded.defaultBranch, 'main');
+    assertEquals(loaded.cleanThreshold, 14);
+    assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
+    assertEquals(loaded.hooks?.checkout?.pre, ['echo Creating {worktree}']);
+    assertEquals(loaded.hooks?.checkout?.post, [
+      'cd {worktreePath} && npm install',
+      'cd {worktreePath} && npm run build',
+    ]);
+    assertEquals(loaded.autoClean, true);
+    assertEquals(loaded.updateStrategy, 'rebase');
   } finally {
     await repo.cleanup();
   }

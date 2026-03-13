@@ -3,6 +3,14 @@
  */
 
 /**
+ * Interface for environment variable access
+ * Compatible with Deno.env and MockEnv for testing
+ */
+export interface EnvGetter {
+  get(key: string): string | undefined;
+}
+
+/**
  * Hook configuration for a command
  */
 export interface CommandHooks {

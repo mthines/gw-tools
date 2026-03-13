@@ -2,6 +2,7 @@
  * Shell integration detection utilities
  */
 import { join } from '$std/path';
+import type { EnvGetter } from './types.ts';
 
 /**
  * Check if shell integration is installed (eval-based or legacy file-based)
@@ -10,12 +11,15 @@ import { join } from '$std/path';
  * - New eval-based format: `eval "$(gw install-shell)"` in shell config
  * - Legacy file-based format: ~/.gw/shell/integration.{zsh,bash} files
  *
+ * @param env Environment variable getter (defaults to Deno.env for production)
  * @returns true if shell integration is detected
  */
-export async function isShellIntegrationInstalled(): Promise<boolean> {
-  const shell = Deno.env.get('SHELL') || '';
+export async function isShellIntegrationInstalled(
+  env: EnvGetter = Deno.env
+): Promise<boolean> {
+  const shell = env.get('SHELL') || '';
   const shellName = shell.split('/').pop() || '';
-  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+  const home = env.get('HOME') || env.get('USERPROFILE') || '';
 
   if (!home) {
     return false;
