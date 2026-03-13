@@ -103,10 +103,7 @@ export class TaskCheckboxItem extends vscode.TreeItem {
     public readonly taskFilePath?: string,
     children: TaskCheckboxItem[] = []
   ) {
-    super(
-      label,
-      children.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None
-    );
+    super(label, children.length > 0 ? vscode.TreeItemCollapsibleState.Expanded : vscode.TreeItemCollapsibleState.None);
     this.childItems = children;
 
     if (inProgress) {
