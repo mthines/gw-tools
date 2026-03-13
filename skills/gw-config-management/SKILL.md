@@ -5,6 +5,7 @@ description: >
   Use when setting up gw for new projects, configuring auto-copy files, troubleshooting configuration issues, or customizing gw for Next.js, Node.js APIs, monorepos, or React SPAs.
   Triggers on .gw/config.json, auto-copy patterns, environment files, or gw init commands.
 license: MIT
+disable-model-invocation: true
 metadata:
   author: mthines
   version: '2.0.0'
