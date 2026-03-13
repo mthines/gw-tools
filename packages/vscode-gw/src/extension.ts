@@ -26,6 +26,7 @@ import {
   stripAnsi,
   hasUncommittedChanges,
   hasStagedFiles,
+  getWorktreePath,
 } from './parsers/git-worktree';
 
 /**
@@ -284,7 +285,17 @@ export function activate(context: vscode.ExtensionContext): void {
           }
         );
         worktreeProvider.refresh();
-        vscode.window.showInformationMessage(`Created worktree: ${branchName}`);
+
+        // Get the worktree path and show notification with button
+        const worktreePath = await getWorktreePath(workspacePath, branchName);
+        const action = await vscode.window.showInformationMessage(
+          `Created worktree: ${branchName}`,
+          'Open in New Window'
+        );
+        if (action === 'Open in New Window' && worktreePath) {
+          const uri = vscode.Uri.file(worktreePath);
+          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
@@ -325,7 +336,17 @@ export function activate(context: vscode.ExtensionContext): void {
           }
         );
         worktreeProvider.refresh();
-        vscode.window.showInformationMessage(`Created worktree with staged files: ${branchName}`);
+
+        // Get the worktree path and show notification with button
+        const worktreePath = await getWorktreePath(workspacePath, branchName);
+        const action = await vscode.window.showInformationMessage(
+          `Created worktree with staged files: ${branchName}`,
+          'Open in New Window'
+        );
+        if (action === 'Open in New Window' && worktreePath) {
+          const uri = vscode.Uri.file(worktreePath);
+          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to create worktree from staged: ${stripAnsi(msg)}`);

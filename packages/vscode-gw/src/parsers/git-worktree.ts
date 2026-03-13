@@ -256,6 +256,15 @@ export async function hasStagedFiles(cwd: string): Promise<boolean> {
 }
 
 /**
+ * Get the path of a worktree by branch name
+ */
+export async function getWorktreePath(cwd: string, branchName: string): Promise<string | undefined> {
+  const worktrees = await listWorktrees(cwd);
+  const worktree = worktrees.find((w) => w.branch === branchName);
+  return worktree?.path;
+}
+
+/**
  * Clean up stale worktrees via gw clean
  */
 export function cleanWorktrees(cwd: string, opts: { force?: boolean; dryRun?: boolean } = {}): Promise<string> {
