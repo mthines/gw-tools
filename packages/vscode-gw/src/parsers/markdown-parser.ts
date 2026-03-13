@@ -88,11 +88,23 @@ function parseFrontmatter(content: string): { frontmatter: Record<string, string
 function extractSection(body: string, heading: string | string[]): string {
   const headings = Array.isArray(heading) ? heading : [heading];
   for (const h of headings) {
-    const regex = new RegExp(`^## ${h}\\s*\\n([\\s\\S]*?)(?=^## |$)`, 'm');
-    const match = body.match(regex);
-    if (match) {
-      return match[1].trim();
+    // Match the heading line
+    const headingRegex = new RegExp(`^## ${h}\\s*$`, 'm');
+    const headingMatch = headingRegex.exec(body);
+    if (!headingMatch) continue;
+
+    // Find content start (after the heading line)
+    const contentStart = body.indexOf('\n', headingMatch.index);
+    if (contentStart === -1) return '';
+
+    const remainder = body.slice(contentStart + 1);
+
+    // Find the next ## heading (if any)
+    const nextHeadingMatch = remainder.match(/^## /m);
+    if (nextHeadingMatch && nextHeadingMatch.index !== undefined) {
+      return remainder.slice(0, nextHeadingMatch.index).trim();
     }
+    return remainder.trim();
   }
   return '';
 }

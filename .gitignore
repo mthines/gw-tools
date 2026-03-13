@@ -58,4 +58,5 @@ vite.config.*.timestamp*
 vitest.config.*.timestamp*
 
 .claude/settings.local.json
+.claude/skills/
 .gw/

@@ -130,6 +130,68 @@ task: Test
       const result = parseTaskMd(content);
       expect(result.current.length).toBeGreaterThanOrEqual(1);
     });
+
+    it('parses multiple checkbox items in each section', () => {
+      const content = `---
+created: 2025-03-13
+branch: feat/from-staged-flag
+task: Add --from-staged flag to gw checkout
+---
+
+# Task: Add --from-staged flag to gw checkout
+
+## Status
+
+- **Phase**: 6 (PR Creation)
+- **Last Updated**: 2025-03-13
+
+## Completed
+
+- [x] Phase 0: Validation - User confirmed requirements
+- [x] Phase 1: Planning - Created plan.md
+- [x] Phase 2: Worktree Setup - Created feat/from-staged-flag worktree
+- [x] Implement git utilities for staged files (getStagedFiles, getStagedFileContent, copyStagedFiles)
+- [x] Add --from-staged flag parsing to checkout.ts
+- [x] Implement staged file copying in checkout flow
+- [x] Update CLI help text
+- [x] Update gw-tool README.md
+- [x] Add VS Code command definition (package.json)
+- [x] Implement VS Code command handler (extension.ts)
+- [x] Add VS Code parser function (hasStagedFiles, createWorktreeFromStaged)
+- [x] Run tests - all 245 tests pass
+- [x] Run linters - both packages pass
+
+## Current
+
+- [ ] Create draft PR <- **IN PROGRESS**
+
+## Upcoming
+
+- [ ] Phase 7: Cleanup (after merge)
+
+## Decisions Log
+
+| Decision | Rationale | Phase |
+| -------- | --------- | ----- |
+| No --clean flag | Keep it simple, user can clean manually | 0 |
+`;
+      const result = parseTaskMd(content);
+
+      // Should have all 13 completed items
+      expect(result.completed).toHaveLength(13);
+      expect(result.completed[0].label).toBe('Phase 0: Validation - User confirmed requirements');
+      expect(result.completed[0].completed).toBe(true);
+      expect(result.completed[12].label).toBe('Run linters - both packages pass');
+
+      // Should have 1 current item (in progress)
+      expect(result.current).toHaveLength(1);
+      expect(result.current[0].label).toBe('Create draft PR');
+      expect(result.current[0].inProgress).toBe(true);
+
+      // Should have 1 upcoming item
+      expect(result.upcoming).toHaveLength(1);
+      expect(result.upcoming[0].label).toBe('Phase 7: Cleanup (after merge)');
+    });
   });
 
   describe('decisions parsing', () => {
