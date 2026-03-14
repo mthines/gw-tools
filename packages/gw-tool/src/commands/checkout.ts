@@ -493,7 +493,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Determine branch state: local, remote-only, or new
   const explicitCreate = hasBranchFlag(gitArgs);
   const localExists = await branchExistsLocally(branchName);
-  const remoteOnlyExists = !localExists && await branchExists(branchName);
+  const remoteOnlyExists = !localExists && (await branchExists(branchName));
   const willCreateBranch = explicitCreate || (!localExists && !remoteOnlyExists);
 
   if (localExists && !explicitCreate) {
@@ -504,9 +504,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   } else if (remoteOnlyExists && !explicitCreate) {
     // Branch exists on remote but not locally (e.g. after gw remove deleted the local branch)
     // Create a local branch from the remote ref with tracking
-    console.log(
-      `Branch ${output.bold(parsed.worktreeName)} exists on remote but not locally, creating from remote...`
-    );
+    console.log(`Branch ${output.bold(parsed.worktreeName)} exists on remote but not locally, creating from remote...`);
 
     startPoint = `origin/${parsed.worktreeName}`;
     gitArgs.unshift('-b', parsed.worktreeName);

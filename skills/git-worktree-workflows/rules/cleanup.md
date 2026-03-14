@@ -102,12 +102,12 @@ gw prune --stale-only
 
 ## Decision Table: `gw clean` vs `gw prune`
 
-| Use Case                       | Command    |
-| ------------------------------ | ---------- |
-| Weekly maintenance             | `gw clean` |
-| Before project break           | `gw prune` |
-| After major release            | `gw prune` |
-| Full reset to minimal state    | `gw prune` |
+| Use Case                    | Command    |
+| --------------------------- | ---------- |
+| Weekly maintenance          | `gw clean` |
+| Before project break        | `gw prune` |
+| After major release         | `gw prune` |
+| Full reset to minimal state | `gw prune` |
 
 > **Note:** Both `gw clean` and `gw remove` now automatically prune orphan branches after removing worktrees, so orphan branches no longer accumulate over time.
 

@@ -343,9 +343,7 @@ export async function executeClean(args: string[]): Promise<void> {
       const defaultBranch = config.defaultBranch || 'main';
       const deleted = await pruneOrphanBranches(defaultBranch);
       if (deleted > 0) {
-        output.success(
-          `Pruned ${deleted} orphan branch(es)`,
-        );
+        output.success(`Pruned ${deleted} orphan branch(es)`);
       }
     } catch {
       // Don't fail clean if orphan branch pruning fails

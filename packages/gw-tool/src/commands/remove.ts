@@ -373,9 +373,7 @@ For full git worktree remove documentation:
     const defaultBranch = pruneConfig.defaultBranch || 'main';
     const deleted = await pruneOrphanBranches(defaultBranch);
     if (deleted > 0) {
-      output.success(
-        `Pruned ${deleted} orphan branch(es)`,
-      );
+      output.success(`Pruned ${deleted} orphan branch(es)`);
     }
   } catch {
     // Don't fail remove if orphan branch pruning fails
