@@ -46,7 +46,7 @@ export const CURRENT_CONFIG_VERSION = 2; // increment this
 export const MIGRATIONS: Migration[] = [
   {
     version: 2,
-    description: 'Rename oldField to newField',
+    description: "Rename oldField to newField",
     migrate: (config) => {
       if (config.oldField !== undefined) {
         config.newField = config.oldField;
@@ -62,15 +62,15 @@ export const MIGRATIONS: Migration[] = [
 ## Output Module Usage
 
 ```typescript
-import * as output from './output.ts';
+import * as output from "./output.ts";
 
 // Status messages (with badges and newlines)
-output.error('Failed'); // Red ERROR badge
-output.success('Done'); // Green SUCCESS badge
-output.warning('Caution'); // Yellow WARNING badge
-output.info('Note'); // Blue INFO badge
+output.error("Failed"); // Red ERROR badge
+output.success("Done"); // Green SUCCESS badge
+output.warning("Caution"); // Yellow WARNING badge
+output.info("Note"); // Blue INFO badge
 
 // Inline formatting (no badges)
-console.log(`Path: ${output.path('/path/to/file')}`);
+console.log(`Path: ${output.path("/path/to/file")}`);
 console.log(`${output.checkmark()} Copied`);
 ```

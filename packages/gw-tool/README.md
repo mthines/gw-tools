@@ -333,13 +333,13 @@ gw init --root /path/to/your/repo.git
   "hooks": {
     "checkout": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": ["pnpm install", "echo 'Setup complete!'"]
-    }
+      "post": ["pnpm install", "echo 'Setup complete!'"],
+    },
   },
   "cleanThreshold": 7,
   "autoClean": true,
   "updateStrategy": "merge",
-  "lastAutoCleanTime": 1706371200000 // trailing comma OK
+  "lastAutoCleanTime": 1706371200000, // trailing comma OK
 }
 ```
 
@@ -1741,11 +1741,11 @@ For commands with custom logic, follow the pattern used by existing commands:
    // src/commands/list.ts
    export async function executeList(args: string[]): Promise<void> {
      // Check for help flag
-     if (args.includes("--help") || args.includes("-h")) {
+     if (args.includes('--help') || args.includes('-h')) {
        console.log(`Usage: gw list
-
+   
    List all git worktrees in the current repository.
-
+   
    Options:
      -h, --help    Show this help message
    `);
@@ -1760,7 +1760,7 @@ For commands with custom logic, follow the pattern used by existing commands:
 2. **Import and register** the command in `src/main.ts`:
 
    ```typescript
-   import { executeList } from "./commands/list.ts";
+   import { executeList } from './commands/list.ts';
 
    const COMMANDS = {
      add: executeAdd,
@@ -1793,19 +1793,19 @@ For simple pass-through commands that wrap git worktree operations, use the `git
 
    ```typescript
    // src/commands/list.ts
-   import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
+   import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
    export async function executeList(args: string[]): Promise<void> {
-     if (args.includes("--help") || args.includes("-h")) {
-       showProxyHelp("list", "list", "List all worktrees in the repository", [
-         "gw list",
-         "gw list --porcelain",
-         "gw list -v",
+     if (args.includes('--help') || args.includes('-h')) {
+       showProxyHelp('list', 'list', 'List all worktrees in the repository', [
+         'gw list',
+         'gw list --porcelain',
+         'gw list -v',
        ]);
        Deno.exit(0);
      }
 
-     await executeGitWorktree("list", args);
+     await executeGitWorktree('list', args);
    }
    ```
 

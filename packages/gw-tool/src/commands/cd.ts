@@ -3,9 +3,9 @@
  * Outputs the path to a worktree for use with cd command
  */
 
-import * as output from '../lib/output.ts';
-import { listWorktrees } from '../lib/git-utils.ts';
-import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
+import * as output from "../lib/output.ts";
+import { listWorktrees } from "../lib/git-utils.ts";
+import { isShellIntegrationInstalled } from "../lib/shell-integration.ts";
 
 /**
  * Execute the cd command
@@ -14,7 +14,7 @@ import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
  */
 export async function executeCd(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     showCdHelp();
     Deno.exit(0);
   }
@@ -22,9 +22,9 @@ export async function executeCd(args: string[]): Promise<void> {
   // Get worktree pattern from arguments
   const pattern = args[0];
   if (!pattern) {
-    output.error('Error: Worktree name or pattern required');
-    console.error('\nUsage: gw cd <worktree>');
-    console.error('Then: cd $(gw cd <worktree>)');
+    output.error("Error: Worktree name or pattern required");
+    console.error("\nUsage: gw cd <worktree>");
+    console.error("Then: cd $(gw cd <worktree>)");
     Deno.exit(1);
   }
 
@@ -33,7 +33,11 @@ export async function executeCd(args: string[]): Promise<void> {
   try {
     worktrees = await listWorktrees();
   } catch (err) {
-    output.error(`Failed to get worktree list: ${err instanceof Error ? err.message : String(err)}`);
+    output.error(
+      `Failed to get worktree list: ${
+        err instanceof Error ? err.message : String(err)
+      }`,
+    );
     Deno.exit(1);
   }
 
@@ -53,7 +57,9 @@ export async function executeCd(args: string[]): Promise<void> {
   // If multiple matches, check for a single exact branch match
   let resolved = matches;
   if (matches.length > 1) {
-    const exactMatches = matches.filter((wt) => wt.branch.toLowerCase() === pattern.toLowerCase());
+    const exactMatches = matches.filter((wt) =>
+      wt.branch.toLowerCase() === pattern.toLowerCase()
+    );
     if (exactMatches.length === 1) {
       resolved = exactMatches;
     }
@@ -63,16 +69,20 @@ export async function executeCd(args: string[]): Promise<void> {
     output.error(`Multiple worktrees match "${pattern}":`);
     const hasDetached = resolved.some((wt) => !wt.branch);
     resolved.forEach((wt) => {
-      const label = wt.branch ? wt.branch : `${wt.path.split('/').pop() || wt.path} (detached)`;
+      const label = wt.branch
+        ? wt.branch
+        : `${wt.path.split("/").pop() || wt.path} (detached)`;
       console.error(`  ${label} -> ${wt.path}`);
     });
     if (hasDetached) {
       const detached = resolved.filter((wt) => !wt.branch);
       for (const wt of detached) {
-        console.error(`\nhint: Remove detached worktree with: gw remove ${wt.path}`);
+        console.error(
+          `\nhint: Remove detached worktree with: gw remove ${wt.path}`,
+        );
       }
     }
-    console.error('\nPlease be more specific.');
+    console.error("\nPlease be more specific.");
     Deno.exit(1);
   }
 
@@ -84,23 +94,23 @@ export async function executeCd(args: string[]): Promise<void> {
   if (Deno.stdout.isTerminal()) {
     const hasShellIntegration = await isShellIntegrationInstalled();
     if (!hasShellIntegration) {
-      const shell = Deno.env.get('SHELL') || '';
-      const shellName = shell.split('/').pop() || '';
+      const shell = Deno.env.get("SHELL") || "";
+      const shellName = shell.split("/").pop() || "";
 
-      let configFile = '~/.zshrc';
+      let configFile = "~/.zshrc";
       let evalLine = 'eval "$(gw install-shell)"';
 
-      if (shellName === 'bash') {
-        configFile = '~/.bashrc';
-      } else if (shellName === 'fish') {
-        configFile = '~/.config/fish/config.fish';
-        evalLine = 'gw install-shell | source';
+      if (shellName === "bash") {
+        configFile = "~/.bashrc";
+      } else if (shellName === "fish") {
+        configFile = "~/.config/fish/config.fish";
+        evalLine = "gw install-shell | source";
       }
 
-      console.error('');
-      console.error('💡 Tip: Add shell integration for automatic navigation:');
+      console.error("");
+      console.error("💡 Tip: Add shell integration for automatic navigation:");
       console.error(`   echo '${evalLine}' >> ${configFile}`);
-      console.error('   Then restart your shell or source the config file.');
+      console.error("   Then restart your shell or source the config file.");
     }
   }
 }

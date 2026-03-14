@@ -3,13 +3,16 @@
  * Tests the cleanup of stale/safe worktrees with various flags
  */
 
-import { assertEquals } from '@std/assert';
-import { join } from '@std/path';
-import { executeClean } from './clean.ts';
-import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { TempCwd } from '../test-utils/temp-env.ts';
-import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
-import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { assertEquals } from "@std/assert";
+import { join } from "@std/path";
+import { executeClean } from "./clean.ts";
+import { GitTestRepo } from "../test-utils/git-test-repo.ts";
+import { TempCwd } from "../test-utils/temp-env.ts";
+import {
+  createMinimalConfig,
+  writeTestConfig,
+} from "../test-utils/fixtures.ts";
+import { withMockedExit } from "../test-utils/mock-exit.ts";
 
 /**
  * Helper to mock stdin for confirmation prompts
@@ -20,7 +23,7 @@ function mockStdin(response: string): () => void {
   // @ts-ignore - Intentionally replacing for testing
   Deno.stdin.read = (_buffer: Uint8Array): Promise<number | null> => {
     const encoder = new TextEncoder();
-    const data = encoder.encode(response + '\n');
+    const data = encoder.encode(response + "\n");
     _buffer.set(data);
     return Promise.resolve(data.length);
   };
@@ -33,7 +36,10 @@ function mockStdin(response: string): () => void {
 /**
  * Helper to run function with mocked stdin
  */
-async function withMockedStdin<T>(response: string, fn: () => Promise<T>): Promise<T> {
+async function withMockedStdin<T>(
+  response: string,
+  fn: () => Promise<T>,
+): Promise<T> {
   const restore = mockStdin(response);
   try {
     const result = await fn();
@@ -49,24 +55,36 @@ async function withMockedStdin<T>(response: string, fn: () => Promise<T>): Promi
  * Helper to set file modification time to make worktree appear old
  * Updates the .git file which is used to calculate worktree age
  */
-async function makeWorktreeOld(worktreePath: string, daysOld: number): Promise<void> {
-  const gitFilePath = join(worktreePath, '.git');
+async function makeWorktreeOld(
+  worktreePath: string,
+  daysOld: number,
+): Promise<void> {
+  const gitFilePath = join(worktreePath, ".git");
   const now = Date.now();
   const oldTime = now - daysOld * 24 * 60 * 60 * 1000;
   await Deno.utime(gitFilePath, oldTime / 1000, oldTime / 1000);
 
   // Backdate the last commit so getWorktreeAgeDays (which checks commit date) sees it as old
   const oldDate = new Date(oldTime).toISOString();
-  const cmd = new Deno.Command('git', {
-    args: ['-C', worktreePath, 'commit', '--allow-empty', '--amend', '--no-edit', '--date', oldDate],
-    stdout: 'null',
-    stderr: 'null',
+  const cmd = new Deno.Command("git", {
+    args: [
+      "-C",
+      worktreePath,
+      "commit",
+      "--allow-empty",
+      "--amend",
+      "--no-edit",
+      "--date",
+      oldDate,
+    ],
+    stdout: "null",
+    stderr: "null",
     env: { ...Deno.env.toObject(), GIT_COMMITTER_DATE: oldDate },
   });
   await cmd.output();
 }
 
-Deno.test('clean command - shows help message', async () => {
+Deno.test("clean command - shows help message", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -76,9 +94,9 @@ Deno.test('clean command - shows help message', async () => {
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--help']));
+      const { exitCode } = await withMockedExit(() => executeClean(["--help"]));
 
-      assertEquals(exitCode, 0, 'Should exit with code 0 for help');
+      assertEquals(exitCode, 0, "Should exit with code 0 for help");
     } finally {
       cwd.restore();
     }
@@ -87,7 +105,7 @@ Deno.test('clean command - shows help message', async () => {
   }
 });
 
-Deno.test('clean command - dry run shows what would be removed (default mode)', async () => {
+Deno.test("clean command - dry run shows what would be removed (default mode)", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -96,18 +114,24 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
     await writeTestConfig(repo.path, config);
 
     // Create a worktree
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(["--dry-run"])
+      );
 
-      assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
+      assertEquals(exitCode, 0, "Should exit with code 0 for dry run");
 
       // Verify worktree still exists (not actually removed)
       const worktrees = await repo.listWorktrees();
-      const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeatBranch, true, 'Worktree should not be removed in dry run');
+      const hasFeatBranch = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeatBranch,
+        true,
+        "Worktree should not be removed in dry run",
+      );
     } finally {
       cwd.restore();
     }
@@ -116,7 +140,7 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
   }
 });
 
-Deno.test('clean command - removes all safe worktrees by default (no age check)', async () => {
+Deno.test("clean command - removes all safe worktrees by default (no age check)", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -125,19 +149,23 @@ Deno.test('clean command - removes all safe worktrees by default (no age check)'
     await writeTestConfig(repo.path, config);
 
     // Create a NEW worktree (just created, not old)
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await executeClean([]);
       });
 
       // Verify worktree was removed (even though it's new)
       const worktrees = await repo.listWorktrees();
-      const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeatBranch, false, 'New worktree should be removed by default');
+      const hasFeatBranch = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeatBranch,
+        false,
+        "New worktree should be removed by default",
+      );
     } finally {
       cwd.restore();
     }
@@ -146,7 +174,7 @@ Deno.test('clean command - removes all safe worktrees by default (no age check)'
   }
 });
 
-Deno.test('clean command - with --use-autoclean-threshold only removes old worktrees', async () => {
+Deno.test("clean command - with --use-autoclean-threshold only removes old worktrees", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -155,30 +183,38 @@ Deno.test('clean command - with --use-autoclean-threshold only removes old workt
     await writeTestConfig(repo.path, config);
 
     // Create a NEW worktree (less than 7 days old)
-    await repo.createWorktree('new-branch');
+    await repo.createWorktree("new-branch");
 
     // Create an OLD worktree (more than 7 days old)
-    const oldWorktree = await repo.createWorktree('old-branch');
+    const oldWorktree = await repo.createWorktree("old-branch");
     await makeWorktreeOld(oldWorktree, 10);
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await withMockedExit(async () => {
-          await executeClean(['--use-autoclean-threshold']);
+          await executeClean(["--use-autoclean-threshold"]);
         });
       });
 
       const worktrees = await repo.listWorktrees();
 
       // New worktree should still exist
-      const hasNewBranch = worktrees.some((wt) => wt.includes('new-branch'));
-      assertEquals(hasNewBranch, true, 'New worktree should NOT be removed with threshold flag');
+      const hasNewBranch = worktrees.some((wt) => wt.includes("new-branch"));
+      assertEquals(
+        hasNewBranch,
+        true,
+        "New worktree should NOT be removed with threshold flag",
+      );
 
       // Old worktree should be removed
-      const hasOldBranch = worktrees.some((wt) => wt.includes('old-branch'));
-      assertEquals(hasOldBranch, false, 'Old worktree should be removed with threshold flag');
+      const hasOldBranch = worktrees.some((wt) => wt.includes("old-branch"));
+      assertEquals(
+        hasOldBranch,
+        false,
+        "Old worktree should be removed with threshold flag",
+      );
     } finally {
       cwd.restore();
     }
@@ -187,7 +223,7 @@ Deno.test('clean command - with --use-autoclean-threshold only removes old workt
   }
 });
 
-Deno.test('clean command - skips worktrees with uncommitted changes', async () => {
+Deno.test("clean command - skips worktrees with uncommitted changes", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -196,19 +232,23 @@ Deno.test('clean command - skips worktrees with uncommitted changes', async () =
     await writeTestConfig(repo.path, config);
 
     // Create a worktree with uncommitted changes
-    await repo.createWorktree('feat-branch');
-    await repo.createFile('feat-branch/new-file.txt', 'uncommitted content');
+    await repo.createWorktree("feat-branch");
+    await repo.createFile("feat-branch/new-file.txt", "uncommitted content");
 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(() => executeClean([]));
 
-      assertEquals(exitCode, 0, 'Should exit successfully');
+      assertEquals(exitCode, 0, "Should exit successfully");
 
       // Verify worktree still exists (protected by safety check)
       const worktrees = await repo.listWorktrees();
-      const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeatBranch, true, 'Worktree with uncommitted changes should not be removed');
+      const hasFeatBranch = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeatBranch,
+        true,
+        "Worktree with uncommitted changes should not be removed",
+      );
     } finally {
       cwd.restore();
     }
@@ -217,7 +257,7 @@ Deno.test('clean command - skips worktrees with uncommitted changes', async () =
   }
 });
 
-Deno.test('clean command - force flag removes worktrees with uncommitted changes', async () => {
+Deno.test("clean command - force flag removes worktrees with uncommitted changes", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -226,20 +266,24 @@ Deno.test('clean command - force flag removes worktrees with uncommitted changes
     await writeTestConfig(repo.path, config);
 
     // Create a worktree with uncommitted changes
-    await repo.createWorktree('feat-branch');
-    await repo.createFile('feat-branch/new-file.txt', 'uncommitted content');
+    await repo.createWorktree("feat-branch");
+    await repo.createFile("feat-branch/new-file.txt", "uncommitted content");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
-        await executeClean(['--force']);
+      await withMockedStdin("yes", async () => {
+        await executeClean(["--force"]);
       });
 
       // Verify worktree was removed (force overrides safety checks)
       const worktrees = await repo.listWorktrees();
-      const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeatBranch, false, 'Force flag should remove worktree with uncommitted changes');
+      const hasFeatBranch = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeatBranch,
+        false,
+        "Force flag should remove worktree with uncommitted changes",
+      );
     } finally {
       cwd.restore();
     }
@@ -248,7 +292,7 @@ Deno.test('clean command - force flag removes worktrees with uncommitted changes
   }
 });
 
-Deno.test('clean command - skips worktrees with unpushed commits', async () => {
+Deno.test("clean command - skips worktrees with unpushed commits", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -257,13 +301,13 @@ Deno.test('clean command - skips worktrees with unpushed commits', async () => {
     await writeTestConfig(repo.path, config);
 
     // Create a worktree
-    const worktreePath = await repo.createWorktree('feat-branch');
+    const worktreePath = await repo.createWorktree("feat-branch");
 
     // Create a commit in the worktree (will be unpushed)
     const cwd = new TempCwd(worktreePath);
     try {
-      await repo.createFile('feat-branch/file.txt', 'content');
-      await repo.createCommit('Add file');
+      await repo.createFile("feat-branch/file.txt", "content");
+      await repo.createCommit("Add file");
 
       cwd.restore();
 
@@ -271,12 +315,18 @@ Deno.test('clean command - skips worktrees with unpushed commits', async () => {
       try {
         const { exitCode } = await withMockedExit(() => executeClean([]));
 
-        assertEquals(exitCode, 0, 'Should exit successfully');
+        assertEquals(exitCode, 0, "Should exit successfully");
 
         // Verify worktree still exists (protected by safety check)
         const worktrees = await repo.listWorktrees();
-        const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-        assertEquals(hasFeatBranch, true, 'Worktree with unpushed commits should not be removed');
+        const hasFeatBranch = worktrees.some((wt) =>
+          wt.includes("feat-branch")
+        );
+        assertEquals(
+          hasFeatBranch,
+          true,
+          "Worktree with unpushed commits should not be removed",
+        );
       } finally {
         mainCwd.restore();
       }
@@ -288,7 +338,7 @@ Deno.test('clean command - skips worktrees with unpushed commits', async () => {
   }
 });
 
-Deno.test('clean command - cancels when user declines confirmation', async () => {
+Deno.test("clean command - cancels when user declines confirmation", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -297,21 +347,25 @@ Deno.test('clean command - cancels when user declines confirmation', async () =>
     await writeTestConfig(repo.path, config);
 
     // Create a clean worktree
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Decline removal with "no"
-      const { exitCode } = await withMockedStdin('no', async () => {
+      const { exitCode } = await withMockedStdin("no", async () => {
         return await withMockedExit(() => executeClean([]));
       });
 
-      assertEquals(exitCode, 0, 'Should exit with code 0 when cancelled');
+      assertEquals(exitCode, 0, "Should exit with code 0 when cancelled");
 
       // Verify worktree still exists (user declined)
       const worktrees = await repo.listWorktrees();
-      const hasFeatBranch = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeatBranch, true, 'Worktree should not be removed when user cancels');
+      const hasFeatBranch = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeatBranch,
+        true,
+        "Worktree should not be removed when user cancels",
+      );
     } finally {
       cwd.restore();
     }
@@ -320,7 +374,7 @@ Deno.test('clean command - cancels when user declines confirmation', async () =>
   }
 });
 
-Deno.test('clean command - exits successfully when no worktrees to clean', async () => {
+Deno.test("clean command - exits successfully when no worktrees to clean", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -333,7 +387,7 @@ Deno.test('clean command - exits successfully when no worktrees to clean', async
     try {
       const { exitCode } = await withMockedExit(() => executeClean([]));
 
-      assertEquals(exitCode, 0, 'Should exit successfully when no worktrees');
+      assertEquals(exitCode, 0, "Should exit successfully when no worktrees");
     } finally {
       cwd.restore();
     }
@@ -342,7 +396,7 @@ Deno.test('clean command - exits successfully when no worktrees to clean', async
   }
 });
 
-Deno.test('clean command - combines dry-run with use-threshold flag', async () => {
+Deno.test("clean command - combines dry-run with use-threshold flag", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -351,19 +405,25 @@ Deno.test('clean command - combines dry-run with use-threshold flag', async () =
     await writeTestConfig(repo.path, config);
 
     // Create an old worktree
-    const oldWorktree = await repo.createWorktree('old-branch');
+    const oldWorktree = await repo.createWorktree("old-branch");
     await makeWorktreeOld(oldWorktree, 10);
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--use-autoclean-threshold', '--dry-run']));
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(["--use-autoclean-threshold", "--dry-run"])
+      );
 
-      assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
+      assertEquals(exitCode, 0, "Should exit with code 0 for dry run");
 
       // Verify worktree still exists (not actually removed in dry run)
       const worktrees = await repo.listWorktrees();
-      const hasOldBranch = worktrees.some((wt) => wt.includes('old-branch'));
-      assertEquals(hasOldBranch, true, 'Worktree should not be removed in dry run');
+      const hasOldBranch = worktrees.some((wt) => wt.includes("old-branch"));
+      assertEquals(
+        hasOldBranch,
+        true,
+        "Worktree should not be removed in dry run",
+      );
     } finally {
       cwd.restore();
     }
@@ -372,7 +432,7 @@ Deno.test('clean command - combines dry-run with use-threshold flag', async () =
   }
 });
 
-Deno.test('clean command - respects custom cleanThreshold from config', async () => {
+Deno.test("clean command - respects custom cleanThreshold from config", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -385,30 +445,40 @@ Deno.test('clean command - respects custom cleanThreshold from config', async ()
     await writeTestConfig(repo.path, config);
 
     // Create worktrees with different ages
-    const tenDayOld = await repo.createWorktree('ten-day-old');
+    const tenDayOld = await repo.createWorktree("ten-day-old");
     await makeWorktreeOld(tenDayOld, 10);
 
-    const twentyDayOld = await repo.createWorktree('twenty-day-old');
+    const twentyDayOld = await repo.createWorktree("twenty-day-old");
     await makeWorktreeOld(twentyDayOld, 20);
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await withMockedExit(async () => {
-          await executeClean(['--use-autoclean-threshold']);
+          await executeClean(["--use-autoclean-threshold"]);
         });
       });
 
       const worktrees = await repo.listWorktrees();
 
       // 10-day-old should still exist (below 14-day threshold)
-      const hasTenDay = worktrees.some((wt) => wt.includes('ten-day-old'));
-      assertEquals(hasTenDay, true, '10-day worktree should NOT be removed (below 14-day threshold)');
+      const hasTenDay = worktrees.some((wt) => wt.includes("ten-day-old"));
+      assertEquals(
+        hasTenDay,
+        true,
+        "10-day worktree should NOT be removed (below 14-day threshold)",
+      );
 
       // 20-day-old should be removed (above 14-day threshold)
-      const hasTwentyDay = worktrees.some((wt) => wt.includes('twenty-day-old'));
-      assertEquals(hasTwentyDay, false, '20-day worktree should be removed (above 14-day threshold)');
+      const hasTwentyDay = worktrees.some((wt) =>
+        wt.includes("twenty-day-old")
+      );
+      assertEquals(
+        hasTwentyDay,
+        false,
+        "20-day worktree should be removed (above 14-day threshold)",
+      );
     } finally {
       cwd.restore();
     }
@@ -417,7 +487,7 @@ Deno.test('clean command - respects custom cleanThreshold from config', async ()
   }
 });
 
-Deno.test('clean command - never removes bare repository', async () => {
+Deno.test("clean command - never removes bare repository", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -430,13 +500,17 @@ Deno.test('clean command - never removes bare repository', async () => {
       // Try to clean (bare repo should be skipped automatically)
       const { exitCode } = await withMockedExit(() => executeClean([]));
 
-      assertEquals(exitCode, 0, 'Should exit successfully');
+      assertEquals(exitCode, 0, "Should exit successfully");
 
       // Verify main repo still exists
       const mainExists = await Deno.stat(repo.path)
         .then(() => true)
         .catch(() => false);
-      assertEquals(mainExists, true, 'Bare/main repository should never be removed');
+      assertEquals(
+        mainExists,
+        true,
+        "Bare/main repository should never be removed",
+      );
     } finally {
       cwd.restore();
     }
@@ -445,40 +519,48 @@ Deno.test('clean command - never removes bare repository', async () => {
   }
 });
 
-Deno.test('clean command - never removes default branch worktree', async () => {
+Deno.test("clean command - never removes default branch worktree", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create a custom branch to use as the default
-    await repo.createWorktree('develop');
+    await repo.createWorktree("develop");
 
     const config = {
       root: repo.path,
-      defaultBranch: 'develop',
+      defaultBranch: "develop",
       cleanThreshold: 7,
     };
     await writeTestConfig(repo.path, config);
 
     // Create another worktree that should be removed
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await executeClean([]);
       });
 
       const worktrees = await repo.listWorktrees();
 
       // Develop worktree should still exist (protected as default branch)
-      const hasDevelop = worktrees.some((wt) => wt.includes('develop'));
-      assertEquals(hasDevelop, true, 'Default branch worktree should never be removed');
+      const hasDevelop = worktrees.some((wt) => wt.includes("develop"));
+      assertEquals(
+        hasDevelop,
+        true,
+        "Default branch worktree should never be removed",
+      );
 
       // Feature worktree should be removed
-      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeat, false, 'Non-default branch worktree should be removed');
+      const hasFeat = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeat,
+        false,
+        "Non-default branch worktree should be removed",
+      );
     } finally {
       cwd.restore();
     }
@@ -487,41 +569,49 @@ Deno.test('clean command - never removes default branch worktree', async () => {
   }
 });
 
-Deno.test('clean command - protects default branch even with --force', async () => {
+Deno.test("clean command - protects default branch even with --force", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create a custom branch to use as the default
-    await repo.createWorktree('develop');
+    await repo.createWorktree("develop");
 
     const config = {
       root: repo.path,
-      defaultBranch: 'develop',
+      defaultBranch: "develop",
       cleanThreshold: 7,
     };
     await writeTestConfig(repo.path, config);
 
     // Create another worktree with uncommitted changes
-    await repo.createWorktree('feat-branch');
-    await repo.createFile('feat-branch/uncommitted.txt', 'content');
+    await repo.createWorktree("feat-branch");
+    await repo.createFile("feat-branch/uncommitted.txt", "content");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes" and use --force
-      await withMockedStdin('yes', async () => {
-        await executeClean(['--force']);
+      await withMockedStdin("yes", async () => {
+        await executeClean(["--force"]);
       });
 
       const worktrees = await repo.listWorktrees();
 
       // Develop worktree should still exist (protected as default branch)
-      const hasDevelop = worktrees.some((wt) => wt.includes('develop'));
-      assertEquals(hasDevelop, true, 'Default branch should be protected even with --force');
+      const hasDevelop = worktrees.some((wt) => wt.includes("develop"));
+      assertEquals(
+        hasDevelop,
+        true,
+        "Default branch should be protected even with --force",
+      );
 
       // Feature worktree should be removed (force bypasses uncommitted changes check)
-      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeat, false, 'Non-default branch should be removed with --force');
+      const hasFeat = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(
+        hasFeat,
+        false,
+        "Non-default branch should be removed with --force",
+      );
     } finally {
       cwd.restore();
     }
@@ -530,14 +620,14 @@ Deno.test('clean command - protects default branch even with --force', async () 
   }
 });
 
-Deno.test('clean command - uses main as default when defaultBranch not configured', async () => {
+Deno.test("clean command - uses main as default when defaultBranch not configured", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create worktrees for both main and a feature branch
-    await repo.createWorktree('staging');
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("staging");
+    await repo.createWorktree("feat-branch");
 
     // Config without defaultBranch set (should default to 'main')
     const config = {
@@ -549,19 +639,19 @@ Deno.test('clean command - uses main as default when defaultBranch not configure
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await executeClean([]);
       });
 
       const worktrees = await repo.listWorktrees();
 
       // Staging worktree should be removed (not the default)
-      const hasStaging = worktrees.some((wt) => wt.includes('staging'));
-      assertEquals(hasStaging, false, 'Staging worktree should be removed');
+      const hasStaging = worktrees.some((wt) => wt.includes("staging"));
+      assertEquals(hasStaging, false, "Staging worktree should be removed");
 
       // Feature worktree should be removed
-      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeat, false, 'Feature branch worktree should be removed');
+      const hasFeat = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(hasFeat, false, "Feature branch worktree should be removed");
     } finally {
       cwd.restore();
     }
@@ -570,7 +660,7 @@ Deno.test('clean command - uses main as default when defaultBranch not configure
   }
 });
 
-Deno.test('clean command - never removes gw_root worktree', async () => {
+Deno.test("clean command - never removes gw_root worktree", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -579,25 +669,25 @@ Deno.test('clean command - never removes gw_root worktree', async () => {
     await writeTestConfig(repo.path, config);
 
     // Create gw_root and a feature worktree
-    await repo.createWorktree('gw_root');
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("gw_root");
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
       // Confirm removal with "yes"
-      await withMockedStdin('yes', async () => {
+      await withMockedStdin("yes", async () => {
         await executeClean([]);
       });
 
       const worktrees = await repo.listWorktrees();
 
       // gw_root worktree should still exist (protected)
-      const hasGwRoot = worktrees.some((wt) => wt.includes('gw_root'));
-      assertEquals(hasGwRoot, true, 'gw_root worktree should never be removed');
+      const hasGwRoot = worktrees.some((wt) => wt.includes("gw_root"));
+      assertEquals(hasGwRoot, true, "gw_root worktree should never be removed");
 
       // Feature worktree should be removed
-      const hasFeat = worktrees.some((wt) => wt.includes('feat-branch'));
-      assertEquals(hasFeat, false, 'Non-protected worktree should be removed');
+      const hasFeat = worktrees.some((wt) => wt.includes("feat-branch"));
+      assertEquals(hasFeat, false, "Non-protected worktree should be removed");
     } finally {
       cwd.restore();
     }
@@ -606,7 +696,7 @@ Deno.test('clean command - never removes gw_root worktree', async () => {
   }
 });
 
-Deno.test('clean command - automatically prunes phantom worktrees before listing', async () => {
+Deno.test("clean command - automatically prunes phantom worktrees before listing", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -614,7 +704,7 @@ Deno.test('clean command - automatically prunes phantom worktrees before listing
     await writeTestConfig(repo.path, config);
 
     // Create a worktree
-    const worktreePath = await repo.createWorktree('feat-branch');
+    const worktreePath = await repo.createWorktree("feat-branch");
 
     // Manually delete the worktree directory (simulating rm -rf)
     await Deno.remove(worktreePath, { recursive: true });
@@ -622,19 +712,25 @@ Deno.test('clean command - automatically prunes phantom worktrees before listing
     const cwd = new TempCwd(repo.path);
     try {
       // Run clean with dry-run
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(["--dry-run"])
+      );
 
-      assertEquals(exitCode, 0, 'Should exit successfully');
+      assertEquals(exitCode, 0, "Should exit successfully");
 
       // Verify phantom worktree was pruned
-      const cmd = new Deno.Command('git', {
-        args: ['-C', repo.path, 'worktree', 'list'],
-        stdout: 'piped',
+      const cmd = new Deno.Command("git", {
+        args: ["-C", repo.path, "worktree", "list"],
+        stdout: "piped",
       });
       const { stdout } = await cmd.output();
       const output = new TextDecoder().decode(stdout);
 
-      assertEquals(output.includes('feat-branch'), false, 'Phantom worktree should be pruned');
+      assertEquals(
+        output.includes("feat-branch"),
+        false,
+        "Phantom worktree should be pruned",
+      );
     } finally {
       cwd.restore();
     }
@@ -643,19 +739,21 @@ Deno.test('clean command - automatically prunes phantom worktrees before listing
   }
 });
 
-Deno.test('clean command - continues successfully even if prune fails', async () => {
+Deno.test("clean command - continues successfully even if prune fails", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
 
-    await repo.createWorktree('feat-branch');
+    await repo.createWorktree("feat-branch");
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
-      assertEquals(exitCode, 0, 'Should succeed even if prune has issues');
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(["--dry-run"])
+      );
+      assertEquals(exitCode, 0, "Should succeed even if prune has issues");
     } finally {
       cwd.restore();
     }
@@ -664,7 +762,7 @@ Deno.test('clean command - continues successfully even if prune fails', async ()
   }
 });
 
-Deno.test('clean command - prunes multiple phantom worktrees at once', async () => {
+Deno.test("clean command - prunes multiple phantom worktrees at once", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -672,9 +770,9 @@ Deno.test('clean command - prunes multiple phantom worktrees at once', async () 
     await writeTestConfig(repo.path, config);
 
     // Create and delete multiple worktrees
-    const wt1 = await repo.createWorktree('feat-1');
-    const wt2 = await repo.createWorktree('feat-2');
-    const wt3 = await repo.createWorktree('feat-3');
+    const wt1 = await repo.createWorktree("feat-1");
+    const wt2 = await repo.createWorktree("feat-2");
+    const wt3 = await repo.createWorktree("feat-3");
 
     await Deno.remove(wt1, { recursive: true });
     await Deno.remove(wt2, { recursive: true });
@@ -688,9 +786,11 @@ Deno.test('clean command - prunes multiple phantom worktrees at once', async () 
       // Verify all are pruned
       const worktrees = await repo.listWorktrees();
       const hasAnyPhantom = worktrees.some(
-        (wt) => wt.includes('feat-1') || wt.includes('feat-2') || wt.includes('feat-3')
+        (wt) =>
+          wt.includes("feat-1") || wt.includes("feat-2") ||
+          wt.includes("feat-3"),
       );
-      assertEquals(hasAnyPhantom, false, 'All phantoms should be pruned');
+      assertEquals(hasAnyPhantom, false, "All phantoms should be pruned");
     } finally {
       cwd.restore();
     }

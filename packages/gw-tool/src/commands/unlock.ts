@@ -3,7 +3,7 @@
  * Unlocks a worktree to allow removal
  */
 
-import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
 
 /**
  * Execute the unlock command
@@ -12,10 +12,12 @@ import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
  */
 export async function executeUnlock(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes('--help') || args.includes('-h')) {
-    showProxyHelp('unlock', 'unlock', 'Unlock a worktree to allow removal', ['gw unlock feat-branch']);
+  if (args.includes("--help") || args.includes("-h")) {
+    showProxyHelp("unlock", "unlock", "Unlock a worktree to allow removal", [
+      "gw unlock feat-branch",
+    ]);
     Deno.exit(0);
   }
 
-  await executeGitWorktree('unlock', args, 'Worktree unlocked successfully');
+  await executeGitWorktree("unlock", args, "Worktree unlocked successfully");
 }

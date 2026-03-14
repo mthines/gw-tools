@@ -3,8 +3,8 @@
  * Runs automatically on configured commands with cooldown
  */
 
-import { isProtectedBranch } from './branch-protection.ts';
-import { loadConfig, saveConfig } from './config.ts';
+import { isProtectedBranch } from "./branch-protection.ts";
+import { loadConfig, saveConfig } from "./config.ts";
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
@@ -12,8 +12,8 @@ import {
   listWorktrees,
   removeWorktree,
   type WorktreeInfo,
-} from './git-utils.ts';
-import * as output from './output.ts';
+} from "./git-utils.ts";
+import * as output from "./output.ts";
 
 /** 24 hours in milliseconds */
 const COOLDOWN_MS = 24 * 60 * 60 * 1000;
@@ -47,7 +47,10 @@ function shouldRunAutoClean(lastRunTime: number | undefined): boolean {
  * @param threshold Minimum age in days for a worktree to be considered stale
  * @param defaultBranch Branch name that should never be cleaned (e.g., "main")
  */
-async function getCleanableWorktrees(threshold: number, defaultBranch: string): Promise<CleanableWorktree[]> {
+async function getCleanableWorktrees(
+  threshold: number,
+  defaultBranch: string,
+): Promise<CleanableWorktree[]> {
   const worktrees = await listWorktrees();
 
   // Filter out bare repository
@@ -108,10 +111,13 @@ export async function executeAutoClean(): Promise<number> {
 
     // Get threshold (default 7 days) and defaultBranch
     const threshold = config.cleanThreshold ?? 7;
-    const defaultBranch = config.defaultBranch ?? 'main';
+    const defaultBranch = config.defaultBranch ?? "main";
 
     // Find cleanable worktrees (excludes defaultBranch)
-    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
+    const cleanableWorktrees = await getCleanableWorktrees(
+      threshold,
+      defaultBranch,
+    );
 
     if (cleanableWorktrees.length === 0) {
       // Update timestamp even if nothing to clean
@@ -152,8 +158,10 @@ export async function runAutoClean(): Promise<void> {
   const removedCount = await executeAutoClean();
 
   if (removedCount > 0) {
-    const worktreeWord = removedCount === 1 ? 'worktree' : 'worktrees';
-    console.log(`\n🧹 Auto-cleanup: Removed ${removedCount} stale ${worktreeWord}\n`);
+    const worktreeWord = removedCount === 1 ? "worktree" : "worktrees";
+    console.log(
+      `\n🧹 Auto-cleanup: Removed ${removedCount} stale ${worktreeWord}\n`,
+    );
   }
 }
 
@@ -188,8 +196,11 @@ export async function promptAndRunAutoClean(): Promise<void> {
 
     // Get cleanable worktrees
     const threshold = config.cleanThreshold ?? 7;
-    const defaultBranch = config.defaultBranch ?? 'main';
-    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
+    const defaultBranch = config.defaultBranch ?? "main";
+    const cleanableWorktrees = await getCleanableWorktrees(
+      threshold,
+      defaultBranch,
+    );
 
     // Update timestamp BEFORE prompting to prevent repeated prompts
     config.lastAutoCleanTime = Date.now();
@@ -202,18 +213,29 @@ export async function promptAndRunAutoClean(): Promise<void> {
 
     // Show list of branches that will be deleted
     console.log();
-    console.log(`${output.bold('🧹 Found stale worktrees to clean:')}\n`);
+    console.log(`${output.bold("🧹 Found stale worktrees to clean:")}\n`);
     for (const wt of cleanableWorktrees) {
-      console.log(`  ${output.errorSymbol()} ${output.path(wt.branch || wt.path)} (${wt.ageDays} days old)`);
+      console.log(
+        `  ${output.errorSymbol()} ${
+          output.path(wt.branch || wt.path)
+        } (${wt.ageDays} days old)`,
+      );
     }
     console.log();
 
     // Show prompt
-    const worktreeWord = cleanableWorktrees.length === 1 ? 'worktree' : 'worktrees';
-    const response = prompt(`Clean ${cleanableWorktrees.length} ${worktreeWord}? [Y/n]: `);
+    const worktreeWord = cleanableWorktrees.length === 1
+      ? "worktree"
+      : "worktrees";
+    const response = prompt(
+      `Clean ${cleanableWorktrees.length} ${worktreeWord}? [Y/n]: `,
+    );
 
     // Handle response (default to yes if empty or Enter)
-    if (response === null || response === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes') {
+    if (
+      response === null || response === "" || response.toLowerCase() === "y" ||
+      response.toLowerCase() === "yes"
+    ) {
       // User accepted - remove worktrees
       let removedCount = 0;
       for (const wt of cleanableWorktrees) {
@@ -226,12 +248,16 @@ export async function promptAndRunAutoClean(): Promise<void> {
       }
 
       if (removedCount > 0) {
-        const removedWord = removedCount === 1 ? 'worktree' : 'worktrees';
-        console.log(`${output.checkmark()} Removed ${removedCount} stale ${removedWord}`);
+        const removedWord = removedCount === 1 ? "worktree" : "worktrees";
+        console.log(
+          `${output.checkmark()} Removed ${removedCount} stale ${removedWord}`,
+        );
       }
     } else {
       // User declined
-      console.log(`Skipped cleanup. Run ${output.bold('gw clean')} manually if needed.`);
+      console.log(
+        `Skipped cleanup. Run ${output.bold("gw clean")} manually if needed.`,
+      );
     }
     console.log();
   } catch {

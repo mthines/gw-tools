@@ -3,8 +3,8 @@
  * Outputs shell function code to stdout for use with eval
  */
 
-import * as output from '../lib/output.ts';
-import { join } from '@std/path';
+import * as output from "../lib/output.ts";
+import { join } from "@std/path";
 
 /**
  * Execute the install-shell command
@@ -13,24 +13,26 @@ import { join } from '@std/path';
  */
 export async function executeInstallShell(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     showInstallShellHelp();
     Deno.exit(0);
   }
 
-  const removeFlag = args.includes('--remove');
-  const quietFlag = args.includes('--quiet') || args.includes('-q');
+  const removeFlag = args.includes("--remove");
+  const quietFlag = args.includes("--quiet") || args.includes("-q");
 
   // Parse --name flag
-  let commandName = 'gw';
-  const nameIndex = args.findIndex((arg) => arg === '--name' || arg === '-n');
+  let commandName = "gw";
+  const nameIndex = args.findIndex((arg) => arg === "--name" || arg === "-n");
   if (nameIndex !== -1 && nameIndex + 1 < args.length) {
     commandName = args[nameIndex + 1];
   }
 
   // Parse --command flag (actual command to run, e.g., for aliases)
   let actualCommand: string | undefined;
-  const commandIndex = args.findIndex((arg) => arg === '--command' || arg === '-c');
+  const commandIndex = args.findIndex((arg) =>
+    arg === "--command" || arg === "-c"
+  );
   if (commandIndex !== -1 && commandIndex + 1 < args.length) {
     actualCommand = args[commandIndex + 1];
   }
@@ -45,60 +47,66 @@ export async function executeInstallShell(args: string[]): Promise<void> {
 /**
  * Output shell integration code to stdout
  */
-async function outputShellIntegration(commandName = 'gw', actualCommand?: string): Promise<void> {
+async function outputShellIntegration(
+  commandName = "gw",
+  actualCommand?: string,
+): Promise<void> {
   // Detect shell
-  const shell = Deno.env.get('SHELL') || '';
-  const shellName = shell.split('/').pop() || '';
+  const shell = Deno.env.get("SHELL") || "";
+  const shellName = shell.split("/").pop() || "";
   // const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
 
   let shellFunction: string;
 
-  if (shellName === 'zsh') {
+  if (shellName === "zsh") {
     shellFunction = getZshFunction(commandName, actualCommand);
-  } else if (shellName === 'bash') {
+  } else if (shellName === "bash") {
     shellFunction = getBashFunction(commandName, actualCommand);
-  } else if (shellName === 'fish') {
+  } else if (shellName === "fish") {
     shellFunction = getFishFunction(commandName, actualCommand);
   } else {
     // Always show this error on stderr
-    output.error(`Unsupported shell: ${shellName || 'unknown'}`);
-    console.log('\nSupported shells: zsh, bash, fish');
-    console.log('Set SHELL environment variable to your shell path.');
-    console.log('\nYou can still use gw without shell integration,');
+    output.error(`Unsupported shell: ${shellName || "unknown"}`);
+    console.log("\nSupported shells: zsh, bash, fish");
+    console.log("Set SHELL environment variable to your shell path.");
+    console.log("\nYou can still use gw without shell integration,");
     console.log('but "gw cd" will not be available.');
     Deno.exit(1);
   }
 
   // Write shell function to stdout
   const encoder = new TextEncoder();
-  await Deno.stdout.write(encoder.encode(shellFunction + '\n'));
+  await Deno.stdout.write(encoder.encode(shellFunction + "\n"));
 }
 
 /**
  * Remove shell integration (legacy files + new eval-based lines)
  */
-async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promise<void> {
-  const shell = Deno.env.get('SHELL') || '';
-  const shellName = shell.split('/').pop() || '';
-  const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+async function removeShellIntegration(
+  quiet: boolean,
+  commandName = "gw",
+): Promise<void> {
+  const shell = Deno.env.get("SHELL") || "";
+  const shellName = shell.split("/").pop() || "";
+  const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
 
   if (!home) {
-    output.error('HOME environment variable is not set');
-    console.log('\nShell integration removal requires HOME to be set.');
+    output.error("HOME environment variable is not set");
+    console.log("\nShell integration removal requires HOME to be set.");
     Deno.exit(1);
   }
 
   // Create filename suffix for non-default command names
-  const fileSuffix = commandName === 'gw' ? '' : `-${commandName}`;
+  const fileSuffix = commandName === "gw" ? "" : `-${commandName}`;
 
   let configFile: string | undefined;
 
-  if (shellName === 'zsh') {
-    configFile = join(home, '.zshrc');
-  } else if (shellName === 'bash') {
-    configFile = join(home, '.bashrc');
-  } else if (shellName === 'fish') {
-    configFile = join(home, '.config', 'fish', 'config.fish');
+  if (shellName === "zsh") {
+    configFile = join(home, ".zshrc");
+  } else if (shellName === "bash") {
+    configFile = join(home, ".bashrc");
+  } else if (shellName === "fish") {
+    configFile = join(home, ".config", "fish", "config.fish");
   } else {
     if (!quiet) {
       output.error(`Unsupported shell: ${shellName}`);
@@ -110,8 +118,8 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 
   // Remove old integration script files (legacy format)
   const legacyScriptFiles = [
-    join(home, '.gw', 'shell', `integration${fileSuffix}.zsh`),
-    join(home, '.gw', 'shell', `integration${fileSuffix}.bash`),
+    join(home, ".gw", "shell", `integration${fileSuffix}.zsh`),
+    join(home, ".gw", "shell", `integration${fileSuffix}.bash`),
   ];
 
   for (const scriptFile of legacyScriptFiles) {
@@ -119,7 +127,9 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
       await Deno.remove(scriptFile);
       foundIntegration = true;
       if (!quiet) {
-        console.log(`Removed legacy integration script: ${output.path(scriptFile)}`);
+        console.log(
+          `Removed legacy integration script: ${output.path(scriptFile)}`,
+        );
       }
     } catch (error) {
       if (!(error instanceof Deno.errors.NotFound)) {
@@ -129,12 +139,20 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
   }
 
   // Remove old Fish function files (legacy format)
-  const fishFunctionFile = join(home, '.config', 'fish', 'functions', `${commandName}.fish`);
+  const fishFunctionFile = join(
+    home,
+    ".config",
+    "fish",
+    "functions",
+    `${commandName}.fish`,
+  );
   try {
     await Deno.remove(fishFunctionFile);
     foundIntegration = true;
     if (!quiet) {
-      console.log(`Removed legacy fish function: ${output.path(fishFunctionFile)}`);
+      console.log(
+        `Removed legacy fish function: ${output.path(fishFunctionFile)}`,
+      );
     }
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) {
@@ -146,28 +164,34 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
   if (configFile) {
     try {
       const content = await Deno.readTextFile(configFile);
-      const lines = content.split('\n');
+      const lines = content.split("\n");
       const filtered: string[] = [];
       let skipNext = false;
 
       for (const line of lines) {
         // Remove old format: comment + source line
         if (
-          line.includes('# gw-tools shell integration') &&
-          (line.includes(`(${commandName})`) || !line.includes('('))
+          line.includes("# gw-tools shell integration") &&
+          (line.includes(`(${commandName})`) || !line.includes("("))
         ) {
           foundIntegration = true;
           skipNext = true;
           continue;
         }
-        if (skipNext && line.includes(`source ~/.gw/shell/integration${fileSuffix}`)) {
+        if (
+          skipNext &&
+          line.includes(`source ~/.gw/shell/integration${fileSuffix}`)
+        ) {
           skipNext = false;
           continue;
         }
         skipNext = false;
 
         // Remove old inline format (multi-line function in config)
-        if (line.includes('# gw-tools shell integration') && !line.includes('eval') && !line.includes('source')) {
+        if (
+          line.includes("# gw-tools shell integration") &&
+          !line.includes("eval") && !line.includes("source")
+        ) {
           // Start of old inline block - skip until closing brace
           foundIntegration = true;
           // We'll handle this by just marking found and letting the comment line be removed
@@ -175,7 +199,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
         }
 
         // Remove new eval-based format
-        if (line.includes('gw install-shell')) {
+        if (line.includes("gw install-shell")) {
           foundIntegration = true;
           continue;
         }
@@ -184,7 +208,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
       }
 
       if (foundIntegration) {
-        await Deno.writeTextFile(configFile, filtered.join('\n'));
+        await Deno.writeTextFile(configFile, filtered.join("\n"));
         if (!quiet) {
           console.log(`Updated: ${output.path(configFile)}`);
         }
@@ -200,7 +224,7 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 
   // Clean up empty legacy directories
   try {
-    const shellDir = join(home, '.gw', 'shell');
+    const shellDir = join(home, ".gw", "shell");
     const files = [];
     for await (const entry of Deno.readDir(shellDir)) {
       files.push(entry);
@@ -217,11 +241,11 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 
   if (foundIntegration) {
     if (!quiet) {
-      output.success('Shell integration removed!');
+      output.success("Shell integration removed!");
     }
   } else {
     if (!quiet) {
-      output.info('Shell integration not found.');
+      output.info("Shell integration not found.");
     }
   }
 }
@@ -229,7 +253,10 @@ async function removeShellIntegration(quiet: boolean, commandName = 'gw'): Promi
 /**
  * Get zsh shell function
  */
-export function getZshFunction(commandName = 'gw', actualCommand?: string): string {
+export function getZshFunction(
+  commandName = "gw",
+  actualCommand?: string,
+): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 
@@ -279,7 +306,10 @@ ${commandName}() {
 /**
  * Get bash shell function
  */
-export function getBashFunction(commandName = 'gw', actualCommand?: string): string {
+export function getBashFunction(
+  commandName = "gw",
+  actualCommand?: string,
+): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 
@@ -329,7 +359,10 @@ ${commandName}() {
 /**
  * Get fish shell function
  */
-export function getFishFunction(commandName = 'gw', actualCommand?: string): string {
+export function getFishFunction(
+  commandName = "gw",
+  actualCommand?: string,
+): string {
   // Use provided command or default to 'command <name>'
   const cmdPrefix = actualCommand || `command ${commandName}`;
 

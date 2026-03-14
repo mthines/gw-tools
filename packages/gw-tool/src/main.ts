@@ -4,25 +4,30 @@
  * Main entry point for the gw CLI tool
  */
 
-import { parseGlobalArgs, showGlobalHelp, showLogo, showVersion } from './lib/cli.ts';
-import { executeCd } from './commands/cd.ts';
-import { executeCheckout } from './commands/checkout.ts';
-import { executeCopy } from './commands/sync.ts';
-import { executeUpdate } from './commands/update.ts';
-import { executeInit } from './commands/init.ts';
-import { executeInstallShell } from './commands/install-shell.ts';
-import { executeRoot } from './commands/root.ts';
-import { executeList } from './commands/list.ts';
-import { executeRemove } from './commands/remove.ts';
-import { executeMove } from './commands/move.ts';
-import { executePrune } from './commands/prune.ts';
-import { executeLock } from './commands/lock.ts';
-import { executeUnlock } from './commands/unlock.ts';
-import { executeRepair } from './commands/repair.ts';
-import { executeClean } from './commands/clean.ts';
-import { executeShowInit } from './commands/show-init.ts';
-import { executePr } from './commands/pr.ts';
-import * as output from './lib/output.ts';
+import {
+  parseGlobalArgs,
+  showGlobalHelp,
+  showLogo,
+  showVersion,
+} from "./lib/cli.ts";
+import { executeCd } from "./commands/cd.ts";
+import { executeCheckout } from "./commands/checkout.ts";
+import { executeCopy } from "./commands/sync.ts";
+import { executeUpdate } from "./commands/update.ts";
+import { executeInit } from "./commands/init.ts";
+import { executeInstallShell } from "./commands/install-shell.ts";
+import { executeRoot } from "./commands/root.ts";
+import { executeList } from "./commands/list.ts";
+import { executeRemove } from "./commands/remove.ts";
+import { executeMove } from "./commands/move.ts";
+import { executePrune } from "./commands/prune.ts";
+import { executeLock } from "./commands/lock.ts";
+import { executeUnlock } from "./commands/unlock.ts";
+import { executeRepair } from "./commands/repair.ts";
+import { executeClean } from "./commands/clean.ts";
+import { executeShowInit } from "./commands/show-init.ts";
+import { executePr } from "./commands/pr.ts";
+import * as output from "./lib/output.ts";
 
 /**
  * Available commands mapped to their handler functions
@@ -35,7 +40,7 @@ const COMMANDS = {
   update: executeUpdate,
   sync: executeCopy,
   init: executeInit,
-  'install-shell': executeInstallShell,
+  "install-shell": executeInstallShell,
   root: executeRoot,
   list: executeList,
   ls: executeList, // Alias for list
@@ -48,7 +53,7 @@ const COMMANDS = {
   unlock: executeUnlock,
   repair: executeRepair,
   clean: executeClean,
-  'show-init': executeShowInit,
+  "show-init": executeShowInit,
   pr: executePr,
 };
 

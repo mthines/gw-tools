@@ -2,12 +2,15 @@
  * Copy command implementation
  */
 
-import { parseCopyArgs, showCopyHelp } from '../lib/cli.ts';
-import { loadConfig } from '../lib/config.ts';
-import { copyFiles } from '../lib/file-ops.ts';
-import { getCurrentWorktreePath, listWorktrees } from '../lib/git-utils.ts';
-import { resolveWorktreePath, validatePathExists } from '../lib/path-resolver.ts';
-import * as output from '../lib/output.ts';
+import { parseCopyArgs, showCopyHelp } from "../lib/cli.ts";
+import { loadConfig } from "../lib/config.ts";
+import { copyFiles } from "../lib/file-ops.ts";
+import { getCurrentWorktreePath, listWorktrees } from "../lib/git-utils.ts";
+import {
+  resolveWorktreePath,
+  validatePathExists,
+} from "../lib/path-resolver.ts";
+import * as output from "../lib/output.ts";
 
 /**
  * Execute the copy command
@@ -32,18 +35,22 @@ export async function executeCopy(args: string[]): Promise<void> {
   if (!target) {
     const currentWorktreePath = await getCurrentWorktreePath();
     if (!currentWorktreePath) {
-      output.error('Target worktree required (not currently inside a worktree)');
+      output.error(
+        "Target worktree required (not currently inside a worktree)",
+      );
       showCopyHelp();
       Deno.exit(1);
     }
     // Find the current worktree and use its branch name (handles nested paths like feat/foo/bar)
     const worktrees = await listWorktrees();
-    const currentWorktree = worktrees.find((wt) => wt.path === currentWorktreePath);
+    const currentWorktree = worktrees.find((wt) =>
+      wt.path === currentWorktreePath
+    );
     if (currentWorktree?.branch) {
       target = currentWorktree.branch;
     } else {
       // Fallback: use relative path from git root
-      target = currentWorktreePath.replace(gitRoot + '/', '');
+      target = currentWorktreePath.replace(gitRoot + "/", "");
     }
   }
 
@@ -54,44 +61,65 @@ export async function executeCopy(args: string[]): Promise<void> {
   }
 
   if (filesToCopy.length === 0) {
-    output.error('No files to sync. Specify files or configure autoCopyFiles in .gw/config.json');
+    output.error(
+      "No files to sync. Specify files or configure autoCopyFiles in .gw/config.json",
+    );
     showCopyHelp();
     Deno.exit(1);
   }
 
   // 6. Resolve paths
-  const sourceWorktree = parsed.from || config.defaultBranch || 'main';
+  const sourceWorktree = parsed.from || config.defaultBranch || "main";
   const sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
   const targetPath = resolveWorktreePath(gitRoot, target);
 
   // 7. Prevent syncing to self
   if (sourcePath === targetPath) {
-    output.error(`Cannot sync worktree to itself (source and target are both '${sourceWorktree}')`);
+    output.error(
+      `Cannot sync worktree to itself (source and target are both '${sourceWorktree}')`,
+    );
     Deno.exit(1);
   }
 
   // 8. Validate paths exist
   try {
-    await validatePathExists(sourcePath, 'directory');
+    await validatePathExists(sourcePath, "directory");
   } catch (_error) {
     output.error(`Source worktree not found: ${output.path(sourcePath)}`);
-    console.error(`Make sure '${output.bold(sourceWorktree)}' worktree exists in ${output.path(gitRoot)}\n`);
+    console.error(
+      `Make sure '${output.bold(sourceWorktree)}' worktree exists in ${
+        output.path(gitRoot)
+      }\n`,
+    );
     Deno.exit(1);
   }
 
   try {
-    await validatePathExists(targetPath, 'directory');
+    await validatePathExists(targetPath, "directory");
   } catch (_error) {
     output.error(`Target worktree not found: ${output.path(targetPath)}`);
-    console.error(`Make sure '${output.bold(target)}' worktree exists in ${output.path(gitRoot)}\n`);
+    console.error(
+      `Make sure '${output.bold(target)}' worktree exists in ${
+        output.path(gitRoot)
+      }\n`,
+    );
     Deno.exit(1);
   }
 
   // 9. Copy files
-  const dryRunNotice = parsed.dryRun ? output.dim(' (DRY RUN)') : '';
-  console.log(`Copying from ${output.bold(sourceWorktree)} to ${output.bold(target)}${dryRunNotice}...\n`);
+  const dryRunNotice = parsed.dryRun ? output.dim(" (DRY RUN)") : "";
+  console.log(
+    `Copying from ${output.bold(sourceWorktree)} to ${
+      output.bold(target)
+    }${dryRunNotice}...\n`,
+  );
 
-  const results = await copyFiles(sourcePath, targetPath, filesToCopy, parsed.dryRun);
+  const results = await copyFiles(
+    sourcePath,
+    targetPath,
+    filesToCopy,
+    parsed.dryRun,
+  );
 
   // 10. Display results
   for (const result of results) {
@@ -104,13 +132,17 @@ export async function executeCopy(args: string[]): Promise<void> {
 
   // 11. Summary
   const successCount = results.filter((r) => r.success).length;
-  const verb = parsed.dryRun ? 'Would copy' : 'Copied';
-  const fileWord = successCount === 1 ? 'file' : 'files';
+  const verb = parsed.dryRun ? "Would copy" : "Copied";
+  const fileWord = successCount === 1 ? "file" : "files";
 
   if (successCount === results.length) {
-    output.success(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
+    output.success(
+      `${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`,
+    );
   } else {
-    output.warning(`${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
+    output.warning(
+      `${verb} ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`,
+    );
     Deno.exit(1);
   }
 }
