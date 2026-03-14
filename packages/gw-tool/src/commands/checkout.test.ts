@@ -137,10 +137,7 @@ Deno.test('checkout command - remote-only branch creates local tracking branch (
 
     // Simulate the branch existing on remote by creating the remote ref
     const remoteRefCmd = new Deno.Command('git', {
-      args: [
-        '-C', repo.path, 'update-ref',
-        'refs/remotes/origin/remote-feature', 'HEAD',
-      ],
+      args: ['-C', repo.path, 'update-ref', 'refs/remotes/origin/remote-feature', 'HEAD'],
       stdout: 'null',
       stderr: 'null',
     });
@@ -178,11 +175,7 @@ Deno.test('checkout command - remote-only branch creates local tracking branch (
         await executeCheckout(['remote-feature']);
       });
 
-      assertEquals(
-        exitCode === undefined || exitCode === 0,
-        true,
-        'checkout should succeed',
-      );
+      assertEquals(exitCode === undefined || exitCode === 0, true, 'checkout should succeed');
 
       // Verify worktree was created
       const listCmd = new Deno.Command('git', {
@@ -191,11 +184,7 @@ Deno.test('checkout command - remote-only branch creates local tracking branch (
       });
       const { stdout: listOut } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(listOut);
-      assertEquals(
-        worktreeList.includes('remote-feature'),
-        true,
-        'worktree should exist',
-      );
+      assertEquals(worktreeList.includes('remote-feature'), true, 'worktree should exist');
 
       // CRITICAL: Verify we're on a local branch, NOT detached HEAD
       const worktreePath = join(repo.path, 'remote-feature');
@@ -205,56 +194,26 @@ Deno.test('checkout command - remote-only branch creates local tracking branch (
         stderr: 'piped',
       });
       const branchResult = await branchCmd.output();
-      assertEquals(
-        branchResult.code,
-        0,
-        'HEAD should be a symbolic ref (not detached)',
-      );
-      const currentBranch = new TextDecoder()
-        .decode(branchResult.stdout)
-        .trim();
-      assertEquals(
-        currentBranch,
-        'remote-feature',
-        'should be on local branch remote-feature',
-      );
+      assertEquals(branchResult.code, 0, 'HEAD should be a symbolic ref (not detached)');
+      const currentBranch = new TextDecoder().decode(branchResult.stdout).trim();
+      assertEquals(currentBranch, 'remote-feature', 'should be on local branch remote-feature');
 
       // Verify tracking is set up
       const mergeCmd = new Deno.Command('git', {
-        args: [
-          '-C', worktreePath, 'config',
-          'branch.remote-feature.merge',
-        ],
+        args: ['-C', worktreePath, 'config', 'branch.remote-feature.merge'],
         stdout: 'piped',
       });
       const mergeResult = await mergeCmd.output();
-      assertEquals(
-        mergeResult.code,
-        0,
-        'tracking merge config should exist',
-      );
-      const tracking = new TextDecoder()
-        .decode(mergeResult.stdout)
-        .trim();
-      assertEquals(
-        tracking,
-        'refs/heads/remote-feature',
-        'should track origin/remote-feature',
-      );
+      assertEquals(mergeResult.code, 0, 'tracking merge config should exist');
+      const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
+      assertEquals(tracking, 'refs/heads/remote-feature', 'should track origin/remote-feature');
 
       const remoteCmd = new Deno.Command('git', {
-        args: [
-          '-C', worktreePath, 'config',
-          'branch.remote-feature.remote',
-        ],
+        args: ['-C', worktreePath, 'config', 'branch.remote-feature.remote'],
         stdout: 'piped',
       });
       const remoteResult = await remoteCmd.output();
-      assertEquals(
-        new TextDecoder().decode(remoteResult.stdout).trim(),
-        'origin',
-        'remote should be origin',
-      );
+      assertEquals(new TextDecoder().decode(remoteResult.stdout).trim(), 'origin', 'remote should be origin');
     } finally {
       cwd.restore();
     }
