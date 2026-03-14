@@ -148,17 +148,14 @@ export async function hasUnpushedCommits(worktreePath: string): Promise<boolean>
 export async function getWorktreeAgeDays(worktreePath: string): Promise<number> {
   try {
     // Prefer last commit date on the branch (reflects actual work)
-    const commitCmd = new Deno.Command("git", {
-      args: ["-C", worktreePath, "log", "-1", "--format=%ct"],
-      stdout: "piped",
-      stderr: "null",
+    const commitCmd = new Deno.Command('git', {
+      args: ['-C', worktreePath, 'log', '-1', '--format=%ct'],
+      stdout: 'piped',
+      stderr: 'null',
     });
     const commitResult = await commitCmd.output();
     if (commitResult.code === 0) {
-      const timestamp = parseInt(
-        new TextDecoder().decode(commitResult.stdout).trim(),
-        10,
-      );
+      const timestamp = parseInt(new TextDecoder().decode(commitResult.stdout).trim(), 10);
       if (!isNaN(timestamp)) {
         const now = Date.now() / 1000;
         return Math.floor((now - timestamp) / 86400);
@@ -166,7 +163,7 @@ export async function getWorktreeAgeDays(worktreePath: string): Promise<number> 
     }
 
     // Fallback: use .git file modification time
-    const gitPath = join(worktreePath, ".git");
+    const gitPath = join(worktreePath, '.git');
     const stat = await Deno.stat(gitPath);
     const mtime = stat.mtime;
 
