@@ -12,12 +12,7 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.test",
-    "config/test-database.json",
-    "cypress.env.json"
-  ],
+  "autoCopyFiles": [".env", ".env.test", "config/test-database.json", "cypress.env.json"],
 
   "hooks": {
     "add": {

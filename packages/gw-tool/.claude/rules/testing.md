@@ -23,9 +23,9 @@ Tests are colocated with source files:
 Use test utilities from `src/test-utils/`:
 
 ```typescript
-import { cleanupTempDir, createTempGitRepo } from "../test-utils/git.ts";
+import { cleanupTempDir, createTempGitRepo } from '../test-utils/git.ts';
 
-Deno.test("my test", async () => {
+Deno.test('my test', async () => {
   const { repoPath, cleanup } = await createTempGitRepo();
   try {
     // test code
@@ -40,7 +40,7 @@ Deno.test("my test", async () => {
 Use Deno's standard assertions:
 
 ```typescript
-import { assertEquals, assertExists, assertRejects } from "@std/assert";
+import { assertEquals, assertExists, assertRejects } from '@std/assert';
 ```
 
 ## Config Migration Tests
@@ -48,10 +48,10 @@ import { assertEquals, assertExists, assertRejects } from "@std/assert";
 When adding a migration to `config-migrations.ts`, add corresponding tests in `config-migrations.test.ts`:
 
 ```typescript
-Deno.test("migration v1 to v2: renames oldField to newField", async () => {
-  const oldConfig = { configVersion: 1, oldField: "value" };
+Deno.test('migration v1 to v2: renames oldField to newField', async () => {
+  const oldConfig = { configVersion: 1, oldField: 'value' };
   const migrated = migrateConfig(oldConfig);
-  assertEquals(migrated.newField, "value");
+  assertEquals(migrated.newField, 'value');
   assertEquals(migrated.oldField, undefined);
   assertEquals(migrated.configVersion, 2);
 });

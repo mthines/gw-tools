@@ -11,20 +11,11 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".env.test",
-    "config/database.json",
-    "prisma/.env"
-  ],
+  "autoCopyFiles": [".env", ".env.local", ".env.test", "config/database.json", "prisma/.env"],
 
   "hooks": {
     "add": {
-      "post": [
-        "cd {worktreePath} && npm install",
-        "cd {worktreePath} && npm run db:migrate"
-      ]
+      "post": ["cd {worktreePath} && npm install", "cd {worktreePath} && npm run db:migrate"]
     }
   }
 }

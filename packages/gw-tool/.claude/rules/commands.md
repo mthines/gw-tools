@@ -32,17 +32,14 @@ export async function execute<Name>(args: string[]): Promise<void> {
 For simple wrappers, use the git-proxy utilities:
 
 ```typescript
-import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
+import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
 export async function execute<Name>(args: string[]): Promise<void> {
-  if (args.includes("--help") || args.includes("-h")) {
-    showProxyHelp("<command>", "<git-subcommand>", "<description>", [
-      "example1",
-      "example2",
-    ]);
+  if (args.includes('--help') || args.includes('-h')) {
+    showProxyHelp('<command>', '<git-subcommand>', '<description>', ['example1', 'example2']);
     Deno.exit(0);
   }
-  await executeGitWorktree("<git-subcommand>", args);
+  await executeGitWorktree('<git-subcommand>', args);
 }
 ```
 
@@ -72,9 +69,9 @@ Examples:
 
 ```typescript
 // Fatal errors - exit immediately
-output.error("Something went wrong");
+output.error('Something went wrong');
 Deno.exit(1);
 
 // Non-fatal warnings - continue execution
-output.warning("File copy failed - continuing anyway");
+output.warning('File copy failed - continuing anyway');
 ```

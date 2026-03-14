@@ -2,35 +2,32 @@
  * Tests for checkout.ts command
  */
 
-import { assertEquals } from "@std/assert";
-import { join } from "@std/path";
-import { executeCheckout } from "./checkout.ts";
-import { GitTestRepo } from "../test-utils/git-test-repo.ts";
-import { TempCwd } from "../test-utils/temp-env.ts";
-import {
-  createMinimalConfig,
-  writeTestConfig,
-} from "../test-utils/fixtures.ts";
-import { withMockedExit } from "../test-utils/mock-exit.ts";
-import { assertShellNavigationWorks } from "../test-utils/assert-shell-nav.ts";
+import { assertEquals } from '@std/assert';
+import { join } from '@std/path';
+import { executeCheckout } from './checkout.ts';
+import { GitTestRepo } from '../test-utils/git-test-repo.ts';
+import { TempCwd } from '../test-utils/temp-env.ts';
+import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
+import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
-Deno.test("checkout command - shows help with --help", async () => {
+Deno.test('checkout command - shows help with --help', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executeCheckout(["--help"]);
+    await executeCheckout(['--help']);
   });
 
   assertEquals(exitCode, 0);
 });
 
-Deno.test("checkout command - shows help with -h", async () => {
+Deno.test('checkout command - shows help with -h', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executeCheckout(["-h"]);
+    await executeCheckout(['-h']);
   });
 
   assertEquals(exitCode, 0);
 });
 
-Deno.test("checkout command - shows help when no args provided", async () => {
+Deno.test('checkout command - shows help when no args provided', async () => {
   const { exitCode } = await withMockedExit(async () => {
     await executeCheckout([]);
   });
@@ -38,13 +35,13 @@ Deno.test("checkout command - shows help when no args provided", async () => {
   assertEquals(exitCode, 1);
 });
 
-Deno.test("checkout command - creates worktree for local branch not in any worktree", async () => {
+Deno.test('checkout command - creates worktree for local branch not in any worktree', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create a test branch
-    await repo.createBranch("feature-x");
+    await repo.createBranch('feature-x');
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -52,17 +49,17 @@ Deno.test("checkout command - creates worktree for local branch not in any workt
     const cwd = new TempCwd(repo.path);
     try {
       await withMockedExit(async () => {
-        await executeCheckout(["feature-x"]);
+        await executeCheckout(['feature-x']);
       });
 
       // Verify a worktree was created (new checkout behavior creates worktrees)
-      const listCmd = new Deno.Command("git", {
-        args: ["-C", repo.path, "worktree", "list"],
-        stdout: "piped",
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
       const { stdout } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(stdout);
-      assertEquals(worktreeList.includes("feature-x"), true);
+      assertEquals(worktreeList.includes('feature-x'), true);
     } finally {
       cwd.restore();
     }
@@ -71,14 +68,14 @@ Deno.test("checkout command - creates worktree for local branch not in any workt
   }
 });
 
-Deno.test("checkout command - navigates to worktree when branch is checked out elsewhere", async () => {
+Deno.test('checkout command - navigates to worktree when branch is checked out elsewhere', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create a worktree with a branch
-    await repo.createWorktree("feature-branch");
-    const featureWorktreePath = join(repo.path, "feature-branch");
+    await repo.createWorktree('feature-branch');
+    const featureWorktreePath = join(repo.path, 'feature-branch');
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -86,14 +83,14 @@ Deno.test("checkout command - navigates to worktree when branch is checked out e
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["feature-branch"]);
+        await executeCheckout(['feature-branch']);
       });
 
       assertEquals(exitCode, 0);
 
       // Verify navigation file was created with the correct path
-      const home = Deno.env.get("HOME") || Deno.env.get("USERPROFILE") || "";
-      const navFile = join(home, ".gw", "tmp", "last-nav");
+      const home = Deno.env.get('HOME') || Deno.env.get('USERPROFILE') || '';
+      const navFile = join(home, '.gw', 'tmp', 'last-nav');
       const navPath = await Deno.readTextFile(navFile);
       assertEquals(navPath, featureWorktreePath);
     } finally {
@@ -104,7 +101,7 @@ Deno.test("checkout command - navigates to worktree when branch is checked out e
   }
 });
 
-Deno.test("checkout command - says already on branch when current branch matches", async () => {
+Deno.test('checkout command - says already on branch when current branch matches', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -115,7 +112,7 @@ Deno.test("checkout command - says already on branch when current branch matches
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["main"]); // Already on main
+        await executeCheckout(['main']); // Already on main
       });
 
       assertEquals(exitCode, 0);
@@ -127,7 +124,7 @@ Deno.test("checkout command - says already on branch when current branch matches
   }
 });
 
-Deno.test("checkout command - remote-only branch creates local tracking branch (not detached HEAD)", async () => {
+Deno.test('checkout command - remote-only branch creates local tracking branch (not detached HEAD)', async () => {
   // This is the key scenario: gw remove deletes the local branch,
   // then gw checkout should recreate it from the remote ref with
   // proper tracking, NOT end up in detached HEAD.
@@ -136,52 +133,38 @@ Deno.test("checkout command - remote-only branch creates local tracking branch (
     await repo.init();
 
     // Create a branch and a commit on it
-    await repo.createBranch("remote-feature");
+    await repo.createBranch('remote-feature');
 
     // Simulate the branch existing on remote by creating the remote ref
-    const remoteRefCmd = new Deno.Command("git", {
-      args: [
-        "-C",
-        repo.path,
-        "update-ref",
-        "refs/remotes/origin/remote-feature",
-        "HEAD",
-      ],
-      stdout: "null",
-      stderr: "null",
+    const remoteRefCmd = new Deno.Command('git', {
+      args: ['-C', repo.path, 'update-ref', 'refs/remotes/origin/remote-feature', 'HEAD'],
+      stdout: 'null',
+      stderr: 'null',
     });
     await remoteRefCmd.output();
 
     // Delete the LOCAL branch (simulating what gw remove does)
-    const deleteBranchCmd = new Deno.Command("git", {
-      args: ["-C", repo.path, "branch", "-D", "remote-feature"],
-      stdout: "null",
-      stderr: "null",
+    const deleteBranchCmd = new Deno.Command('git', {
+      args: ['-C', repo.path, 'branch', '-D', 'remote-feature'],
+      stdout: 'null',
+      stderr: 'null',
     });
     await deleteBranchCmd.output();
 
     // Verify local branch is gone but remote ref exists
-    const localCheck = new Deno.Command("git", {
-      args: ["-C", repo.path, "rev-parse", "--verify", "remote-feature"],
-      stdout: "null",
-      stderr: "null",
+    const localCheck = new Deno.Command('git', {
+      args: ['-C', repo.path, 'rev-parse', '--verify', 'remote-feature'],
+      stdout: 'null',
+      stderr: 'null',
     });
-    assertEquals(
-      (await localCheck.output()).code,
-      128,
-      "local branch should not exist",
-    );
+    assertEquals((await localCheck.output()).code, 128, 'local branch should not exist');
 
-    const remoteCheck = new Deno.Command("git", {
-      args: ["-C", repo.path, "rev-parse", "--verify", "origin/remote-feature"],
-      stdout: "null",
-      stderr: "null",
+    const remoteCheck = new Deno.Command('git', {
+      args: ['-C', repo.path, 'rev-parse', '--verify', 'origin/remote-feature'],
+      stdout: 'null',
+      stderr: 'null',
     });
-    assertEquals(
-      (await remoteCheck.output()).code,
-      0,
-      "remote ref should exist",
-    );
+    assertEquals((await remoteCheck.output()).code, 0, 'remote ref should exist');
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -189,73 +172,48 @@ Deno.test("checkout command - remote-only branch creates local tracking branch (
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["remote-feature"]);
+        await executeCheckout(['remote-feature']);
       });
 
-      assertEquals(
-        exitCode === undefined || exitCode === 0,
-        true,
-        "checkout should succeed",
-      );
+      assertEquals(exitCode === undefined || exitCode === 0, true, 'checkout should succeed');
 
       // Verify worktree was created
-      const listCmd = new Deno.Command("git", {
-        args: ["-C", repo.path, "worktree", "list"],
-        stdout: "piped",
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
       const { stdout: listOut } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(listOut);
-      assertEquals(
-        worktreeList.includes("remote-feature"),
-        true,
-        "worktree should exist",
-      );
+      assertEquals(worktreeList.includes('remote-feature'), true, 'worktree should exist');
 
       // CRITICAL: Verify we're on a local branch, NOT detached HEAD
-      const worktreePath = join(repo.path, "remote-feature");
-      const branchCmd = new Deno.Command("git", {
-        args: ["-C", worktreePath, "symbolic-ref", "--short", "HEAD"],
-        stdout: "piped",
-        stderr: "piped",
+      const worktreePath = join(repo.path, 'remote-feature');
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'symbolic-ref', '--short', 'HEAD'],
+        stdout: 'piped',
+        stderr: 'piped',
       });
       const branchResult = await branchCmd.output();
-      assertEquals(
-        branchResult.code,
-        0,
-        "HEAD should be a symbolic ref (not detached)",
-      );
-      const currentBranch = new TextDecoder().decode(branchResult.stdout)
-        .trim();
-      assertEquals(
-        currentBranch,
-        "remote-feature",
-        "should be on local branch remote-feature",
-      );
+      assertEquals(branchResult.code, 0, 'HEAD should be a symbolic ref (not detached)');
+      const currentBranch = new TextDecoder().decode(branchResult.stdout).trim();
+      assertEquals(currentBranch, 'remote-feature', 'should be on local branch remote-feature');
 
       // Verify tracking is set up
-      const mergeCmd = new Deno.Command("git", {
-        args: ["-C", worktreePath, "config", "branch.remote-feature.merge"],
-        stdout: "piped",
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.remote-feature.merge'],
+        stdout: 'piped',
       });
       const mergeResult = await mergeCmd.output();
-      assertEquals(mergeResult.code, 0, "tracking merge config should exist");
+      assertEquals(mergeResult.code, 0, 'tracking merge config should exist');
       const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
-      assertEquals(
-        tracking,
-        "refs/heads/remote-feature",
-        "should track origin/remote-feature",
-      );
+      assertEquals(tracking, 'refs/heads/remote-feature', 'should track origin/remote-feature');
 
-      const remoteCmd = new Deno.Command("git", {
-        args: ["-C", worktreePath, "config", "branch.remote-feature.remote"],
-        stdout: "piped",
+      const remoteCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.remote-feature.remote'],
+        stdout: 'piped',
       });
       const remoteResult = await remoteCmd.output();
-      assertEquals(
-        new TextDecoder().decode(remoteResult.stdout).trim(),
-        "origin",
-        "remote should be origin",
-      );
+      assertEquals(new TextDecoder().decode(remoteResult.stdout).trim(), 'origin', 'remote should be origin');
     } finally {
       cwd.restore();
     }
@@ -264,7 +222,7 @@ Deno.test("checkout command - remote-only branch creates local tracking branch (
   }
 });
 
-Deno.test("checkout command - creates worktree with new branch when branch does not exist", async () => {
+Deno.test('checkout command - creates worktree with new branch when branch does not exist', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -275,7 +233,7 @@ Deno.test("checkout command - creates worktree with new branch when branch does 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["new-feature-branch"]);
+        await executeCheckout(['new-feature-branch']);
       });
 
       // The checkout command should succeed by creating a new branch from main
@@ -283,13 +241,13 @@ Deno.test("checkout command - creates worktree with new branch when branch does 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
       // Verify the worktree was created
-      const listCmd = new Deno.Command("git", {
-        args: ["-C", repo.path, "worktree", "list"],
-        stdout: "piped",
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
       const { stdout } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(stdout);
-      assertEquals(worktreeList.includes("new-feature-branch"), true);
+      assertEquals(worktreeList.includes('new-feature-branch'), true);
     } finally {
       cwd.restore();
     }
@@ -298,7 +256,7 @@ Deno.test("checkout command - creates worktree with new branch when branch does 
   }
 });
 
-Deno.test("checkout command - does NOT overwrite tracking for existing local branches", async () => {
+Deno.test('checkout command - does NOT overwrite tracking for existing local branches', async () => {
   // This test verifies the fix: when a local branch exists with existing tracking,
   // gw checkout should NOT overwrite that tracking configuration
   const remoteRepo = new GitTestRepo();
@@ -310,56 +268,39 @@ Deno.test("checkout command - does NOT overwrite tracking for existing local bra
 
     // Initialize local repo and add remote
     await localRepo.init();
-    await localRepo.runCommand("git", [
-      "remote",
-      "add",
-      "origin",
-      remoteRepo.path,
-    ], localRepo.path);
+    await localRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], localRepo.path);
 
     // Push main to remote first
-    await localRepo.runCommand(
-      "git",
-      ["push", "-u", "origin", "main"],
-      localRepo.path,
-    );
+    await localRepo.runCommand('git', ['push', '-u', 'origin', 'main'], localRepo.path);
 
     // Create a local branch with tracking already set up
-    await localRepo.createBranch("existing-tracked");
+    await localRepo.createBranch('existing-tracked');
 
     // Set up tracking to origin/main (simulating an existing tracked branch)
-    await localRepo.runCommand("git", [
-      "config",
-      "branch.existing-tracked.remote",
-      "origin",
-    ], localRepo.path);
-    await localRepo.runCommand("git", [
-      "config",
-      "branch.existing-tracked.merge",
-      "refs/heads/main",
-    ], localRepo.path);
+    await localRepo.runCommand('git', ['config', 'branch.existing-tracked.remote', 'origin'], localRepo.path);
+    await localRepo.runCommand('git', ['config', 'branch.existing-tracked.merge', 'refs/heads/main'], localRepo.path);
 
     const config = createMinimalConfig(localRepo.path);
     await writeTestConfig(localRepo.path, config);
 
     const cwd = new TempCwd(localRepo.path);
     try {
-      await executeCheckout(["existing-tracked"]);
+      await executeCheckout(['existing-tracked']);
 
       // Verify worktree was created
-      const listCmd = new Deno.Command("git", {
-        args: ["-C", localRepo.path, "worktree", "list"],
-        stdout: "piped",
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', localRepo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
       const { stdout } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(stdout);
-      assertEquals(worktreeList.includes("existing-tracked"), true);
+      assertEquals(worktreeList.includes('existing-tracked'), true);
 
       // Verify tracking was NOT overwritten - should still track main, not existing-tracked
-      const worktreePath = join(localRepo.path, "existing-tracked");
-      const mergeCmd = new Deno.Command("git", {
-        args: ["-C", worktreePath, "config", "branch.existing-tracked.merge"],
-        stdout: "piped",
+      const worktreePath = join(localRepo.path, 'existing-tracked');
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.existing-tracked.merge'],
+        stdout: 'piped',
       });
       const mergeResult = await mergeCmd.output();
       const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
@@ -367,8 +308,8 @@ Deno.test("checkout command - does NOT overwrite tracking for existing local bra
       // Should still be tracking main, NOT existing-tracked
       assertEquals(
         tracking,
-        "refs/heads/main",
-        "Existing tracking should NOT be overwritten - should still track main",
+        'refs/heads/main',
+        'Existing tracking should NOT be overwritten - should still track main'
       );
     } finally {
       cwd.restore();
@@ -379,7 +320,7 @@ Deno.test("checkout command - does NOT overwrite tracking for existing local bra
   }
 });
 
-Deno.test("checkout command - sets up tracking for truly new branches", async () => {
+Deno.test('checkout command - sets up tracking for truly new branches', async () => {
   // This test verifies that new branches DO get tracking set up
   const repo = new GitTestRepo();
   try {
@@ -390,27 +331,22 @@ Deno.test("checkout command - sets up tracking for truly new branches", async ()
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeCheckout(["new-feature-branch-tracking"]);
+      await executeCheckout(['new-feature-branch-tracking']);
 
       // Verify worktree was created
-      const listCmd = new Deno.Command("git", {
-        args: ["-C", repo.path, "worktree", "list"],
-        stdout: "piped",
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
       const { stdout } = await listCmd.output();
       const worktreeList = new TextDecoder().decode(stdout);
-      assertEquals(worktreeList.includes("new-feature-branch-tracking"), true);
+      assertEquals(worktreeList.includes('new-feature-branch-tracking'), true);
 
       // Verify tracking was set up to track the new branch name
-      const worktreePath = join(repo.path, "new-feature-branch-tracking");
-      const mergeCmd = new Deno.Command("git", {
-        args: [
-          "-C",
-          worktreePath,
-          "config",
-          "branch.new-feature-branch-tracking.merge",
-        ],
-        stdout: "piped",
+      const worktreePath = join(repo.path, 'new-feature-branch-tracking');
+      const mergeCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.new-feature-branch-tracking.merge'],
+        stdout: 'piped',
       });
       const mergeResult = await mergeCmd.output();
       const tracking = new TextDecoder().decode(mergeResult.stdout).trim();
@@ -418,27 +354,18 @@ Deno.test("checkout command - sets up tracking for truly new branches", async ()
       // Should be tracking the new branch name
       assertEquals(
         tracking,
-        "refs/heads/new-feature-branch-tracking",
-        "New branch should track origin/new-feature-branch-tracking",
+        'refs/heads/new-feature-branch-tracking',
+        'New branch should track origin/new-feature-branch-tracking'
       );
 
-      const remoteCmd = new Deno.Command("git", {
-        args: [
-          "-C",
-          worktreePath,
-          "config",
-          "branch.new-feature-branch-tracking.remote",
-        ],
-        stdout: "piped",
+      const remoteCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'config', 'branch.new-feature-branch-tracking.remote'],
+        stdout: 'piped',
       });
       const remoteResult = await remoteCmd.output();
       const remote = new TextDecoder().decode(remoteResult.stdout).trim();
 
-      assertEquals(
-        remote,
-        "origin",
-        "New branch should have remote set to origin",
-      );
+      assertEquals(remote, 'origin', 'New branch should have remote set to origin');
     } finally {
       cwd.restore();
     }
@@ -451,31 +378,31 @@ Deno.test("checkout command - sets up tracking for truly new branches", async ()
 // Shell integration navigation tests
 // =============================================================================
 
-Deno.test("checkout - shell integration navigates after command", async () => {
-  await assertShellNavigationWorks("checkout");
+Deno.test('checkout - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('checkout');
 });
 
-Deno.test("co - shell integration navigates after command", async () => {
-  await assertShellNavigationWorks("co");
+Deno.test('co - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('co');
 });
 
-Deno.test("add - shell integration navigates after command", async () => {
-  await assertShellNavigationWorks("add");
+Deno.test('add - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('add');
 });
 
 // =============================================================================
 // --from-staged flag tests
 // =============================================================================
 
-Deno.test("checkout command - --from-staged copies staged files to new worktree", async () => {
+Deno.test('checkout command - --from-staged copies staged files to new worktree', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create and stage some files
-    await repo.createFile("staged-file.txt", "staged content");
-    await repo.createFile("another-staged.txt", "more staged content");
-    await repo.runCommand("git", ["add", "."], repo.path);
+    await repo.createFile('staged-file.txt', 'staged content');
+    await repo.createFile('another-staged.txt', 'more staged content');
+    await repo.runCommand('git', ['add', '.'], repo.path);
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -483,25 +410,21 @@ Deno.test("checkout command - --from-staged copies staged files to new worktree"
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["feat-from-staged", "--from-staged"]);
+        await executeCheckout(['feat-from-staged', '--from-staged']);
       });
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
       // Verify worktree was created
-      const worktreePath = join(repo.path, "feat-from-staged");
+      const worktreePath = join(repo.path, 'feat-from-staged');
       const stat = await Deno.stat(worktreePath);
       assertEquals(stat.isDirectory, true);
 
       // Verify staged files were copied
-      const file1Content = await Deno.readTextFile(
-        join(worktreePath, "staged-file.txt"),
-      );
-      const file2Content = await Deno.readTextFile(
-        join(worktreePath, "another-staged.txt"),
-      );
-      assertEquals(file1Content, "staged content");
-      assertEquals(file2Content, "more staged content");
+      const file1Content = await Deno.readTextFile(join(worktreePath, 'staged-file.txt'));
+      const file2Content = await Deno.readTextFile(join(worktreePath, 'another-staged.txt'));
+      assertEquals(file1Content, 'staged content');
+      assertEquals(file2Content, 'more staged content');
     } finally {
       cwd.restore();
     }
@@ -510,15 +433,15 @@ Deno.test("checkout command - --from-staged copies staged files to new worktree"
   }
 });
 
-Deno.test("checkout command - --from-staged with specific files only copies those files", async () => {
+Deno.test('checkout command - --from-staged with specific files only copies those files', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create and stage multiple files
-    await repo.createFile("include-me.txt", "include content");
-    await repo.createFile("exclude-me.txt", "exclude content");
-    await repo.runCommand("git", ["add", "."], repo.path);
+    await repo.createFile('include-me.txt', 'include content');
+    await repo.createFile('exclude-me.txt', 'exclude content');
+    await repo.runCommand('git', ['add', '.'], repo.path);
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -526,28 +449,22 @@ Deno.test("checkout command - --from-staged with specific files only copies thos
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout([
-          "feat-specific",
-          "--from-staged",
-          "include-me.txt",
-        ]);
+        await executeCheckout(['feat-specific', '--from-staged', 'include-me.txt']);
       });
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
       // Verify worktree was created
-      const worktreePath = join(repo.path, "feat-specific");
+      const worktreePath = join(repo.path, 'feat-specific');
 
       // Verify only specified file was copied
-      const includeContent = await Deno.readTextFile(
-        join(worktreePath, "include-me.txt"),
-      );
-      assertEquals(includeContent, "include content");
+      const includeContent = await Deno.readTextFile(join(worktreePath, 'include-me.txt'));
+      assertEquals(includeContent, 'include content');
 
       // Excluded file should not exist (it's a new worktree from main)
       let excludeExists = false;
       try {
-        await Deno.stat(join(worktreePath, "exclude-me.txt"));
+        await Deno.stat(join(worktreePath, 'exclude-me.txt'));
         excludeExists = true;
       } catch {
         excludeExists = false;
@@ -561,7 +478,7 @@ Deno.test("checkout command - --from-staged with specific files only copies thos
   }
 });
 
-Deno.test("checkout command - --from-staged fails when no files are staged", async () => {
+Deno.test('checkout command - --from-staged fails when no files are staged', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -574,7 +491,7 @@ Deno.test("checkout command - --from-staged fails when no files are staged", asy
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["feat-no-staged", "--from-staged"]);
+        await executeCheckout(['feat-no-staged', '--from-staged']);
       });
 
       // Should fail with exit code 1
@@ -583,7 +500,7 @@ Deno.test("checkout command - --from-staged fails when no files are staged", asy
       // Verify worktree was NOT created (cleaned up after error)
       let worktreeExists = false;
       try {
-        await Deno.stat(join(repo.path, "feat-no-staged"));
+        await Deno.stat(join(repo.path, 'feat-no-staged'));
         worktreeExists = true;
       } catch {
         worktreeExists = false;
@@ -597,17 +514,14 @@ Deno.test("checkout command - --from-staged fails when no files are staged", asy
   }
 });
 
-Deno.test("checkout command - --from-staged preserves nested directory structure", async () => {
+Deno.test('checkout command - --from-staged preserves nested directory structure', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create and stage a deeply nested file
-    await repo.createFile(
-      "src/components/Button/index.tsx",
-      "export const Button = () => {};",
-    );
-    await repo.runCommand("git", ["add", "."], repo.path);
+    await repo.createFile('src/components/Button/index.tsx', 'export const Button = () => {};');
+    await repo.runCommand('git', ['add', '.'], repo.path);
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
@@ -615,17 +529,15 @@ Deno.test("checkout command - --from-staged preserves nested directory structure
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode } = await withMockedExit(async () => {
-        await executeCheckout(["feat-nested", "--from-staged"]);
+        await executeCheckout(['feat-nested', '--from-staged']);
       });
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
       // Verify nested file was copied with correct path
-      const worktreePath = join(repo.path, "feat-nested");
-      const nestedContent = await Deno.readTextFile(
-        join(worktreePath, "src/components/Button/index.tsx"),
-      );
-      assertEquals(nestedContent, "export const Button = () => {};");
+      const worktreePath = join(repo.path, 'feat-nested');
+      const nestedContent = await Deno.readTextFile(join(worktreePath, 'src/components/Button/index.tsx'));
+      assertEquals(nestedContent, 'export const Button = () => {};');
     } finally {
       cwd.restore();
     }
