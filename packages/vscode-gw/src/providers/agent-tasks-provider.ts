@@ -290,6 +290,36 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     return [];
   }
 
+  /**
+   * Recursively find directories containing task.md, plan.md, or walkthrough.md.
+   * Returns paths relative to gwRoot for each leaf directory with artifacts.
+   */
+  private findBranchDirs(dir: string, relativePath = ''): string[] {
+    const results: string[] = [];
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+
+      // Check if this directory itself has artifacts
+      const hasArtifact = entries.some(
+        (e) => !e.isDirectory() && (e.name === 'task.md' || e.name === 'plan.md' || e.name === 'walkthrough.md')
+      );
+      if (hasArtifact && relativePath) {
+        results.push(relativePath);
+      }
+
+      // Recurse into subdirectories
+      for (const entry of entries) {
+        if (!entry.isDirectory()) continue;
+        if (entry.name === '.git' || entry.name === 'config.json') continue;
+        const childRelative = relativePath ? `${relativePath}/${entry.name}` : entry.name;
+        results.push(...this.findBranchDirs(path.join(dir, entry.name), childRelative));
+      }
+    } catch {
+      // directory unreadable
+    }
+    return results;
+  }
+
   private getBranchItems(): AgentBranchItem[] {
     if (!this.gwRoot) return [];
 
@@ -302,72 +332,64 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     }
 
     const items: BranchItemWithMeta[] = [];
+    const branchRelPaths = this.findBranchDirs(this.gwRoot);
 
-    try {
-      const entries = fs.readdirSync(this.gwRoot, { withFileTypes: true });
-      for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        if (entry.name === '.git' || entry.name === 'config.json') continue;
+    for (const relPath of branchRelPaths) {
+      const branchDir = path.join(this.gwRoot, relPath);
+      const taskPath = path.join(branchDir, 'task.md');
+      const planPath = path.join(branchDir, 'plan.md');
+      const walkthroughPath = path.join(branchDir, 'walkthrough.md');
 
-        const branchDir = path.join(this.gwRoot, entry.name);
-        const taskPath = path.join(branchDir, 'task.md');
-        const planPath = path.join(branchDir, 'plan.md');
-        const walkthroughPath = path.join(branchDir, 'walkthrough.md');
-
-        // Filter: require at least task.md or plan.md to be valid
-        const hasTaskFile = fs.existsSync(taskPath);
-        const hasPlanFile = fs.existsSync(planPath);
-        if (!hasTaskFile && !hasPlanFile) {
-          continue; // Skip directories without valid artifacts
-        }
-
-        let task: ParsedTask | undefined;
-        let plan: ParsedPlan | undefined;
-        let latestMtime = 0;
-
-        if (hasTaskFile) {
-          try {
-            task = parseTaskMd(fs.readFileSync(taskPath, 'utf-8'));
-            const stat = fs.statSync(taskPath);
-            latestMtime = Math.max(latestMtime, stat.mtimeMs);
-          } catch {
-            // ignore parse errors
-          }
-        }
-
-        if (hasPlanFile) {
-          try {
-            plan = parsePlanMd(fs.readFileSync(planPath, 'utf-8'));
-            const stat = fs.statSync(planPath);
-            latestMtime = Math.max(latestMtime, stat.mtimeMs);
-          } catch {
-            // ignore parse errors
-          }
-        }
-
-        const hasWalkthrough = fs.existsSync(walkthroughPath);
-        if (hasWalkthrough) {
-          try {
-            const stat = fs.statSync(walkthroughPath);
-            latestMtime = Math.max(latestMtime, stat.mtimeMs);
-          } catch {
-            // ignore stat errors
-          }
-        }
-
-        // Check if any task is in progress
-        const hasInProgress = task?.current.some((t) => t.inProgress) ?? false;
-
-        items.push({
-          item: new AgentBranchItem(entry.name, branchDir, task, plan, hasWalkthrough),
-          mtime: latestMtime,
-          name: entry.name.toLowerCase(),
-          hasWalkthrough,
-          hasInProgress,
-        });
+      const hasTaskFile = fs.existsSync(taskPath);
+      const hasPlanFile = fs.existsSync(planPath);
+      if (!hasTaskFile && !hasPlanFile) {
+        continue;
       }
-    } catch {
-      // .gw directory unreadable
+
+      let task: ParsedTask | undefined;
+      let plan: ParsedPlan | undefined;
+      let latestMtime = 0;
+
+      if (hasTaskFile) {
+        try {
+          task = parseTaskMd(fs.readFileSync(taskPath, 'utf-8'));
+          const stat = fs.statSync(taskPath);
+          latestMtime = Math.max(latestMtime, stat.mtimeMs);
+        } catch {
+          // ignore parse errors
+        }
+      }
+
+      if (hasPlanFile) {
+        try {
+          plan = parsePlanMd(fs.readFileSync(planPath, 'utf-8'));
+          const stat = fs.statSync(planPath);
+          latestMtime = Math.max(latestMtime, stat.mtimeMs);
+        } catch {
+          // ignore parse errors
+        }
+      }
+
+      const hasWalkthrough = fs.existsSync(walkthroughPath);
+      if (hasWalkthrough) {
+        try {
+          const stat = fs.statSync(walkthroughPath);
+          latestMtime = Math.max(latestMtime, stat.mtimeMs);
+        } catch {
+          // ignore stat errors
+        }
+      }
+
+      // Check if any task is in progress
+      const hasInProgress = task?.current.some((t) => t.inProgress) ?? false;
+
+      items.push({
+        item: new AgentBranchItem(relPath, branchDir, task, plan, hasWalkthrough),
+        mtime: latestMtime,
+        name: relPath.toLowerCase(),
+        hasWalkthrough,
+        hasInProgress,
+      });
     }
 
     // Get sort settings from configuration
