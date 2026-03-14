@@ -333,13 +333,13 @@ gw init --root /path/to/your/repo.git
   "hooks": {
     "checkout": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": ["pnpm install", "echo 'Setup complete!'"],
-    },
+      "post": ["pnpm install", "echo 'Setup complete!'"]
+    }
   },
   "cleanThreshold": 7,
   "autoClean": true,
   "updateStrategy": "merge",
-  "lastAutoCleanTime": 1706371200000, // trailing comma OK
+  "lastAutoCleanTime": 1706371200000 // trailing comma OK
 }
 ```
 
@@ -1210,6 +1210,7 @@ gw clean [options]
 
 #### Options
 
+- `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
@@ -1220,6 +1221,9 @@ gw clean [options]
 #### Examples
 
 ```bash
+# Interactive mode: pick exactly what to remove
+gw clean --interactive
+
 # Preview all safe worktrees (default behavior)
 gw clean --dry-run
 
@@ -1258,6 +1262,7 @@ The clean command:
 
 | Command                              | Age Check          | Safety Checks        | Use Case                            |
 | ------------------------------------ | ------------------ | -------------------- | ----------------------------------- |
+| `gw clean --interactive`             | N/A (user picks)   | No (force delete)    | Manually pick items to remove       |
 | `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
 | `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
@@ -1417,14 +1422,15 @@ gw prune --stale-only        # Only clean git metadata (like git worktree prune)
 ```
 
 **Comparison with `gw clean`:**
-| Feature | `gw clean` | `gw clean --use-autoclean-threshold` | `gw prune` |
-|---------|-----------|-------------------------------------|-------------------|
-| Age-based | No (all worktrees) | Yes (configurable threshold) | No (removes all clean) |
-| Safety checks | Yes | Yes | Yes |
-| Protects default branch | No | No | Yes |
-| Deletes orphan branches | No | No | Yes |
-| Runs `git worktree prune` | No | No | Yes |
-| Use case | Clean up finished work | Regular maintenance | Full cleanup |
+
+| Feature                   | `gw clean`             | `gw clean --use-autoclean-threshold` | `gw prune`             |
+| ------------------------- | ---------------------- | ------------------------------------ | ---------------------- |
+| Age-based                 | No (all worktrees)     | Yes (configurable threshold)         | No (removes all clean) |
+| Safety checks             | Yes                    | Yes                                  | Yes                    |
+| Protects default branch   | No                     | No                                   | Yes                    |
+| Deletes orphan branches   | No                     | No                                   | Yes                    |
+| Runs `git worktree prune` | No                     | No                                   | Yes                    |
+| Use case                  | Clean up finished work | Regular maintenance                  | Full cleanup           |
 
 #### lock
 
@@ -1735,11 +1741,11 @@ For commands with custom logic, follow the pattern used by existing commands:
    // src/commands/list.ts
    export async function executeList(args: string[]): Promise<void> {
      // Check for help flag
-     if (args.includes('--help') || args.includes('-h')) {
+     if (args.includes("--help") || args.includes("-h")) {
        console.log(`Usage: gw list
-   
+
    List all git worktrees in the current repository.
-   
+
    Options:
      -h, --help    Show this help message
    `);
@@ -1754,7 +1760,7 @@ For commands with custom logic, follow the pattern used by existing commands:
 2. **Import and register** the command in `src/main.ts`:
 
    ```typescript
-   import { executeList } from './commands/list.ts';
+   import { executeList } from "./commands/list.ts";
 
    const COMMANDS = {
      add: executeAdd,
@@ -1787,19 +1793,19 @@ For simple pass-through commands that wrap git worktree operations, use the `git
 
    ```typescript
    // src/commands/list.ts
-   import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+   import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
 
    export async function executeList(args: string[]): Promise<void> {
-     if (args.includes('--help') || args.includes('-h')) {
-       showProxyHelp('list', 'list', 'List all worktrees in the repository', [
-         'gw list',
-         'gw list --porcelain',
-         'gw list -v',
+     if (args.includes("--help") || args.includes("-h")) {
+       showProxyHelp("list", "list", "List all worktrees in the repository", [
+         "gw list",
+         "gw list --porcelain",
+         "gw list -v",
        ]);
        Deno.exit(0);
      }
 
-     await executeGitWorktree('list', args);
+     await executeGitWorktree("list", args);
    }
    ```
 

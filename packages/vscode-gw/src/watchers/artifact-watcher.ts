@@ -24,15 +24,21 @@ export class ArtifactWatcher implements vscode.Disposable {
   private scanExistingWalkthroughs(): void {
     const gwRoot = this.findGwRoot();
     if (!gwRoot) return;
+    this.scanWalkthroughsRecursive(gwRoot);
+  }
 
+  private scanWalkthroughsRecursive(dir: string): void {
     try {
-      const entries = fs.readdirSync(gwRoot, { withFileTypes: true });
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
       for (const entry of entries) {
-        if (!entry.isDirectory()) continue;
-        const wtPath = path.join(gwRoot, entry.name, 'walkthrough.md');
-        if (fs.existsSync(wtPath)) {
-          this.knownWalkthroughs.add(wtPath);
+        if (!entry.isDirectory()) {
+          if (entry.name === 'walkthrough.md') {
+            this.knownWalkthroughs.add(path.join(dir, entry.name));
+          }
+          continue;
         }
+        if (entry.name === '.git') continue;
+        this.scanWalkthroughsRecursive(path.join(dir, entry.name));
       }
     } catch {
       // ignore
@@ -72,9 +78,9 @@ export class ArtifactWatcher implements vscode.Disposable {
       this.watchers.push(watcher);
     }
 
-    // Also watch for new branch directories
+    // Also watch for new branch directories (including nested like .gw/feat/branch-name/)
     const dirWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(this.getWatchBase(), '.gw/*')
+      new vscode.RelativePattern(this.getWatchBase(), '.gw/**')
     );
     dirWatcher.onDidCreate(() => this._onArtifactChanged.fire('directory'));
     dirWatcher.onDidDelete(() => this._onArtifactChanged.fire('directory'));
