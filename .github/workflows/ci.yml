@@ -140,7 +140,7 @@ jobs:
           if [ "$FORCE_GW" = "true" ]; then
             GW_CHANGED="true"
             echo "::notice::gw-tool: force release enabled"
-          elif echo "$AFFECTED" | grep -q "gw-tool"; then
+          elif echo "$AFFECTED" | grep -qw "gw-tool"; then
             GW_CHANGED="true"
             echo "::notice::gw-tool: changes detected"
           else
