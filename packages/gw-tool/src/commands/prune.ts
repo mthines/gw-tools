@@ -11,12 +11,12 @@ import { executeGitWorktree } from '../lib/git-proxy.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
   deleteBranch,
+  findOrphanBranches,
   getCurrentWorktreePath,
-  hasBranchUnpushedCommits,
   hasUncommittedChanges,
   hasUnpushedCommits,
-  listLocalBranches,
   listWorktrees,
+  type OrphanBranch,
   pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
@@ -43,16 +43,6 @@ interface CleanableWorktree extends WorktreeInfo {
   canClean: boolean;
   reason?: string;
   hasUncommitted: boolean;
-  hasUnpushed: boolean;
-}
-
-/**
- * Orphan branch info
- */
-interface OrphanBranch {
-  name: string;
-  canDelete: boolean;
-  reason?: string;
   hasUnpushed: boolean;
 }
 
@@ -236,47 +226,6 @@ async function analyzeWorktrees(
   }
 
   return analyzed;
-}
-
-/**
- * Find orphan branches (branches without worktrees)
- */
-async function findOrphanBranches(worktrees: WorktreeInfo[], defaultBranch: string): Promise<OrphanBranch[]> {
-  const allBranches = await listLocalBranches();
-  const worktreeBranches = new Set(worktrees.map((wt) => wt.branch).filter(Boolean));
-
-  const orphans: OrphanBranch[] = [];
-
-  for (const branch of allBranches) {
-    // Skip if branch has a worktree
-    if (worktreeBranches.has(branch)) {
-      continue;
-    }
-
-    // Skip protected branches
-    if (branch === defaultBranch || branch === 'gw_root') {
-      continue;
-    }
-
-    const hasUnpushed = await hasBranchUnpushedCommits(branch);
-
-    let canDelete = true;
-    let reason: string | undefined;
-
-    if (hasUnpushed) {
-      canDelete = false;
-      reason = 'has unpushed commits';
-    }
-
-    orphans.push({
-      name: branch,
-      canDelete,
-      reason,
-      hasUnpushed,
-    });
-  }
-
-  return orphans;
 }
 
 /**

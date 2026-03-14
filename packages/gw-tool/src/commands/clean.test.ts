@@ -54,6 +54,16 @@ async function makeWorktreeOld(worktreePath: string, daysOld: number): Promise<v
   const now = Date.now();
   const oldTime = now - daysOld * 24 * 60 * 60 * 1000;
   await Deno.utime(gitFilePath, oldTime / 1000, oldTime / 1000);
+
+  // Backdate the last commit so getWorktreeAgeDays (which checks commit date) sees it as old
+  const oldDate = new Date(oldTime).toISOString();
+  const cmd = new Deno.Command('git', {
+    args: ['-C', worktreePath, 'commit', '--allow-empty', '--amend', '--no-edit', '--date', oldDate],
+    stdout: 'null',
+    stderr: 'null',
+    env: { ...Deno.env.toObject(), GIT_COMMITTER_DATE: oldDate },
+  });
+  await cmd.output();
 }
 
 Deno.test('clean command - shows help message', async () => {

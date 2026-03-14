@@ -12,6 +12,7 @@ import {
   hasUnpushedCommits,
   deleteLocalBranch,
   isBranchCheckedOutElsewhere,
+  pruneOrphanBranches,
 } from '../lib/git-utils.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import * as output from '../lib/output.ts';
@@ -364,6 +365,18 @@ For full git worktree remove documentation:
         }
       }
     }
+  }
+
+  // Silently prune any other orphan branches
+  try {
+    const { config: pruneConfig } = await loadConfig();
+    const defaultBranch = pruneConfig.defaultBranch || 'main';
+    const deleted = await pruneOrphanBranches(defaultBranch);
+    if (deleted > 0) {
+      output.success(`Pruned ${deleted} orphan branch(es)`);
+    }
+  } catch {
+    // Don't fail remove if orphan branch pruning fails
   }
 
   // If we removed the current worktree, show a helpful message

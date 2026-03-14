@@ -2,7 +2,7 @@
  * Git utility functions for worktree operations
  */
 
-import { join } from '@std/path';
+import { dirname, join } from '@std/path';
 
 /**
  * Worktree information from git worktree list
@@ -147,7 +147,22 @@ export async function hasUnpushedCommits(worktreePath: string): Promise<boolean>
  */
 export async function getWorktreeAgeDays(worktreePath: string): Promise<number> {
   try {
-    // Use .git file modification time as proxy for worktree creation time
+    // Prefer last commit date on the branch (reflects actual work)
+    const commitCmd = new Deno.Command('git', {
+      args: ['-C', worktreePath, 'log', '-1', '--format=%ct'],
+      stdout: 'piped',
+      stderr: 'null',
+    });
+    const commitResult = await commitCmd.output();
+    if (commitResult.code === 0) {
+      const timestamp = parseInt(new TextDecoder().decode(commitResult.stdout).trim(), 10);
+      if (!isNaN(timestamp)) {
+        const now = Date.now() / 1000;
+        return Math.floor((now - timestamp) / 86400);
+      }
+    }
+
+    // Fallback: use .git file modification time
     const gitPath = join(worktreePath, '.git');
     const stat = await Deno.stat(gitPath);
     const mtime = stat.mtime;
@@ -156,9 +171,7 @@ export async function getWorktreeAgeDays(worktreePath: string): Promise<number> 
 
     const now = new Date();
     const ageMs = now.getTime() - mtime.getTime();
-    const ageDays = ageMs / (1000 * 60 * 60 * 24);
-
-    return Math.floor(ageDays);
+    return Math.floor(ageMs / (1000 * 60 * 60 * 24));
   } catch {
     return 0; // On error, return 0 (won't be cleaned)
   }
@@ -529,6 +542,86 @@ export async function hasBranchUnpushedCommits(branchName: string): Promise<bool
 
   const count = parseInt(new TextDecoder().decode(stdout).trim(), 10);
   return count > 0;
+}
+
+/**
+ * Orphan branch info (branch without an associated worktree)
+ */
+export interface OrphanBranch {
+  name: string;
+  canDelete: boolean;
+  reason?: string;
+  hasUnpushed: boolean;
+}
+
+/**
+ * Find orphan branches (local branches without associated worktrees)
+ * @param worktrees Current list of worktrees
+ * @param defaultBranch Default branch name to protect
+ * @returns Array of orphan branch info
+ */
+export async function findOrphanBranches(worktrees: WorktreeInfo[], defaultBranch: string): Promise<OrphanBranch[]> {
+  const allBranches = await listLocalBranches();
+  const worktreeBranches = new Set(worktrees.map((wt) => wt.branch).filter(Boolean));
+
+  const orphans: OrphanBranch[] = [];
+
+  for (const branch of allBranches) {
+    // Skip if branch has a worktree
+    if (worktreeBranches.has(branch)) {
+      continue;
+    }
+
+    // Skip protected branches
+    if (branch === defaultBranch || branch === 'gw_root') {
+      continue;
+    }
+
+    const hasUnpushed = await hasBranchUnpushedCommits(branch);
+
+    let canDelete = true;
+    let reason: string | undefined;
+
+    if (hasUnpushed) {
+      canDelete = false;
+      reason = 'has unpushed commits';
+    }
+
+    orphans.push({
+      name: branch,
+      canDelete,
+      reason,
+      hasUnpushed,
+    });
+  }
+
+  return orphans;
+}
+
+/**
+ * Silently prune orphan branches (branches without worktrees
+ * that have no unpushed commits). Safe to call from any command.
+ * @param defaultBranch Default branch name to protect
+ * @returns Number of branches deleted
+ */
+export async function pruneOrphanBranches(defaultBranch: string): Promise<number> {
+  const worktrees = await listWorktrees();
+  const orphans = await findOrphanBranches(worktrees, defaultBranch);
+
+  const toDelete = orphans.filter((b) => b.canDelete);
+  if (toDelete.length === 0) return 0;
+
+  let deleted = 0;
+  for (const branch of toDelete) {
+    try {
+      await deleteBranch(branch.name, false);
+      deleted++;
+    } catch {
+      // Silently skip branches that fail to delete
+    }
+  }
+
+  return deleted;
 }
 
 /**

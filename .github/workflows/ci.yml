@@ -479,6 +479,12 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      - name: Set build version
+        run: |
+          VERSION="${{ needs.version-gw.outputs.version }}"
+          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" packages/gw-tool/npm/package.json
+          echo "::notice::Set build version to $VERSION"
+
       - name: Run release script
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

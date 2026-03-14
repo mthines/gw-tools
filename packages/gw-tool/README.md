@@ -252,7 +252,7 @@ gw sync feat-existing-branch .env
 
 - **Easy setup**: Clone and configure repositories in one command with `gw init <url> --interactive`
 - **Quick navigation**: Navigate to worktrees instantly with smart partial matching (`gw cd feat` finds `feat-branch`)
-- **Smart checkout**: `gw checkout` handles worktree-specific scenarios, navigating to branches checked out elsewhere instead of showing errors
+- **Smart checkout**: `gw checkout` handles worktree-specific scenarios, navigating to branches checked out elsewhere instead of showing errors, and properly recreating local tracking branches from remote after `gw remove`
 - **Auto-copy files**: Configure once, automatically copy `.env`, secrets, and config files to every new worktree
 - **Hooks support**: Run commands before/after worktree creation (install dependencies, validate setup, etc.)
 - **Copy files between worktrees**: Easily copy secrets, environment files, and configurations from one worktree to another
@@ -475,12 +475,10 @@ gw checkout feat/new-feature .env secrets/
 # Force create even if branch exists elsewhere
 gw checkout feat/bugfix -f
 
-# Create worktree for remote branch (prompts)
+# Create worktree for remote-only branch (auto-creates local tracking branch)
 gw checkout remote-feature
-# Output: Branch remote-feature exists on remote but not locally.
-#
-# Create a new worktree for it? [Y/n]:
-# (If yes, creates the worktree)
+# Output: Branch remote-feature exists on remote but not locally, creating from remote...
+# Creates worktree with proper local tracking branch (git push/pull work automatically)
 
 # Already on the branch
 gw checkout current-branch
@@ -1202,7 +1200,7 @@ gw sync /full/path/to/repo/feat-branch .env
 
 Remove safe worktrees with no uncommitted changes and no unpushed commits. By default, removes **ALL** safe worktrees regardless of age. Use `--use-autoclean-threshold` to only remove worktrees older than the configured threshold.
 
-**Automatic Pruning:** The clean command automatically runs `git worktree prune` before listing worktrees, ensuring only worktrees that actually exist on disk are shown. This prevents "phantom" worktrees (manually deleted directories) from appearing in the list.
+**Automatic Pruning:** The clean command automatically runs `git worktree prune` before listing worktrees, ensuring only worktrees that actually exist on disk are shown. This prevents "phantom" worktrees (manually deleted directories) from appearing in the list. After removing worktrees, it also automatically prunes any orphan branches (branches with no associated worktree and no unpushed commits).
 
 **Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 
@@ -1254,6 +1252,7 @@ The clean command:
 3. Verifies they have no unpushed commits (unless `--force`)
 4. Prompts for confirmation before deleting (unless `--dry-run`)
 5. Never removes bare/main repository worktrees
+6. After removal, automatically prunes orphan branches (no worktree, no unpushed commits)
 
 **Behavior Modes:**
 
@@ -1271,6 +1270,7 @@ The clean command:
 - By default, only removes worktrees with NO unpushed commits
 - Always prompts for confirmation before deletion
 - Main/bare repository, default branch, and gw_root worktrees are never removed
+- After removing worktrees, automatically prunes orphan branches (branches with no worktree and no unpushed commits)
 - Use `--force` to bypass safety checks (use with caution)
 
 **Configuration:**
@@ -1332,6 +1332,7 @@ By default, `gw remove` deletes the local branch after removing the worktree:
 - Use `--preserve-branch` to keep the local branch
 - Use `--force` to force delete unmerged branches
 - Protected branches (main, master, defaultBranch, gw_root) are never deleted
+- Also automatically prunes any other orphan branches (no worktree, no unpushed commits)
 
 **Protected Worktrees:**
 

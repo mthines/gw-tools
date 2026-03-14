@@ -67,7 +67,7 @@ gw init
 | New branch (no `--from`)   | Fetches latest default branch, falls back to local on network failure |
 | New branch (with `--from`) | Requires successful fetch, exits on failure                           |
 | Local branch exists        | Uses local directly, no fetch                                         |
-| Remote-only branch         | Fetches and creates local tracking branch                             |
+| Remote-only branch         | Fetches and creates local tracking branch (e.g., after `gw remove`)   |
 
 ### GOOD Pattern
 
@@ -173,6 +173,12 @@ gw cd feature-x
 # Or create with different name
 gw add feature-x-v2 -b feature-x-v2
 ```
+
+### Recreating a Removed Worktree
+
+**Symptom**: After `gw remove feature-x`, need to work on it again.
+
+**Fix**: Just run `gw checkout feature-x` again. It detects the branch exists on remote but not locally, and automatically creates a proper local tracking branch from the remote ref. No detached HEAD, `git push`/`git pull` work immediately.
 
 ### Network Fetch Failed
 

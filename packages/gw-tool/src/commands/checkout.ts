@@ -490,12 +490,29 @@ export async function executeCheckout(args: string[]): Promise<void> {
   let startPoint: string | undefined;
   let needsTrackingSetup = false; // Track if we need to set up tracking (new branches AND remote-only branches)
 
-  // Determine if we're creating a new branch
+  // Determine branch state: local, remote-only, or new
   const explicitCreate = hasBranchFlag(gitArgs);
-  const branchExistsAlready = await branchExists(parsed.worktreeName);
-  const willCreateBranch = explicitCreate || !branchExistsAlready;
+  const localExists = await branchExistsLocally(branchName);
+  const remoteOnlyExists = !localExists && (await branchExists(branchName));
+  const willCreateBranch = explicitCreate || (!localExists && !remoteOnlyExists);
 
-  if (willCreateBranch) {
+  if (localExists && !explicitCreate) {
+    // Local branch exists - just check it out directly
+    // Explicitly pass it to git to avoid git inferring from path basename
+    // Without this, "gw checkout test/foo" would make git use basename "foo" as branch name
+    startPoint = parsed.worktreeName;
+  } else if (remoteOnlyExists && !explicitCreate) {
+    // Branch exists on remote but not locally (e.g. after gw remove deleted the local branch)
+    // Create a local branch from the remote ref with tracking
+    console.log(`Branch ${output.bold(parsed.worktreeName)} exists on remote but not locally, creating from remote...`);
+
+    startPoint = `origin/${parsed.worktreeName}`;
+    gitArgs.unshift('-b', parsed.worktreeName);
+    needsTrackingSetup = true;
+
+    console.log(`Creating from ${output.bold(startPoint)}`);
+    console.log('');
+  } else if (willCreateBranch) {
     // Check for ref conflicts (single check for both paths)
     const { hasConflict, conflictingBranch } = await hasRefConflict(branchName);
     if (hasConflict) {
@@ -589,10 +606,6 @@ export async function executeCheckout(args: string[]): Promise<void> {
         Deno.exit(1);
       }
     }
-  } else {
-    // Branch exists - explicitly pass it to git to avoid git inferring from path basename
-    // Without this, "gw checkout test/foo" would make git use basename "foo" as branch name
-    startPoint = parsed.worktreeName;
   }
 
   // Build git worktree add command

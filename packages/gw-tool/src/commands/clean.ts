@@ -10,6 +10,7 @@ import {
   hasUncommittedChanges,
   hasUnpushedCommits,
   listWorktrees,
+  pruneOrphanBranches,
   pruneWorktrees,
   removeWorktree,
   type WorktreeInfo,
@@ -66,6 +67,8 @@ Safety Features:
   - By default, only removes worktrees with NO unpushed commits
   - Always prompts for confirmation before deletion (unless --dry-run)
   - Main/bare repository, default branch, and gw_root are never removed
+  - After removing worktrees, automatically prunes orphan branches
+    (branches with no worktree and no unpushed commits)
   - Use --force to bypass safety checks (use with caution)
 
 Examples:
@@ -332,5 +335,18 @@ export async function executeClean(args: string[]): Promise<void> {
   }
   if (failed > 0) {
     output.error(`Failed to remove ${failed} worktree(s)`);
+  }
+
+  // Silently prune orphan branches after cleaning worktrees
+  if (successful > 0) {
+    try {
+      const defaultBranch = config.defaultBranch || 'main';
+      const deleted = await pruneOrphanBranches(defaultBranch);
+      if (deleted > 0) {
+        output.success(`Pruned ${deleted} orphan branch(es)`);
+      }
+    } catch {
+      // Don't fail clean if orphan branch pruning fails
+    }
   }
 }
