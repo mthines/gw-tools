@@ -79,11 +79,17 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.switchWorktree', async () => {
-      const worktrees = await listWorktrees(workspacePath);
+      const [worktrees, branches, defaultBranch] = await Promise.all([
+        listWorktrees(workspacePath),
+        listBranches(workspacePath),
+        getDefaultBranch(workspacePath),
+      ]);
       const currentPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
-      interface WorktreeQuickPickItem extends vscode.QuickPickItem {
-        worktreePath: string;
+      interface SwitchQuickPickItem extends vscode.QuickPickItem {
+        worktreePath?: string;
+        branch?: string;
+        isCreateNew?: boolean;
       }
 
       const openInSameWindowButton: vscode.QuickInputButton = {
@@ -91,12 +97,12 @@ export function activate(context: vscode.ExtensionContext): void {
         tooltip: 'Open in Same Window',
       };
 
-      const items: WorktreeQuickPickItem[] = worktrees
+      const worktreeItems: SwitchQuickPickItem[] = worktrees
         .filter((w) => !w.bare)
         .map((w) => {
           const isCurrent = w.path === currentPath;
           return {
-            label: `${isCurrent ? '$(check) ' : ''}${w.branch}`,
+            label: `${isCurrent ? '$(check) ' : '$(folder-opened) '}${w.branch}`,
             description: isCurrent ? 'current' : path.basename(w.path),
             detail: w.path,
             worktreePath: w.path,
@@ -104,30 +110,125 @@ export function activate(context: vscode.ExtensionContext): void {
           };
         });
 
-      if (items.length === 0) {
-        vscode.window.showWarningMessage('No worktrees available.');
-        return;
-      }
+      // Prepare branch items (exclude branches that already have worktrees)
+      const worktreeBranches = new Set(worktrees.map((w) => w.branch));
+      const isDefaultBranch = (name: string): boolean => {
+        const baseName = name.replace(/^origin\//, '');
+        return baseName === defaultBranch;
+      };
+      const sortedBranches = branches
+        .filter((b) => !b.isCurrent && !worktreeBranches.has(b.name))
+        .sort((a, b) => {
+          const aIsDefault = isDefaultBranch(a.name);
+          const bIsDefault = isDefaultBranch(b.name);
+          if (aIsDefault !== bIsDefault) return aIsDefault ? -1 : 1;
+          if (a.isRemote !== b.isRemote) return a.isRemote ? 1 : -1;
+          return a.name.localeCompare(b.name);
+        });
+      const branchItems: SwitchQuickPickItem[] = sortedBranches.map((b) => ({
+        label: `$(git-branch) ${b.name}`,
+        description: b.relativeDate || '',
+        detail:
+          b.authorName && b.commitHash && b.commitMessage
+            ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
+            : undefined,
+        branch: b.name,
+      }));
+      const branchNames = new Set(sortedBranches.map((b) => b.name));
 
-      const quickPick = vscode.window.createQuickPick<WorktreeQuickPickItem>();
-      quickPick.items = items;
-      quickPick.placeholder = 'Select worktree to switch to (click button for same window)';
+      // Build the full item list: worktrees first, then branches
+      const allStaticItems: SwitchQuickPickItem[] = [
+        { label: 'Worktrees', kind: vscode.QuickPickItemKind.Separator },
+        ...worktreeItems,
+        { label: 'Branches', kind: vscode.QuickPickItemKind.Separator },
+        ...branchItems,
+      ];
+
+      const quickPick = vscode.window.createQuickPick<SwitchQuickPickItem>();
       quickPick.title = 'Switch Worktree';
+      quickPick.placeholder = 'Search worktrees, branches, or type a new branch name';
       quickPick.matchOnDescription = true;
       quickPick.matchOnDetail = true;
+      // Preserve our item order (worktrees first) instead of alphabetical sorting.
+      // sortByLabel is a proposed API (not yet in stable @types/vscode):
+      // https://github.com/microsoft/vscode/blob/main/src/vscode-dts/vscode.proposed.quickPickSortByLabel.d.ts
+      (quickPick as unknown as { sortByLabel: boolean }).sortByLabel = false;
+      quickPick.items = allStaticItems;
 
-      quickPick.onDidAccept(() => {
-        const selected = quickPick.selectedItems[0];
-        if (selected && selected.worktreePath !== currentPath) {
-          const uri = vscode.Uri.file(selected.worktreePath);
-          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+      // Only use onDidChangeValue for the dynamic "Create new branch" item
+      quickPick.onDidChangeValue((value) => {
+        const typedRaw = value.trim();
+        if (typedRaw.length === 0 || branchNames.has(typedRaw) || worktreeBranches.has(typedRaw)) {
+          quickPick.items = allStaticItems;
+          return;
         }
+
+        // Append "Create new branch" when typed text doesn't match any existing branch
+        quickPick.items = [
+          ...allStaticItems,
+          { label: '', kind: vscode.QuickPickItemKind.Separator },
+          {
+            label: `$(plus) Create new branch "${typedRaw}"`,
+            description: 'New worktree from new branch',
+            alwaysShow: true,
+            branch: typedRaw,
+            isCreateNew: true,
+          },
+        ];
+      });
+
+      quickPick.onDidAccept(async () => {
+        const selected = quickPick.selectedItems[0];
         quickPick.hide();
+
+        if (!selected) return;
+
+        // Existing worktree — open it
+        if (selected.worktreePath) {
+          if (selected.worktreePath !== currentPath) {
+            const uri = vscode.Uri.file(selected.worktreePath);
+            vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+          }
+          return;
+        }
+
+        // Branch or new branch — create worktree then open
+        const branchName = selected.branch;
+        if (!branchName) return;
+
+        try {
+          await vscode.window.withProgress(
+            {
+              location: vscode.ProgressLocation.Notification,
+              title: `Creating worktree: ${branchName}`,
+              cancellable: false,
+            },
+            async () => {
+              await createWorktree(workspacePath, branchName);
+            }
+          );
+          worktreeProvider.refresh();
+
+          const newWorktreePath = await getWorktreePath(workspacePath, branchName);
+          const action = await vscode.window.showInformationMessage(
+            `Created worktree: ${branchName}`,
+            'Open in New Window'
+          );
+          if (action === 'Open in New Window' && newWorktreePath) {
+            const uri = vscode.Uri.file(newWorktreePath);
+            vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+        }
       });
 
       quickPick.onDidTriggerItemButton((e) => {
-        const uri = vscode.Uri.file(e.item.worktreePath);
-        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+        if (e.item.worktreePath) {
+          const uri = vscode.Uri.file(e.item.worktreePath);
+          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+        }
         quickPick.hide();
       });
 
