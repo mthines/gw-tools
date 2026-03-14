@@ -75,7 +75,7 @@ echo ".gw/config.local.json" >> .gitignore
 ### Prerequisites
 
 - Node.js 18+
-- gw-tools: `npm install -g @gw-tools/gw-tool`
+- gw-tools: `npm install -g gw-tool`
 
 ### Initial Setup
 
@@ -117,7 +117,7 @@ gw show-init | pbcopy
 ### For New Developers
 
 1. Clone repository
-2. Install gw: `npm install -g @gw-tools/gw-tool`
+2. Install gw: `npm install -g gw-tool`
 3. Install shell integration:
    ```bash
    eval "$(gw install-shell)"

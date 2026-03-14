@@ -140,7 +140,7 @@ jobs:
           if [ "$FORCE_GW" = "true" ]; then
             GW_CHANGED="true"
             echo "::notice::gw-tool: force release enabled"
-          elif echo "$AFFECTED" | grep -q "@gw-tools/gw-tool"; then
+          elif echo "$AFFECTED" | grep -qw "gw-tool"; then
             GW_CHANGED="true"
             echo "::notice::gw-tool: changes detected"
           else
@@ -201,7 +201,7 @@ jobs:
           fi
 
       - name: Test gw-tool
-        run: npx nx run @gw-tools/gw-tool:test:ci
+        run: npx nx run gw-tool:test:ci
 
   test-agent:
     needs: detect-changes
@@ -492,7 +492,7 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
           RELEASE_VERSION: ${{ needs.version-gw.outputs.tag }}
           SKIP_NPM: 'true'
-        run: npx nx run @gw-tools/gw-tool:release:ci
+        run: npx nx run gw-tool:release:ci
 
       - name: Update npm
         run: npm install -g npm@latest

@@ -113,7 +113,7 @@ git push
 ```markdown
 ## Development Setup
 
-1. Install gw: `npm install -g @gw-tools/gw-tool`
+1. Install gw: `npm install -g gw-tool`
 2. Clone repository
 3. Set up secrets:
    \`\`\`bash

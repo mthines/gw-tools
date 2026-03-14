@@ -1,5 +1,5 @@
 {
-  "name": "@gw-tools/gw-tool",
+  "name": "gw-tool",
   "$schema": "../../node_modules/nx/schemas/project-schema.json",
   "sourceRoot": "packages/gw-tool/src",
   "projectType": "library",

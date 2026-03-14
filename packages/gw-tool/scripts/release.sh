@@ -100,7 +100,7 @@ fi
 
 # Run tests and checks
 echo -e "\n${BLUE}🧪 Running tests and checks...${NC}"
-nx run @gw-tools/gw-tool:test
+nx run gw-tool:test
 if [ $? -ne 0 ]; then
   echo -e "${RED}❌ Error: Tests or checks failed. Please fix the issues before releasing.${NC}"
   exit 1
