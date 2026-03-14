@@ -61,10 +61,22 @@ export async function executeCd(args: string[]): Promise<void> {
 
   if (resolved.length > 1) {
     output.error(`Multiple worktrees match "${pattern}":`);
+    const hasDetached = resolved.some((wt) => !wt.branch);
     resolved.forEach((wt) => {
-      console.error(`  ${wt.branch || '(detached)'} -> ${wt.path}`);
+      const label = wt.branch
+        ? wt.branch
+        : `${wt.path.split("/").pop() || wt.path} (detached)`;
+      console.error(`  ${label} -> ${wt.path}`);
     });
-    console.error('\nPlease be more specific.');
+    if (hasDetached) {
+      const detached = resolved.filter((wt) => !wt.branch);
+      for (const wt of detached) {
+        console.error(
+          `\nhint: Remove detached worktree with: gw remove ${wt.path}`,
+        );
+      }
+    }
+    console.error("\nPlease be more specific.");
     Deno.exit(1);
   }
 
