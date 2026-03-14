@@ -2,8 +2,8 @@
  * Tests for git-utils.ts
  */
 
-import { assertEquals, assertRejects } from '$std/assert';
-import { join } from '$std/path';
+import { assertEquals, assertRejects } from '@std/assert';
+import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { getStagedFiles, getStagedFileContent, copyStagedFiles } from './git-utils.ts';
 

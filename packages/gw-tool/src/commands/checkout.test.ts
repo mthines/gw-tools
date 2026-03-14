@@ -9,7 +9,6 @@ import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
-import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
 import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 Deno.test('checkout command - shows help with --help', async () => {
@@ -125,16 +124,29 @@ Deno.test('checkout command - says already on branch when current branch matches
   }
 });
 
-Deno.test('checkout command - prompts to create worktree for remote branch (yes)', async () => {
+Deno.test('checkout command - remote-only branch creates local tracking branch (not detached HEAD)', async () => {
+  // This is the key scenario: gw remove deletes the local branch,
+  // then gw checkout should recreate it from the remote ref with
+  // proper tracking, NOT end up in detached HEAD.
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    // Create a remote branch
+    // Create a branch and a commit on it
     await repo.createBranch('remote-feature');
-    await repo.createCommit('Remote commit');
 
-    // Delete the local branch but keep it on "remote"
+    // Simulate the branch existing on remote by creating the remote ref
+    const remoteRefCmd = new Deno.Command('git', {
+      args: [
+        '-C', repo.path, 'update-ref',
+        'refs/remotes/origin/remote-feature', 'HEAD',
+      ],
+      stdout: 'null',
+      stderr: 'null',
+    });
+    await remoteRefCmd.output();
+
+    // Delete the LOCAL branch (simulating what gw remove does)
     const deleteBranchCmd = new Deno.Command('git', {
       args: ['-C', repo.path, 'branch', '-D', 'remote-feature'],
       stdout: 'null',
@@ -142,72 +154,107 @@ Deno.test('checkout command - prompts to create worktree for remote branch (yes)
     });
     await deleteBranchCmd.output();
 
-    // Simulate the branch existing on remote by creating the remote ref
-    const remoteRefCmd = new Deno.Command('git', {
-      args: ['-C', repo.path, 'update-ref', 'refs/remotes/origin/remote-feature', 'HEAD'],
+    // Verify local branch is gone but remote ref exists
+    const localCheck = new Deno.Command('git', {
+      args: ['-C', repo.path, 'rev-parse', '--verify', 'remote-feature'],
       stdout: 'null',
       stderr: 'null',
     });
-    await remoteRefCmd.output();
+    assertEquals((await localCheck.output()).code, 128, 'local branch should not exist');
+
+    const remoteCheck = new Deno.Command('git', {
+      args: ['-C', repo.path, 'rev-parse', '--verify', 'origin/remote-feature'],
+      stdout: 'null',
+      stderr: 'null',
+    });
+    assertEquals((await remoteCheck.output()).code, 0, 'remote ref should exist');
 
     const config = createMinimalConfig(repo.path);
     await writeTestConfig(repo.path, config);
 
     const cwd = new TempCwd(repo.path);
     try {
-      await withMockedPrompt(['y'], async () => {
-        return await withMockedExit(async () => {
-          await executeCheckout(['remote-feature']);
-        });
+      const { exitCode } = await withMockedExit(async () => {
+        await executeCheckout(['remote-feature']);
       });
 
-      // The command will try to run gw add which may fail in test environment
-      // but that's ok - we're testing that it prompts and tries to run gw add
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
+      assertEquals(
+        exitCode === undefined || exitCode === 0,
+        true,
+        'checkout should succeed',
+      );
 
-Deno.test('checkout command - handles remote branch (no existing worktree)', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a remote branch
-    await repo.createBranch('remote-feature');
-    await repo.createCommit('Remote commit');
-
-    // Delete the local branch but keep it on "remote"
-    const deleteBranchCmd = new Deno.Command('git', {
-      args: ['-C', repo.path, 'branch', '-D', 'remote-feature'],
-      stdout: 'null',
-      stderr: 'null',
-    });
-    await deleteBranchCmd.output();
-
-    // Simulate the branch existing on remote by creating the remote ref
-    const remoteRefCmd = new Deno.Command('git', {
-      args: ['-C', repo.path, 'update-ref', 'refs/remotes/origin/remote-feature', 'HEAD'],
-      stdout: 'null',
-      stderr: 'null',
-    });
-    await remoteRefCmd.output();
-
-    const config = createMinimalConfig(repo.path);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      // Test completes without error - behavior depends on checkout implementation
-      // The new checkout command should handle this case gracefully
-      await withMockedPrompt(['n'], async () => {
-        return await withMockedExit(async () => {
-          await executeCheckout(['remote-feature']);
-        });
+      // Verify worktree was created
+      const listCmd = new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'list'],
+        stdout: 'piped',
       });
+      const { stdout: listOut } = await listCmd.output();
+      const worktreeList = new TextDecoder().decode(listOut);
+      assertEquals(
+        worktreeList.includes('remote-feature'),
+        true,
+        'worktree should exist',
+      );
+
+      // CRITICAL: Verify we're on a local branch, NOT detached HEAD
+      const worktreePath = join(repo.path, 'remote-feature');
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'symbolic-ref', '--short', 'HEAD'],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const branchResult = await branchCmd.output();
+      assertEquals(
+        branchResult.code,
+        0,
+        'HEAD should be a symbolic ref (not detached)',
+      );
+      const currentBranch = new TextDecoder()
+        .decode(branchResult.stdout)
+        .trim();
+      assertEquals(
+        currentBranch,
+        'remote-feature',
+        'should be on local branch remote-feature',
+      );
+
+      // Verify tracking is set up
+      const mergeCmd = new Deno.Command('git', {
+        args: [
+          '-C', worktreePath, 'config',
+          'branch.remote-feature.merge',
+        ],
+        stdout: 'piped',
+      });
+      const mergeResult = await mergeCmd.output();
+      assertEquals(
+        mergeResult.code,
+        0,
+        'tracking merge config should exist',
+      );
+      const tracking = new TextDecoder()
+        .decode(mergeResult.stdout)
+        .trim();
+      assertEquals(
+        tracking,
+        'refs/heads/remote-feature',
+        'should track origin/remote-feature',
+      );
+
+      const remoteCmd = new Deno.Command('git', {
+        args: [
+          '-C', worktreePath, 'config',
+          'branch.remote-feature.remote',
+        ],
+        stdout: 'piped',
+      });
+      const remoteResult = await remoteCmd.output();
+      assertEquals(
+        new TextDecoder().decode(remoteResult.stdout).trim(),
+        'origin',
+        'remote should be origin',
+      );
     } finally {
       cwd.restore();
     }
