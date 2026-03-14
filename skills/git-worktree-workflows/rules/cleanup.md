@@ -41,7 +41,9 @@ gw remove feature-abandoned --force
 - Working directory deleted
 - Worktree reference removed from Git
 - Local branch deleted (unless `--preserve-branch`)
+- Any other orphan branches pruned (branches with no worktree and no unpushed commits)
 - Remote branch NOT affected
+- To work on the branch again later, just run `gw checkout <branch>` — it will recreate the local tracking branch from remote
 
 ### Protected Worktrees
 
@@ -80,6 +82,8 @@ Only removes worktrees with:
 - NO uncommitted changes
 - NO unpushed commits
 
+After removing worktrees, also automatically prunes orphan branches (branches with no associated worktree and no unpushed commits).
+
 ## Full Cleanup with `gw prune`
 
 ```bash
@@ -98,13 +102,14 @@ gw prune --stale-only
 
 ## Decision Table: `gw clean` vs `gw prune`
 
-| Use Case                    | Command    |
-| --------------------------- | ---------- |
-| Weekly maintenance          | `gw clean` |
-| Before project break        | `gw prune` |
-| After major release         | `gw prune` |
-| Keep branches for reference | `gw clean` |
-| Full reset to minimal state | `gw prune` |
+| Use Case                       | Command    |
+| ------------------------------ | ---------- |
+| Weekly maintenance             | `gw clean` |
+| Before project break           | `gw prune` |
+| After major release            | `gw prune` |
+| Full reset to minimal state    | `gw prune` |
+
+> **Note:** Both `gw clean` and `gw remove` now automatically prune orphan branches after removing worktrees, so orphan branches no longer accumulate over time.
 
 ## Locking Worktrees
 
