@@ -227,11 +227,17 @@ async function executeInteractiveClean(): Promise<void> {
 
   // ── Build Orphan Branches section ─────────────────────
   const orphans = await findOrphanBranches(worktrees, defaultBranch);
+  const orphanNames = new Set(orphans.map((o) => o.name));
   const orphanItems: SelectItem[] = orphans.map((o) => ({
     label: o.name,
     value: `orphan:${o.name}`,
     hint: o.hasUnpushed ? '(has unpushed commits)' : '(remote gone)',
   }));
+
+  // Filter out branches that already appear in the orphans section
+  const filteredBranchItems = branchItems.filter(
+    (item) => !orphanNames.has(item.label)
+  );
 
   // ── Build sections (only include non-empty ones) ──────
   const sections: SelectSection[] = [];
@@ -241,10 +247,10 @@ async function executeInteractiveClean(): Promise<void> {
       items: worktreeItems,
     });
   }
-  if (branchItems.length > 0) {
+  if (filteredBranchItems.length > 0) {
     sections.push({
       title: 'Local Branches (no worktree)',
-      items: branchItems,
+      items: filteredBranchItems,
     });
   }
   if (orphanItems.length > 0) {
