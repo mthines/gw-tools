@@ -235,9 +235,7 @@ async function executeInteractiveClean(): Promise<void> {
   }));
 
   // Filter out branches that already appear in the orphans section
-  const filteredBranchItems = branchItems.filter(
-    (item) => !orphanNames.has(item.label)
-  );
+  const filteredBranchItems = branchItems.filter((item) => !orphanNames.has(item.label));
 
   // ── Build sections (only include non-empty ones) ──────
   const sections: SelectSection[] = [];

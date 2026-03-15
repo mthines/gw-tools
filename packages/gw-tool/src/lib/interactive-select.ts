@@ -245,11 +245,7 @@ function getSelected(sections: SelectSection[]): string[] {
 const HEADER_LINES = 3; // header, warning, blank
 const FOOTER_LINES = 2; // blank, controls
 
-function renderRowLine(
-  row: Row,
-  isCursor: boolean,
-  sections: SelectSection[],
-): string {
+function renderRowLine(row: Row, isCursor: boolean, sections: SelectSection[]): string {
   const section = sections[row.sectionIndex];
 
   if (row.type === 'separator') {
@@ -270,9 +266,7 @@ function renderRowLine(
     const selectedInSection = selectable.filter((i) => i.selected).length;
     const title = output.bold(section.title);
     const count = output.dim(` (${selectedInSection}/${selectable.length})`);
-    return isCursor
-      ? `${output.bold('>')} [${checkbox}] ${title}${count}`
-      : `  [${checkbox}] ${title}${count}`;
+    return isCursor ? `${output.bold('>')} [${checkbox}] ${title}${count}` : `  [${checkbox}] ${title}${count}`;
   }
 
   // Item row
@@ -297,7 +291,7 @@ function render(
   rows: Row[],
   cursor: number,
   viewportOffset: number,
-  termRows: number,
+  termRows: number
 ): number {
   const encoder = new TextEncoder();
   const sel = countSelected(options.sections);
