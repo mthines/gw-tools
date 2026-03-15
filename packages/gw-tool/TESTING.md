@@ -77,10 +77,10 @@ await repo.cleanup(); // Cleanup
 
 ```typescript
 import {
-  assertFileExists,
-  assertDirExists,
-  assertWorktreeExists,
   assertBranchExists,
+  assertDirExists,
+  assertFileExists,
+  assertWorktreeExists,
 } from '../test-utils/assertions.ts';
 
 await assertFileExists('/path/to/file');
@@ -91,7 +91,7 @@ await assertBranchExists(repo.path, 'branch-name');
 #### Config Fixtures
 
 ```typescript
-import { createMinimalConfig, createConfigWithAutoCopy, writeTestConfig } from '../test-utils/fixtures.ts';
+import { createConfigWithAutoCopy, createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 
 const config = createConfigWithAutoCopy(repo.path, ['.env']);
 await writeTestConfig(repo.path, config);

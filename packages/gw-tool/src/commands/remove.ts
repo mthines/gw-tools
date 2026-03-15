@@ -7,11 +7,11 @@ import { resolve } from '@std/path';
 import { executeGitWorktree } from '../lib/git-proxy.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
-  listWorktrees,
+  deleteLocalBranch,
   hasUncommittedChanges,
   hasUnpushedCommits,
-  deleteLocalBranch,
   isBranchCheckedOutElsewhere,
+  listWorktrees,
   pruneOrphanBranches,
 } from '../lib/git-utils.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';

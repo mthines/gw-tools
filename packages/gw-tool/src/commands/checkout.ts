@@ -7,12 +7,12 @@ import { promptAndRunAutoClean } from '../lib/auto-clean.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import {
-  fetchAndGetStartPoint,
-  listWorktrees,
-  getStagedFiles,
   copyStagedFiles,
-  removeWorktree,
+  fetchAndGetStartPoint,
   getCurrentWorktreePath,
+  getStagedFiles,
+  listWorktrees,
+  removeWorktree,
 } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
@@ -120,11 +120,15 @@ function showRefConflictError(
 ): never {
   console.log('');
   output.error(
-    `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(conflictingBranch || '')}`
+    `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(
+      conflictingBranch || ''
+    )}`
   );
   console.log('');
   console.log(
-    `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(`refs/heads/${conflictingBranch}`)}`
+    `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(
+      `refs/heads/${conflictingBranch}`
+    )}`
   );
   console.log('');
   console.log('Options:');
@@ -751,7 +755,9 @@ export async function executeCheckout(args: string[]): Promise<void> {
       const fileWord = successCount === 1 ? 'file' : 'files';
       console.log();
       console.log(
-        `  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${skippedCount > 0 ? ` (${skippedCount} skipped)` : ''}`
+        `  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${
+          skippedCount > 0 ? ` (${skippedCount} skipped)` : ''
+        }`
       );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);

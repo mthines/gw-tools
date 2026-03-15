@@ -780,13 +780,14 @@ If not configured, defaults to "main" branch and "merge" strategy.
 
 ### install-shell
 
-Output shell integration code for the `gw cd` command and enable real-time streaming output. The shell code is always generated from the current binary, so updates happen automatically.
+Output shell integration code for the `gw cd` command, enable real-time streaming output, and register TAB completions. The shell code is always generated from the current binary, so updates happen automatically.
 
 Shell integration provides:
 
 - **Navigation support**: `gw cd <worktree>` navigates directly to worktrees
 - **Real-time streaming**: Command output streams as it's generated (no buffering)
 - **Auto-navigation**: Automatically navigate after `gw checkout` and `gw remove` operations
+- **TAB completions**: Complete subcommands, branch names, worktree names, and flags
 - **Multi-alias support**: Install for different command names (e.g., `gw-dev` for development)
 
 ```bash
@@ -1417,14 +1418,15 @@ gw prune --stale-only        # Only clean git metadata (like git worktree prune)
 ```
 
 **Comparison with `gw clean`:**
-| Feature | `gw clean` | `gw clean --use-autoclean-threshold` | `gw prune` |
-|---------|-----------|-------------------------------------|-------------------|
-| Age-based | No (all worktrees) | Yes (configurable threshold) | No (removes all clean) |
-| Safety checks | Yes | Yes | Yes |
-| Protects default branch | No | No | Yes |
-| Deletes orphan branches | No | No | Yes |
-| Runs `git worktree prune` | No | No | Yes |
-| Use case | Clean up finished work | Regular maintenance | Full cleanup |
+
+| Feature                   | `gw clean`             | `gw clean --use-autoclean-threshold` | `gw prune`             |
+| ------------------------- | ---------------------- | ------------------------------------ | ---------------------- |
+| Age-based                 | No (all worktrees)     | Yes (configurable threshold)         | No (removes all clean) |
+| Safety checks             | Yes                    | Yes                                  | Yes                    |
+| Protects default branch   | No                     | No                                   | Yes                    |
+| Deletes orphan branches   | No                     | No                                   | Yes                    |
+| Runs `git worktree prune` | No                     | No                                   | Yes                    |
+| Use case                  | Clean up finished work | Regular maintenance                  | Full cleanup           |
 
 #### lock
 

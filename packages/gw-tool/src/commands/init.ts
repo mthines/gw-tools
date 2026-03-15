@@ -650,7 +650,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
             return;
           }
 
-          await Deno.writeTextFile(shellConfigFile, '\n' + evalLine + '\n', { append: true });
+          await Deno.writeTextFile(shellConfigFile, '\n' + evalLine + '\n', {
+            append: true,
+          });
           output.success('Shell integration added!');
           console.log(`  Added to: ${output.path(shellConfigFile)}`);
           console.log('\nRestart your terminal or run:');
