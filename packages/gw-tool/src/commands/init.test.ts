@@ -8,7 +8,7 @@ import { executeInit } from './init.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { readTestConfig } from '../test-utils/fixtures.ts';
-import { assertFileExists, assertDirExists } from '../test-utils/assertions.ts';
+import { assertDirExists, assertFileExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
 import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';

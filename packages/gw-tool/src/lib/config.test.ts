@@ -7,9 +7,9 @@ import { join } from '@std/path';
 import { loadConfig, saveConfig, saveConfigTemplate } from './config.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import {
-  createMinimalConfig,
   createConfigWithAutoCopy,
   createConfigWithHooks,
+  createMinimalConfig,
   readTestConfig,
   writeTestConfig,
 } from '../test-utils/fixtures.ts';

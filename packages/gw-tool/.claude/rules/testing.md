@@ -23,7 +23,7 @@ Tests are colocated with source files:
 Use test utilities from `src/test-utils/`:
 
 ```typescript
-import { createTempGitRepo, cleanupTempDir } from '../test-utils/git.ts';
+import { cleanupTempDir, createTempGitRepo } from '../test-utils/git.ts';
 
 Deno.test('my test', async () => {
   const { repoPath, cleanup } = await createTempGitRepo();

@@ -7,7 +7,7 @@ import { join, resolve } from '@std/path';
 import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from './types.ts';
 import { findGitRoot, pathExists } from './path-resolver.ts';
-import { runMigrations, CURRENT_CONFIG_VERSION } from './config-migrations.ts';
+import { CURRENT_CONFIG_VERSION, runMigrations } from './config-migrations.ts';
 
 const CONFIG_DIR_NAME = '.gw';
 const CONFIG_FILE_NAME = 'config.json';
@@ -173,7 +173,9 @@ export async function loadConfig(): Promise<{
       if (migrated && migratedData.root) {
         await saveConfig(migratedData.root, migratedData);
         console.log(
-          `Config automatically updated (${appliedMigrations.length} migration${appliedMigrations.length > 1 ? 's' : ''} applied)\n`
+          `Config automatically updated (${appliedMigrations.length} migration${
+            appliedMigrations.length > 1 ? 's' : ''
+          } applied)\n`
         );
       }
 

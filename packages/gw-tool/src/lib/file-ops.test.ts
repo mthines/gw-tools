@@ -6,7 +6,7 @@ import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
 import { copyFiles } from './file-ops.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { assertFileExists, assertFileContent } from '../test-utils/assertions.ts';
+import { assertFileContent, assertFileExists } from '../test-utils/assertions.ts';
 
 Deno.test('copyFiles - copies single file', async () => {
   const repo = new GitTestRepo();

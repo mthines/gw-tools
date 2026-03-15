@@ -3,7 +3,7 @@
  */
 
 import { assertEquals } from '@std/assert';
-import { runMigrations, needsMigration, CURRENT_CONFIG_VERSION, MIGRATIONS } from './config-migrations.ts';
+import { CURRENT_CONFIG_VERSION, MIGRATIONS, needsMigration, runMigrations } from './config-migrations.ts';
 
 Deno.test('runMigrations - returns config unchanged when already at current version', () => {
   const config = {
