@@ -533,8 +533,10 @@ jobs:
             # npm
             npm install @gw-tools/gw@beta
 
-            # homebrew
+            # homebrew (latest beta)
             brew install mthines/gw-tools/gw-beta
+            # homebrew (this exact version)
+            brew install mthines/gw-tools/gw-beta@${version}
             \`\`\`
 
             [View Release](https://github.com/${context.repo.owner}/${context.repo.repo}/releases/tag/v${version})`;
