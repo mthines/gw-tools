@@ -229,6 +229,9 @@ else
     # gw-beta@0.43.0-beta.40.1 -> GwBetaAT0430Beta401
     VERSIONED_CLASS=$(echo "GwBetaAT${VERSION}" | perl -pe 's/[^a-zA-Z0-9]+(.)/uc($1)/ge; s/[^a-zA-Z0-9]//g')
     sed -i "s/class GwBeta < Formula/class ${VERSIONED_CLASS} < Formula/" "$VERSIONED_FORMULA"
+    # Allow versioned formula to overwrite the gw binary from gw-beta
+    sed -i "/class ${VERSIONED_CLASS} < Formula/a\\
+  link_overwrite \"bin/gw\"" "$VERSIONED_FORMULA"
   fi
 
   # Commit and push
