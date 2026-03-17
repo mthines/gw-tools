@@ -225,9 +225,9 @@ else
   if [ "$IS_PRERELEASE" = true ]; then
     VERSIONED_FORMULA="Formula/gw-beta@${VERSION}.rb"
     cp "$FORMULA_FILE" "$VERSIONED_FORMULA"
-    # Homebrew class names must be PascalCase with no special chars
+    # Homebrew class names: capitalize after delimiters, strip non-alnum (matches Homebrew's class_s)
     # gw-beta@0.43.0-beta.40.1 -> GwBetaAT0430Beta401
-    VERSIONED_CLASS=$(echo "GwBetaAT${VERSION}" | sed 's/[^a-zA-Z0-9]//g')
+    VERSIONED_CLASS=$(echo "GwBetaAT${VERSION}" | perl -pe 's/[^a-zA-Z0-9]+(.)/uc($1)/ge; s/[^a-zA-Z0-9]//g')
     sed -i "s/class GwBeta < Formula/class ${VERSIONED_CLASS} < Formula/" "$VERSIONED_FORMULA"
   fi
 
