@@ -221,12 +221,26 @@ else
     }
   ' "$FORMULA_FILE"
 
+  # Create versioned formula for prereleases (enables: brew install mthines/gw-tools/gw-beta@VERSION)
+  if [ "$IS_PRERELEASE" = true ]; then
+    VERSIONED_FORMULA="Formula/gw-beta@${VERSION}.rb"
+    cp "$FORMULA_FILE" "$VERSIONED_FORMULA"
+    # Homebrew class names: capitalize after delimiters, strip non-alnum (matches Homebrew's class_s)
+    # gw-beta@0.43.0-beta.40.1 -> GwBetaAT0430Beta401
+    VERSIONED_CLASS=$(echo "GwBetaAT${VERSION}" | perl -pe 's/[^a-zA-Z0-9]+(.)/uc($1)/ge; s/[^a-zA-Z0-9]//g')
+    sed -i "s/class GwBeta < Formula/class ${VERSIONED_CLASS} < Formula/" "$VERSIONED_FORMULA"
+    # Allow versioned formula to overwrite the gw binary from gw-beta
+    sed -i "/class ${VERSIONED_CLASS} < Formula/a\\
+  link_overwrite \"bin/gw\"" "$VERSIONED_FORMULA"
+  fi
+
   # Commit and push
   git config user.name "github-actions[bot]"
   git config user.email "github-actions[bot]@users.noreply.github.com"
   git add "$FORMULA_FILE"
 
   if [ "$IS_PRERELEASE" = true ]; then
+    git add "$VERSIONED_FORMULA"
     git commit -m "gw-beta: update to v$VERSION"
   else
     git commit -m "gw: update to v$VERSION"

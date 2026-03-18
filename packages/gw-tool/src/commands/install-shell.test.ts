@@ -4,7 +4,15 @@
 
 import { assertEquals, assertStringIncludes } from '@std/assert';
 import { join } from '@std/path';
-import { executeInstallShell } from './install-shell.ts';
+import {
+  executeInstallShell,
+  getBashCompletionFunction,
+  getBashFunction,
+  getFishCompletionFunction,
+  getFishFunction,
+  getZshCompletionFunction,
+  getZshFunction,
+} from './install-shell.ts';
 import { TempHome } from '../test-utils/temp-env.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 
@@ -284,4 +292,176 @@ Deno.test('install-shell - removes fish integration with --remove', async () => 
   } finally {
     await tempHome.cleanup();
   }
+});
+
+// Shell completion tests
+
+Deno.test('zsh completions - includes compdef registration', () => {
+  const output = getZshFunction();
+  assertStringIncludes(output, 'compdef _gw gw');
+});
+
+Deno.test('zsh completions - includes branch helper', () => {
+  const output = getZshCompletionFunction();
+  assertStringIncludes(output, '__gw_branches()');
+  assertStringIncludes(output, 'git for-each-ref');
+});
+
+Deno.test('zsh completions - includes worktree helper', () => {
+  const output = getZshCompletionFunction();
+  assertStringIncludes(output, '__gw_worktrees()');
+  assertStringIncludes(output, 'git worktree list --porcelain');
+});
+
+Deno.test('zsh completions - includes all subcommands', () => {
+  const output = getZshCompletionFunction();
+  const subcommands = [
+    'checkout',
+    'co',
+    'add',
+    'cd',
+    'pr',
+    'update',
+    'sync',
+    'init',
+    'show-init',
+    'install-shell',
+    'root',
+    'clean',
+    'list',
+    'ls',
+    'remove',
+    'rm',
+    'move',
+    'mv',
+    'prune',
+    'lock',
+    'unlock',
+    'repair',
+  ];
+  for (const cmd of subcommands) {
+    assertStringIncludes(output, `'${cmd}:`, `Should include ${cmd} subcommand`);
+  }
+});
+
+Deno.test('zsh completions - custom name uses namespaced functions', () => {
+  const output = getZshCompletionFunction('gw-dev');
+  assertStringIncludes(output, '__gw_dev_branches()');
+  assertStringIncludes(output, '__gw_dev_worktrees()');
+  assertStringIncludes(output, 'compdef _gw_dev gw-dev');
+});
+
+Deno.test('bash completions - includes complete -F registration', () => {
+  const output = getBashFunction();
+  assertStringIncludes(output, 'complete -F _gw_completions gw');
+});
+
+Deno.test('bash completions - includes branch helper', () => {
+  const output = getBashCompletionFunction();
+  assertStringIncludes(output, '__gw_branches()');
+  assertStringIncludes(output, 'git for-each-ref');
+});
+
+Deno.test('bash completions - includes worktree helper', () => {
+  const output = getBashCompletionFunction();
+  assertStringIncludes(output, '__gw_worktrees()');
+  assertStringIncludes(output, 'git worktree list --porcelain');
+});
+
+Deno.test('bash completions - includes all subcommands', () => {
+  const output = getBashCompletionFunction();
+  const subcommands = [
+    'checkout',
+    'co',
+    'add',
+    'cd',
+    'pr',
+    'update',
+    'sync',
+    'init',
+    'show-init',
+    'install-shell',
+    'root',
+    'clean',
+    'list',
+    'ls',
+    'remove',
+    'rm',
+    'move',
+    'mv',
+    'prune',
+    'lock',
+    'unlock',
+    'repair',
+  ];
+  for (const cmd of subcommands) {
+    assertStringIncludes(output, cmd, `Should include ${cmd} subcommand`);
+  }
+});
+
+Deno.test('bash completions - custom name uses namespaced functions', () => {
+  const output = getBashCompletionFunction('gw-dev');
+  assertStringIncludes(output, '__gw_dev_branches()');
+  assertStringIncludes(output, '__gw_dev_worktrees()');
+  assertStringIncludes(output, 'complete -F _gw_dev_completions gw-dev');
+});
+
+Deno.test('fish completions - includes complete -c commands', () => {
+  const output = getFishFunction();
+  assertStringIncludes(output, 'complete -c gw');
+});
+
+Deno.test('fish completions - includes branch helper', () => {
+  const output = getFishCompletionFunction();
+  assertStringIncludes(output, 'function __gw_branches');
+  assertStringIncludes(output, 'git for-each-ref');
+});
+
+Deno.test('fish completions - includes worktree helper', () => {
+  const output = getFishCompletionFunction();
+  assertStringIncludes(output, 'function __gw_worktrees');
+  assertStringIncludes(output, 'git worktree list --porcelain');
+});
+
+Deno.test('fish completions - disables file completions', () => {
+  const output = getFishCompletionFunction();
+  assertStringIncludes(output, 'complete -c gw -f');
+});
+
+Deno.test('fish completions - includes all subcommands', () => {
+  const output = getFishCompletionFunction();
+  const subcommands = [
+    'checkout',
+    'co',
+    'add',
+    'cd',
+    'pr',
+    'update',
+    'sync',
+    'init',
+    'show-init',
+    'install-shell',
+    'root',
+    'clean',
+    'list',
+    'ls',
+    'remove',
+    'rm',
+    'move',
+    'mv',
+    'prune',
+    'lock',
+    'unlock',
+    'repair',
+  ];
+  for (const cmd of subcommands) {
+    assertStringIncludes(output, `-a ${cmd}`, `Should include ${cmd} subcommand`);
+  }
+});
+
+Deno.test('fish completions - custom name uses namespaced functions', () => {
+  const output = getFishCompletionFunction('gw-dev');
+  assertStringIncludes(output, 'function __gw_dev_branches');
+  assertStringIncludes(output, 'function __gw_dev_worktrees');
+  assertStringIncludes(output, 'complete -c gw-dev');
 });

@@ -1,5 +1,5 @@
 {
-  "name": "@gw-tools/gw-tool",
+  "name": "gw-tool",
   "version": "0.0.1",
   "private": true,
   "type": "module"

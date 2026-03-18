@@ -71,7 +71,7 @@ Execute complete feature development cycles autonomously using isolated worktree
 
 ### Prerequisites
 
-- [gw CLI tool](../README.md) installed (`npm install -g @gw-tools/gw-tool`)
+- [gw CLI tool](../README.md) installed (`npm install -g gw-tool`)
 - Basic Git knowledge
 - Claude Code or another compatible AI agent
 

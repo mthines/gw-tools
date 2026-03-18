@@ -10,7 +10,7 @@ This project uses Deno's built-in test framework with comprehensive unit and int
 
 ```bash
 # Run all tests
-pnpm exec nx run @gw-tools/gw-tool:test
+pnpm exec nx run gw-tool:test
 
 # Run all tests (alternative)
 nx run gw-tool:test

@@ -780,13 +780,14 @@ If not configured, defaults to "main" branch and "merge" strategy.
 
 ### install-shell
 
-Output shell integration code for the `gw cd` command and enable real-time streaming output. The shell code is always generated from the current binary, so updates happen automatically.
+Output shell integration code for the `gw cd` command, enable real-time streaming output, and register TAB completions. The shell code is always generated from the current binary, so updates happen automatically.
 
 Shell integration provides:
 
 - **Navigation support**: `gw cd <worktree>` navigates directly to worktrees
 - **Real-time streaming**: Command output streams as it's generated (no buffering)
 - **Auto-navigation**: Automatically navigate after `gw checkout` and `gw remove` operations
+- **TAB completions**: Complete subcommands, branch names, worktree names, and flags
 - **Multi-alias support**: Install for different command names (e.g., `gw-dev` for development)
 
 ```bash

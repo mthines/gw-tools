@@ -1,6 +1,6 @@
 {
   "name": "@gw-tools/autonomous-workflow-agent",
-  "version": "2.4.5",
+  "version": "2.4.12",
   "description": "Autonomous workflow agent for Claude Agent SDK - complete feature development from task to PR",
   "type": "module",
   "main": "./src/index.js",
