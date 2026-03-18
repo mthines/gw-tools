@@ -3,7 +3,7 @@
  * Provides utilities for testing git worktree operations
  */
 
-import { join, dirname } from '@std/path';
+import { dirname, join } from '@std/path';
 
 /**
  * Creates an isolated temporary git repository for testing

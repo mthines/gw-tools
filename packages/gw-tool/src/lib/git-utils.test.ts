@@ -5,7 +5,7 @@
 import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { getStagedFiles, getStagedFileContent, copyStagedFiles } from './git-utils.ts';
+import { copyStagedFiles, getStagedFileContent, getStagedFiles } from './git-utils.ts';
 
 // =============================================================================
 // getStagedFiles tests
