@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan, TaskItem, TaskSection } from '../parsers/markdown-parser';
+import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan, TaskItem } from '../parsers/markdown-parser';
 
 // -- Tree Item Types --
 
