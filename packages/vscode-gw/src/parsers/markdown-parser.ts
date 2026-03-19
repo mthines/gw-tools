@@ -21,14 +21,17 @@ export interface TaskDecision {
   phase: string;
 }
 
+export interface TaskSection {
+  heading: string;
+  items: TaskItem[];
+}
+
 export interface ParsedTask {
   frontmatter: TaskFrontmatter;
   phase?: string;
   phaseName?: string;
   lastUpdated?: string;
-  completed: TaskItem[];
-  current: TaskItem[];
-  upcoming: TaskItem[];
+  taskSections: TaskSection[];
   decisions: TaskDecision[];
   discoveries: string[];
   blockers: string[];
@@ -180,6 +183,102 @@ function parseTableRows(section: string, columnCount: number): string[][] {
   return rows;
 }
 
+/**
+ * Headings that are parsed separately (not as checkbox task sections).
+ * Matched case-insensitively.
+ */
+const NON_TASK_HEADINGS = new Set(
+  [
+    'status',
+    'decisions log',
+    'decisions',
+    'key findings',
+    'discoveries',
+    'notes',
+    'blockers',
+    'current blockers',
+    'objective',
+    'summary',
+    'test iterations',
+  ].map((h) => h.toLowerCase())
+);
+
+/**
+ * Known heading synonyms mapped to a sort priority.
+ * Lower number = higher in the tree. Matched case-insensitively.
+ * Unknown headings get priority Infinity (appear after known ones, in markdown order).
+ */
+const HEADING_PRIORITY: Record<string, number> = {
+  // "Current / In Progress" group — shown first
+  'current': 0,
+  'in progress': 0,
+  'active': 0,
+  'working on': 0,
+
+  // "Completed / Done" group — shown second
+  'completed': 1,
+  'completed items': 1,
+  'done': 1,
+  'finished': 1,
+
+  // "Upcoming / TODO" group — shown third
+  'upcoming': 2,
+  'todo': 2,
+  'to do': 2,
+  'planned': 2,
+  'next': 2,
+  'remaining': 2,
+  'backlog': 2,
+
+  // Checklists — shown after the big three
+  'checklist': 3,
+  'tasks': 3,
+  'task list': 3,
+  'open questions': 3,
+  'open questions (blocking)': 3,
+  'questions': 3,
+};
+
+function getHeadingPriority(heading: string): number {
+  return HEADING_PRIORITY[heading.toLowerCase()] ?? Infinity;
+}
+
+/**
+ * Extract all ## sections from the markdown body.
+ * Returns sections in document order with their heading text and content.
+ */
+function extractAllSections(body: string): Array<{ heading: string; content: string; index: number }> {
+  const sections: Array<{ heading: string; content: string; index: number }> = [];
+  const headingRegex = /^## (.+)$/gm;
+  const matches: Array<{ heading: string; start: number }> = [];
+
+  let m: RegExpExecArray | null;
+  while ((m = headingRegex.exec(body)) !== null) {
+    matches.push({ heading: m[1].trim(), start: m.index + m[0].length });
+  }
+
+  for (let i = 0; i < matches.length; i++) {
+    const contentStart = body.indexOf('\n', matches[i].start);
+    if (contentStart === -1) {
+      sections.push({ heading: matches[i].heading, content: '', index: i });
+      continue;
+    }
+
+    const contentEnd = i + 1 < matches.length ? body.lastIndexOf('\n', matches[i + 1].start) : body.length;
+    const content = body.slice(contentStart + 1, contentEnd).trim();
+    sections.push({ heading: matches[i].heading, content, index: i });
+  }
+
+  return sections;
+}
+
+/**
+ * Check if a section's content contains any markdown checkboxes.
+ */
+function hasCheckboxes(content: string): boolean {
+  return /^\s*[-*]\s+\[([ xX])\]/m.test(content);
+}
+
 export function parseTaskMd(content: string): ParsedTask {
   const { frontmatter, body } = parseFrontmatter(content);
 
@@ -202,7 +301,6 @@ export function parseTaskMd(content: string): ParsedTask {
     phase = phaseMatch[1];
     phaseName = phaseMatch[2];
   } else {
-    // Try alternate format: "Phase N: Name" (e.g., "Phase 6: Complete - PR Created!")
     const altPhaseMatch = statusSection.match(/Phase\s*(\d+):\s*(.+)/);
     if (altPhaseMatch) {
       phase = altPhaseMatch[1];
@@ -215,10 +313,7 @@ export function parseTaskMd(content: string): ParsedTask {
     lastUpdated = updatedMatch[1].trim();
   }
 
-  // Support alternate section names
-  const completedSection = extractSection(body, ['Completed', 'Completed Items']);
-  const currentSection = extractSection(body, ['Current', 'In Progress']);
-  const upcomingSection = extractSection(body, ['Upcoming', 'TODO', 'To Do']);
+  // Parse dedicated non-task sections
   const decisionsSection = extractSection(body, ['Decisions Log', 'Decisions', 'Key Findings']);
   const discoveriesSection = extractSection(body, ['Discoveries', 'Notes']);
   const blockersSection = extractSection(body, ['Blockers', 'Current Blockers']);
@@ -244,14 +339,40 @@ export function parseTaskMd(content: string): ParsedTask {
       ? []
       : blockerLines.filter((l) => l.trim().toLowerCase() !== 'none').map((l) => l.replace(/^[-*]\s+/, '').trim());
 
+  // Scan all ## sections for checkbox content
+  const allSections = extractAllSections(body);
+  const taskSections: TaskSection[] = [];
+
+  for (const section of allSections) {
+    // Skip non-task sections (parsed separately above)
+    if (NON_TASK_HEADINGS.has(section.heading.toLowerCase())) continue;
+
+    // Only include sections that contain checkboxes
+    if (!hasCheckboxes(section.content)) continue;
+
+    const items = parseCheckboxItems(section.content);
+    if (items.length > 0) {
+      taskSections.push({ heading: section.heading, items });
+    }
+  }
+
+  // Sort: known headings by priority, then unknown headings in markdown order
+  taskSections.sort((a, b) => {
+    const pa = getHeadingPriority(a.heading);
+    const pb = getHeadingPriority(b.heading);
+    if (pa !== pb) return pa - pb;
+    // Same priority (or both unknown) — preserve markdown order
+    const idxA = allSections.findIndex((s) => s.heading === a.heading);
+    const idxB = allSections.findIndex((s) => s.heading === b.heading);
+    return idxA - idxB;
+  });
+
   return {
     frontmatter: frontmatter as TaskFrontmatter,
     phase,
     phaseName,
     lastUpdated,
-    completed: parseCheckboxItems(completedSection),
-    current: parseCheckboxItems(currentSection),
-    upcoming: parseCheckboxItems(upcomingSection),
+    taskSections,
     decisions,
     discoveries,
     blockers,

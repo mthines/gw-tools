@@ -5,7 +5,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
-import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan, TaskItem } from '../parsers/markdown-parser';
+import { parseTaskMd, parsePlanMd, ParsedTask, ParsedPlan, TaskItem, TaskSection } from '../parsers/markdown-parser';
 
 // -- Tree Item Types --
 
@@ -126,26 +126,40 @@ export class TaskCheckboxItem extends vscode.TreeItem {
 }
 
 export class TasksSummaryItem extends vscode.TreeItem {
+  public readonly sectionGroups: TaskGroupItem[];
+
   constructor(
-    public readonly currentItems: TaskCheckboxItem[],
-    public readonly completedItems: TaskCheckboxItem[],
-    public readonly upcomingItems: TaskCheckboxItem[],
+    public readonly sections: Array<{ heading: string; items: TaskCheckboxItem[] }>,
     public readonly blockerItems: BlockerItem[],
     public readonly taskFilePath: string
   ) {
     super('Tasks', vscode.TreeItemCollapsibleState.Expanded);
     this.iconPath = new vscode.ThemeIcon('tasklist');
 
-    // Bubble up current task status
-    const inProgressTask = currentItems.find((t) => t.inProgress);
+    // Build section groups with smart expand/collapse
+    this.sectionGroups = sections.map((s) => {
+      const allCompleted = s.items.length > 0 && s.items.every((i) => i.completed);
+      return new TaskGroupItem(
+        s.heading,
+        allCompleted ? 'pass' : 'play',
+        s.items,
+        allCompleted ? vscode.TreeItemCollapsibleState.Collapsed : vscode.TreeItemCollapsibleState.Expanded,
+        taskFilePath
+      );
+    });
+
+    // Build summary description
+    const allItems = sections.flatMap((s) => s.items);
+    const inProgressTask = allItems.find((t) => t.inProgress);
     if (inProgressTask) {
       this.description = inProgressTask.label as string;
-    } else if (currentItems.length > 0) {
-      this.description = `${currentItems.length} current`;
-    } else if (upcomingItems.length > 0) {
-      this.description = `${upcomingItems.length} upcoming`;
     } else {
-      this.description = `${completedItems.length} completed`;
+      const completed = countItems(allItems, true);
+      const total = countItems(allItems, false);
+      this.description = `${completed} completed`;
+      if (total > completed) {
+        this.description = `${completed}/${total} completed`;
+      }
     }
 
     this.command = {
@@ -154,6 +168,16 @@ export class TasksSummaryItem extends vscode.TreeItem {
       arguments: [taskFilePath],
     };
   }
+}
+
+/** Recursively count items (and their children). If onlyCompleted, count only checked items. */
+function countItems(items: TaskCheckboxItem[], onlyCompleted: boolean): number {
+  let count = 0;
+  for (const item of items) {
+    if (!onlyCompleted || item.completed) count++;
+    count += countItems(item.childItems, onlyCompleted);
+  }
+  return count;
 }
 
 export class PlanSummaryItem extends vscode.TreeItem {
@@ -381,7 +405,7 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
       }
 
       // Check if any task is in progress
-      const hasInProgress = task?.current.some((t) => t.inProgress) ?? false;
+      const hasInProgress = task?.taskSections.some((s) => s.items.some((t) => t.inProgress)) ?? false;
 
       items.push({
         item: new AgentBranchItem(relPath, branchDir, task, plan, hasWalkthrough),
@@ -436,14 +460,17 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     const taskFilePath = path.join(branch.gwDir, 'task.md');
 
     if (task) {
-      // Build task items for the summary (preserving hierarchy)
-      const currentItems = task.current.map((t) => this.taskItemToCheckbox(t, taskFilePath));
-      const completedItems = task.completed.map((t) => this.taskItemToCheckbox(t, taskFilePath));
-      const upcomingItems = task.upcoming.map((t) => this.taskItemToCheckbox(t, taskFilePath));
+      // Build checkbox items for each task section
+      const sections = task.taskSections.map((s) => ({
+        heading: s.heading,
+        items: s.items.map((t) => this.taskItemToCheckbox(t, taskFilePath)),
+      }));
       const blockerItems = task.blockers.map((b) => new BlockerItem(b, taskFilePath));
 
-      // Add Tasks summary (groups Current/Completed/Upcoming inside)
-      children.push(new TasksSummaryItem(currentItems, completedItems, upcomingItems, blockerItems, taskFilePath));
+      // Add Tasks summary (groups all checkbox sections inside)
+      if (sections.length > 0) {
+        children.push(new TasksSummaryItem(sections, blockerItems, taskFilePath));
+      }
 
       // Blockers shown at branch level for visibility
       if (task.blockers.length > 0) {
@@ -485,48 +512,7 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   }
 
   private getTasksSummaryChildren(summary: TasksSummaryItem): AgentTaskTreeItem[] {
-    const children: AgentTaskTreeItem[] = [];
-
-    // Current (expanded by default)
-    if (summary.currentItems.length > 0) {
-      children.push(
-        new TaskGroupItem(
-          'Current',
-          'play',
-          summary.currentItems,
-          vscode.TreeItemCollapsibleState.Expanded,
-          summary.taskFilePath
-        )
-      );
-    }
-
-    // Completed
-    if (summary.completedItems.length > 0) {
-      children.push(
-        new TaskGroupItem(
-          'Completed',
-          'pass',
-          summary.completedItems,
-          vscode.TreeItemCollapsibleState.Collapsed,
-          summary.taskFilePath
-        )
-      );
-    }
-
-    // Upcoming
-    if (summary.upcomingItems.length > 0) {
-      children.push(
-        new TaskGroupItem(
-          'Upcoming',
-          'circle-large-outline',
-          summary.upcomingItems,
-          vscode.TreeItemCollapsibleState.Collapsed,
-          summary.taskFilePath
-        )
-      );
-    }
-
-    return children;
+    return summary.sectionGroups;
   }
 
   private getPlanChildren(plan: ParsedPlan): AgentTaskTreeItem[] {
