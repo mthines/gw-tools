@@ -210,33 +210,33 @@ const NON_TASK_HEADINGS = new Set(
  */
 const HEADING_PRIORITY: Record<string, number> = {
   // "Current / In Progress" group — shown first
-  'current': 0,
+  current: 0,
   'in progress': 0,
-  'active': 0,
+  active: 0,
   'working on': 0,
 
   // "Completed / Done" group — shown second
-  'completed': 1,
+  completed: 1,
   'completed items': 1,
-  'done': 1,
-  'finished': 1,
+  done: 1,
+  finished: 1,
 
   // "Upcoming / TODO" group — shown third
-  'upcoming': 2,
-  'todo': 2,
+  upcoming: 2,
+  todo: 2,
   'to do': 2,
-  'planned': 2,
-  'next': 2,
-  'remaining': 2,
-  'backlog': 2,
+  planned: 2,
+  next: 2,
+  remaining: 2,
+  backlog: 2,
 
   // Checklists — shown after the big three
-  'checklist': 3,
-  'tasks': 3,
+  checklist: 3,
+  tasks: 3,
   'task list': 3,
   'open questions': 3,
   'open questions (blocking)': 3,
-  'questions': 3,
+  questions: 3,
 };
 
 function getHeadingPriority(heading: string): number {

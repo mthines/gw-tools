@@ -13,6 +13,7 @@ import * as fs from 'fs';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-provider';
 import { ArtifactWatcher } from './watchers/artifact-watcher';
+import { WorktreeWatcher } from './watchers/worktree-watcher';
 import {
   removeWorktree,
   createWorktree,
@@ -51,6 +52,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const worktreeProvider = new WorktreeProvider();
   const agentTasksProvider = new AgentTasksProvider();
   const artifactWatcher = new ArtifactWatcher();
+  const worktreeWatcher = new WorktreeWatcher();
 
   // Register tree views
   const worktreeView = vscode.window.createTreeView('gwWorktreeExplorer', {
@@ -66,6 +68,11 @@ export function activate(context: vscode.ExtensionContext): void {
   // Wire up artifact watcher to refresh agent tasks
   artifactWatcher.onArtifactChanged(() => {
     agentTasksProvider.refresh();
+  });
+
+  // Wire up worktree watcher to refresh worktrees view
+  worktreeWatcher.onWorktreeChanged(() => {
+    worktreeProvider.refresh();
   });
 
   // Register commands
@@ -881,7 +888,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Push all disposables
-  context.subscriptions.push(worktreeView, agentTasksView, artifactWatcher, workspaceWatcher, ...commands);
+  context.subscriptions.push(worktreeView, agentTasksView, artifactWatcher, worktreeWatcher, workspaceWatcher, ...commands);
 }
 
 export function deactivate(): void {
