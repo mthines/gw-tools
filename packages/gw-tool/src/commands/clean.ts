@@ -8,6 +8,7 @@ import { loadConfig } from '../lib/config.ts';
 import {
   deleteBranch,
   findOrphanBranches,
+  getBranchLastCommitDate,
   getWorktreeAgeDays,
   hasUncommittedChanges,
   hasUnpushedCommits,
@@ -181,6 +182,16 @@ async function executeInteractiveClean(): Promise<void> {
       continue;
     }
 
+    if (isGwRoot) {
+      worktreeItems.push({
+        label: wt.branch || wt.path,
+        value: `worktree:${wt.path}`,
+        disabled: true,
+        disabledReason: 'gw_root - cannot remove',
+      });
+      continue;
+    }
+
     const ageDays = await getWorktreeAgeDays(wt.path);
     const hasUncommitted = await hasUncommittedChanges(wt.path);
     const hasUnpushed = await hasUnpushedCommits(wt.path);
@@ -194,7 +205,6 @@ async function executeInteractiveClean(): Promise<void> {
     worktreeItems.push({
       label: wt.branch || wt.path,
       value: `worktree:${wt.path}`,
-      protected: isGwRoot,
       hint,
     });
   }
@@ -218,21 +228,42 @@ async function executeInteractiveClean(): Promise<void> {
       continue;
     }
 
+    if (isGwRoot) {
+      branchItems.push({
+        label: branch,
+        value: `branch:${branch}`,
+        disabled: true,
+        disabledReason: 'gw_root - cannot remove',
+      });
+      continue;
+    }
+
+    const date = await getBranchLastCommitDate(branch);
+    const hint = date ? `(${date})` : '';
+
     branchItems.push({
       label: branch,
       value: `branch:${branch}`,
-      protected: isGwRoot,
+      hint,
     });
   }
 
   // ── Build Orphan Branches section ─────────────────────
   const orphans = await findOrphanBranches(worktrees, defaultBranch);
   const orphanNames = new Set(orphans.map((o) => o.name));
-  const orphanItems: SelectItem[] = orphans.map((o) => ({
-    label: o.name,
-    value: `orphan:${o.name}`,
-    hint: o.hasUnpushed ? '(has unpushed commits)' : '(remote gone)',
-  }));
+  const orphanItems: SelectItem[] = await Promise.all(
+    orphans.map(async (o) => {
+      const date = await getBranchLastCommitDate(o.name);
+      const parts: string[] = [];
+      if (date) parts.push(date);
+      parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
+      return {
+        label: o.name,
+        value: `orphan:${o.name}`,
+        hint: `(${parts.join(', ')})`,
+      };
+    })
+  );
 
   // Filter out branches that already appear in the orphans section
   const filteredBranchItems = branchItems.filter((item) => !orphanNames.has(item.label));
