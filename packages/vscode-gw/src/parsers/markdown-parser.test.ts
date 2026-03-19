@@ -93,12 +93,19 @@ task: Test
 - [ ] Future task
 `;
       const result = parseTaskMd(content);
-      expect(result.completed).toHaveLength(1);
-      expect(result.completed[0]).toEqual({ label: 'Done task', completed: true, inProgress: false, children: [] });
-      expect(result.current).toHaveLength(1);
-      expect(result.current[0]).toEqual({ label: 'Working task', completed: false, inProgress: true, children: [] });
-      expect(result.upcoming).toHaveLength(1);
-      expect(result.upcoming[0]).toEqual({ label: 'Future task', completed: false, inProgress: false, children: [] });
+      // Sections sorted: In Progress (priority 0), Completed Items (priority 1), TODO (priority 2)
+      expect(result.taskSections).toHaveLength(3);
+
+      const completed = result.taskSections.find((s) => s.heading === 'Completed Items');
+      const current = result.taskSections.find((s) => s.heading === 'In Progress');
+      const upcoming = result.taskSections.find((s) => s.heading === 'TODO');
+
+      expect(completed?.items).toHaveLength(1);
+      expect(completed?.items[0]).toEqual({ label: 'Done task', completed: true, inProgress: false, children: [] });
+      expect(current?.items).toHaveLength(1);
+      expect(current?.items[0]).toEqual({ label: 'Working task', completed: false, inProgress: true, children: [] });
+      expect(upcoming?.items).toHaveLength(1);
+      expect(upcoming?.items[0]).toEqual({ label: 'Future task', completed: false, inProgress: false, children: [] });
     });
 
     it('handles arrow-style in-progress marker', () => {
@@ -112,7 +119,8 @@ task: Test
 - [ ] Next
 `;
       const result = parseTaskMd(content);
-      expect(result.current[0].inProgress).toBe(true);
+      const current = result.taskSections.find((s) => s.heading === 'In Progress');
+      expect(current?.items[0].inProgress).toBe(true);
     });
 
     it('handles nested checkbox items', () => {
@@ -128,13 +136,14 @@ task: Test
 - [ ] Next
 `;
       const result = parseTaskMd(content);
-      expect(result.current).toHaveLength(1);
-      expect(result.current[0].label).toBe('Main task');
-      expect(result.current[0].children).toHaveLength(2);
-      expect(result.current[0].children[0].label).toBe('Sub task 1');
-      expect(result.current[0].children[0].completed).toBe(false);
-      expect(result.current[0].children[1].label).toBe('Sub task 2');
-      expect(result.current[0].children[1].completed).toBe(true);
+      const current = result.taskSections.find((s) => s.heading === 'In Progress');
+      expect(current?.items).toHaveLength(1);
+      expect(current?.items[0].label).toBe('Main task');
+      expect(current?.items[0].children).toHaveLength(2);
+      expect(current?.items[0].children[0].label).toBe('Sub task 1');
+      expect(current?.items[0].children[0].completed).toBe(false);
+      expect(current?.items[0].children[1].label).toBe('Sub task 2');
+      expect(current?.items[0].children[1].completed).toBe(true);
     });
 
     it('parses multiple checkbox items in each section', () => {
@@ -183,20 +192,90 @@ task: Add --from-staged flag to gw checkout
 `;
       const result = parseTaskMd(content);
 
+      // Should have 3 task sections: Current (0), Completed (1), Upcoming (2)
+      expect(result.taskSections).toHaveLength(3);
+      expect(result.taskSections[0].heading).toBe('Current');
+      expect(result.taskSections[1].heading).toBe('Completed');
+      expect(result.taskSections[2].heading).toBe('Upcoming');
+
       // Should have all 13 completed items
-      expect(result.completed).toHaveLength(13);
-      expect(result.completed[0].label).toBe('Phase 0: Validation - User confirmed requirements');
-      expect(result.completed[0].completed).toBe(true);
-      expect(result.completed[12].label).toBe('Run linters - both packages pass');
+      const completed = result.taskSections[1];
+      expect(completed.items).toHaveLength(13);
+      expect(completed.items[0].label).toBe('Phase 0: Validation - User confirmed requirements');
+      expect(completed.items[0].completed).toBe(true);
+      expect(completed.items[12].label).toBe('Run linters - both packages pass');
 
       // Should have 1 current item (in progress)
-      expect(result.current).toHaveLength(1);
-      expect(result.current[0].label).toBe('Create draft PR');
-      expect(result.current[0].inProgress).toBe(true);
+      const current = result.taskSections[0];
+      expect(current.items).toHaveLength(1);
+      expect(current.items[0].label).toBe('Create draft PR');
+      expect(current.items[0].inProgress).toBe(true);
 
       // Should have 1 upcoming item
-      expect(result.upcoming).toHaveLength(1);
-      expect(result.upcoming[0].label).toBe('Phase 7: Cleanup (after merge)');
+      const upcoming = result.taskSections[2];
+      expect(upcoming.items).toHaveLength(1);
+      expect(upcoming.items[0].label).toBe('Phase 7: Cleanup (after merge)');
+    });
+
+    it('detects checkbox sections with unknown headings', () => {
+      const content = `---
+task: Test
+---
+## Checklist
+- [ ] First item
+- [x] Second item
+
+## Open Questions (BLOCKING)
+- [ ] Path mapping question
+
+## Status
+Phase 3: Implementation
+`;
+      const result = parseTaskMd(content);
+      // Both checkbox sections detected; Status is a non-task section
+      expect(result.taskSections).toHaveLength(2);
+      expect(result.taskSections[0].heading).toBe('Checklist');
+      expect(result.taskSections[0].items).toHaveLength(2);
+      expect(result.taskSections[1].heading).toBe('Open Questions (BLOCKING)');
+      expect(result.taskSections[1].items).toHaveLength(1);
+    });
+
+    it('sorts known headings before unknown headings', () => {
+      const content = `---
+task: Test
+---
+## My Custom Section
+- [ ] Custom item
+
+## Completed
+- [x] Done item
+
+## Current
+- [ ] Active item
+`;
+      const result = parseTaskMd(content);
+      // Current (0), Completed (1), then unknown in markdown order
+      expect(result.taskSections[0].heading).toBe('Current');
+      expect(result.taskSections[1].heading).toBe('Completed');
+      expect(result.taskSections[2].heading).toBe('My Custom Section');
+    });
+
+    it('ignores sections without checkboxes', () => {
+      const content = `---
+task: Test
+---
+## Current
+- [ ] Active task
+
+## Some Notes
+Just plain text, no checkboxes here.
+
+## Another Section
+- Regular bullet point
+`;
+      const result = parseTaskMd(content);
+      expect(result.taskSections).toHaveLength(1);
+      expect(result.taskSections[0].heading).toBe('Current');
     });
   });
 
@@ -243,9 +322,7 @@ task: Test
     it('handles empty content', () => {
       const result = parseTaskMd('');
       expect(result.frontmatter).toEqual({});
-      expect(result.completed).toEqual([]);
-      expect(result.current).toEqual([]);
-      expect(result.upcoming).toEqual([]);
+      expect(result.taskSections).toEqual([]);
       expect(result.blockers).toEqual([]);
     });
 

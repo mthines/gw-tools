@@ -16,7 +16,7 @@ Manage Git worktrees and visualize autonomous agent workflows directly from the 
 
 - **Visualize task progress** from `.gw/{branch}/task.md` files in real-time
 - **Track phases** - see which workflow phase each agent branch is in
-- **View task breakdown** - completed, current (with spinner), and upcoming items
+- **View task breakdown** - any section with checkboxes is shown, with smart sorting and expand/collapse
 - **Monitor blockers** and decisions at a glance
 - **Plan overview** - see the implementation plan with files to create/modify
 - **Auto-opens walkthrough.md** when an agent completes work (Phase 6)
