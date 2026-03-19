@@ -12,6 +12,24 @@ export function stripAnsi(str: string): string {
   return str.replace(/\x1B\[[0-9;]*[a-zA-Z]/g, '');
 }
 
+/**
+ * Strip the remote prefix (e.g. `origin/`, `upstream/`) from a remote branch name.
+ * If the branch name does not contain a `/`, it is returned unchanged.
+ * Only strips the first path segment, preserving the rest of the branch name.
+ *
+ * Examples:
+ *   `origin/test/foo`   → `test/foo`
+ *   `upstream/main`     → `main`
+ *   `my-local-branch`   → `my-local-branch`
+ */
+export function stripRemotePrefix(branchName: string): string {
+  const slashIndex = branchName.indexOf('/');
+  if (slashIndex === -1) {
+    return branchName;
+  }
+  return branchName.substring(slashIndex + 1);
+}
+
 export interface WorktreeInfo {
   path: string;
   branch: string;
