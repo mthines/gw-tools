@@ -6,12 +6,7 @@ import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
-import {
-  copyStagedFiles,
-  getBranchLastCommitDate,
-  getStagedFileContent,
-  getStagedFiles,
-} from './git-utils.ts';
+import { copyStagedFiles, getBranchLastCommitDate, getStagedFileContent, getStagedFiles } from './git-utils.ts';
 
 // =============================================================================
 // getBranchLastCommitDate tests
