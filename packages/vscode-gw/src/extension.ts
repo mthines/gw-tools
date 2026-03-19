@@ -888,7 +888,14 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Push all disposables
-  context.subscriptions.push(worktreeView, agentTasksView, artifactWatcher, worktreeWatcher, workspaceWatcher, ...commands);
+  context.subscriptions.push(
+    worktreeView,
+    agentTasksView,
+    artifactWatcher,
+    worktreeWatcher,
+    workspaceWatcher,
+    ...commands
+  );
 }
 
 export function deactivate(): void {

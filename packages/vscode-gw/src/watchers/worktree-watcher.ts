@@ -8,7 +8,6 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import * as fs from 'fs';
 
-
 export class WorktreeWatcher implements vscode.Disposable {
   private watchers: vscode.FileSystemWatcher[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
@@ -50,9 +49,7 @@ export class WorktreeWatcher implements vscode.Disposable {
     this.watchers.push(refsWatcher);
 
     // Watch HEAD for current branch changes
-    const headWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(gitCommonUri, 'HEAD')
-    );
+    const headWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(gitCommonUri, 'HEAD'));
     headWatcher.onDidChange(() => this.emitDebounced());
     this.watchers.push(headWatcher);
 
