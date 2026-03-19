@@ -116,6 +116,8 @@ Like Antigravity, the task list is **dynamic**:
 
 ## Sections Explained
 
+> **Note:** The VS Code extension detects task sections generically — any `##` section containing checkboxes (`[ ]` or `[x]`) will appear in the Agent Tasks tree. The headings below are recommended conventions, but custom headings (e.g., `## Checklist`, `## Open Questions`) work too. Known headings like Completed/Current/Upcoming are sorted to the top; unknown headings appear after them in document order.
+
 ### Status
 
 Current phase and last update time. Update on every change.
