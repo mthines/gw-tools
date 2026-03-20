@@ -24,16 +24,7 @@ export class AgentBranchItem extends vscode.TreeItem {
     this.tooltip = this.getTooltip();
     this.iconPath = this.getIcon();
 
-    // Click to open task.md (or walkthrough.md if completed)
-    const targetFile = hasWalkthrough ? 'walkthrough.md' : 'task.md';
-    const filePath = path.join(gwDir, targetFile);
-    if (fs.existsSync(filePath)) {
-      this.command = {
-        command: 'gw.openMarkdown',
-        title: `Open ${targetFile}`,
-        arguments: [filePath],
-      };
-    }
+    // No command — clicking expands/collapses. Child items open files.
   }
 
   private getDescription(): string {
