@@ -45,6 +45,27 @@ async function openMarkdownFile(filePath: string): Promise<void> {
   }
 }
 
+/**
+ * Open a newly created worktree in a new window, either automatically or via notification button
+ */
+async function openNewWorktree(worktreePath: string | undefined, message: string): Promise<void> {
+  if (!worktreePath) return;
+
+  const autoOpen = vscode.workspace.getConfiguration('gw').get<boolean>('autoOpenWorktree', true);
+
+  if (autoOpen) {
+    const uri = vscode.Uri.file(worktreePath);
+    vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+    vscode.window.showInformationMessage(message);
+  } else {
+    const action = await vscode.window.showInformationMessage(message, 'Open in New Window');
+    if (action === 'Open in New Window') {
+      const uri = vscode.Uri.file(worktreePath);
+      vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+    }
+  }
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspacePath) return;
@@ -222,14 +243,7 @@ export function activate(context: vscode.ExtensionContext): void {
           worktreeProvider.refresh();
 
           const newWorktreePath = await getWorktreePath(workspacePath, branchName);
-          const action = await vscode.window.showInformationMessage(
-            `Created worktree: ${branchName}`,
-            'Open in New Window'
-          );
-          if (action === 'Open in New Window' && newWorktreePath) {
-            const uri = vscode.Uri.file(newWorktreePath);
-            vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
-          }
+          await openNewWorktree(newWorktreePath, `Created worktree: ${branchName}`);
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err);
           vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
@@ -483,16 +497,9 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         worktreeProvider.refresh();
 
-        // Get the worktree path and show notification with button
+        // Get the worktree path and open or show notification
         const worktreePath = await getWorktreePath(workspacePath, branchName);
-        const action = await vscode.window.showInformationMessage(
-          `Created worktree: ${branchName}`,
-          'Open in New Window'
-        );
-        if (action === 'Open in New Window' && worktreePath) {
-          const uri = vscode.Uri.file(worktreePath);
-          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
-        }
+        await openNewWorktree(worktreePath, `Created worktree: ${branchName}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
@@ -534,16 +541,9 @@ export function activate(context: vscode.ExtensionContext): void {
         );
         worktreeProvider.refresh();
 
-        // Get the worktree path and show notification with button
+        // Get the worktree path and open or show notification
         const worktreePath = await getWorktreePath(workspacePath, branchName);
-        const action = await vscode.window.showInformationMessage(
-          `Created worktree with staged files: ${branchName}`,
-          'Open in New Window'
-        );
-        if (action === 'Open in New Window' && worktreePath) {
-          const uri = vscode.Uri.file(worktreePath);
-          vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
-        }
+        await openNewWorktree(worktreePath, `Created worktree with staged files: ${branchName}`);
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to create worktree from staged: ${stripAnsi(msg)}`);
