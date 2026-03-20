@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseWorktreeListOutput } from './git-worktree';
+import { parseWorktreeListOutput, stripRemotePrefix } from './git-worktree';
 
 describe('parseWorktreeListOutput', () => {
   describe('basic parsing', () => {
@@ -243,5 +243,36 @@ prunable
       expect(result).toHaveLength(1);
       expect(result[0].branch).toBe('old-branch');
     });
+  });
+});
+
+describe('stripRemotePrefix', () => {
+  it('strips origin/ prefix from a remote branch name', () => {
+    expect(stripRemotePrefix('origin/test/foo')).toBe('test/foo');
+  });
+
+  it('strips origin/ prefix from a simple remote branch name', () => {
+    expect(stripRemotePrefix('origin/main')).toBe('main');
+  });
+
+  it('strips upstream/ prefix from a remote branch name', () => {
+    expect(stripRemotePrefix('upstream/feature/bar')).toBe('feature/bar');
+  });
+
+  it('strips custom remote prefix from a remote branch name', () => {
+    expect(stripRemotePrefix('my-remote/fix/issue-123')).toBe('fix/issue-123');
+  });
+
+  it('returns local branch name unchanged when no slash is present', () => {
+    expect(stripRemotePrefix('main')).toBe('main');
+  });
+
+  it('preserves slashes in the branch name after stripping the remote prefix', () => {
+    expect(stripRemotePrefix('origin/feat/deep/nested')).toBe('feat/deep/nested');
+  });
+
+  it('handles a branch name that is only a remote prefix with no branch part', () => {
+    // Edge case: "origin/" — strips to empty string
+    expect(stripRemotePrefix('origin/')).toBe('');
   });
 });

@@ -25,6 +25,7 @@ import {
   getDefaultBranch,
   updateWorktree,
   stripAnsi,
+  stripRemotePrefix,
   hasUncommittedChanges,
   hasStagedFiles,
   getWorktreePath,
@@ -97,6 +98,7 @@ export function activate(context: vscode.ExtensionContext): void {
         worktreePath?: string;
         branch?: string;
         isCreateNew?: boolean;
+        isRemote?: boolean;
       }
 
       const openInSameWindowButton: vscode.QuickInputButton = {
@@ -140,6 +142,7 @@ export function activate(context: vscode.ExtensionContext): void {
             ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
             : undefined,
         branch: b.name,
+        isRemote: b.isRemote,
       }));
       const branchNames = new Set(sortedBranches.map((b) => b.name));
 
@@ -200,8 +203,10 @@ export function activate(context: vscode.ExtensionContext): void {
         }
 
         // Branch or new branch — create worktree then open
-        const branchName = selected.branch;
-        if (!branchName) return;
+        const rawBranchName = selected.branch;
+        if (!rawBranchName) return;
+        // Strip remote prefix (e.g. `origin/`) when checking out a remote-only branch
+        const branchName = selected.isRemote ? stripRemotePrefix(rawBranchName) : rawBranchName;
 
         try {
           await vscode.window.withProgress(
@@ -392,6 +397,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       interface BranchPickItem extends vscode.QuickPickItem {
         branch: string;
+        isRemote?: boolean;
       }
 
       const branchPicks: BranchPickItem[] = sortedBranches.map((b) => ({
@@ -402,6 +408,7 @@ export function activate(context: vscode.ExtensionContext): void {
             ? `${b.authorName} • ${b.commitHash} • ${b.commitMessage}`
             : undefined,
         branch: b.name,
+        isRemote: b.isRemote,
       }));
 
       const branchNames = new Set(sortedBranches.map((b) => b.name));
@@ -439,7 +446,9 @@ export function activate(context: vscode.ExtensionContext): void {
         qp.onDidAccept(() => {
           const selected = qp.selectedItems[0];
           if (selected) {
-            resolve(selected.branch);
+            // Strip remote prefix (e.g. `origin/`) when checking out a remote-only branch
+            const resolvedBranch = selected.isRemote ? stripRemotePrefix(selected.branch) : selected.branch;
+            resolve(resolvedBranch);
           } else {
             const typed = qp.value.trim();
             if (typed.length > 0 && !typed.includes(' ')) {
