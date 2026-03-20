@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
-  "version": "0.37.0",
+  "version": "0.38.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -319,6 +319,11 @@
           "type": "boolean",
           "default": false,
           "description": "Open task.md, plan.md, and walkthrough.md files in Markdown preview mode instead of text editor"
+        },
+        "gw.autoOpenWorktree": {
+          "type": "boolean",
+          "default": true,
+          "description": "Automatically open a new worktree in a new window after creation. When disabled, a notification with an 'Open in New Window' button is shown instead."
         },
         "gw.agentTasksSortBy": {
           "type": "string",
