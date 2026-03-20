@@ -1211,6 +1211,7 @@ gw clean [options]
 
 #### Options
 
+- `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
@@ -1221,6 +1222,9 @@ gw clean [options]
 #### Examples
 
 ```bash
+# Interactive mode: pick exactly what to remove
+gw clean --interactive
+
 # Preview all safe worktrees (default behavior)
 gw clean --dry-run
 
@@ -1259,6 +1263,7 @@ The clean command:
 
 | Command                              | Age Check          | Safety Checks        | Use Case                            |
 | ------------------------------------ | ------------------ | -------------------- | ----------------------------------- |
+| `gw clean --interactive`             | N/A (user picks)   | No (force delete)    | Manually pick items to remove       |
 | `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
 | `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |

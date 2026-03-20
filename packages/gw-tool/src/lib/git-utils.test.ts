@@ -5,7 +5,49 @@
 import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { copyStagedFiles, getStagedFileContent, getStagedFiles } from './git-utils.ts';
+import { TempCwd } from '../test-utils/temp-env.ts';
+import { copyStagedFiles, getBranchLastCommitDate, getStagedFileContent, getStagedFiles } from './git-utils.ts';
+
+// =============================================================================
+// getBranchLastCommitDate tests
+// =============================================================================
+
+Deno.test('getBranchLastCommitDate - returns YYYY-MM-DD for a branch with commits', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const cwd = new TempCwd(repo.path);
+    try {
+      const date = await getBranchLastCommitDate('main');
+
+      // Should be a non-empty string
+      assertEquals(date.length > 0, true, 'Should return a non-empty date string');
+      // Should match YYYY-MM-DD pattern
+      assertEquals(/^\d{4}-\d{2}-\d{2}$/.test(date), true, `Expected YYYY-MM-DD format, got: ${date}`);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('getBranchLastCommitDate - returns empty string for non-existent branch', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const cwd = new TempCwd(repo.path);
+    try {
+      const date = await getBranchLastCommitDate('nonexistent-branch');
+
+      assertEquals(date, '', 'Should return empty string for nonexistent branch');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
 
 // =============================================================================
 // getStagedFiles tests

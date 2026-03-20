@@ -466,6 +466,29 @@ export async function mergeBranch(
 }
 
 /**
+ * Get the date of the last commit on a branch (YYYY-MM-DD format)
+ * @param branchName Branch name to query
+ * @returns Date string like "2024-03-15", or empty string on error
+ */
+export async function getBranchLastCommitDate(branchName: string): Promise<string> {
+  try {
+    const cmd = new Deno.Command('git', {
+      args: ['log', '-1', '--format=%ci', branchName],
+      stdout: 'piped',
+      stderr: 'null',
+    });
+    const { code, stdout } = await cmd.output();
+    if (code !== 0) return '';
+    const raw = new TextDecoder().decode(stdout).trim();
+    if (!raw) return '';
+    // raw is like "2024-03-15 10:22:01 +0000"
+    return raw.split(' ')[0];
+  } catch {
+    return '';
+  }
+}
+
+/**
  * List all local branches
  * @returns Array of branch names (without refs/heads/ prefix)
  */
