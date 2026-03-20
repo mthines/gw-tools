@@ -29,6 +29,9 @@ export class WorktreeWatcher implements vscode.Disposable {
     const gitCommonUri = vscode.Uri.file(gitCommonDir);
 
     // Watch worktrees/ directory for worktree add/remove
+    // Only listen for create/delete — NOT change. Internal worktree file changes
+    // (HEAD, index, COMMIT_EDITMSG, etc.) happen constantly during agent work
+    // but don't affect the worktree list (branch names, paths).
     const worktreesDir = path.join(gitCommonDir, 'worktrees');
     if (fs.existsSync(worktreesDir)) {
       const wtWatcher = vscode.workspace.createFileSystemWatcher(
@@ -36,7 +39,6 @@ export class WorktreeWatcher implements vscode.Disposable {
       );
       wtWatcher.onDidCreate(() => this.emitDebounced());
       wtWatcher.onDidDelete(() => this.emitDebounced());
-      wtWatcher.onDidChange(() => this.emitDebounced());
       this.watchers.push(wtWatcher);
     }
 
