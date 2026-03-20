@@ -25,7 +25,7 @@ When a user declines an update, record the skipped version in `.gw/.skipped-skil
 }
 ```
 
-This file lives in `.gw/` (already gitignored) and persists across conversations. The user is only prompted again when a *newer* version than their previously skipped version becomes available.
+This file lives in `.gw/` (already gitignored) and persists across conversations. The user is only prompted again when a _newer_ version than their previously skipped version becomes available.
 
 ## Procedure
 
@@ -35,7 +35,7 @@ Extract the `version` field from the installed SKILL.md metadata block:
 
 ```yaml
 metadata:
-  version: 'X.Y.Z'  # ← this value
+  version: 'X.Y.Z' # ← this value
 ```
 
 ### Step 2: Fetch Latest Version
@@ -50,42 +50,46 @@ Extract the `version` field from the fetched content's metadata block.
 
 ### Step 3: Compare Versions
 
-| Scenario                     | Action                                            |
-| ---------------------------- | ------------------------------------------------- |
-| Versions match               | Proceed silently                                  |
-| Fetch fails (network error)  | Proceed silently — do not block on network issues |
-| Local version is older       | Check skip file, then **maybe prompt** (see below)|
-| Local version is newer (dev) | Proceed silently — likely a development build     |
+| Scenario                     | Action                                             |
+| ---------------------------- | -------------------------------------------------- |
+| Versions match               | Proceed silently                                   |
+| Fetch fails (network error)  | Proceed silently — do not block on network issues  |
+| Local version is older       | Check skip file, then **maybe prompt** (see below) |
+| Local version is newer (dev) | Proceed silently — likely a development build      |
 
 ### Step 4: Check Skip File
 
 If local version is older than latest, read `.gw/.skipped-skill-versions.json`:
 
-| Skip File State                                        | Action                          |
-| ------------------------------------------------------ | ------------------------------- |
-| File missing or unreadable                             | Prompt user                     |
-| `autonomous-workflow` key missing                      | Prompt user                     |
-| Skipped version **equals** latest version              | **Proceed silently** — already declined this version |
-| Skipped version is **older than** latest version       | Prompt user — a newer version is available           |
+| Skip File State                                  | Action                                               |
+| ------------------------------------------------ | ---------------------------------------------------- |
+| File missing or unreadable                       | Prompt user                                          |
+| `autonomous-workflow` key missing                | Prompt user                                          |
+| Skipped version **equals** latest version        | **Proceed silently** — already declined this version |
+| Skipped version is **older than** latest version | Prompt user — a newer version is available           |
 
 ### Step 5: Prompt User (if needed)
 
 When prompting, be clear and concise:
 
-```markdown
+````markdown
 **Skill Update Available**
 
 Your `autonomous-workflow` skill is on version **{local_version}**, but **{latest_version}** is available.
 
 To update, run:
+
 ```bash
 npx skills add https://github.com/mthines/gw-tools --skill @gw-autonomous-workflow
 ```
+````
 
 Would you like to:
+
 1. **Update now** — I'll wait while you update, then we continue
 2. **Skip** — Continue with the current version (won't ask again for this version)
-```
+
+````
 
 ### Step 6: Handle User Response
 
@@ -102,7 +106,7 @@ Would you like to:
 read existing .gw/.skipped-skill-versions.json (or start with {})
 set "autonomous-workflow" = "{latest_version}"
 write back to .gw/.skipped-skill-versions.json
-```
+````
 
 ## Version Comparison Logic
 
@@ -114,12 +118,12 @@ Use semantic versioning comparison:
 
 **Examples:**
 
-| Local   | Latest  | Result     |
-| ------- | ------- | ---------- |
-| `2.0.0` | `2.0.0` | Up to date |
-| `2.0.0` | `2.1.0` | Outdated   |
-| `1.9.9` | `2.0.0` | Outdated   |
-| `2.1.0` | `2.0.0` | Newer (dev)|
+| Local   | Latest  | Result      |
+| ------- | ------- | ----------- |
+| `2.0.0` | `2.0.0` | Up to date  |
+| `2.0.0` | `2.1.0` | Outdated    |
+| `1.9.9` | `2.0.0` | Outdated    |
+| `2.1.0` | `2.0.0` | Newer (dev) |
 
 ## Error Handling
 
