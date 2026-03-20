@@ -11,7 +11,7 @@ tags:
 
 ---
 
-## ⚠️ PREREQUISITE GATE: Workflow Mode & Artifacts
+## ⚠️ PREREQUISITE GATE: Workflow Mode Detection
 
 **Before ANY Phase 1 work, you MUST have completed:**
 
@@ -24,27 +24,7 @@ Confirm which mode applies to this task:
 | **Full** | 4+ files OR complex changes | **REQUIRED**   |
 | **Lite** | 1-3 files AND simple        | Skip artifacts |
 
-### 2. Artifact Creation (Full Mode ONLY)
-
-**⛔ STOP if Full Mode and artifacts don't exist yet.**
-
-```bash
-# Create artifact directory FIRST
-mkdir -p .gw/{branch-name}
-
-# Create required files
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
-```
-
-Verify files exist before proceeding:
-
-```bash
-ls -la .gw/{branch-name}/
-# Must show: task.md, plan.md
-```
-
-**Only proceed to Phase 1 analysis after artifacts are created.**
+**⚠️ NOTE: Artifact files are NOT created yet.** Phase 1 planning happens in conversation. Artifact files (`.gw/{branch}/task.md`, `plan.md`) are created after Phase 2 worktree setup, so they live in the worktree — not on the main branch.
 
 ---
 
@@ -172,19 +152,19 @@ Ask yourself:
 - Is this approach simple enough?
 - Will other developers understand this?
 
-### Step 4: Populate Artifacts (Full Mode)
+### Step 4: Prepare Artifact Content (Full Mode)
 
-**Note:** Artifact files should already exist from the Prerequisite Gate above.
+**⚠️ Do NOT write artifact files to disk yet.** Artifact files are created after Phase 2 worktree setup so they live in the worktree, not on the main branch.
 
-Now populate the artifacts with your planning content:
+Prepare the following content in conversation (to be written to disk after worktree setup):
 
-**task.md** - Initialize with:
+**task.md** - Plan to initialize with:
 
 - Phase 0 and Phase 1 marked complete
 - Phase 2-6 in Upcoming
 - Decisions from Phase 0 in Decisions Log
 
-**plan.md** - Populate ALL sections from the template (`templates/plan.template.md`):
+**plan.md** - Prepare ALL sections from the template (`templates/plan.template.md`):
 
 - **Summary**: What, why, and definition of "done"
 - **Background & Context**: Full motivation and history from discussion
@@ -199,7 +179,7 @@ Now populate the artifacts with your planning content:
 
 **⚠️ The plan.md content should be detailed and comprehensive — a new Claude session must be able to execute from it alone without the original conversation. Optimize for information density: be thorough in content, but use tables and structured formats rather than prose where possible.**
 
-**metadata.json** - Create with:
+**metadata.json** - Prepare with:
 
 ```json
 {
@@ -211,6 +191,8 @@ Now populate the artifacts with your planning content:
   "status": "in_progress"
 }
 ```
+
+**These files will be written to `.gw/{branch}/` after the worktree is created in Phase 2.**
 
 See [artifacts-overview](./artifacts-overview.md) for full details.
 

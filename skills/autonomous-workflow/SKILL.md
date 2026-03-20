@@ -42,26 +42,19 @@ Analyze the task scope to determine the workflow mode:
 
 **When in doubt, choose Full Mode.**
 
-### Step 2: Create Artifact Files (Full Mode ONLY)
+### Step 2: Plan Artifact Content (Full Mode ONLY)
 
-For **Full Mode**, you MUST create these files in `.gw/{branch-name}/` **BEFORE Phase 1 Planning begins**:
+For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-```bash
-# Create artifact directory
-mkdir -p .gw/{branch-name}
+| File             | Purpose                                                                                                   | Created           | When to Update                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------- |
+| `task.md`        | Dynamic checklist, decisions, blockers                                                                    | After Phase 2     | **At milestones (every 2-3 files)**                                         |
+| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 2     | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
+| `walkthrough.md` | Final summary for PR                                                                                      | Phase 6           | Phase 6 (MANDATORY)                                                         |
 
-# Create required files
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
-```
+**⚠️ Artifact files are created and populated inside the worktree at the end of Phase 2. Phase 1 planning happens in conversation.**
 
-| File             | Purpose                                                                                                   | When to Update                                                              |
-| ---------------- | --------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `task.md`        | Dynamic checklist, decisions, blockers                                                                    | **At milestones (every 2-3 files)**                                         |
-| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
-| `walkthrough.md` | Final summary for PR                                                                                      | Phase 6 (MANDATORY)                                                         |
-
-**⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
+**⛔ DO NOT create artifact files on the main branch.**
 
 ---
 
@@ -191,9 +184,9 @@ Structured templates for consistent artifact generation:
 
 | Phase             | Command/Action                                                                                                                                 |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Validation     | Ask clarifying questions, get user confirmation                                                                                                |
-| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md` **(ALL sections, verbose — capture every detail from Phase 0 discussion)** |
-| 2. Worktree       | `gw add feat/feature-name`                                                                                                                     |
+| 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                                                                                    |
+| 1. Planning       | Analyze codebase, **PREPARE** plan content in conversation **(ALL sections, verbose — capture every detail from Phase 0 discussion)**           |
+| 2. Worktree       | `gw add feat/feature-name`, then **CREATE & POPULATE** `.gw/{branch}/task.md` and `plan.md` inside worktree                                    |
 | 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                                                                                           |
 | 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                                                                                |
 | 5. Documentation  | Update README, CHANGELOG                                                                                                                       |
@@ -225,7 +218,7 @@ Structured templates for consistent artifact generation:
 ## Key Principles
 
 1. **Detect workflow mode FIRST**: Determine Full vs Lite before any other action.
-2. **Create artifacts BEFORE planning (Full Mode)**: `.gw/{branch}/task.md` and `plan.md` are MANDATORY.
+2. **Create artifacts AFTER worktree setup (Full Mode)**: `.gw/{branch}/task.md` and `plan.md` are MANDATORY — created inside the worktree, never on main.
 3. **Always validate first (Phase 0)**: Never skip directly to implementation.
 4. **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
 5. **Update task.md at milestones**: Every 2-3 files or at logical checkpoints (not every file).
@@ -242,8 +235,8 @@ Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{
 
 | Artifact        | File             | Created | Purpose                                   |
 | --------------- | ---------------- | ------- | ----------------------------------------- |
-| **Task**        | `task.md`        | Phase 1 | Dynamic checklist, decisions, discoveries |
-| **Plan**        | `plan.md`        | Phase 1 | Implementation strategy                   |
+| **Task**        | `task.md`        | Phase 2 (end) | Dynamic checklist, decisions, discoveries |
+| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy                   |
 | **Walkthrough** | `walkthrough.md` | Phase 6 | Final summary for PR                      |
 
 Files are gitignored and grouped by branch for easy browsing.
@@ -252,7 +245,7 @@ Files are gitignored and grouped by branch for easy browsing.
 
 | Artifact         | Update Frequency                | Blocking Gate                                                                      |
 | ---------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
-| `plan.md`        | Once in Phase 1                 | ⛔ Must be COMPREHENSIVELY POPULATED (all sections filled, verbose) before Phase 2 |
+| `plan.md`        | Created & populated at end of Phase 2 | ⛔ Must be COMPREHENSIVELY POPULATED (all sections filled, verbose) before Phase 3 |
 | `task.md`        | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions                                |
 | `walkthrough.md` | Once in Phase 6                 | ⛔ Must be CREATED AND SHOWN to user before completion                             |
 
@@ -262,16 +255,16 @@ Files are gitignored and grouped by branch for easy browsing.
 ┌─────────────────────────────────────────────────────┐
 │  MODE DETECTION ← MANDATORY FIRST STEP              │
 │  Analyze task → Choose Full (4+ files) or Lite      │
-│  Full Mode: Create .gw/{branch}/ artifacts NOW      │
+│  ⚠️ Do NOT create artifact files yet                │
 └─────────────────────────────────────────────────────┘
     ↓
 Phase 0: Validation ← MANDATORY
     ↓ (user confirms)
-Phase 1: Planning
-    ⛔ Full Mode: POPULATE plan.md + task.md (not empty!)
+Phase 1: Planning (prepare content IN CONVERSATION, no files yet)
     ↓ (plan validated)
 Phase 2: Worktree Setup ← MANDATORY (with smart detection)
-    ↓ (worktree created)
+    ⛔ Full Mode: CREATE & POPULATE artifacts INSIDE worktree
+    ↓ (worktree created, artifacts populated)
 Phase 3: Implementation
     📝 Full Mode: UPDATE task.md at milestones (every 2-3 files)
     ↓ (code complete)

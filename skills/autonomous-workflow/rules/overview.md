@@ -20,7 +20,7 @@ tags:
 | **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
 | **Lite** | 1-3 files AND simple/straightforward | No                  |
 
-**For Full Mode:** Create `.gw/{branch-name}/task.md` and `plan.md` BEFORE Phase 1.
+**For Full Mode:** Plan artifact content during Phase 1, then create `.gw/{branch-name}/task.md` and `plan.md` inside the worktree AFTER Phase 2 setup. **Never create artifact files on the main branch.**
 
 **State your mode selection explicitly before proceeding.**
 
@@ -71,15 +71,16 @@ See [artifacts-overview](./artifacts-overview.md) for full details.
 ┌─────────────────────────────────────────────────────┐
 │  MODE DETECTION ← MANDATORY FIRST STEP              │
 │  Analyze task → Choose Full (4+ files) or Lite      │
-│  Full Mode: Create .gw/{branch}/ artifacts NOW      │
+│  ⚠️ Do NOT create artifact files yet                │
 └─────────────────────────────────────────────────────┘
     ↓
 Phase 0: Validation + Mode Detection
-    ↓ (user confirms, mode selected, artifacts created)
-Phase 1: Planning (Full: write to plan.md, Lite: mental plan)
+    ↓ (user confirms, mode selected)
+Phase 1: Planning (Full: prepare plan in conversation, Lite: mental plan)
     ↓ (plan validated)
 Phase 2: Worktree Setup 🔴 MANDATORY
-    ↓ (worktree created)
+    ⛔ Full Mode: CREATE & POPULATE artifacts INSIDE worktree
+    ↓ (worktree created, artifacts populated)
 Phase 3: Implementation (Full: update task.md, Lite: just code)
     ↓ (code complete)
 Phase 4: Testing & Iteration ← iterate until passing
@@ -147,8 +148,8 @@ Use for simple, focused changes:
 
 Is this a complex change? (4+ files OR architectural)
 ├── Yes → Full Mode
-│   └── IMMEDIATELY create: .gw/{branch}/task.md, plan.md
-│   └── Then proceed to Phase 0
+│   └── Plan artifacts in Phase 1 (in conversation)
+│   └── Create artifact files INSIDE worktree (after Phase 2)
 └── No (1-3 files, straightforward)
     └── Lite Mode (no artifacts, still use worktree)
 ```
