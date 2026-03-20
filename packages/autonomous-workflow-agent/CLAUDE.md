@@ -44,6 +44,16 @@ agents/
 - `systemPrompt` is ~20KB - changes affect agent behavior significantly
 - The system prompt references the `autonomous-workflow` skill which must be installed
 
+## ⚠️ Coupled Documentation
+
+This package and `skills/autonomous-workflow/` describe the **same workflow** and must stay in sync. When changing workflow behavior (phase ordering, artifact timing, worktree setup, etc.):
+
+1. Update the skill files first: `skills/autonomous-workflow/SKILL.md`, `rules/*.md`, `references/*.md`, `README.md`
+2. Then update the system prompt here: `src/lib/system-prompt.ts`
+3. Verify the two do not contradict each other
+
+The skill is the **source of truth** — the system prompt should mirror it.
+
 ## Related
 
 @../../skills/autonomous-workflow/SKILL.md

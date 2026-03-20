@@ -81,12 +81,12 @@ The workflow adapts based on task complexity:
 **Use when:** Multi-file features, significant refactors, new capabilities
 
 ```
-Phase 0 → Phase 1 (with artifacts) → Phase 2 → Phase 3-6 → Phase 7
-          ↓
-    Creates .gw/{branch}/
-    ├── task.md      ← Updated throughout
-    ├── plan.md      ← Created at planning
-    └── walkthrough.md ← Generated at end
+Phase 0 → Phase 1 (plan in conversation) → Phase 2 → Phase 3-6 → Phase 7
+                                              ↓
+                                        Creates .gw/{branch}/ INSIDE worktree
+                                        ├── task.md      ← Updated throughout
+                                        ├── plan.md      ← Populated from Phase 1
+                                        └── walkthrough.md ← Generated at end
 ```
 
 **Artifacts provide:**

@@ -51,6 +51,20 @@ Based on the changes, determine which documentation files need updates:
 
 4. **Examples**: Check `skills/*/examples/` for outdated references
 
+### ⚠️ Coupled Documentation: Autonomous Workflow
+
+The autonomous workflow has documentation spread across two packages that **must be updated together**:
+
+| Location | Content |
+| --- | --- |
+| `skills/autonomous-workflow/` | Skill rules, phases, templates, references (the "source of truth" for workflow behavior) |
+| `packages/autonomous-workflow-agent/` | Agent SDK package with system prompt that mirrors the skill docs |
+
+**When changing autonomous workflow behavior:**
+1. Update the skill files first (`skills/autonomous-workflow/SKILL.md`, `rules/*.md`, `references/*.md`, `README.md`)
+2. Then update the agent's system prompt (`packages/autonomous-workflow-agent/src/lib/system-prompt.ts`) to match
+3. Verify consistency between the two — they describe the same workflow and must not contradict each other
+
 ## Step 3: Update Documentation
 
 For each affected documentation file:
