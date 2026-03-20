@@ -181,39 +181,37 @@ export async function listBranches(cwd: string): Promise<BranchInfo[]> {
     // Ignore - might be in detached HEAD state
   }
 
-  return lines
-    .map((line) => {
-      const [refname, commitHash, commitMessage, authorName, relativeDate] = line.split('|');
+  const branches: BranchInfo[] = [];
+  for (const line of lines) {
+    const [refname, commitHash, commitMessage, authorName, relativeDate] = line.split('|');
 
-      // Parse refname to get clean branch name and determine if remote
-      let name = refname;
-      let isRemote = false;
+    // Parse refname to get clean branch name and determine if remote
+    let name = refname;
+    let isRemote = false;
 
-      if (refname.startsWith('refs/heads/')) {
-        name = refname.replace('refs/heads/', '');
-      } else if (refname.startsWith('refs/remotes/')) {
-        name = refname.replace('refs/remotes/', '');
-        isRemote = true;
-      }
+    if (refname.startsWith('refs/heads/')) {
+      name = refname.replace('refs/heads/', '');
+    } else if (refname.startsWith('refs/remotes/')) {
+      name = refname.replace('refs/remotes/', '');
+      isRemote = true;
+    }
 
-      // Skip HEAD pointer entries
-      if (name.endsWith('/HEAD')) {
-        return null;
-      }
+    // Skip HEAD pointer entries
+    if (name.endsWith('/HEAD')) {
+      continue;
+    }
 
-      const isCurrent = name === currentBranch;
-
-      return {
-        name,
-        isRemote,
-        isCurrent,
-        commitHash,
-        commitMessage,
-        authorName,
-        relativeDate,
-      };
-    })
-    .filter((b): b is BranchInfo => b !== null);
+    branches.push({
+      name,
+      isRemote,
+      isCurrent: name === currentBranch,
+      commitHash,
+      commitMessage,
+      authorName,
+      relativeDate,
+    });
+  }
+  return branches;
 }
 
 /**
