@@ -2,6 +2,7 @@
 created: { { TIMESTAMP } }
 branch: { { BRANCH } }
 task: { { TASK_DESCRIPTION } }
+complexity: <!-- LOW | MEDIUM | HIGH -->
 approved: false
 ---
 
@@ -9,42 +10,82 @@ approved: false
 
 ## Summary
 
-<!-- 2-3 sentence overview of the approach -->
+<!-- What, why, and definition of "done" in 2-3 sentences -->
 
-## Goal
+## Background & Context
 
-<!-- Clear objective statement -->
+<!-- Why is this needed? What problem does it solve? Include history and motivation from Phase 0 discussion. Write so a reader with zero prior context understands the full "why". -->
 
-## Files to Create
+## Requirements
 
-| File | Purpose |
-| ---- | ------- |
+<!-- ALL requirements from Phase 0. Tag: [user-stated] or [inferred]. Include non-functional (perf, compat, security) inline. -->
 
-<!-- New files to add -->
+1. <!-- requirement — [user-stated | inferred] -->
 
-## Files to Modify
+### Out of Scope
 
-| File | Change |
-| ---- | ------ |
+<!-- Discussed but excluded, with reason. Prevents scope creep. -->
 
-<!-- Existing files to change -->
+1. <!-- item — reason -->
 
-## Testing Strategy
+## Decisions
 
-<!-- How to verify the implementation -->
+<!-- Every decision from Phase 0, including rejected alternatives and rationale. Critical for context recovery. -->
 
-1. Unit tests:
-2. Integration tests:
-3. Manual verification:
+| Decision | Alternatives Rejected | Rationale |
+| -------- | --------------------- | --------- |
+
+## Technical Approach
+
+<!-- Architecture, data flow, integration points. Specific enough for a new session to implement without the original conversation. -->
+
+### Patterns to Follow
+
+<!-- Existing codebase patterns to match. Reference specific files. -->
+
+### Edge Cases
+
+| Edge Case | Handling |
+| --------- | -------- |
+
+### API / Interfaces
+
+<!-- Type signatures, function signatures, config shapes. Omit if N/A. -->
+
+```typescript
+
+```
+
+## Implementation Order
+
+<!-- Ordered steps for Phase 3 execution. Enables context recovery if interrupted mid-implementation. -->
+
+1. <!-- step -->
+
+## File Changes
+
+<!-- All files: create, modify, or update (including docs). -->
+
+| Action | File          | Change                         | Reason       |
+| ------ | ------------- | ------------------------------ | ------------ |
+| create | <!-- path --> | <!-- purpose / key exports --> | <!-- why --> |
+| modify | <!-- path --> | <!-- specific changes -->      | <!-- why --> |
+
+## Tests
+
+<!-- Specific test cases, not categories. -->
+
+| Type        | Test Case             | File          | Validates         |
+| ----------- | --------------------- | ------------- | ----------------- |
+| unit        | <!-- case -->         | <!-- file --> | <!-- behavior --> |
+| integration |                       |               |                   |
+| manual      | <!-- step-by-step --> |               |                   |
 
 ## Dependencies
 
-<!-- External packages or prerequisites, or "None" -->
+<!-- "None" or list. Mark new additions with [new]. -->
 
 ## Risks
 
-<!-- Potential issues to watch for -->
-
-## Estimated Complexity
-
-<!-- LOW / MEDIUM / HIGH with brief rationale -->
+| Risk | Likelihood | Impact | Mitigation |
+| ---- | ---------- | ------ | ---------- |

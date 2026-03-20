@@ -66,6 +66,7 @@ touch .gw/{branch-name}/plan.md
 - **Focus on one failure at a time**: Don't fix multiple test failures simultaneously.
 - **Escalate errors progressively**: Simple fix → Deep analysis → Alternative approach → Ask user.
 - **Stop and ask when blocked**: Don't guess on ambiguity.
+- **No AI co-author tags**: NEVER add `Co-Authored-By` lines to commit messages or PR descriptions.
 
 ---
 
@@ -125,6 +126,8 @@ This phase is MANDATORY. Never skip directly to implementation.
 PHASE 0 → 1 TRANSITION:
 Before proceeding, verify ALL checklist items are checked.
 If any unchecked: STOP and address the gap.
+IMPORTANT: All details from this discussion (requirements, decisions, alternatives,
+edge cases, rationale) MUST be captured in plan.md during Phase 1.
 Announce: "Phase 0 complete. User confirmed. Proceeding to Phase 1 Planning."
 ```
 
@@ -132,7 +135,9 @@ Announce: "Phase 0 complete. User confirmed. Proceeding to Phase 1 Planning."
 
 ## Phase 1: Task Intake & Planning
 
-Deep codebase analysis and implementation planning.
+Deep codebase analysis and comprehensive implementation planning.
+
+**The plan.md is your single source of truth for context recovery.** It must contain enough detail that a brand new Claude session can pick up the work without re-reading the original conversation. Verbose plans are far better than sparse ones.
 
 ### Context Recovery
 
@@ -144,20 +149,27 @@ READ: .gw/{branch}/plan.md (if exists)
 ### Procedure
 
 1. **Analyze Codebase**: Project structure, existing patterns, technology stack.
-2. **Create Implementation Plan**: Document files to change, testing strategy, documentation updates, risks.
-3. **Self-Validation**: Does plan achieve requirements? Follow patterns? Testable?
-4. **Write Artifacts** (Full Mode): Populate `.gw/{branch}/task.md` and `plan.md` with details.
+2. **Transfer Phase 0 Context**: Capture ALL details from the Phase 0 discussion into plan.md — every requirement, decision, rejected alternative, edge case, and rationale.
+3. **Create Comprehensive Implementation Plan**: Document architecture, specific file changes with rationale, implementation order, API designs, specific test cases, risks with mitigations.
+4. **Self-Validation**: Does plan achieve requirements? Follow patterns? Testable? Could a new session execute this without the original conversation?
+5. **Write Artifacts** (Full Mode): Populate `.gw/{branch}/plan.md` with ALL sections (Summary, Background & Context, Requirements + Out of Scope, Decisions, Technical Approach + Edge Cases + APIs, Implementation Order, File Changes, Tests, Dependencies, Risks). Populate `task.md` with checklist.
 
 ### Phase 1 Gate
 
 ```
 PHASE 1 → 2 TRANSITION:
-- [ ] Implementation plan documented
-- [ ] Files to change identified
-- [ ] Testing strategy defined
-- [ ] Artifacts updated (Full Mode)
+- [ ] Implementation plan documented with ALL sections populated
+- [ ] ALL Phase 0 discussion details captured (requirements, decisions, rationale)
+- [ ] Files to change identified with rationale
+- [ ] Implementation order defined
+- [ ] Testing strategy has specific test cases
+- [ ] Risks documented with mitigations
+- [ ] ⛔ plan.md is COMPREHENSIVE (not sparse — a new session can execute from it alone)
+- [ ] ⛔ task.md POPULATED with checklist (not empty)
 Announce: "Phase 1 complete. Plan ready. Proceeding to Phase 2 Worktree Setup."
 ```
+
+**⛔ BLOCKING: Do NOT proceed to Phase 2 if plan.md is sparse or missing sections.**
 
 ---
 
@@ -494,17 +506,17 @@ Update `task.md` whenever:
 
 ### Full Mode (4+ files)
 
-| Phase | Command/Action                                  |
-| ----- | ----------------------------------------------- |
-| Setup | Output MODE SELECTION, create `.gw/{branch}/`   |
-| 0     | Ask clarifying questions, get user confirmation |
-| 1     | Analyze codebase, populate `plan.md`            |
-| 2     | `gw add feat/feature-name`                      |
-| 3     | Code in worktree, update `task.md` per file     |
-| 4     | `npm test`, one failure at a time, escalate     |
-| 5     | Update README, CHANGELOG                        |
-| 6     | Create `walkthrough.md`, `gh pr create --draft` |
-| 7     | `gw remove` (after merge)                       |
+| Phase | Command/Action                                               |
+| ----- | ------------------------------------------------------------ |
+| Setup | Output MODE SELECTION, create `.gw/{branch}/`                |
+| 0     | Ask clarifying questions, get user confirmation              |
+| 1     | Analyze codebase, populate `plan.md` (ALL sections, verbose) |
+| 2     | `gw add feat/feature-name`                                   |
+| 3     | Code in worktree, update `task.md` per file                  |
+| 4     | `npm test`, one failure at a time, escalate                  |
+| 5     | Update README, CHANGELOG                                     |
+| 6     | Create `walkthrough.md`, `gh pr create --draft`              |
+| 7     | `gw remove` (after merge)                                    |
 
 ### Lite Mode (1-3 files)
 

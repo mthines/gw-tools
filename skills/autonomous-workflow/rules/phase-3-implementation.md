@@ -122,6 +122,7 @@ git commit -m "<type>(<scope>): <description>"
 - One logical change per commit
 - Clear, descriptive messages
 - Keep commits atomic
+- NEVER add `Co-Authored-By` lines to commit messages
 
 ### Step 5: Continuous Validation
 
