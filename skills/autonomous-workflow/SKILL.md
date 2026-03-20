@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: mthines
-  version: '2.1.0'
+  version: '2.0.0'
   workflow_type: autonomous
   phases:
     - validation_questions
@@ -24,30 +24,6 @@ metadata:
 # Autonomous Workflow
 
 Execute complete feature development cycles autonomously—from task intake through tested PR delivery—using isolated Git worktrees.
-
----
-
-## Preflight: Version Check
-
-Before starting any workflow, check if this skill is up to date:
-
-1. **Read** the `version` from this file's metadata
-2. **Fetch** the latest SKILL.md from GitHub: `https://raw.githubusercontent.com/mthines/gw-tools/main/skills/autonomous-workflow/SKILL.md`
-3. **Check** `.gw/.skipped-skill-versions.json` — if the user already skipped this exact version, proceed silently
-4. **Compare** versions — if the local version is older and not skipped, prompt the user:
-
-> **Skill Update Available** — Your `autonomous-workflow` skill is on version **{local}**, but **{latest}** is available.
->
-> To update: `npx skills add https://github.com/mthines/gw-tools --skill @gw-autonomous-workflow`
->
-> 1. **Update now** — I'll wait while you update
-> 2. **Skip** — Continue with the current version (won't ask again for this version)
-
-5. **If skipped**, write the declined version to `.gw/.skipped-skill-versions.json` so the user isn't prompted again until a newer version is available
-
-**Rules:** If versions match, the fetch fails, or the local version is newer — proceed silently. This check must never block the workflow.
-
-See [version-check rule](./rules/version-check.md) for full details.
 
 ---
 
@@ -181,7 +157,6 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 | Rule                                                            | Description                                                                           |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [version-check](./rules/version-check.md)                       | **HIGH** - Check for skill updates before starting workflow                           |
 | [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                            |
 | [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree, prompt to continue or create new |
 | [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                      |
