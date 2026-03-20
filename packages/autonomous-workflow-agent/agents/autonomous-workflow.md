@@ -506,17 +506,17 @@ Update `task.md` whenever:
 
 ### Full Mode (4+ files)
 
-| Phase | Command/Action                                  |
-| ----- | ----------------------------------------------- |
-| Setup | Output MODE SELECTION, create `.gw/{branch}/`   |
-| 0     | Ask clarifying questions, get user confirmation |
+| Phase | Command/Action                                               |
+| ----- | ------------------------------------------------------------ |
+| Setup | Output MODE SELECTION, create `.gw/{branch}/`                |
+| 0     | Ask clarifying questions, get user confirmation              |
 | 1     | Analyze codebase, populate `plan.md` (ALL sections, verbose) |
-| 2     | `gw add feat/feature-name`                      |
-| 3     | Code in worktree, update `task.md` per file     |
-| 4     | `npm test`, one failure at a time, escalate     |
-| 5     | Update README, CHANGELOG                        |
-| 6     | Create `walkthrough.md`, `gh pr create --draft` |
-| 7     | `gw remove` (after merge)                       |
+| 2     | `gw add feat/feature-name`                                   |
+| 3     | Code in worktree, update `task.md` per file                  |
+| 4     | `npm test`, one failure at a time, escalate                  |
+| 5     | Update README, CHANGELOG                                     |
+| 6     | Create `walkthrough.md`, `gh pr create --draft`              |
+| 7     | `gw remove` (after merge)                                    |
 
 ### Lite Mode (1-3 files)
 

@@ -120,11 +120,11 @@ Be specific and detailed in the technical approach:
 Use a single consolidated table for all file changes (creates, modifies, doc updates):
 
 ```markdown
-| Action | File | Change | Reason |
-| ------ | ---- | ------ | ------ |
-| create | path/to/new-file.ts | Purpose / key exports | Why needed |
-| modify | path/to/existing.ts | Specific modifications | Why this change |
-| modify | README.md | Add feature docs | User-facing change |
+| Action | File                | Change                 | Reason             |
+| ------ | ------------------- | ---------------------- | ------------------ |
+| create | path/to/new-file.ts | Purpose / key exports  | Why needed         |
+| modify | path/to/existing.ts | Specific modifications | Why this change    |
+| modify | README.md           | Add feature docs       | User-facing change |
 ```
 
 #### 2d: Define Testing Strategy with Specific Cases
@@ -132,20 +132,20 @@ Use a single consolidated table for all file changes (creates, modifies, doc upd
 Don't just list categories — list actual test cases in a single table:
 
 ```markdown
-| Type | Test Case | File | Validates |
-| ---- | --------- | ---- | --------- |
-| unit | handles empty input | processor.spec.ts | Returns default |
-| unit | rejects invalid config | config.spec.ts | Throws ConfigError |
-| integration | end-to-end flow | feature.e2e.ts | Full pipeline |
-| manual | toggle and verify | — | Visual check |
+| Type        | Test Case              | File              | Validates          |
+| ----------- | ---------------------- | ----------------- | ------------------ |
+| unit        | handles empty input    | processor.spec.ts | Returns default    |
+| unit        | rejects invalid config | config.spec.ts    | Throws ConfigError |
+| integration | end-to-end flow        | feature.e2e.ts    | Full pipeline      |
+| manual      | toggle and verify      | —                 | Visual check       |
 ```
 
 #### 2e: Document Risks with Mitigations
 
 ```markdown
-| Risk | Likelihood | Impact | Mitigation |
-| ---- | ---------- | ------ | ---------- |
-| Breaking API change | LOW | HIGH | Add deprecation warning |
+| Risk                | Likelihood | Impact | Mitigation              |
+| ------------------- | ---------- | ------ | ----------------------- |
+| Breaking API change | LOW        | HIGH   | Add deprecation warning |
 ```
 
 ### Step 3: Self-Validation

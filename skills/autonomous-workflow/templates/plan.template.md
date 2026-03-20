@@ -53,6 +53,7 @@ approved: false
 <!-- Type signatures, function signatures, config shapes. Omit if N/A. -->
 
 ```typescript
+
 ```
 
 ## Implementation Order
@@ -65,20 +66,20 @@ approved: false
 
 <!-- All files: create, modify, or update (including docs). -->
 
-| Action | File | Change | Reason |
-| ------ | ---- | ------ | ------ |
+| Action | File          | Change                         | Reason       |
+| ------ | ------------- | ------------------------------ | ------------ |
 | create | <!-- path --> | <!-- purpose / key exports --> | <!-- why --> |
-| modify | <!-- path --> | <!-- specific changes --> | <!-- why --> |
+| modify | <!-- path --> | <!-- specific changes -->      | <!-- why --> |
 
 ## Tests
 
 <!-- Specific test cases, not categories. -->
 
-| Type | Test Case | File | Validates |
-| ---- | --------- | ---- | --------- |
-| unit | <!-- case --> | <!-- file --> | <!-- behavior --> |
-| integration | | | |
-| manual | <!-- step-by-step --> | | |
+| Type        | Test Case             | File          | Validates         |
+| ----------- | --------------------- | ------------- | ----------------- |
+| unit        | <!-- case -->         | <!-- file --> | <!-- behavior --> |
+| integration |                       |               |                   |
+| manual      | <!-- step-by-step --> |               |                   |
 
 ## Dependencies
 
