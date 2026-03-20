@@ -29,6 +29,7 @@ import {
   hasUncommittedChanges,
   hasStagedFiles,
   getWorktreePath,
+  setLogger,
 } from './parsers/git-worktree';
 
 /**
@@ -70,6 +71,14 @@ export function activate(context: vscode.ExtensionContext): void {
   const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!workspacePath) return;
 
+  // Create output channel for logging
+  const outputChannel = vscode.window.createOutputChannel('gw');
+  context.subscriptions.push(outputChannel);
+  const log = (message: string): void => {
+    outputChannel.appendLine(`[${new Date().toLocaleTimeString()}] ${message}`);
+  };
+  setLogger(log);
+
   // Initialize providers
   const worktreeProvider = new WorktreeProvider();
   const agentTasksProvider = new AgentTasksProvider();
@@ -87,15 +96,22 @@ export function activate(context: vscode.ExtensionContext): void {
     showCollapseAll: true,
   });
 
+  log('gw extension activated');
+
   // Wire up artifact watcher to refresh agent tasks
-  artifactWatcher.onArtifactChanged(() => {
+  artifactWatcher.onArtifactChanged((artifact) => {
+    log(`Artifact changed: ${artifact}`);
     agentTasksProvider.refresh();
   });
 
   // Wire up worktree watcher to refresh worktrees view
   worktreeWatcher.onWorktreeChanged(() => {
+    log('Worktree change detected, refreshing');
     worktreeProvider.refresh();
   });
+
+  // Shared reference for the active switch worktree quick pick (used by shift+enter keybinding)
+  let activeSwitchQuickPick: vscode.QuickPick<vscode.QuickPickItem & { worktreePath?: string }> | undefined;
 
   // Register commands
   const commands = [
@@ -108,6 +124,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.switchWorktree', async () => {
+      log('Command: switchWorktree');
       const [worktrees, branches, defaultBranch] = await Promise.all([
         listWorktrees(workspacePath),
         listBranches(workspacePath),
@@ -177,7 +194,8 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const quickPick = vscode.window.createQuickPick<SwitchQuickPickItem>();
       quickPick.title = 'Switch Worktree';
-      quickPick.placeholder = 'Search worktrees, branches, or type a new branch name';
+      quickPick.placeholder =
+        'Search worktrees, branches, or type a new branch name (Shift+Enter to open in same window)';
       quickPick.matchOnDescription = true;
       quickPick.matchOnDetail = true;
       // Preserve our item order (worktrees first) instead of alphabetical sorting.
@@ -217,6 +235,7 @@ export function activate(context: vscode.ExtensionContext): void {
         // Existing worktree — open it
         if (selected.worktreePath) {
           if (selected.worktreePath !== currentPath) {
+            log(`Opening worktree in new window: ${selected.worktreePath}`);
             const uri = vscode.Uri.file(selected.worktreePath);
             vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
           }
@@ -228,6 +247,7 @@ export function activate(context: vscode.ExtensionContext): void {
         if (!rawBranchName) return;
         // Strip remote prefix (e.g. `origin/`) when checking out a remote-only branch
         const branchName = selected.isRemote ? stripRemotePrefix(rawBranchName) : rawBranchName;
+        log(`Creating worktree for branch: ${branchName}`);
 
         try {
           await vscode.window.withProgress(
@@ -258,8 +278,27 @@ export function activate(context: vscode.ExtensionContext): void {
         quickPick.hide();
       });
 
-      quickPick.onDidHide(() => quickPick.dispose());
+      quickPick.onDidHide(() => {
+        activeSwitchQuickPick = undefined;
+        vscode.commands.executeCommand('setContext', 'gw.switchWorktreeActive', false);
+        quickPick.dispose();
+      });
+
+      activeSwitchQuickPick = quickPick;
+      vscode.commands.executeCommand('setContext', 'gw.switchWorktreeActive', true);
       quickPick.show();
+    }),
+
+    vscode.commands.registerCommand('gw.switchWorktreeAcceptSameWindow', () => {
+      if (!activeSwitchQuickPick) return;
+      const selected = activeSwitchQuickPick.activeItems[0];
+      const current = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (selected?.worktreePath && selected.worktreePath !== current) {
+        log(`Opening worktree in same window: ${selected.worktreePath}`);
+        const uri = vscode.Uri.file(selected.worktreePath);
+        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+      }
+      activeSwitchQuickPick.hide();
     }),
 
     vscode.commands.registerCommand('gw.focus', () => {
@@ -333,6 +372,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.removeWorktree', async (item?: WorktreeItem) => {
+      log(`Command: removeWorktree${item ? ` (${item.worktree.branch})` : ''}`);
       let branch = item?.worktree?.branch;
       let worktreePath = item?.worktree?.path;
 
@@ -388,6 +428,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.createWorktree', async () => {
+      log('Command: createWorktree');
       const [branches, defaultBranch] = await Promise.all([
         listBranches(workspacePath),
         getDefaultBranch(workspacePath),
@@ -507,6 +548,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.createWorktreeFromStaged', async () => {
+      log('Command: createWorktreeFromStaged');
       // Check if there are staged files first
       const hasStaged = await hasStagedFiles(workspacePath);
       if (!hasStaged) {
@@ -596,6 +638,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.clean', async () => {
+      log('Command: clean');
       const dryRunRaw = await cleanWorktrees(workspacePath, { dryRun: true });
       const dryRunOutput = stripAnsi(dryRunRaw);
       if (!dryRunOutput || dryRunOutput.includes('No worktrees to clean')) {
@@ -697,6 +740,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.sync', async (item?: WorktreeItem) => {
+      log(`Command: sync${item ? ` (${item.worktree.branch})` : ''}`);
       let target = item?.worktree.branch;
 
       if (!target) {
@@ -731,6 +775,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.update', async () => {
+      log('Command: update');
       const result = await vscode.window.withProgress(
         { location: vscode.ProgressLocation.Notification, title: 'Updating worktree...', cancellable: false },
         async () => {
@@ -758,6 +803,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.updateFrom', async () => {
+      log('Command: updateFrom');
       const [branches, defaultBranch] = await Promise.all([
         listBranches(workspacePath),
         getDefaultBranch(workspacePath),
@@ -838,6 +884,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
 
     vscode.commands.registerCommand('gw.syncFrom', async () => {
+      log('Command: syncFrom');
       const [worktrees, defaultBranch] = await Promise.all([
         listWorktrees(workspacePath),
         getDefaultBranch(workspacePath),

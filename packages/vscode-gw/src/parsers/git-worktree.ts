@@ -4,6 +4,17 @@
 
 import * as cp from 'child_process';
 
+/** Optional logger callback for command execution */
+let logFn: ((message: string) => void) | undefined;
+
+/**
+ * Set the logger function for command execution output.
+ * Pass `undefined` to disable logging.
+ */
+export function setLogger(fn: ((message: string) => void) | undefined): void {
+  logFn = fn;
+}
+
 /**
  * Strip ANSI escape codes from a string
  */
@@ -41,18 +52,26 @@ export interface WorktreeInfo {
  * Run a shell command and return stdout
  */
 function exec(command: string, cwd: string, timeoutMs?: number): Promise<string> {
+  logFn?.(`> ${command}`);
   return new Promise((resolve, reject) => {
     const child = cp.exec(command, { cwd, timeout: timeoutMs }, (err, stdout, stderr) => {
       if (err) {
         // Check if it was a timeout (killed)
         if (err.killed || err.signal === 'SIGTERM') {
+          logFn?.(`  [TIMEOUT] ${command}`);
           reject(new Error('TIMEOUT'));
           return;
         }
-        reject(new Error(stderr.trim() || err.message));
+        const errMsg = stderr.trim() || err.message;
+        logFn?.(`  [ERROR] ${stripAnsi(errMsg)}`);
+        reject(new Error(errMsg));
         return;
       }
-      resolve(stdout.trim());
+      const output = stdout.trim();
+      if (output) {
+        logFn?.(`  ${stripAnsi(output).split('\n').join('\n  ')}`);
+      }
+      resolve(output);
     });
 
     // Also set up a manual timeout in case the process hangs without being killed
@@ -111,16 +130,9 @@ export function parseWorktreeListOutput(output: string): WorktreeInfo[] {
 /**
  * List all worktrees by invoking git
  */
-export function listWorktrees(cwd: string): Promise<WorktreeInfo[]> {
-  return new Promise((resolve, reject) => {
-    cp.exec('git worktree list --porcelain', { cwd }, (err, stdout) => {
-      if (err) {
-        reject(new Error(`Failed to list worktrees: ${err.message}`));
-        return;
-      }
-      resolve(parseWorktreeListOutput(stdout));
-    });
-  });
+export async function listWorktrees(cwd: string): Promise<WorktreeInfo[]> {
+  const output = await exec('git worktree list --porcelain', cwd);
+  return parseWorktreeListOutput(output);
 }
 
 /**
@@ -207,23 +219,13 @@ export async function listBranches(cwd: string): Promise<BranchInfo[]> {
 /**
  * Get the git root directory for a given path
  */
-export function getGitRoot(cwd: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    cp.exec('git rev-parse --show-toplevel', { cwd }, (err, stdout) => {
-      if (err) {
-        // Could be bare repo - try common dir
-        cp.exec('git rev-parse --git-common-dir', { cwd }, (err2, stdout2) => {
-          if (err2) {
-            reject(new Error(`Not a git repository: ${err2.message}`));
-            return;
-          }
-          resolve(stdout2.trim());
-        });
-        return;
-      }
-      resolve(stdout.trim());
-    });
-  });
+export async function getGitRoot(cwd: string): Promise<string> {
+  try {
+    return await exec('git rev-parse --show-toplevel', cwd);
+  } catch {
+    // Could be bare repo - try common dir
+    return await exec('git rev-parse --git-common-dir', cwd);
+  }
 }
 
 /**
