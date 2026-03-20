@@ -106,6 +106,8 @@ If user clarifies/corrects:
 - Re-validate if significant changes
 - Confirm again before proceeding
 
+**⚠️ IMPORTANT: Every detail discussed in this phase — requirements, decisions, alternatives considered, edge cases, rationale, out-of-scope items — MUST be captured in plan.md during Phase 1. The plan.md serves as the complete context record. A new Claude session should be able to execute the plan from plan.md alone without needing the original conversation.**
+
 ### Step 6: Detect Workflow Mode & Create Artifacts
 
 **After user confirmation, before Phase 1:**

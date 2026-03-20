@@ -21,6 +21,7 @@ Preserve worktree for user review.
 - **Draft PR only**: Never mark ready-to-merge automatically.
 - **Comprehensive description**: Reviewers understand context.
 - **Preserve worktree**: User may want to review locally.
+- **No AI co-author tags**: NEVER add `Co-Authored-By` lines (e.g., `Co-Authored-By: Claude ...`) to commit messages or PR descriptions. The user owns the commits.
 
 ## Procedure
 

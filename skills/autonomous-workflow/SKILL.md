@@ -58,7 +58,7 @@ touch .gw/{branch-name}/plan.md
 | File             | Purpose                                | When to Update                      |
 | ---------------- | -------------------------------------- | ----------------------------------- |
 | `task.md`        | Dynamic checklist, decisions, blockers | **At milestones (every 2-3 files)** |
-| `plan.md`        | Implementation strategy, file list     | After Phase 1 analysis              |
+| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
 | `walkthrough.md` | Final summary for PR                   | Phase 6 (MANDATORY)                 |
 
 **⛔ DO NOT proceed to implementation without these files for Full Mode tasks.**
@@ -192,7 +192,7 @@ Structured templates for consistent artifact generation:
 | Phase             | Command/Action                                                                    |
 | ----------------- | --------------------------------------------------------------------------------- |
 | 0. Validation     | Ask clarifying questions, get user confirmation                                   |
-| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md`               |
+| 1. Planning       | Analyze codebase, **POPULATE** `.gw/{branch}/task.md` and `plan.md` **(ALL sections, verbose — capture every detail from Phase 0 discussion)** |
 | 2. Worktree       | `gw add feat/feature-name`                                                        |
 | 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                              |
 | 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                   |
@@ -252,7 +252,7 @@ Files are gitignored and grouped by branch for easy browsing.
 
 | Artifact         | Update Frequency                | Blocking Gate                                          |
 | ---------------- | ------------------------------- | ------------------------------------------------------ |
-| `plan.md`        | Once in Phase 1                 | ⛔ Must be POPULATED (not empty) before Phase 2        |
+| `plan.md`        | Once in Phase 1                 | ⛔ Must be COMPREHENSIVELY POPULATED (all sections filled, verbose) before Phase 2 |
 | `task.md`        | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions    |
 | `walkthrough.md` | Once in Phase 6                 | ⛔ Must be CREATED AND SHOWN to user before completion |
 
