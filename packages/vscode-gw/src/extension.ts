@@ -105,19 +105,9 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Wire up worktree watcher to refresh worktrees view
-  // Use refresh guard to prevent feedback loops: the refresh itself runs
-  // git commands that touch .git/worktrees/ files, which would re-trigger
-  // the watcher without the guard.
-  worktreeWatcher.onWorktreeChanged(async () => {
+  worktreeWatcher.onWorktreeChanged(() => {
     log('Worktree change detected, refreshing');
-    worktreeWatcher.markRefreshStart();
-    try {
-      worktreeProvider.refresh();
-      // Wait for the tree to finish loading (getChildren completes)
-      await worktreeProvider.waitForRefresh();
-    } finally {
-      worktreeWatcher.markRefreshEnd();
-    }
+    worktreeProvider.refresh();
   });
 
   // Shared reference for the active switch worktree quick pick (used by shift+enter keybinding)
