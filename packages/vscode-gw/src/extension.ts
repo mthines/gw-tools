@@ -883,6 +883,10 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
+    vscode.commands.registerCommand('gw.showOutput', () => {
+      outputChannel.show();
+    }),
+
     vscode.commands.registerCommand('gw.syncFrom', async () => {
       log('Command: syncFrom');
       const [worktrees, defaultBranch] = await Promise.all([
