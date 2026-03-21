@@ -11,6 +11,8 @@ import * as fs from 'fs';
 export class WorktreeWatcher implements vscode.Disposable {
   private watchers: vscode.FileSystemWatcher[] = [];
   private debounceTimer: ReturnType<typeof setTimeout> | undefined;
+  private refreshing = false;
+  private pendingRefresh = false;
 
   private _onWorktreeChanged = new vscode.EventEmitter<void>();
   readonly onWorktreeChanged = this._onWorktreeChanged.event;
@@ -66,13 +68,41 @@ export class WorktreeWatcher implements vscode.Disposable {
     }
   }
 
+  /**
+   * Mark the start of a refresh cycle. Call when the consumer begins
+   * processing the worktreeChanged event. While refreshing, new file
+   * system events are coalesced into a single follow-up refresh instead
+   * of creating a feedback loop.
+   */
+  markRefreshStart(): void {
+    this.refreshing = true;
+    this.pendingRefresh = false;
+  }
+
+  /**
+   * Mark the end of a refresh cycle. If events arrived during the refresh,
+   * schedule one more refresh.
+   */
+  markRefreshEnd(): void {
+    this.refreshing = false;
+    if (this.pendingRefresh) {
+      this.pendingRefresh = false;
+      this.emitDebounced();
+    }
+  }
+
   private emitDebounced(): void {
     if (this.debounceTimer) {
       clearTimeout(this.debounceTimer);
     }
+    // If a refresh is already in progress, just note that we need another one
+    if (this.refreshing) {
+      this.pendingRefresh = true;
+      return;
+    }
     this.debounceTimer = setTimeout(() => {
       this._onWorktreeChanged.fire();
-    }, 500);
+    }, 1000);
   }
 
   private getGitCommonDir(workspacePath: string): string | undefined {
