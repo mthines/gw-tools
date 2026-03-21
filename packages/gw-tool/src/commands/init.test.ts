@@ -738,12 +738,18 @@ Deno.test('init command - clone mode fails when directory exists', async () => {
   }
 });
 
-Deno.test('init command - clone mode with empty repository', async () => {
-  // Create a bare repo with no commits (simulates empty GitHub repo)
+/**
+ * Helper: create an empty bare repo and a target directory for clone tests.
+ * Returns cleanup-friendly resources.
+ */
+async function createEmptyBareRepo(): Promise<{
+  sourceRepoPath: string;
+  tempDir: string;
+  cleanup: () => Promise<void>;
+}> {
   const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }));
   const sourceRepoPath = join(tempDir, 'empty-repo');
   await Deno.mkdir(sourceRepoPath);
-
   const initCmd = new Deno.Command('git', {
     args: ['init', '--bare'],
     cwd: sourceRepoPath,
@@ -751,14 +757,21 @@ Deno.test('init command - clone mode with empty repository', async () => {
     stderr: 'piped',
   });
   await initCmd.output();
+  return {
+    sourceRepoPath,
+    tempDir,
+    cleanup: () => Deno.remove(tempDir, { recursive: true }).catch(() => {}),
+  };
+}
 
+Deno.test('init command - clone mode with empty repository', async () => {
+  const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
     const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      // Mock the shell integration prompt (respond 'n')
       await withMockedPrompt(['n'], async () => {
         await executeInit([cloneUrl, 'my-empty-repo']);
       });
@@ -792,24 +805,12 @@ Deno.test('init command - clone mode with empty repository', async () => {
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
     }
   } finally {
-    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+    await cleanup();
   }
 });
 
 Deno.test('init command - clone mode with empty repository creates initial commit on gw_root', async () => {
-  // Create a bare repo with no commits (simulates empty GitHub repo)
-  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }));
-  const sourceRepoPath = join(tempDir, 'empty-repo');
-  await Deno.mkdir(sourceRepoPath);
-
-  const initCmd = new Deno.Command('git', {
-    args: ['init', '--bare'],
-    cwd: sourceRepoPath,
-    stdout: 'piped',
-    stderr: 'piped',
-  });
-  await initCmd.output();
-
+  const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
     const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
@@ -841,24 +842,12 @@ Deno.test('init command - clone mode with empty repository creates initial commi
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
     }
   } finally {
-    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+    await cleanup();
   }
 });
 
 Deno.test('init command - clone mode with empty repository and custom default branch', async () => {
-  // Create a bare repo with no commits
-  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }));
-  const sourceRepoPath = join(tempDir, 'empty-repo');
-  await Deno.mkdir(sourceRepoPath);
-
-  const initCmd = new Deno.Command('git', {
-    args: ['init', '--bare'],
-    cwd: sourceRepoPath,
-    stdout: 'piped',
-    stderr: 'piped',
-  });
-  await initCmd.output();
-
+  const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
     const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
@@ -892,7 +881,7 @@ Deno.test('init command - clone mode with empty repository and custom default br
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
     }
   } finally {
-    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+    await cleanup();
   }
 });
 
