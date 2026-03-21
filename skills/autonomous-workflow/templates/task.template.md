@@ -1,5 +1,5 @@
 ---
-created: { { TIMESTAMP } }
+created: { { TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ) } }
 branch: { { BRANCH } }
 task: { { TASK_DESCRIPTION } }
 ---
@@ -9,7 +9,7 @@ task: { { TASK_DESCRIPTION } }
 ## Status
 
 - **Phase**: {{PHASE_NUMBER}} ({{PHASE_NAME}})
-- **Last Updated**: {{TIMESTAMP}}
+- **Last Updated**: {{TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ)}}
 
 ## Completed
 

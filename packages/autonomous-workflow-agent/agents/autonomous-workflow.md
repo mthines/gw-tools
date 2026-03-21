@@ -52,6 +52,8 @@ touch .gw/{branch-name}/task.md
 touch .gw/{branch-name}/plan.md
 ```
 
+**⚠️ All timestamps** in artifact frontmatter, status fields, and metadata.json **MUST use full ISO 8601 with time**: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`). Never date-only.
+
 **⛔ BLOCKING GATE: Do NOT proceed without completing Actions 1-3.**
 
 ---

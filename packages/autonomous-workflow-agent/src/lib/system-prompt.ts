@@ -57,6 +57,8 @@ For **Full Mode**, you will need these artifacts. **Do NOT create the files yet*
 | \`plan.md\` | Comprehensive implementation strategy | After Phase 2 |
 | \`walkthrough.md\` | Final summary for PR | Phase 6 |
 
+**⚠️ All timestamps** in artifact frontmatter, status fields, and metadata.json **MUST use full ISO 8601 with time**: \`YYYY-MM-DDTHH:MM:SSZ\` (e.g. \`2026-03-07T14:30:00Z\`). Never date-only.
+
 **⛔ BLOCKING GATE: Do NOT proceed without completing Actions 1-3.**
 **⛔ DO NOT create artifact files on the main branch.**
 
@@ -80,7 +82,7 @@ For **Full Mode**, you will need these artifacts. **Do NOT create the files yet*
 \`\`\`
 ## Status
 - **Phase**: {current phase}
-- **Last Updated**: {timestamp}
+- **Last Updated**: {ISO 8601 timestamp with time: YYYY-MM-DDTHH:MM:SSZ}
 
 ## Completed
 - [x] {completed items as batch}

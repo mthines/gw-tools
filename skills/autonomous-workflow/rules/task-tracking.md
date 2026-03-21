@@ -120,7 +120,7 @@ Like Antigravity, the task list is **dynamic**:
 
 ### Status
 
-Current phase and last update time. Update on every change.
+Current phase and last update time. Update on every change. **All timestamps must use full ISO 8601 with time** (`YYYY-MM-DDTHH:MM:SSZ`, e.g. `2026-03-07T15:45:00Z`) — never date-only.
 
 ### Completed
 

@@ -185,8 +185,8 @@ Prepare the following content in conversation (to be written to disk after workt
 {
   "branch": "<branch-name>",
   "task": "<task-description>",
-  "created": "<ISO-timestamp>",
-  "updated": "<ISO-timestamp>",
+  "created": "<ISO-8601-with-time e.g. 2026-03-07T14:30:00Z>",
+  "updated": "<ISO-8601-with-time e.g. 2026-03-07T14:30:00Z>",
   "phase": 1,
   "status": "in_progress"
 }

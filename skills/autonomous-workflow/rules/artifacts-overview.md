@@ -101,8 +101,8 @@ Each branch directory includes `metadata.json`:
 
 **Fields:**
 
-- `created`: ISO 8601 timestamp (enables future auto-cleanup)
-- `updated`: Last modification time
+- `created`: ISO 8601 timestamp with time (`YYYY-MM-DDTHH:MM:SSZ`, e.g. `2026-03-07T14:30:00Z`) — never date-only
+- `updated`: Last modification time (same ISO 8601 format with time)
 - `phase`: Current workflow phase (0-7)
 - `status`: `pending`, `in_progress`, `completed`, `blocked`
 

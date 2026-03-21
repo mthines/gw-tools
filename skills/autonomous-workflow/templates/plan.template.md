@@ -1,5 +1,5 @@
 ---
-created: { { TIMESTAMP } }
+created: { { TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ) } }
 branch: { { BRANCH } }
 task: { { TASK_DESCRIPTION } }
 complexity: <!-- LOW | MEDIUM | HIGH -->

@@ -241,6 +241,8 @@ Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{
 
 Files are gitignored and grouped by branch for easy browsing.
 
+**⚠️ All timestamps** in artifact frontmatter (`created:`), status fields (`Last Updated:`), and `metadata.json` **MUST use full ISO 8601 with time**: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`). Never use date-only formats.
+
 ### ⚠️ CRITICAL: Artifact Update Requirements
 
 | Artifact         | Update Frequency                      | Blocking Gate                                                                      |
