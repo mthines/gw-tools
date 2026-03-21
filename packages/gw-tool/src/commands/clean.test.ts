@@ -383,7 +383,9 @@ Deno.test('clean command - combines dry-run with use-threshold flag', async () =
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--use-autoclean-threshold', '--dry-run']));
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(['--auto', '--use-autoclean-threshold', '--dry-run'])
+      );
 
       assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
 
