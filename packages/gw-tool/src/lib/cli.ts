@@ -84,7 +84,7 @@ Commands:
   show-init        Generate a 'gw init' command from current configuration
   install-shell    Output shell integration code (use with eval)
   root             Get the root directory of the current git repository
-  clean            Remove safe worktrees (use --use-autoclean-threshold for age-based)
+  clean            Interactive cleanup of worktrees and branches (--auto for batch)
 
 Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository
@@ -109,7 +109,7 @@ Examples:
   gw list
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
-  gw clean --dry-run
+  gw clean
 
 For command-specific help:
   gw <command> --help`);

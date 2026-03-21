@@ -182,6 +182,52 @@ async function createGwRootBranch(repoPath: string): Promise<void> {
 }
 
 /**
+ * Check if a repository is empty (has no commits)
+ */
+async function isRepoEmpty(repoPath: string): Promise<boolean> {
+  const cmd = new Deno.Command('git', {
+    args: ['-C', repoPath, 'rev-parse', 'HEAD'],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code } = await cmd.output();
+  return code !== 0;
+}
+
+/**
+ * Create an initial empty commit on the current branch
+ * Needed for empty repos so that worktrees can be created
+ */
+async function createInitialCommit(repoPath: string): Promise<void> {
+  const cmd = new Deno.Command('git', {
+    args: ['-C', repoPath, 'commit', '--allow-empty', '-m', 'Initial commit (gw)'],
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+
+  const { code } = await cmd.output();
+  if (code !== 0) {
+    throw new Error('Failed to create initial commit');
+  }
+}
+
+/**
+ * Create default worktree directly from gw_root
+ * Used for empty repos where the default branch doesn't exist yet
+ */
+async function createWorktreeFromRoot(repoPath: string, branchName: string, worktreePath: string): Promise<boolean> {
+  const cmd = new Deno.Command('git', {
+    args: ['-C', repoPath, 'worktree', 'add', '-b', branchName, worktreePath, 'gw_root'],
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+
+  const { code } = await cmd.output();
+  return code === 0;
+}
+
+/**
  * Detect the default branch from remote
  */
 async function detectDefaultBranch(repoPath: string): Promise<string> {
@@ -565,44 +611,61 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     await saveConfigTemplate(fullPath, config as Config);
     output.success('Configuration created');
 
-    // Step 4: Create default worktree via gw add
+    // Step 4: Create default worktree
     const defaultBranch = config.defaultBranch || detectedBranch;
     console.log(`\nCreating ${defaultBranch} worktree...`);
 
-    // Detect if we're running from a compiled binary or in development
-    // Compiled binaries have execPath pointing to the binary itself (e.g., /usr/local/bin/gw)
-    // In development, execPath points to the deno executable (e.g., /opt/homebrew/bin/deno)
-    const execPath = Deno.execPath();
-    const isCompiled = !execPath.endsWith('/deno') && !execPath.endsWith('\\deno.exe');
+    // Check if the repo is empty (no commits yet)
+    const emptyRepo = await isRepoEmpty(fullPath);
 
-    // Call add command to create worktree
-    let addCmd: Deno.Command;
-    if (isCompiled) {
-      // Running from compiled binary - use 'gw' command directly
-      addCmd = new Deno.Command('gw', {
-        args: ['add', defaultBranch],
-        cwd: fullPath,
-        stdout: 'inherit',
-        stderr: 'inherit',
-      });
-    } else {
-      // Running in development - use deno run with main.ts
-      const gwPath = new URL(import.meta.url).pathname;
-      const mainPath = resolve(gwPath, '../../main.ts');
-      addCmd = new Deno.Command('deno', {
-        args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
-        cwd: fullPath,
-        stdout: 'inherit',
-        stderr: 'inherit',
-      });
-    }
+    if (emptyRepo) {
+      // Empty repo: create an initial commit on gw_root so we
+      // have a base to branch from, then create the worktree
+      // directly instead of going through `gw add`
+      output.info('Empty repository detected, creating initial commit...');
+      await createInitialCommit(fullPath);
 
-    const { code } = await addCmd.output();
-    if (code !== 0) {
-      output.warning('Failed to create default worktree automatically');
-      output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
+      const worktreePath = join(fullPath, defaultBranch);
+      const success = await createWorktreeFromRoot(fullPath, defaultBranch, worktreePath);
+
+      if (!success) {
+        output.warning('Failed to create default worktree automatically');
+        output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
+      } else {
+        output.success(`Created ${defaultBranch} worktree`);
+      }
     } else {
-      output.success(`Created ${defaultBranch} worktree`);
+      // Non-empty repo: use gw add as normal
+      // Detect if we're running from a compiled binary or in development
+      const execPath = Deno.execPath();
+      const isCompiled = !execPath.endsWith('/deno') && !execPath.endsWith('\\deno.exe');
+
+      let addCmd: Deno.Command;
+      if (isCompiled) {
+        addCmd = new Deno.Command('gw', {
+          args: ['add', defaultBranch],
+          cwd: fullPath,
+          stdout: 'inherit',
+          stderr: 'inherit',
+        });
+      } else {
+        const gwPath = new URL(import.meta.url).pathname;
+        const mainPath = resolve(gwPath, '../../main.ts');
+        addCmd = new Deno.Command('deno', {
+          args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
+          cwd: fullPath,
+          stdout: 'inherit',
+          stderr: 'inherit',
+        });
+      }
+
+      const { code } = await addCmd.output();
+      if (code !== 0) {
+        output.warning('Failed to create default worktree automatically');
+        output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
+      } else {
+        output.success(`Created ${defaultBranch} worktree`);
+      }
     }
 
     // Success summary

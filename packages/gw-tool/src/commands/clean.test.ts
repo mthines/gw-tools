@@ -114,7 +114,7 @@ Deno.test('clean command - shows help message', async () => {
   }
 });
 
-Deno.test('clean command - dry run shows what would be removed (default mode)', async () => {
+Deno.test('clean command - dry run shows what would be removed (auto mode)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -127,7 +127,7 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--dry-run']));
 
       assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
 
@@ -143,7 +143,7 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
   }
 });
 
-Deno.test('clean command - removes all safe worktrees by default (no age check)', async () => {
+Deno.test('clean command - auto mode removes all safe worktrees (no age check)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -158,7 +158,7 @@ Deno.test('clean command - removes all safe worktrees by default (no age check)'
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean([]);
+        await executeClean(['--auto']);
       });
 
       // Verify worktree was removed (even though it's new)
@@ -193,7 +193,7 @@ Deno.test('clean command - with --use-autoclean-threshold only removes old workt
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
         await withMockedExit(async () => {
-          await executeClean(['--use-autoclean-threshold']);
+          await executeClean(['--auto', '--use-autoclean-threshold']);
         });
       });
 
@@ -228,7 +228,7 @@ Deno.test('clean command - skips worktrees with uncommitted changes', async () =
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean([]));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto']));
 
       assertEquals(exitCode, 0, 'Should exit successfully');
 
@@ -260,7 +260,7 @@ Deno.test('clean command - force flag removes worktrees with uncommitted changes
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean(['--force']);
+        await executeClean(['--auto', '--force']);
       });
 
       // Verify worktree was removed (force overrides safety checks)
@@ -296,7 +296,7 @@ Deno.test('clean command - skips worktrees with unpushed commits', async () => {
 
       const mainCwd = new TempCwd(repo.path);
       try {
-        const { exitCode } = await withMockedExit(() => executeClean([]));
+        const { exitCode } = await withMockedExit(() => executeClean(['--auto']));
 
         assertEquals(exitCode, 0, 'Should exit successfully');
 
@@ -330,7 +330,7 @@ Deno.test('clean command - cancels when user declines confirmation', async () =>
     try {
       // Decline removal with "no"
       const { exitCode } = await withMockedStdin('no', async () => {
-        return await withMockedExit(() => executeClean([]));
+        return await withMockedExit(() => executeClean(['--auto']));
       });
 
       assertEquals(exitCode, 0, 'Should exit with code 0 when cancelled');
@@ -358,7 +358,7 @@ Deno.test('clean command - exits successfully when no worktrees to clean', async
     // Don't create any worktrees
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean([]));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto']));
 
       assertEquals(exitCode, 0, 'Should exit successfully when no worktrees');
     } finally {
@@ -383,7 +383,9 @@ Deno.test('clean command - combines dry-run with use-threshold flag', async () =
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--use-autoclean-threshold', '--dry-run']));
+      const { exitCode } = await withMockedExit(() =>
+        executeClean(['--auto', '--use-autoclean-threshold', '--dry-run'])
+      );
 
       assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
 
@@ -423,7 +425,7 @@ Deno.test('clean command - respects custom cleanThreshold from config', async ()
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
         await withMockedExit(async () => {
-          await executeClean(['--use-autoclean-threshold']);
+          await executeClean(['--auto', '--use-autoclean-threshold']);
         });
       });
 
@@ -455,7 +457,7 @@ Deno.test('clean command - never removes bare repository', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       // Try to clean (bare repo should be skipped automatically)
-      const { exitCode } = await withMockedExit(() => executeClean([]));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto']));
 
       assertEquals(exitCode, 0, 'Should exit successfully');
 
@@ -494,7 +496,7 @@ Deno.test('clean command - never removes default branch worktree', async () => {
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean([]);
+        await executeClean(['--auto']);
       });
 
       const worktrees = await repo.listWorktrees();
@@ -537,7 +539,7 @@ Deno.test('clean command - protects default branch even with --force', async () 
     try {
       // Confirm removal with "yes" and use --force
       await withMockedStdin('yes', async () => {
-        await executeClean(['--force']);
+        await executeClean(['--auto', '--force']);
       });
 
       const worktrees = await repo.listWorktrees();
@@ -577,7 +579,7 @@ Deno.test('clean command - uses main as default when defaultBranch not configure
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean([]);
+        await executeClean(['--auto']);
       });
 
       const worktrees = await repo.listWorktrees();
@@ -613,7 +615,7 @@ Deno.test('clean command - never removes gw_root worktree', async () => {
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean([]);
+        await executeClean(['--auto']);
       });
 
       const worktrees = await repo.listWorktrees();
@@ -649,7 +651,7 @@ Deno.test('clean command - automatically prunes phantom worktrees before listing
     const cwd = new TempCwd(repo.path);
     try {
       // Run clean with dry-run
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--dry-run']));
 
       assertEquals(exitCode, 0, 'Should exit successfully');
 
@@ -681,7 +683,7 @@ Deno.test('clean command - continues successfully even if prune fails', async ()
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--dry-run']));
       assertEquals(exitCode, 0, 'Should succeed even if prune has issues');
     } finally {
       cwd.restore();
@@ -709,7 +711,7 @@ Deno.test('clean command - prunes multiple phantom worktrees at once', async () 
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean([]));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto']));
       assertEquals(exitCode, 0);
 
       // Verify all are pruned

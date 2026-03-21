@@ -968,11 +968,14 @@ gw init git@github.com:user/repo.git
 5. Creates the default branch worktree (e.g., `main`)
 6. Automatically navigates to the repository directory (requires shell integration)
 
+**Empty repositories** are handled automatically — if the remote has no branches or commits, `gw init` creates an initial commit on `gw_root` and sets up the default branch worktree from it.
+
 **Benefits:**
 
 - No need to manually run `git clone --bare` or `git worktree add`
 - Configuration is set up immediately
 - Ready to use `gw checkout` right away
+- Works with both existing and empty repositories
 
 **Notes:**
 

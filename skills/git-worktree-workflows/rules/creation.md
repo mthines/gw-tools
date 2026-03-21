@@ -55,6 +55,9 @@ gw init git@github.com:user/repo.git \
   --auto-copy-files .env,secrets/ \
   --post-add "pnpm install"
 
+# Works with empty repositories (no branches/commits yet)
+gw init git@github.com:user/new-empty-repo.git
+
 # Initialize existing repository
 cd ~/projects/myapp
 gw init
