@@ -199,18 +199,9 @@ async function isRepoEmpty(repoPath: string): Promise<boolean> {
  * Create an initial empty commit on the current branch
  * Needed for empty repos so that worktrees can be created
  */
-async function createInitialCommit(
-  repoPath: string,
-): Promise<void> {
+async function createInitialCommit(repoPath: string): Promise<void> {
   const cmd = new Deno.Command('git', {
-    args: [
-      '-C',
-      repoPath,
-      'commit',
-      '--allow-empty',
-      '-m',
-      'Initial commit (gw)',
-    ],
+    args: ['-C', repoPath, 'commit', '--allow-empty', '-m', 'Initial commit (gw)'],
     stdout: 'piped',
     stderr: 'piped',
   });
@@ -225,22 +216,9 @@ async function createInitialCommit(
  * Create default worktree directly from gw_root
  * Used for empty repos where the default branch doesn't exist yet
  */
-async function createWorktreeFromRoot(
-  repoPath: string,
-  branchName: string,
-  worktreePath: string,
-): Promise<boolean> {
+async function createWorktreeFromRoot(repoPath: string, branchName: string, worktreePath: string): Promise<boolean> {
   const cmd = new Deno.Command('git', {
-    args: [
-      '-C',
-      repoPath,
-      'worktree',
-      'add',
-      '-b',
-      branchName,
-      worktreePath,
-      'gw_root',
-    ],
+    args: ['-C', repoPath, 'worktree', 'add', '-b', branchName, worktreePath, 'gw_root'],
     stdout: 'inherit',
     stderr: 'inherit',
   });
@@ -648,19 +626,11 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       await createInitialCommit(fullPath);
 
       const worktreePath = join(fullPath, defaultBranch);
-      const success = await createWorktreeFromRoot(
-        fullPath,
-        defaultBranch,
-        worktreePath,
-      );
+      const success = await createWorktreeFromRoot(fullPath, defaultBranch, worktreePath);
 
       if (!success) {
-        output.warning(
-          'Failed to create default worktree automatically',
-        );
-        output.info(
-          `You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`,
-        );
+        output.warning('Failed to create default worktree automatically');
+        output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
       } else {
         output.success(`Created ${defaultBranch} worktree`);
       }
@@ -668,8 +638,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       // Non-empty repo: use gw add as normal
       // Detect if we're running from a compiled binary or in development
       const execPath = Deno.execPath();
-      const isCompiled = !execPath.endsWith('/deno') &&
-        !execPath.endsWith('\\deno.exe');
+      const isCompiled = !execPath.endsWith('/deno') && !execPath.endsWith('\\deno.exe');
 
       let addCmd: Deno.Command;
       if (isCompiled) {
@@ -683,13 +652,7 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
         const gwPath = new URL(import.meta.url).pathname;
         const mainPath = resolve(gwPath, '../../main.ts');
         addCmd = new Deno.Command('deno', {
-          args: [
-            'run',
-            '--allow-all',
-            mainPath,
-            'add',
-            defaultBranch,
-          ],
+          args: ['run', '--allow-all', mainPath, 'add', defaultBranch],
           cwd: fullPath,
           stdout: 'inherit',
           stderr: 'inherit',
@@ -698,12 +661,8 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
 
       const { code } = await addCmd.output();
       if (code !== 0) {
-        output.warning(
-          'Failed to create default worktree automatically',
-        );
-        output.info(
-          `You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`,
-        );
+        output.warning('Failed to create default worktree automatically');
+        output.info(`You can create it manually with: cd ${targetDir} && gw add ${defaultBranch}`);
       } else {
         output.success(`Created ${defaultBranch} worktree`);
       }

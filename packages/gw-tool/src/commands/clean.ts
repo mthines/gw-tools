@@ -64,7 +64,7 @@ function parseCleanArgs(args: string[]): {
   useThreshold: boolean;
   json: boolean;
   yes: boolean;
-  interactive: boolean;
+  auto: boolean;
 } {
   return {
     help: args.includes('--help') || args.includes('-h'),
@@ -73,7 +73,7 @@ function parseCleanArgs(args: string[]): {
     useThreshold: args.includes('--use-autoclean-threshold'),
     json: args.includes('--json'),
     yes: args.includes('--yes') || args.includes('-y'),
-    interactive: args.includes('--interactive') || args.includes('-i'),
+    auto: args.includes('--auto') || args.includes('-a'),
   };
 }
 
@@ -83,61 +83,61 @@ function parseCleanArgs(args: string[]): {
 function showCleanHelp(): void {
   console.log(`Usage: gw clean [options]
 
-Remove safe worktrees with no uncommitted changes or unpushed commits.
+Interactive cleanup of worktrees, branches, and orphan branches.
 
-By default, removes ALL safe worktrees regardless of age. Use
---use-autoclean-threshold to only remove worktrees older than the configured
-age threshold (.gw/config.json cleanThreshold field, default: 7 days).
+By default, opens an interactive multi-select UI where you can pick exactly
+which worktrees, branches, and orphans to remove. Use --auto to remove ALL
+safe worktrees automatically without the interactive UI.
 
 Automatically prunes stale worktree metadata before listing, ensuring only
 worktrees that actually exist on disk are shown.
 
 Options:
-  -i, --interactive          Interactive mode: select worktrees, branches, and
-                             orphans to remove using a multi-select checklist
-                             WARNING: Uses --force deletion for selected items
+  -a, --auto                 Auto mode: remove all safe worktrees without
+                             interactive selection (previous default behavior)
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
+                             (only applies in --auto mode)
   -f, --force                Skip safety checks (uncommitted changes, unpushed commits)
                              WARNING: This may result in data loss
   -n, --dry-run              Preview what would be removed without actually removing
-  --json                     Output results as JSON and exit (implies --dry-run)
-  -y, --yes                  Skip confirmation prompt
+                             (only applies in --auto mode)
+  --json                     Output results as JSON and exit (implies --dry-run,
+                             only applies in --auto mode)
+  -y, --yes                  Skip confirmation prompt (only applies in --auto mode)
   -h, --help                 Show this help message
 
 Safety Features:
-  - By default, only removes worktrees with NO uncommitted changes
-  - By default, only removes worktrees with NO unpushed commits
-  - Always prompts for confirmation before deletion (unless --dry-run)
+  - Interactive mode uses force-deletion for selected items — choose carefully
+  - Auto mode only removes worktrees with NO uncommitted changes or unpushed
+    commits (unless --force is used)
+  - Always prompts for confirmation before deletion
   - Main/bare repository, default branch, and gw_root are never removed
   - After removing worktrees, automatically prunes orphan branches
     (branches with no worktree and no unpushed commits)
-  - Use --force to bypass safety checks (use with caution)
 
 Examples:
-  # Interactive mode: pick exactly what to remove
-  gw clean --interactive
-
-  # Preview all safe worktrees (default behavior)
-  gw clean --dry-run
-
-  # Remove all safe worktrees regardless of age
+  # Interactive mode (default): pick exactly what to remove
   gw clean
 
-  # Only remove worktrees older than configured threshold
-  gw clean --use-autoclean-threshold
+  # Auto mode: remove all safe worktrees regardless of age
+  gw clean --auto
 
-  # Preview old worktrees with threshold check
-  gw clean --use-autoclean-threshold --dry-run
+  # Preview what auto mode would remove
+  gw clean --auto --dry-run
+
+  # Auto mode: only remove worktrees older than configured threshold
+  gw clean --auto --use-autoclean-threshold
 
   # Force remove all worktrees without safety checks (dangerous!)
-  gw clean --force
+  gw clean --auto --force
 
   # Configure threshold during init (used by --use-autoclean-threshold)
   gw init --clean-threshold 14
 
 Comparison:
-  gw clean                         - Removes ALL safe worktrees
-  gw clean --use-autoclean-threshold - Removes only OLD safe worktrees
+  gw clean                         - Interactive multi-select UI
+  gw clean --auto                  - Removes ALL safe worktrees
+  gw clean --auto --use-autoclean-threshold - Removes only OLD safe worktrees
   gw prune --clean                 - Removes all clean worktrees (no safety checks)
 
 Configuration:
@@ -409,8 +409,8 @@ export async function executeClean(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
-  // Interactive mode - early return
-  if (parsed.interactive) {
+  // Interactive mode is the default — auto mode is opt-in
+  if (!parsed.auto) {
     await executeInteractiveClean();
     return;
   }

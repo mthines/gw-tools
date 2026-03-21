@@ -114,7 +114,7 @@ Deno.test('clean command - shows help message', async () => {
   }
 });
 
-Deno.test('clean command - dry run shows what would be removed (default mode)', async () => {
+Deno.test('clean command - dry run shows what would be removed (auto mode)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -127,7 +127,7 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeClean(['--dry-run']));
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--dry-run']));
 
       assertEquals(exitCode, 0, 'Should exit with code 0 for dry run');
 
@@ -143,7 +143,7 @@ Deno.test('clean command - dry run shows what would be removed (default mode)', 
   }
 });
 
-Deno.test('clean command - removes all safe worktrees by default (no age check)', async () => {
+Deno.test('clean command - auto mode removes all safe worktrees (no age check)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -158,7 +158,7 @@ Deno.test('clean command - removes all safe worktrees by default (no age check)'
     try {
       // Confirm removal with "yes"
       await withMockedStdin('yes', async () => {
-        await executeClean([]);
+        await executeClean(['--auto']);
       });
 
       // Verify worktree was removed (even though it's new)
