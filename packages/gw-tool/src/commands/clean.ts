@@ -27,10 +27,33 @@ import { signalNavigation } from '../lib/shell-navigation.ts';
 /**
  * Check if a path is inside or equal to another path
  */
-function isPathInside(childPath: string, parentPath: string): boolean {
+export function isPathInside(childPath: string, parentPath: string): boolean {
   const child = resolve(childPath);
   const parent = resolve(parentPath);
   return child === parent || child.startsWith(parent + '/');
+}
+
+/**
+ * Navigate to git root if the current directory is inside any of the given paths.
+ * Returns true if navigation occurred.
+ */
+async function navigateAwayIfNeeded(
+  paths: string[],
+): Promise<boolean> {
+  const cwd = Deno.cwd();
+  const removingCurrent = paths.some((p) => isPathInside(cwd, p));
+
+  if (removingCurrent) {
+    try {
+      const { gitRoot } = await loadConfig();
+      Deno.chdir(gitRoot);
+      await signalNavigation(gitRoot);
+      return true;
+    } catch {
+      // Continue anyway — git command might still work
+    }
+  }
+  return false;
 }
 
 /**
@@ -318,24 +341,11 @@ async function executeInteractiveClean(): Promise<void> {
   }
 
   // ── Navigate away if removing current worktree ──────
-  const cwd = Deno.cwd();
   const selectedWorktreePaths = result.selected
     .filter((v) => v.startsWith('worktree:'))
     .map((v) => v.split(':').slice(1).join(':'));
 
-  let navigatedToRoot = false;
-  const removingCurrent = selectedWorktreePaths.some((p) => isPathInside(cwd, p));
-
-  if (removingCurrent) {
-    try {
-      const { gitRoot } = await loadConfig();
-      Deno.chdir(gitRoot);
-      await signalNavigation(gitRoot);
-      navigatedToRoot = true;
-    } catch {
-      // Continue anyway — git command might still work
-    }
-  }
+  const navigatedToRoot = await navigateAwayIfNeeded(selectedWorktreePaths);
 
   // ── Process selections ────────────────────────────────
   console.log();
@@ -571,20 +581,9 @@ export async function executeClean(args: string[]): Promise<void> {
   }
 
   // Navigate away if removing current worktree
-  const cwd = Deno.cwd();
-  let navigatedToRoot = false;
-  const removingCurrent = toClean.some((wt) => isPathInside(cwd, wt.path));
-
-  if (removingCurrent) {
-    try {
-      const { gitRoot } = await loadConfig();
-      Deno.chdir(gitRoot);
-      await signalNavigation(gitRoot);
-      navigatedToRoot = true;
-    } catch {
-      // Continue anyway — git command might still work
-    }
-  }
+  const navigatedToRoot = await navigateAwayIfNeeded(
+    toClean.map((wt) => wt.path),
+  );
 
   // Remove worktrees
   console.log();

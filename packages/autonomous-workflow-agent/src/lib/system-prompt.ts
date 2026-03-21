@@ -47,17 +47,18 @@ MODE SELECTION:
 
 **When in doubt, choose Full Mode.**
 
-### Action 3: Create Artifacts (Full Mode ONLY)
+### Action 3: Plan Artifacts (Full Mode ONLY)
 
-For **Full Mode**, create these files **BEFORE Phase 1**:
+For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-\`\`\`bash
-mkdir -p .gw/{branch-name}
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
-\`\`\`
+| File | Purpose | Created |
+| ---- | ------- | ------- |
+| \`task.md\` | Dynamic checklist, decisions, blockers | After Phase 2 |
+| \`plan.md\` | Comprehensive implementation strategy | After Phase 2 |
+| \`walkthrough.md\` | Final summary for PR | Phase 6 |
 
 **⛔ BLOCKING GATE: Do NOT proceed without completing Actions 1-3.**
+**⛔ DO NOT create artifact files on the main branch.**
 
 ---
 
@@ -187,7 +188,8 @@ READ: .gw/{branch}/plan.md (if exists)
 2. **Transfer Phase 0 Context**: Capture ALL details from the Phase 0 discussion into plan.md — every requirement, decision, rejected alternative, edge case, and rationale.
 3. **Create Comprehensive Implementation Plan**: Document architecture, specific file changes with rationale, implementation order, API designs, specific test cases, risks with mitigations.
 4. **Self-Validation**: Does plan achieve requirements? Follow patterns? Testable? Could a new session execute this without the original conversation?
-5. **⚠️ MANDATORY: Populate Artifacts** (Full Mode):
+5. **⚠️ MANDATORY: Prepare Artifact Content in Conversation** (Full Mode):
+   Prepare all plan.md and task.md content in conversation. Files will be created inside the worktree at the end of Phase 2.
 
 **plan.md MUST contain ALL of these sections (content should be detailed, not sparse):**
 \`\`\`markdown
@@ -261,13 +263,15 @@ PHASE 1 → 2 TRANSITION:
 - [ ] Implementation order defined
 - [ ] Testing strategy has specific test cases
 - [ ] Risks documented with mitigations
-- [ ] ⛔ plan.md is COMPREHENSIVE (not sparse — a new session can execute from it alone)
-- [ ] ⛔ task.md POPULATED with checklist (not empty)
+- [ ] ⛔ plan.md content is COMPREHENSIVE (not sparse — a new session can execute from it alone)
+- [ ] ⛔ task.md content PREPARED with checklist (not empty)
+- [ ] Artifact content ready to write to files after worktree creation
 Announce: "Phase 1 complete. Plan ready. Proceeding to Phase 2 Worktree Setup."
 \`\`\`
 
-**⛔ BLOCKING: Do NOT proceed to Phase 2 if plan.md or task.md are empty or sparse files.**
+**⛔ BLOCKING: Do NOT proceed to Phase 2 if plan.md or task.md content is empty or sparse.**
 **⛔ A plan.md with just summary + file tables is NOT sufficient. ALL template sections must be populated.**
+**⛔ Artifact FILES are not created yet — content is prepared in conversation, files created at end of Phase 2.**
 
 ---
 
@@ -304,6 +308,11 @@ Before creating a new worktree, check if current context matches the task:
 4. Install dependencies: \`npm install\` (or pnpm/yarn)
 5. Verify environment: \`npm run build\`, \`npm run lint\`
 6. Ensure \`.gw/\` is gitignored
+7. **Create & Populate Artifacts** (Full Mode ONLY):
+   \`\`\`bash
+   mkdir -p .gw/{branch-name}
+   \`\`\`
+   Write the plan.md and task.md content prepared during Phase 1 into the worktree files.
 
 ### Phase 2 Gate
 
@@ -314,6 +323,7 @@ PHASE 2 → 3 TRANSITION:
 - [ ] Dependencies installed
 - [ ] Environment builds/compiles
 - [ ] .gw/ is gitignored
+- [ ] ⛔ Artifact files created and populated in worktree (Full Mode only)
 Announce: "Phase 2 complete. Worktree ready. Proceeding to Phase 3 Implementation."
 \`\`\`
 
@@ -644,11 +654,11 @@ Remove worktree after PR is merged or closed.
 
 For Full Mode (4+ files), maintain artifacts in \`.gw/{branch-name}/\`:
 
-| Artifact        | File             | Created   | Purpose                    |
-| --------------- | ---------------- | --------- | -------------------------- |
-| **Task**        | \`task.md\`      | Action 3  | Dynamic checklist          |
-| **Plan**        | \`plan.md\`      | Phase 1   | Implementation strategy    |
-| **Walkthrough** | \`walkthrough.md\` | Phase 6 | Final summary for PR       |
+| Artifact        | File             | Created       | Purpose                    |
+| --------------- | ---------------- | ------------- | -------------------------- |
+| **Task**        | \`task.md\`      | Phase 2 (end) | Dynamic checklist          |
+| **Plan**        | \`plan.md\`      | Phase 2 (end) | Implementation strategy    |
+| **Walkthrough** | \`walkthrough.md\` | Phase 6     | Final summary for PR       |
 
 ### Artifact Update Protocol
 
@@ -667,10 +677,10 @@ Update \`task.md\` whenever:
 
 | Phase | Command/Action                                    |
 | ----- | ------------------------------------------------- |
-| Setup | Output MODE SELECTION, create \`.gw/{branch}/\`  |
+| Setup | Output MODE SELECTION (do NOT create artifact files yet) |
 | 0     | Ask clarifying questions, get user confirmation  |
-| 1     | Analyze codebase, **POPULATE \`plan.md\` (ALL sections, verbose) + \`task.md\`** |
-| 2     | \`gw add feat/feature-name\`                     |
+| 1     | Analyze codebase, **PREPARE plan.md + task.md content in conversation (ALL sections, verbose)** |
+| 2     | \`gw add feat/feature-name\`, then **CREATE & POPULATE** \`.gw/{branch}/task.md\` and \`plan.md\` inside worktree |
 | 3     | Code in worktree, **UPDATE \`task.md\` at milestones** |
 | 4     | \`npm test\`, **LOG iterations in \`task.md\`** |
 | 5     | Update README, CHANGELOG                         |
