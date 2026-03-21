@@ -738,6 +738,208 @@ Deno.test('init command - clone mode fails when directory exists', async () => {
   }
 });
 
+Deno.test('init command - clone mode with empty repository', async () => {
+  // Create a bare repo with no commits (simulates empty GitHub repo)
+  const tempDir = Deno.realPathSync(
+    Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }),
+  );
+  const sourceRepoPath = join(tempDir, 'empty-repo');
+  await Deno.mkdir(sourceRepoPath);
+
+  const initCmd = new Deno.Command('git', {
+    args: ['init', '--bare'],
+    cwd: sourceRepoPath,
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+  await initCmd.output();
+
+  try {
+    const targetDir = Deno.realPathSync(
+      Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }),
+    );
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepoPath}`;
+
+      // Mock the shell integration prompt (respond 'n')
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'my-empty-repo']);
+      });
+
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
+
+      // Verify the repository was cloned
+      await assertDirExists(join(clonedRepoPath, '.git'));
+
+      // Verify config was created
+      await assertFileExists(
+        join(clonedRepoPath, '.gw', 'config.json'),
+      );
+
+      // Verify config content
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.root, clonedRepoPath);
+
+      // Verify default worktree was created
+      await assertDirExists(join(clonedRepoPath, 'main'));
+
+      // Verify that the main branch exists in the worktree
+      const branchCmd = new Deno.Command('git', {
+        args: [
+          '-C',
+          join(clonedRepoPath, 'main'),
+          'rev-parse',
+          '--abbrev-ref',
+          'HEAD',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const { stdout } = await branchCmd.output();
+      const branch = new TextDecoder().decode(stdout).trim();
+      assertEquals(branch, 'main');
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(
+        () => {},
+      );
+    }
+  } finally {
+    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+  }
+});
+
+Deno.test('init command - clone mode with empty repository creates initial commit on gw_root', async () => {
+  // Create a bare repo with no commits (simulates empty GitHub repo)
+  const tempDir = Deno.realPathSync(
+    Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }),
+  );
+  const sourceRepoPath = join(tempDir, 'empty-repo');
+  await Deno.mkdir(sourceRepoPath);
+
+  const initCmd = new Deno.Command('git', {
+    args: ['init', '--bare'],
+    cwd: sourceRepoPath,
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+  await initCmd.output();
+
+  try {
+    const targetDir = Deno.realPathSync(
+      Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }),
+    );
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepoPath}`;
+
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'my-empty-repo']);
+      });
+
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
+
+      // Verify gw_root has an initial commit
+      const logCmd = new Deno.Command('git', {
+        args: [
+          '-C',
+          clonedRepoPath,
+          'log',
+          'gw_root',
+          '--oneline',
+          '-1',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const { stdout, code } = await logCmd.output();
+      assertEquals(code, 0);
+      const logLine = new TextDecoder().decode(stdout).trim();
+      assertEquals(
+        logLine.includes('Initial commit (gw)'),
+        true,
+        `Expected gw_root to have 'Initial commit (gw)' but got: ${logLine}`,
+      );
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(
+        () => {},
+      );
+    }
+  } finally {
+    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+  }
+});
+
+Deno.test('init command - clone mode with empty repository and custom default branch', async () => {
+  // Create a bare repo with no commits
+  const tempDir = Deno.realPathSync(
+    Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }),
+  );
+  const sourceRepoPath = join(tempDir, 'empty-repo');
+  await Deno.mkdir(sourceRepoPath);
+
+  const initCmd = new Deno.Command('git', {
+    args: ['init', '--bare'],
+    cwd: sourceRepoPath,
+    stdout: 'piped',
+    stderr: 'piped',
+  });
+  await initCmd.output();
+
+  try {
+    const targetDir = Deno.realPathSync(
+      Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }),
+    );
+    const cwd = new TempCwd(targetDir);
+    try {
+      const cloneUrl = `file://${sourceRepoPath}`;
+
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([
+          cloneUrl,
+          'my-empty-repo',
+          '--default-source',
+          'develop',
+        ]);
+      });
+
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
+
+      // Verify config has custom default branch
+      const config = await readTestConfig(clonedRepoPath);
+      assertEquals(config.defaultBranch, 'develop');
+
+      // Verify worktree was created with custom branch name
+      await assertDirExists(join(clonedRepoPath, 'develop'));
+
+      // Verify the branch in the worktree
+      const branchCmd = new Deno.Command('git', {
+        args: [
+          '-C',
+          join(clonedRepoPath, 'develop'),
+          'rev-parse',
+          '--abbrev-ref',
+          'HEAD',
+        ],
+        stdout: 'piped',
+        stderr: 'piped',
+      });
+      const { stdout } = await branchCmd.output();
+      const branch = new TextDecoder().decode(stdout).trim();
+      assertEquals(branch, 'develop');
+    } finally {
+      cwd.restore();
+      await Deno.remove(targetDir, { recursive: true }).catch(
+        () => {},
+      );
+    }
+  } finally {
+    await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+  }
+});
+
 Deno.test('init command - existing repo mode when already initialized', async () => {
   const repo = new GitTestRepo();
   try {

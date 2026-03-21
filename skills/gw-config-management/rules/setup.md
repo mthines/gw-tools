@@ -35,6 +35,9 @@ gw init git@github.com:user/repo.git
 # ✓ Created gw_root branch
 # ✓ Configuration created
 # ✓ Created main worktree
+
+# Works with empty repositories too — gw creates an initial
+# commit and sets up the default branch automatically
 ```
 
 ### 2. Set Up Secrets in Main
