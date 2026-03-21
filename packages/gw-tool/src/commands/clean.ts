@@ -37,9 +37,7 @@ export function isPathInside(childPath: string, parentPath: string): boolean {
  * Navigate to git root if the current directory is inside any of the given paths.
  * Returns true if navigation occurred.
  */
-async function navigateAwayIfNeeded(
-  paths: string[],
-): Promise<boolean> {
+async function navigateAwayIfNeeded(paths: string[]): Promise<boolean> {
   const cwd = Deno.cwd();
   const removingCurrent = paths.some((p) => isPathInside(cwd, p));
 
@@ -581,9 +579,7 @@ export async function executeClean(args: string[]): Promise<void> {
   }
 
   // Navigate away if removing current worktree
-  const navigatedToRoot = await navigateAwayIfNeeded(
-    toClean.map((wt) => wt.path),
-  );
+  const navigatedToRoot = await navigateAwayIfNeeded(toClean.map((wt) => wt.path));
 
   // Remove worktrees
   console.log();
