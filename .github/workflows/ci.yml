@@ -68,7 +68,7 @@ jobs:
 
           if [ "${{ github.event_name }}" = "push" ]; then
             # Push to main - find last stable tag as base
-            LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1 || echo "")
+            LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -E "^v[0-9]" | grep -v "beta" | head -n 1 || echo "")
             if [ -n "$LAST_STABLE_TAG" ]; then
               BASE_REF="$LAST_STABLE_TAG"
             else
@@ -91,7 +91,7 @@ jobs:
             # Manual trigger
             if [ "${{ github.ref }}" = "refs/heads/main" ]; then
               # Main branch - find last stable tag
-              LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -v "beta" | head -n 1 || echo "")
+              LAST_STABLE_TAG=$(git tag -l "v*" --sort=-version:refname | grep -E "^v[0-9]" | grep -v "beta" | head -n 1 || echo "")
               if [ -n "$LAST_STABLE_TAG" ]; then
                 BASE_REF="$LAST_STABLE_TAG"
               else
@@ -117,16 +117,20 @@ jobs:
             echo "::notice::Manual trigger - comparing against $BASE_REF"
           fi
 
-          # Skip release commit
+          # Skip release commits (only on push events — manual triggers with force flags must proceed)
           COMMIT_MSG=$(git log -1 --pretty=%s)
           if [[ "$COMMIT_MSG" =~ ^chore\((gw|autonomous-workflow-agent)\):\ release ]]; then
-            echo "::notice::Skipping - this is a release commit"
-            echo "gw_changed=false" >> $GITHUB_OUTPUT
-            echo "agent_changed=false" >> $GITHUB_OUTPUT
-            echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
-            echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
-            echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
-            exit 0
+            if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+              echo "::notice::Skipping — this is a release commit"
+              echo "gw_changed=false" >> $GITHUB_OUTPUT
+              echo "agent_changed=false" >> $GITHUB_OUTPUT
+              echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
+              echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
+              echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
+              exit 0
+            else
+              echo "::notice::Release commit detected but workflow_dispatch — checking force flags"
+            fi
           fi
 
           # Use Nx to detect affected projects
@@ -326,6 +330,13 @@ jobs:
           TAG="${{ steps.version.outputs.tag }}"
           IS_BETA="${{ needs.detect-changes.outputs.is_beta }}"
 
+          # Check if tag already exists (race condition from parallel/retried runs)
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::warning::Tag $TAG already exists — skipping version-gw"
+            echo "created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
@@ -426,6 +437,13 @@ jobs:
         run: |
           VERSION="${{ steps.version.outputs.version }}"
           TAG="${{ steps.version.outputs.tag }}"
+
+          # Check if tag already exists (race condition from parallel/retried runs)
+          if git rev-parse "$TAG" >/dev/null 2>&1; then
+            echo "::warning::Tag $TAG already exists — skipping version-agent"
+            echo "created=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
