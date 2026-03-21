@@ -78,6 +78,7 @@ export class WorktreeProvider implements vscode.TreeDataProvider<WorktreeItem> {
   private worktrees: WorktreeInfo[] = [];
   private currentWorkspacePath: string | undefined;
   private hasShownUpdateNotification = false;
+  private refreshResolve: (() => void) | undefined;
 
   constructor() {
     this.currentWorkspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
@@ -85,6 +86,16 @@ export class WorktreeProvider implements vscode.TreeDataProvider<WorktreeItem> {
 
   refresh(): void {
     this._onDidChangeTreeData.fire();
+  }
+
+  /**
+   * Returns a promise that resolves when the next getChildren() call completes.
+   * Used by the worktree watcher to know when refresh-triggered commands are done.
+   */
+  waitForRefresh(): Promise<void> {
+    return new Promise((resolve) => {
+      this.refreshResolve = resolve;
+    });
   }
 
   getTreeItem(element: WorktreeItem): vscode.TreeItem {
@@ -131,12 +142,20 @@ export class WorktreeProvider implements vscode.TreeDataProvider<WorktreeItem> {
 
     const showBare = vscode.workspace.getConfiguration('gw').get<boolean>('showBareWorktree', false);
 
-    return this.worktrees
+    const items = this.worktrees
       .filter((wt) => showBare || !wt.bare)
       .map((wt) => {
         const isCurrent = wt.path === this.currentWorkspacePath;
         const isCleanable = cleanablePaths.has(wt.path);
         return new WorktreeItem(wt, isCurrent, isCleanable);
       });
+
+    // Signal that refresh is complete (used by worktree watcher guard)
+    if (this.refreshResolve) {
+      this.refreshResolve();
+      this.refreshResolve = undefined;
+    }
+
+    return items;
   }
 }

@@ -108,7 +108,7 @@ If user clarifies/corrects:
 
 **⚠️ IMPORTANT: Every detail discussed in this phase — requirements, decisions, alternatives considered, edge cases, rationale, out-of-scope items — MUST be captured in plan.md during Phase 1. The plan.md serves as the complete context record. A new Claude session should be able to execute the plan from plan.md alone without needing the original conversation.**
 
-### Step 6: Detect Workflow Mode & Create Artifacts
+### Step 6: Detect Workflow Mode
 
 **After user confirmation, before Phase 1:**
 
@@ -127,19 +127,13 @@ Analyze the confirmed scope:
 
 State explicitly:
 
-> "This is a **Full Mode** task (affects X files). Creating artifacts now."
+> "This is a **Full Mode** task (affects X files). Artifacts will be created after worktree setup."
 
 or
 
 > "This is a **Lite Mode** task (Y files, simple fix). Proceeding without artifacts."
 
-#### 6c. Create Artifacts (Full Mode ONLY)
-
-```bash
-mkdir -p .gw/{branch-name}
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
-```
+**⚠️ IMPORTANT: Do NOT create artifact files here.** Artifact files must be created inside the worktree directory (after Phase 2), not on the main branch. Phase 1 planning happens in conversation; artifacts are written to disk after the worktree is set up.
 
 **⛔ DO NOT proceed to Phase 1 without completing Step 6.**
 
@@ -187,7 +181,7 @@ Before leaving Phase 0:
 - [ ] Technical approach validated
 - [ ] User gave explicit "proceed" signal
 - [ ] **Workflow mode determined (Full or Lite)**
-- [ ] **Artifacts created (Full Mode only)**: `.gw/{branch}/task.md`, `plan.md`
+- [ ] **Branch name decided** (artifacts will be created after worktree setup in Phase 2)
 
 **If any checkbox unchecked, DO NOT proceed to Phase 1.**
 

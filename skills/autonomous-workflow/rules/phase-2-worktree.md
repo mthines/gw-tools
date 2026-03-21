@@ -151,6 +151,36 @@ grep -q "^\.gw/$" .gitignore 2>/dev/null || echo ".gw/" >> .gitignore
 The `.gw/` folder contains working artifacts that should not be committed.
 See [artifacts-overview](./artifacts-overview.md) for details.
 
+### Step 8: Create Artifact Files (Full Mode ONLY)
+
+**⚠️ CRITICAL: Artifacts must be created HERE — inside the worktree, not on the main branch.**
+
+After the worktree is set up and you have navigated into it, create the artifact files:
+
+```bash
+# Create artifact directory in the worktree
+mkdir -p .gw/{branch-name}
+
+# Create required files
+touch .gw/{branch-name}/task.md
+touch .gw/{branch-name}/plan.md
+```
+
+**Now populate the artifacts** with the content prepared during Phase 1:
+
+- Write `task.md` with phase checklist and decisions log
+- Write `plan.md` with the comprehensive implementation plan
+- Write `metadata.json` with branch metadata
+
+**Validation:**
+
+```bash
+ls -la .gw/{branch-name}/
+# Must show: task.md, plan.md
+```
+
+**⛔ DO NOT proceed to Phase 3 without artifacts populated (Full Mode).**
+
 ## gw Commands Reference
 
 ```bash
@@ -182,6 +212,7 @@ Before Phase 3 (Implementation):
 - [ ] Environment builds/compiles
 - [ ] Configuration files synced
 - [ ] `.gw/` is gitignored
+- [ ] Artifact files created and populated in worktree (Full Mode only)
 
 **If any marked item not checked, STOP and complete Phase 2.**
 

@@ -3,6 +3,7 @@
  * Remove stale worktrees based on age threshold
  */
 
+import { resolve } from '@std/path';
 import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
@@ -21,6 +22,37 @@ import {
 } from '../lib/git-utils.ts';
 import { multiSelect, type SelectItem, type SelectSection } from '../lib/interactive-select.ts';
 import * as output from '../lib/output.ts';
+import { signalNavigation } from '../lib/shell-navigation.ts';
+
+/**
+ * Check if a path is inside or equal to another path
+ */
+export function isPathInside(childPath: string, parentPath: string): boolean {
+  const child = resolve(childPath);
+  const parent = resolve(parentPath);
+  return child === parent || child.startsWith(parent + '/');
+}
+
+/**
+ * Navigate to git root if the current directory is inside any of the given paths.
+ * Returns true if navigation occurred.
+ */
+async function navigateAwayIfNeeded(paths: string[]): Promise<boolean> {
+  const cwd = Deno.cwd();
+  const removingCurrent = paths.some((p) => isPathInside(cwd, p));
+
+  if (removingCurrent) {
+    try {
+      const { gitRoot } = await loadConfig();
+      Deno.chdir(gitRoot);
+      await signalNavigation(gitRoot);
+      return true;
+    } catch {
+      // Continue anyway — git command might still work
+    }
+  }
+  return false;
+}
 
 /**
  * Parse clean command arguments
@@ -306,6 +338,13 @@ async function executeInteractiveClean(): Promise<void> {
     Deno.exit(0);
   }
 
+  // ── Navigate away if removing current worktree ──────
+  const selectedWorktreePaths = result.selected
+    .filter((v) => v.startsWith('worktree:'))
+    .map((v) => v.split(':').slice(1).join(':'));
+
+  const navigatedToRoot = await navigateAwayIfNeeded(selectedWorktreePaths);
+
   // ── Process selections ────────────────────────────────
   console.log();
   let removedWorktrees = 0;
@@ -353,6 +392,9 @@ async function executeInteractiveClean(): Promise<void> {
   }
   if (failed > 0) {
     output.error(`Failed to remove ${failed} item(s)`);
+  }
+  if (navigatedToRoot) {
+    output.info('Navigated to git root (removed current worktree)');
   }
 }
 
@@ -536,6 +578,9 @@ export async function executeClean(args: string[]): Promise<void> {
     }
   }
 
+  // Navigate away if removing current worktree
+  const navigatedToRoot = await navigateAwayIfNeeded(toClean.map((wt) => wt.path));
+
   // Remove worktrees
   console.log();
   const results: {
@@ -580,5 +625,9 @@ export async function executeClean(args: string[]): Promise<void> {
     } catch {
       // Don't fail clean if orphan branch pruning fails
     }
+  }
+
+  if (navigatedToRoot) {
+    output.info('Navigated to git root (removed current worktree)');
   }
 }

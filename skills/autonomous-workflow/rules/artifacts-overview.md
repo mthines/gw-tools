@@ -14,16 +14,20 @@ tags:
 
 ## ⚠️ CRITICAL: When to Create Artifacts
 
-**For Full Mode tasks, artifacts MUST be created BEFORE Phase 1 begins.**
+**For Full Mode tasks, artifacts MUST be created AFTER Phase 2 worktree setup — inside the worktree, not on the main branch.**
+
+Phase 1 planning happens in conversation. Artifact files are written to disk only after the worktree is created and you have navigated into it:
 
 ```bash
-# Create IMMEDIATELY after mode detection (end of Phase 0)
+# Create AFTER worktree setup (end of Phase 2), inside the worktree
 mkdir -p .gw/{branch-name}
 touch .gw/{branch-name}/task.md
 touch .gw/{branch-name}/plan.md
 ```
 
-**⛔ DO NOT start Phase 1 analysis without these files existing.**
+Then populate them with the content prepared during Phase 1.
+
+**⛔ DO NOT create artifact files on the main branch. Always create them inside the worktree.**
 
 ---
 
@@ -56,11 +60,11 @@ See [overview](./overview.md) for the complete decision flow.
 
 | Artifact        | File             | Purpose                                   | Created       | Populated |
 | --------------- | ---------------- | ----------------------------------------- | ------------- | --------- |
-| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 0 (end) | Phase 1+  |
-| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 0 (end) | Phase 1   |
+| **Task**        | `task.md`        | Dynamic checklist, decisions, discoveries | Phase 2 (end) | Phase 2+  |
+| **Plan**        | `plan.md`        | Implementation strategy, files to change  | Phase 2 (end) | Phase 2   |
 | **Walkthrough** | `walkthrough.md` | Final summary, verification steps         | Phase 6       | Phase 6   |
 
-**Note:** Files are _created_ at mode detection (Phase 0), then _populated_ in Phase 1.
+**Note:** Planning happens in Phase 1 (in conversation). Files are _created and populated_ inside the worktree after Phase 2 setup.
 
 ## File Location
 
@@ -131,8 +135,9 @@ Use templates from `skills/autonomous-workflow/templates/` for consistency:
 
 ## Key Principles
 
-- **Create BEFORE Phase 1**: Files must exist before analysis begins (created at mode detection)
-- **Populate in Phase 1**: Fill `task.md` and `plan.md` with planning content
+- **Plan in Phase 1**: Prepare artifact content in conversation during codebase analysis
+- **Create AFTER Phase 2**: Write artifact files inside the worktree (never on main branch)
+- **Populate at end of Phase 2**: Fill `task.md` and `plan.md` with planning content from Phase 1
 - **Update frequently**: Update `task.md` on every significant change
 - **Generate at end**: Create `walkthrough.md` at Phase 6
 - **User-visible**: These are deliverables, not hidden state

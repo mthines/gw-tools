@@ -5,11 +5,38 @@
 
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
-import { executeClean } from './clean.ts';
+import { executeClean, isPathInside } from './clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
+
+// ── isPathInside tests ──────────────────────────────────
+
+Deno.test('isPathInside - returns true when paths are equal', () => {
+  assertEquals(isPathInside('/foo/bar', '/foo/bar'), true);
+});
+
+Deno.test('isPathInside - returns true when child is inside parent', () => {
+  assertEquals(isPathInside('/foo/bar/baz', '/foo/bar'), true);
+});
+
+Deno.test('isPathInside - returns true for deeply nested child', () => {
+  assertEquals(isPathInside('/foo/bar/baz/qux/file.txt', '/foo/bar'), true);
+});
+
+Deno.test('isPathInside - returns false when child is outside parent', () => {
+  assertEquals(isPathInside('/foo/other', '/foo/bar'), false);
+});
+
+Deno.test('isPathInside - returns false for partial prefix match', () => {
+  // /foo/bar-extra should NOT be inside /foo/bar
+  assertEquals(isPathInside('/foo/bar-extra', '/foo/bar'), false);
+});
+
+Deno.test('isPathInside - returns false when parent is inside child', () => {
+  assertEquals(isPathInside('/foo', '/foo/bar'), false);
+});
 
 /**
  * Helper to mock stdin for confirmation prompts
