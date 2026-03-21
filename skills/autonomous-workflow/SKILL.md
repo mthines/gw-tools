@@ -46,11 +46,11 @@ Analyze the task scope to determine the workflow mode:
 
 For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-| File             | Purpose                                                                                                   | Created           | When to Update                                                              |
-| ---------------- | --------------------------------------------------------------------------------------------------------- | ----------------- | --------------------------------------------------------------------------- |
-| `task.md`        | Dynamic checklist, decisions, blockers                                                                    | After Phase 2     | **At milestones (every 2-3 files)**                                         |
-| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 2     | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
-| `walkthrough.md` | Final summary for PR                                                                                      | Phase 6           | Phase 6 (MANDATORY)                                                         |
+| File             | Purpose                                                                                                   | Created       | When to Update                                                              |
+| ---------------- | --------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- |
+| `task.md`        | Dynamic checklist, decisions, blockers                                                                    | After Phase 2 | **At milestones (every 2-3 files)**                                         |
+| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 2 | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
+| `walkthrough.md` | Final summary for PR                                                                                      | Phase 6       | Phase 6 (MANDATORY)                                                         |
 
 **⚠️ Artifact files are created and populated inside the worktree at the end of Phase 2. Phase 1 planning happens in conversation.**
 
@@ -182,16 +182,16 @@ Structured templates for consistent artifact generation:
 
 ### Full Mode (4+ files, complex changes)
 
-| Phase             | Command/Action                                                                                                                                 |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                                                                                    |
-| 1. Planning       | Analyze codebase, **PREPARE** plan content in conversation **(ALL sections, verbose — capture every detail from Phase 0 discussion)**           |
-| 2. Worktree       | `gw add feat/feature-name`, then **CREATE & POPULATE** `.gw/{branch}/task.md` and `plan.md` inside worktree                                    |
-| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                                                                                           |
-| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                                                                                |
-| 5. Documentation  | Update README, CHANGELOG                                                                                                                       |
-| 6. PR Creation    | **CREATE `walkthrough.md`**, `gh pr create --draft`, **SHOW walkthrough to user**                                                              |
-| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                                                                                    |
+| Phase             | Command/Action                                                                                                                        |
+| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                                                                          |
+| 1. Planning       | Analyze codebase, **PREPARE** plan content in conversation **(ALL sections, verbose — capture every detail from Phase 0 discussion)** |
+| 2. Worktree       | `gw add feat/feature-name`, then **CREATE & POPULATE** `.gw/{branch}/task.md` and `plan.md` inside worktree                           |
+| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                                                                                  |
+| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                                                                       |
+| 5. Documentation  | Update README, CHANGELOG                                                                                                              |
+| 6. PR Creation    | **CREATE `walkthrough.md`**, `gh pr create --draft`, **SHOW walkthrough to user**                                                     |
+| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                                                                           |
 
 ### Lite Mode (1-3 files, simple changes)
 
@@ -233,21 +233,21 @@ Structured templates for consistent artifact generation:
 
 Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{branch-name}/`:
 
-| Artifact        | File             | Created | Purpose                                   |
-| --------------- | ---------------- | ------- | ----------------------------------------- |
+| Artifact        | File             | Created       | Purpose                                   |
+| --------------- | ---------------- | ------------- | ----------------------------------------- |
 | **Task**        | `task.md`        | Phase 2 (end) | Dynamic checklist, decisions, discoveries |
 | **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy                   |
-| **Walkthrough** | `walkthrough.md` | Phase 6 | Final summary for PR                      |
+| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR                      |
 
 Files are gitignored and grouped by branch for easy browsing.
 
 ### ⚠️ CRITICAL: Artifact Update Requirements
 
-| Artifact         | Update Frequency                | Blocking Gate                                                                      |
-| ---------------- | ------------------------------- | ---------------------------------------------------------------------------------- |
+| Artifact         | Update Frequency                      | Blocking Gate                                                                      |
+| ---------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
 | `plan.md`        | Created & populated at end of Phase 2 | ⛔ Must be COMPREHENSIVELY POPULATED (all sections filled, verbose) before Phase 3 |
-| `task.md`        | At milestones (every 2-3 files) | ⛔ Must reflect completed work at phase transitions                                |
-| `walkthrough.md` | Once in Phase 6                 | ⛔ Must be CREATED AND SHOWN to user before completion                             |
+| `task.md`        | At milestones (every 2-3 files)       | ⛔ Must reflect completed work at phase transitions                                |
+| `walkthrough.md` | Once in Phase 6                       | ⛔ Must be CREATED AND SHOWN to user before completion                             |
 
 ## Workflow Flow
 
