@@ -27,6 +27,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Arguments](#arguments)
       - [Options](#options)
       - [Examples](#examples)
+      - [Staged Files](#staged-files)
       - [Auto-Copy Configuration](#auto-copy-configuration)
       - [Hooks](#hooks)
     - [cd](#cd)
@@ -161,16 +162,17 @@ Once installed, your AI agent can:
 
 Want Claude Code to autonomously implement features end-to-end? Install the autonomous workflow agent:
 
+One-liner - installs agent and skill (global - works in all projects)
+
 ```bash
-# One-liner - installs agent and skill (global - works in all projects)
 mkdir -p ~/.claude/agents && \
   curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
   -o ~/.claude/agents/autonomous-workflow.md && \
   npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 
-# Or manually: copy the file from packages/autonomous-workflow-agent/agents/autonomous-workflow.md
-# to ~/.claude/agents/ (global) or .claude/agents/ (per-project)
 ```
+
+Or manually: copy the file from `packages/autonomous-workflow-agent/agents/autonomous-workflow.md` to `~/.claude/agents/` (global) or `.claude/agents/` (per-project)
 
 Once installed, Claude will automatically use this agent when you ask it to implement features, and it will:
 

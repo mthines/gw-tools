@@ -96,10 +96,11 @@ Give the agent a task and walk away:
 
 ### Quick Install for Claude Code
 
-```bash
-# Prerequisites: gw CLI must be installed first (see above)
+**Prerequisites:** gw CLI must be installed first (see above)
 
-# One-liner - installs agent and skill (global)
+One-liner - installs agent and skill (global)
+
+```bash
 mkdir -p ~/.claude/agents && \
   curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
   -o ~/.claude/agents/autonomous-workflow.md && \
