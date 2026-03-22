@@ -275,6 +275,7 @@ jobs:
           IS_BETA: ${{ needs.detect-changes.outputs.is_beta }}
           PR_NUMBER: ${{ needs.detect-changes.outputs.pr_number }}
           BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
+          FORCE_GW: ${{ inputs.force_gw }}
         run: |
           echo "::group::Commit analysis"
 
@@ -293,8 +294,15 @@ jobs:
           echo "Bump type: $BUMP_TYPE"
           echo "::endgroup::"
 
-          # Get current version
-          CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          # Get current version from latest stable tag (authoritative) or package.json (fallback)
+          LAST_GW_TAG=$(git tag -l "v*" --sort=-version:refname | grep -E "^v[0-9]" | grep -v "beta" | head -n 1 || echo "")
+          if [ -n "$LAST_GW_TAG" ]; then
+            CURRENT=$(echo "$LAST_GW_TAG" | sed 's/^v//')
+            echo "::notice::Version source: tag $LAST_GW_TAG"
+          else
+            CURRENT=$(cat packages/gw-tool/npm/package.json | grep '"version"' | sed 's/.*"version": "\([^"]*\)".*/\1/')
+            echo "::notice::Version source: package.json ($CURRENT) — no tags found"
+          fi
           # Strip any existing prerelease suffix
           BASE_CURRENT=$(echo "$CURRENT" | sed -E 's/-.*$//')
           IFS='.' read -ra V <<< "$BASE_CURRENT"
@@ -317,6 +325,22 @@ jobs:
           else
             # Stable version
             NEW_VERSION="$BASE_VERSION"
+
+            # Force mode: ensure tag doesn't already exist by incrementing past collisions
+            if [ "$FORCE_GW" = "true" ]; then
+              ATTEMPTS=0
+              while git rev-parse "v$NEW_VERSION" >/dev/null 2>&1; do
+                ATTEMPTS=$((ATTEMPTS + 1))
+                if [ $ATTEMPTS -ge 100 ]; then
+                  echo "::error::Could not find available version after 100 increments"
+                  exit 1
+                fi
+                echo "::notice::Tag v$NEW_VERSION already exists — incrementing"
+                V[2]=$((V[2] + 1))
+                NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+              done
+            fi
+
             echo "::notice::Stable version: $NEW_VERSION"
           fi
 
@@ -398,6 +422,7 @@ jobs:
         id: version
         env:
           BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
+          FORCE_AGENT: ${{ inputs.force_agent }}
         run: |
           # Get commits for version determination
           LAST_AGENT_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1 || echo "")
@@ -416,8 +441,14 @@ jobs:
             BUMP_TYPE="minor"
           fi
 
-          # Get current version
-          CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
+          # Get current version from latest tag (authoritative) or package.json (fallback)
+          if [ -n "$LAST_AGENT_TAG" ]; then
+            CURRENT=$(echo "$LAST_AGENT_TAG" | sed 's/^autonomous-workflow-agent-v//')
+            echo "::notice::Version source: tag $LAST_AGENT_TAG"
+          else
+            CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
+            echo "::notice::Version source: package.json ($CURRENT) — no tags found"
+          fi
           IFS='.' read -ra V <<< "$CURRENT"
 
           case "$BUMP_TYPE" in
@@ -427,10 +458,27 @@ jobs:
           esac
 
           NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+          NEW_TAG="autonomous-workflow-agent-v$NEW_VERSION"
+
+          # Force mode: ensure tag doesn't already exist by incrementing past collisions
+          if [ "$FORCE_AGENT" = "true" ]; then
+            ATTEMPTS=0
+            while git rev-parse "$NEW_TAG" >/dev/null 2>&1; do
+              ATTEMPTS=$((ATTEMPTS + 1))
+              if [ $ATTEMPTS -ge 100 ]; then
+                echo "::error::Could not find available version after 100 increments"
+                exit 1
+              fi
+              echo "::notice::Tag $NEW_TAG already exists — incrementing"
+              V[2]=$((V[2] + 1))
+              NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
+              NEW_TAG="autonomous-workflow-agent-v$NEW_VERSION"
+            done
+          fi
 
           echo "::notice::autonomous-workflow-agent: $CURRENT -> $NEW_VERSION ($BUMP_TYPE)"
           echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=autonomous-workflow-agent-v$NEW_VERSION" >> $GITHUB_OUTPUT
+          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
 
       - name: Create tag
         id: tag
