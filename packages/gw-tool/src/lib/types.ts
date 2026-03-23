@@ -24,6 +24,8 @@ export interface HooksConfig {
  * Per-repository configuration stored at .gw/config.json
  */
 export interface Config {
+  /** JSON Schema reference for IDE autocompletion */
+  $schema?: string;
   /** Config schema version for migrations (managed automatically) */
   configVersion?: number;
   /** Absolute path to the git repository root */

@@ -34,10 +34,10 @@ Different branch types need files from different sources:
 
 ```bash
 # Feature from develop (default)
-gw add feature-x
+gw checkout feature-x
 
 # Hotfix from main
-gw add hotfix-y --from main
+gw checkout hotfix-y --from main
 
 # Sync specific files from staging
 gw sync --from staging feature-x .env
@@ -82,7 +82,7 @@ switch-env:
 
 ```bash
 # After creating worktree
-gw add feature-x
+gw checkout feature-x
 
 # Inject secrets
 op inject -i feature-x/.env.template -o feature-x/.env
@@ -91,7 +91,7 @@ op inject -i feature-x/.env.template -o feature-x/.env
 ### AWS Secrets Manager
 
 ```bash
-gw add feature-x
+gw checkout feature-x
 
 aws secretsmanager get-secret-value \
     --secret-id myapp/dev \
@@ -102,7 +102,7 @@ aws secretsmanager get-secret-value \
 ### HashiCorp Vault
 
 ```bash
-gw add feature-x
+gw checkout feature-x
 
 vault kv get -field=.env secret/myapp > feature-x/.env
 ```
@@ -110,27 +110,35 @@ vault kv get -field=.env secret/myapp > feature-x/.env
 ### Doppler
 
 ```bash
-gw add feature-x
+gw checkout feature-x
 
 doppler secrets download \
     --no-file \
     --format env > feature-x/.env
 ```
 
-## Post-Add Hooks
+## Checkout Hooks
 
-### Configure Hooks
+### Configure Hooks via CLI
 
 ```bash
-gw init --post-add "pnpm install"
+gw init --post-checkout "cd {worktreePath} && pnpm install"
 ```
 
 ### Multiple Commands
 
-```json
+```jsonc
 {
   "hooks": {
-    "post-add": ["pnpm install", "cp .env.example .env"]
+    "checkout": {
+      "pre": [
+        "echo 'Creating worktree: {worktree}'"
+      ],
+      "post": [
+        "cd {worktreePath} && pnpm install",
+        "cd {worktreePath} && cp .env.example .env"
+      ]
+    }
   }
 }
 ```
@@ -139,18 +147,17 @@ gw init --post-add "pnpm install"
 
 Available in hook commands:
 
-- `{worktree}` - Worktree name
-- `{worktreePath}` - Full path to worktree
-- `{gitRoot}` - Repository root
-- `{branch}` - Branch name
+| Variable         | Description                        |
+| ---------------- | ---------------------------------- |
+| `{worktree}`     | Worktree name                      |
+| `{worktreePath}` | Full path to worktree              |
+| `{gitRoot}`      | Repository root                    |
+| `{branch}`       | Branch name                        |
 
-```json
-{
-  "hooks": {
-    "post-add": "echo 'Created {worktree} at {worktreePath}'"
-  }
-}
-```
+### Hook Behavior
+
+- **Pre-hooks**: Run before worktree creation. Failure **aborts** the checkout.
+- **Post-hooks**: Run after worktree creation. Failure produces **warnings** only.
 
 ## Network Behavior
 
@@ -164,10 +171,10 @@ When creating new branches, gw fetches from remote:
 
 ### Strictness Levels
 
-| Command                          | Network Behavior                    |
-| -------------------------------- | ----------------------------------- |
-| `gw add feat/new`                | Fetches remote, falls back to local |
-| `gw add feat/new --from develop` | Requires successful fetch           |
+| Command                                | Network Behavior                    |
+| -------------------------------------- | ----------------------------------- |
+| `gw checkout feat/new`                 | Fetches remote, falls back to local |
+| `gw checkout feat/new --from develop`  | Requires successful fetch           |
 
 ### Offline Fallback
 
@@ -185,6 +192,8 @@ Configuration supports JSON with Comments:
 
 ```jsonc
 {
+  "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
+
   // Repository root path
   "root": "/projects/myapp.git",
 

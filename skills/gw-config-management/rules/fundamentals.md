@@ -53,7 +53,7 @@ gw init
 
 ```bash
 gw init --root /projects/myapp.git \
-        --default-branch main \
+        --default-source main \
         --auto-copy-files .env,.env.local,secrets/
 ```
 
@@ -74,28 +74,47 @@ gw init git@github.com:user/repo.git
 # With configuration
 gw init git@github.com:user/repo.git \
         --auto-copy-files .env,secrets/ \
-        --post-add "pnpm install"
+        --post-checkout "cd {worktreePath} && pnpm install"
 ```
 
 ## Config Structure
 
 ```jsonc
 {
+  "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
+
+  "configVersion": 1,
+
+  // Core Settings
   "root": "/absolute/path/to/repo.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [".env", "secrets/"],
-  "updateStrategy": "merge",
   "cleanThreshold": 7,
-  "autoClean": true,
+
+  // Auto-Copy Files
+  "autoCopyFiles": [".env", "secrets/"],
+
+  // Hooks
+  "hooks": {
+    "checkout": {
+      "pre": ["echo 'Creating: {worktree}'"],
+      "post": ["cd {worktreePath} && pnpm install"]
+    }
+  },
+
+  // Advanced Options
+  "autoClean": false,
+  "updateStrategy": "merge",
 }
 ```
 
 JSONC support: Comments (`//`, `/* */`) and trailing commas allowed.
 
+IDE autocompletion: The `$schema` property enables autocompletion and validation in VS Code, JetBrains, and other editors.
+
 ## Config Precedence
 
 1. `gw` searches for `.gw/config.json` walking up from current directory
-2. If not found, attempts auto-detection on first `gw add`
+2. If not found, attempts auto-detection on first `gw checkout`
 3. Falls back to defaults:
    - `root`: Auto-detected from `git worktree list`
    - `defaultBranch`: "main"
@@ -120,7 +139,7 @@ cp .env.example .env
 gw init --auto-copy-files .env,secrets/
 
 # 5. Now auto-copy works
-gw add feature-new  # .env copied automatically
+gw checkout feature-new  # .env copied automatically
 ```
 
 ## Troubleshooting
@@ -142,7 +161,7 @@ gw init
 **Fix**:
 
 ```bash
-gw init --root /correct/path.git --default-branch develop
+gw init --root /correct/path.git --default-source develop
 ```
 
 ## References

@@ -1,0 +1,106 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
+  "title": "gw Configuration",
+  "description": "Configuration file for the gw CLI tool (.gw/config.json). Manages git worktree workflows including auto-copy, hooks, cleanup, and update strategies.",
+  "type": "object",
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for IDE autocompletion and validation."
+    },
+    "configVersion": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Config schema version for migrations. Managed automatically by gw — do not edit manually.",
+      "default": 1
+    },
+    "root": {
+      "type": "string",
+      "description": "Absolute path to the git repository root directory (the parent directory containing all worktrees). Auto-detected by gw init.",
+      "examples": ["/Users/you/projects/myapp.git", "/home/dev/repos/project.git"]
+    },
+    "defaultBranch": {
+      "type": "string",
+      "description": "Default source worktree name used for file copying (auto-copy/sync) and as the base for new branches. This worktree is protected from auto-clean.",
+      "default": "main",
+      "examples": ["main", "master", "develop"]
+    },
+    "autoCopyFiles": {
+      "type": "array",
+      "description": "Files and directories to automatically copy from the default branch worktree when creating new worktrees with 'gw checkout'. Paths are relative to the worktree root. Directories should end with '/' to copy recursively. Non-existent files are skipped with a warning.",
+      "items": {
+        "type": "string",
+        "description": "File or directory path relative to the worktree root."
+      },
+      "uniqueItems": true,
+      "examples": [
+        [".env", ".env.local"],
+        [".env", "secrets/", "config/local.json"],
+        [".env", ".env.local", ".vercel/"]
+      ]
+    },
+    "hooks": {
+      "type": "object",
+      "description": "Command hooks that run before/after gw operations. Hook commands support variable substitution: {worktree}, {worktreePath}, {gitRoot}, {branch}.",
+      "properties": {
+        "checkout": {
+          "type": "object",
+          "description": "Hooks for the 'gw checkout' command (creating new worktrees).",
+          "properties": {
+            "pre": {
+              "type": "array",
+              "description": "Commands to run before creating the worktree. If any command fails, the checkout is aborted.",
+              "items": {
+                "type": "string",
+                "description": "Shell command to execute. Supports variables: {worktree}, {worktreePath}, {gitRoot}, {branch}."
+              },
+              "examples": [
+                ["echo 'Creating worktree: {worktree}'"]
+              ]
+            },
+            "post": {
+              "type": "array",
+              "description": "Commands to run after the worktree is created successfully. Failures produce warnings but don't roll back the worktree.",
+              "items": {
+                "type": "string",
+                "description": "Shell command to execute. Supports variables: {worktree}, {worktreePath}, {gitRoot}, {branch}."
+              },
+              "examples": [
+                ["cd {worktreePath} && npm install"],
+                ["cd {worktreePath} && pnpm install", "cd {worktreePath} && pnpm build"]
+              ]
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "cleanThreshold": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Number of days before worktrees are considered stale and eligible for cleanup. Used by 'gw clean' and auto-clean.",
+      "default": 7,
+      "examples": [3, 7, 14, 30]
+    },
+    "autoClean": {
+      "type": "boolean",
+      "description": "When enabled, gw will prompt to clean stale worktrees after certain commands (checkout, list). Prompts at most once every 24 hours. Uses cleanThreshold for age check. Never removes the defaultBranch worktree.",
+      "default": false
+    },
+    "updateStrategy": {
+      "type": "string",
+      "enum": ["merge", "rebase"],
+      "description": "Default strategy for 'gw update' when syncing worktrees with the latest changes from the default branch. Can be overridden per-command with --merge or --rebase flags.",
+      "default": "merge"
+    },
+    "lastAutoCleanTime": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Unix timestamp in milliseconds of the last auto-cleanup run. Managed automatically by gw — do not edit manually."
+    }
+  },
+  "required": ["root"],
+  "additionalProperties": false
+}

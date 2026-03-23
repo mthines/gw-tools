@@ -596,7 +596,7 @@ Deno.test('saveConfigTemplate - includes section headers and documentation', asy
     // Verify documentation elements
     assertEquals(rawContent.includes('Documentation: https://github.com/mthines/gw-tools'), true);
     assertEquals(rawContent.includes('All fields except'), true);
-    assertEquals(rawContent.includes('Internal fields (managed automatically)'), true);
+    assertEquals(rawContent.includes('Internal fields (managed automatically'), true);
   } finally {
     await repo.cleanup();
   }

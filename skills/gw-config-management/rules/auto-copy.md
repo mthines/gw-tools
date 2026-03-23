@@ -12,7 +12,7 @@ tags:
 ## Overview
 
 Auto-copy ensures secrets and environment files are available in new worktrees.
-Configure `autoCopyFiles` to automatically copy files when creating worktrees with `gw add`.
+Configure `autoCopyFiles` to automatically copy files when creating worktrees with `gw checkout`.
 
 ## Core Principles
 

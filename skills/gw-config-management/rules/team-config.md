@@ -27,7 +27,7 @@ Proper team setup ensures consistent workflows and easy onboarding.
 
 ```bash
 git add .gw/config.json
-git commit -m "chore: add gw configuration for team"
+git commit -m "chore: add gw configuration"
 git push
 ```
 
@@ -87,7 +87,7 @@ echo ".gw/config.local.json" >> .gitignore
    \`\`\`
 3. Create feature worktree:
    \`\`\`bash
-   gw add feature-name
+   gw checkout feature-name
    \`\`\`
 
 ### Auto-Copied Files
@@ -106,7 +106,7 @@ The following files are automatically copied to new worktrees:
 gw show-init
 
 # Output:
-# gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+# gw init --auto-copy-files .env,secrets/ --post-checkout 'cd {worktreePath} && pnpm install'
 
 # Copy to clipboard (macOS)
 gw show-init | pbcopy
@@ -131,7 +131,7 @@ gw show-init | pbcopy
    ```
 5. Create first worktree:
    ```bash
-   gw add feature-onboarding
+   gw checkout feature-onboarding
    # Files automatically copied
    ```
 
@@ -139,7 +139,7 @@ gw show-init | pbcopy
 
 ```bash
 # Should create worktree with all files
-gw add test-setup
+gw checkout test-setup
 
 # Check files exist
 ls test-setup/.env
@@ -181,7 +181,7 @@ cp .env.example .env
 # Add secrets
 
 # Then create worktrees
-gw add feature-x
+gw checkout feature-x
 ```
 
 ### Config Out of Sync
