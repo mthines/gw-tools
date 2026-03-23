@@ -9,6 +9,13 @@ import type { Config } from './types.ts';
 import { findGitRoot, pathExists } from './path-resolver.ts';
 import { CURRENT_CONFIG_VERSION, runMigrations } from './config-migrations.ts';
 
+/**
+ * URL to the JSON Schema for .gw/config.json
+ * Provides IDE autocompletion and validation
+ */
+const CONFIG_SCHEMA_URL =
+  'https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json';
+
 const CONFIG_DIR_NAME = '.gw';
 const CONFIG_FILE_NAME = 'config.json';
 
@@ -75,6 +82,7 @@ async function ensureConfigDir(dir: string): Promise<void> {
  */
 function createDefaultConfig(): Config {
   return {
+    $schema: CONFIG_SCHEMA_URL,
     configVersion: CURRENT_CONFIG_VERSION,
     defaultBranch: 'main',
     cleanThreshold: 7,
@@ -90,6 +98,10 @@ function validateConfig(data: unknown): data is Config {
   }
 
   const config = data as Partial<Config>;
+
+  if (config.$schema !== undefined && typeof config.$schema !== 'string') {
+    return false;
+  }
 
   if (config.root !== undefined && typeof config.root !== 'string') {
     return false;
@@ -251,12 +263,19 @@ function generateConfigTemplate(config: Config): string {
 
   // Header
   lines.push('{');
+  lines.push(`  "$schema": ${JSON.stringify(CONFIG_SCHEMA_URL)},`);
+  lines.push('');
   lines.push('  // ============================================================================');
   lines.push('  // gw Configuration File');
   lines.push('  // ============================================================================');
   lines.push('  // Documentation: https://github.com/mthines/gw-tools');
   lines.push('  // All fields except "root" are optional.');
+  lines.push('  // Supports JSONC: comments (// and /* */) and trailing commas are allowed.');
   lines.push('  // ============================================================================');
+  lines.push('');
+
+  // Config version (managed automatically)
+  lines.push(`  "configVersion": ${CURRENT_CONFIG_VERSION},`);
   lines.push('');
 
   // Core Settings Section
@@ -390,7 +409,8 @@ function generateConfigTemplate(config: Config): string {
   lines.push('');
 
   // Footer
-  lines.push('  // Internal fields (managed automatically):');
+  lines.push('  // Internal fields (managed automatically — do not edit):');
+  lines.push('  // - configVersion: Schema version for config migrations');
   lines.push('  // - lastAutoCleanTime: Unix timestamp of last auto-cleanup run');
 
   lines.push('}');

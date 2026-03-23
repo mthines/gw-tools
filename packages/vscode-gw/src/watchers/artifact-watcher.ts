@@ -225,11 +225,16 @@ export class ArtifactWatcher implements vscode.Disposable {
 
   private async openWalkthrough(uri: vscode.Uri): Promise<void> {
     try {
-      const doc = await vscode.workspace.openTextDocument(uri);
-      await vscode.window.showTextDocument(doc, {
-        preview: false,
-        viewColumn: vscode.ViewColumn.One,
-      });
+      const usePreview = vscode.workspace.getConfiguration('gw').get<boolean>('openMarkdownInPreview', true);
+      if (usePreview) {
+        await vscode.commands.executeCommand('markdown.showPreview', uri);
+      } else {
+        const doc = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(doc, {
+          preview: false,
+          viewColumn: vscode.ViewColumn.One,
+        });
+      }
       vscode.window.showInformationMessage(`Walkthrough generated: ${path.basename(path.dirname(uri.fsPath))}`);
     } catch {
       // ignore open errors

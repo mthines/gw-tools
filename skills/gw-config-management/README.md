@@ -2,18 +2,20 @@
 
 > Configure and optimize gw-tools for different project types and team needs
 
-## 🎯 What You'll Learn
+## What You'll Learn
 
 This skill teaches you how to configure gw for optimal workflow in any project type. You'll learn:
 
 - **Configuration fundamentals** - Understanding `.gw/config.json` structure and auto-detection
+- **IDE autocompletion** - JSON Schema support for VS Code, JetBrains, and other editors
 - **Auto-copy strategies** - Which files to copy automatically for different project types
+- **Hooks** - Pre/post checkout commands for automated setup
 - **Project-specific patterns** - Ready-to-use configs for Next.js, Node.js APIs, monorepos, and SPAs
 - **Team configuration** - Sharing configs across teams and onboarding new developers
 - **Advanced techniques** - Multiple source worktrees, environment-specific configs
 - **Troubleshooting** - Solving common configuration issues
 
-## 📦 Installation
+## Installation
 
 ```bash
 npx skills add https://github.com/mthines/gw-tools --skill
@@ -21,13 +23,13 @@ npx skills add https://github.com/mthines/gw-tools --skill
 
 Select `gw-config-management` from the interactive menu.
 
-## 📋 Prerequisites
+## Prerequisites
 
 - `gw` CLI tool installed ([installation guide](../../../packages/gw-tool/README.md#installation))
 - A project to configure (Next.js, Node.js, monorepo, etc.)
 - Basic understanding of Git worktrees ([git-worktree-workflows skill](../git-worktree-workflows/))
 
-## 📚 What's Included
+## What's Included
 
 ### Main Documentation
 
@@ -46,7 +48,7 @@ Select `gw-config-management` from the interactive menu.
 - **[Monorepo Setup](./references/monorepo-setup.md)** - Configuring for monorepos
 - **[Troubleshooting](./references/troubleshooting-config.md)** - Common configuration problems
 
-## 🚀 Quick Start
+## Quick Start
 
 After installing this skill, try asking your AI agent:
 
@@ -60,7 +62,7 @@ After installing this skill, try asking your AI agent:
 "Why aren't my environment files being copied?"
 ```
 
-## 🎓 Quick Configuration
+## Quick Configuration
 
 ### Option 1: Auto-Detection (Easiest)
 
@@ -71,13 +73,14 @@ gw init
 # gw will auto-detect:
 # - Repository root
 # - Default branch (main/master)
+# - Creates config with $schema for IDE autocompletion
 ```
 
 ### Option 2: Manual Configuration
 
 ```bash
 gw init --root /path/to/repo.git \
-        --default-branch main \
+        --default-source main \
         --auto-copy-files .env,.env.local,secrets/
 ```
 
@@ -91,12 +94,19 @@ gw init --root /path/to/repo.git \
 gw init --auto-copy-files .env,.env.local,.vercel/
 ```
 
-## 🔗 Related Skills
+### Option 4: With Hooks
+
+```bash
+gw init --auto-copy-files .env,secrets/ \
+        --post-checkout "cd {worktreePath} && pnpm install"
+```
+
+## Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Learn worktree basics first
 - [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
 
-## 💬 Common Configuration Patterns
+## Common Configuration Patterns
 
 ### Next.js Projects
 
@@ -118,7 +128,7 @@ gw init --auto-copy-files .env,.env.local,.vercel/
 - Copy: `.env`, `.env.local`, `public/config.json`
 - Skip: `build/`, `dist/`, `node_modules/`
 
-## 🆘 Need Help?
+## Need Help?
 
 - Check the [Troubleshooting Guide](./references/troubleshooting-config.md)
 - Review [project-type guides](./rules/project-types/)

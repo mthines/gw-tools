@@ -187,6 +187,18 @@ export class PlanSummaryItem extends vscode.TreeItem {
   }
 }
 
+export class WalkthroughSummaryItem extends vscode.TreeItem {
+  constructor(public readonly walkthroughFilePath: string) {
+    super('Walkthrough', vscode.TreeItemCollapsibleState.None);
+    this.iconPath = new vscode.ThemeIcon('book');
+    this.command = {
+      command: 'gw.openMarkdown',
+      title: 'Open Walkthrough',
+      arguments: [walkthroughFilePath],
+    };
+  }
+}
+
 export class DecisionItem extends vscode.TreeItem {
   constructor(decision: string, rationale: string, phase: string, taskFilePath?: string) {
     super(decision, vscode.TreeItemCollapsibleState.None);
@@ -225,6 +237,7 @@ type AgentTaskTreeItem =
   | TaskCheckboxItem
   | TasksSummaryItem
   | PlanSummaryItem
+  | WalkthroughSummaryItem
   | DecisionItem
   | BlockerItem;
 
@@ -497,6 +510,12 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
     if (branch.plan) {
       const planPath = path.join(branch.gwDir, 'plan.md');
       children.push(new PlanSummaryItem(branch.plan, planPath));
+    }
+
+    // Walkthrough
+    if (branch.hasWalkthrough) {
+      const wtPath = path.join(branch.gwDir, 'walkthrough.md');
+      children.push(new WalkthroughSummaryItem(wtPath));
     }
 
     return children;

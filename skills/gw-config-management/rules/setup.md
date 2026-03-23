@@ -64,7 +64,7 @@ gw init --auto-copy-files .env,secrets/
 
 ```bash
 # Create test worktree
-gw add test-feature
+gw checkout test-feature
 
 # Check files were copied
 ls test-feature/.env
@@ -89,7 +89,7 @@ gw init
 
 # Or with options
 gw init --auto-copy-files .env,secrets/ \
-        --post-add "pnpm install"
+        --post-checkout "cd {worktreePath} && pnpm install"
 ```
 
 ### 3. Ensure Secrets Exist
@@ -123,7 +123,7 @@ git push
    cp .env.example .env
    # Get secrets from team lead
    \`\`\`
-4. Create worktree: `gw add feature-name`
+4. Create worktree: `gw checkout feature-name`
 ```
 
 ### Generate Setup Command
@@ -132,7 +132,7 @@ git push
 # Show init command from current config
 gw show-init
 
-# Output: gw init --auto-copy-files .env,secrets/ --post-add 'pnpm install'
+# Output: gw init --auto-copy-files .env,secrets/ --post-checkout 'cd {worktreePath} && pnpm install'
 ```
 
 ## Interactive Setup
@@ -147,9 +147,11 @@ Prompts for:
 
 - Default source worktree
 - Auto-copy files
-- Post-add hooks
+- Pre-checkout hooks
+- Post-checkout hooks
 - Clean threshold
 - Auto-clean setting
+- Update strategy
 
 ## Troubleshooting
 

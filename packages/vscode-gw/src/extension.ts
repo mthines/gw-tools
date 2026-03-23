@@ -33,10 +33,14 @@ import {
 } from './parsers/git-worktree';
 
 /**
- * Open a markdown file, respecting the preview setting
+ * Open a markdown file, respecting the preview setting.
+ *
+ * By default, plan.md and walkthrough.md open in preview (read-mostly artifacts),
+ * while task.md opens in the text editor so users can edit checkboxes directly.
+ * Set `forceEditor` to bypass the preview setting for a specific call.
  */
 async function openMarkdownFile(filePath: string): Promise<void> {
-  const usePreview = vscode.workspace.getConfiguration('gw').get<boolean>('openMarkdownInPreview', false);
+  const usePreview = vscode.workspace.getConfiguration('gw').get<boolean>('openMarkdownInPreview', true);
   const uri = vscode.Uri.file(filePath);
 
   if (usePreview) {

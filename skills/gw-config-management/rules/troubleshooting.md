@@ -39,7 +39,7 @@ gw init --root $(gw root)
 **Symptom**:
 
 ```bash
-$ gw add feature-x
+$ gw checkout feature-x
 ✓ Worktree created
 # But .env is missing!
 ```
@@ -198,6 +198,34 @@ gw update --rebase
 gw update --merge
 ```
 
+## Hooks Not Running
+
+**Symptom**: Post-checkout commands not executing.
+
+**Check**: Verify hook structure uses nested `checkout` object:
+
+```jsonc
+// Correct structure
+{
+  "hooks": {
+    "checkout": {
+      "post": ["cd {worktreePath} && pnpm install"]
+    }
+  }
+}
+
+// Wrong (old format, pre-v1 migration)
+{
+  "hooks": {
+    "add": {
+      "post": ["pnpm install"]
+    }
+  }
+}
+```
+
+**Fix**: Run any gw command to trigger automatic migration, or manually update the structure.
+
 ## Permission Denied
 
 **Symptom**:
@@ -235,6 +263,8 @@ cat .gw/config.json | jq .
 # - Trailing comma (OK with JSONC)
 # - Missing quotes
 ```
+
+**Note**: `.gw/config.json` supports JSONC (comments and trailing commas). If using standard JSON tools like `jq`, they may report false positives for comments.
 
 ## References
 

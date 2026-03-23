@@ -14,18 +14,77 @@ tags:
 Complete reference for all `.gw/config.json` options.
 Each option affects specific gw commands and behaviors.
 
+The config file supports JSONC (JSON with Comments) — comments (`//`, `/* */`) and trailing commas are allowed.
+
+## IDE Autocompletion
+
+The `$schema` property enables autocompletion and validation in VS Code, JetBrains IDEs, and other editors with JSON Schema support. It is automatically added when running `gw init`.
+
 ## Complete Structure
 
 ```jsonc
 {
+  "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
+
+  "configVersion": 1,
+
+  // Core Settings
   "root": "/absolute/path/to/repo.git",
   "defaultBranch": "main",
-  "autoCopyFiles": [".env", "secrets/"],
-  "updateStrategy": "merge",
   "cleanThreshold": 7,
-  "autoClean": true,
+
+  // Auto-Copy Files
+  "autoCopyFiles": [".env", ".env.local", "secrets/"],
+
+  // Hooks
+  "hooks": {
+    "checkout": {
+      "pre": [
+        "echo 'Creating worktree: {worktree}'"
+      ],
+      "post": [
+        "cd {worktreePath} && pnpm install"
+      ]
+    }
+  },
+
+  // Advanced Options
+  "autoClean": false,
+  "updateStrategy": "merge"
 }
 ```
+
+## `$schema`
+
+**Purpose**: JSON Schema reference for IDE autocompletion and validation.
+
+**Type**: String (URL)
+
+**Managed by**: `gw init` (set automatically)
+
+```json
+{
+  "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json"
+}
+```
+
+**Benefits**: Autocompletion for all fields, inline documentation on hover, validation of values and types.
+
+## `configVersion`
+
+**Purpose**: Schema version for automatic config migrations.
+
+**Type**: Integer (managed automatically)
+
+**Current version**: `1`
+
+```json
+{
+  "configVersion": 1
+}
+```
+
+**Important**: Do not edit manually. gw uses this to determine which migrations to apply when the config schema changes between versions.
 
 ## `root`
 
@@ -53,7 +112,7 @@ Each option affects specific gw commands and behaviors.
 
 **Type**: String (branch name)
 
-**Used by**: `gw add`, `gw sync`, `gw update`, `gw clean`
+**Used by**: `gw checkout`, `gw sync`, `gw update`, `gw clean`
 
 ```json
 {
@@ -71,7 +130,7 @@ Each option affects specific gw commands and behaviors.
 
 **Type**: Array of strings (relative paths)
 
-**Used by**: `gw add`, `gw sync`
+**Used by**: `gw checkout`, `gw sync`
 
 ```json
 {
@@ -87,6 +146,54 @@ Each option affects specific gw commands and behaviors.
 | `"config/local.json"` | Specific nested file |
 
 **Important**: Paths relative to repository root. Non-existent files skipped with warning.
+
+## `hooks`
+
+**Purpose**: Commands to run before/after gw operations.
+
+**Type**: Object with nested `checkout` configuration.
+
+**Used by**: `gw checkout`
+
+```jsonc
+{
+  "hooks": {
+    "checkout": {
+      "pre": [
+        "echo 'Creating worktree: {worktree}'"
+      ],
+      "post": [
+        "cd {worktreePath} && pnpm install",
+        "cd {worktreePath} && pnpm build"
+      ]
+    }
+  }
+}
+```
+
+### Hook Variables
+
+Available for substitution in hook commands:
+
+| Variable         | Description                       |
+| ---------------- | --------------------------------- |
+| `{worktree}`     | The worktree name                 |
+| `{worktreePath}` | Full absolute path to the worktree |
+| `{gitRoot}`      | The git repository root path       |
+| `{branch}`       | The branch name                    |
+
+### Hook Behavior
+
+- **Pre-hooks**: Run before the worktree is created. If any command fails, the checkout is **aborted**.
+- **Post-hooks**: Run after the worktree is created. Failures produce **warnings** but don't roll back the worktree.
+
+### Setting Hooks via CLI
+
+```bash
+gw init --pre-checkout "echo 'Starting...'" \
+        --post-checkout "cd {worktreePath} && pnpm install" \
+        --post-checkout "cd {worktreePath} && pnpm build"
+```
 
 ## `updateStrategy`
 
@@ -113,9 +220,9 @@ Each option affects specific gw commands and behaviors.
 
 **Purpose**: Days before worktrees considered stale.
 
-**Type**: Number (days)
+**Type**: Number (days, non-negative)
 
-**Used by**: `gw clean --use-autoclean-threshold`, auto-clean
+**Used by**: `gw clean`, auto-clean
 
 ```json
 {
@@ -139,7 +246,7 @@ Each option affects specific gw commands and behaviors.
 
 **Type**: Boolean
 
-**Used by**: `gw add`, `gw list`
+**Used by**: `gw checkout`, `gw list`
 
 ```json
 {
@@ -149,12 +256,20 @@ Each option affects specific gw commands and behaviors.
 
 **Behavior**:
 
-- Prompts after `gw add` or `gw list` when stale worktrees detected
+- Prompts after `gw checkout` or `gw list` when stale worktrees detected
 - Only prompts once per 24 hours
 - Uses `cleanThreshold` for age check
 - Never removes `defaultBranch` worktree
 
 **Set during init**: `gw init --auto-clean`
+
+## `lastAutoCleanTime`
+
+**Purpose**: Unix timestamp in milliseconds of last auto-cleanup run.
+
+**Type**: Integer (managed automatically)
+
+**Important**: Do not edit manually. gw uses this to enforce the 24-hour cooldown for auto-clean prompts.
 
 ## Decision Table: Which Options to Set
 
