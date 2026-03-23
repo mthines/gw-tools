@@ -60,7 +60,8 @@ fi
 
 echo ""
 echo "Updated package.json to version $NEW_VERSION"
-echo ""
-echo "Next steps:"
-echo "  nx package vscode-gw     # Build the .vsix package"
-echo "  nx release vscode-gw     # Publish to marketplaces"
+
+# Auto-commit the version bump
+git add package.json
+git commit -m "chore: version bump to $NEW_VERSION"
+echo "Committed version bump to $NEW_VERSION"
