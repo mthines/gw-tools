@@ -1,0 +1,80 @@
+name: Download Stats
+
+on:
+  schedule:
+    # Run weekly on Monday at 9:00 UTC
+    - cron: '0 9 * * 1'
+  workflow_dispatch: # Allow manual trigger
+
+permissions:
+  contents: read
+
+jobs:
+  collect-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect download statistics
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Fetch all releases
+          RELEASES=$(curl -sf \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: token $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases?per_page=100")
+
+          # Calculate stats
+          TOTAL=$(echo "$RELEASES" | jq '[.[].assets[].download_count] | add // 0')
+          STABLE=$(echo "$RELEASES" | jq '[.[] | select(.prerelease == false) | .assets[].download_count] | add // 0')
+          BETA=$(echo "$RELEASES" | jq '[.[] | select(.prerelease == true) | .assets[].download_count] | add // 0')
+          LATEST_TAG=$(echo "$RELEASES" | jq -r '[.[] | select(.prerelease == false)] | first | .tag_name // "none"')
+          LATEST_DL=$(echo "$RELEASES" | jq '[.[] | select(.prerelease == false)] | first | [.assets[].download_count] | add // 0')
+
+          # Platform breakdown
+          MACOS_ARM64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("macos-arm64")) | .download_count] | add // 0')
+          MACOS_X64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("macos-x64")) | .download_count] | add // 0')
+          LINUX_X64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("linux-x64")) | .download_count] | add // 0')
+          LINUX_ARM64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("linux-arm64")) | .download_count] | add // 0')
+          WINDOWS_X64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("windows-x64")) | .download_count] | add // 0')
+
+          # Build JSON snapshot
+          SNAPSHOT=$(jq -n \
+            --arg date "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --argjson total "$TOTAL" \
+            --argjson stable "$STABLE" \
+            --argjson beta "$BETA" \
+            --arg latest_tag "$LATEST_TAG" \
+            --argjson latest_dl "$LATEST_DL" \
+            --argjson macos_arm64 "$MACOS_ARM64" \
+            --argjson macos_x64 "$MACOS_X64" \
+            --argjson linux_x64 "$LINUX_X64" \
+            --argjson linux_arm64 "$LINUX_ARM64" \
+            --argjson windows_x64 "$WINDOWS_X64" \
+            '{
+              date: $date,
+              total_downloads: $total,
+              stable_downloads: $stable,
+              beta_downloads: $beta,
+              latest_release: { tag: $latest_tag, downloads: $latest_dl },
+              by_platform: {
+                macos_arm64: $macos_arm64,
+                macos_x64: $macos_x64,
+                linux_x64: $linux_x64,
+                linux_arm64: $linux_arm64,
+                windows_x64: $windows_x64
+              }
+            }')
+
+          echo "$SNAPSHOT" | jq .
+
+          # Write to file for artifact upload
+          mkdir -p stats
+          echo "$SNAPSHOT" > stats/download-stats-$(date -u +%Y-%m-%d).json
+          echo "$SNAPSHOT" > stats/latest.json
+
+      - name: Upload stats artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: download-stats-${{ github.run_id }}
+          path: stats/
+          retention-days: 365
