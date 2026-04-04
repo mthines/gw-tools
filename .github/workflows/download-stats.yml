@@ -72,6 +72,28 @@ jobs:
           echo "$SNAPSHOT" > stats/download-stats-$(date -u +%Y-%m-%d).json
           echo "$SNAPSHOT" > stats/latest.json
 
+          # Write job summary for easy viewing in the Actions tab
+          cat >> "$GITHUB_STEP_SUMMARY" <<EOL
+          ## gw-tools Download Stats — $(date -u +%Y-%m-%d)
+
+          | Metric | Count |
+          |--------|-------|
+          | **Total downloads** | **$TOTAL** |
+          | Stable releases | $STABLE |
+          | Beta releases | $BETA |
+          | Latest release ($LATEST_TAG) | $LATEST_DL |
+
+          ### By Platform
+
+          | Platform | Downloads |
+          |----------|-----------|
+          | macOS arm64 (Apple Silicon) | $MACOS_ARM64 |
+          | macOS x64 (Intel) | $MACOS_X64 |
+          | Linux x64 | $LINUX_X64 |
+          | Linux arm64 | $LINUX_ARM64 |
+          | Windows x64 | $WINDOWS_X64 |
+          EOL
+
       - name: Upload stats artifact
         uses: actions/upload-artifact@v4
         with:

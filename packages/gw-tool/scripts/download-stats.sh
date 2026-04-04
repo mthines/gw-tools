@@ -20,6 +20,14 @@
 
 set -e
 
+# Check dependencies
+for cmd in curl jq; do
+  if ! command -v "$cmd" &>/dev/null; then
+    echo "Error: '$cmd' is required but not installed." >&2
+    exit 1
+  fi
+done
+
 REPO="mthines/gw-tools"
 API_URL="https://api.github.com/repos/$REPO/releases"
 
@@ -55,26 +63,29 @@ for arg in "$@"; do
   esac
 done
 
-# Build auth header if token available
-AUTH_HEADER=""
-if [ -n "$GITHUB_TOKEN" ]; then
-  AUTH_HEADER="-H \"Authorization: token $GITHUB_TOKEN\""
-fi
+# Fetch releases from GitHub API
+fetch_releases() {
+  local url="$1"
+  local response
+  response=$(curl -sf -H "Accept: application/vnd.github+json" \
+    ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} \
+    "$url") || {
+    echo "Error: Failed to fetch releases from GitHub API." >&2
+    echo "  Check your network connection or set GITHUB_TOKEN for higher rate limits." >&2
+    exit 1
+  }
+  echo "$response"
+}
 
-# Fetch all releases (paginated, up to 100)
 if [ "$LATEST_ONLY" = true ]; then
-  RELEASES=$(curl -sf -H "Accept: application/vnd.github+json" \
-    ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} \
-    "$API_URL/latest" | jq '[.]')
+  RELEASES=$(fetch_releases "$API_URL/latest" | jq '[.]')
 else
-  RELEASES=$(curl -sf -H "Accept: application/vnd.github+json" \
-    ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} \
-    "$API_URL?per_page=100")
+  RELEASES=$(fetch_releases "$API_URL?per_page=100")
 fi
 
-if [ -z "$RELEASES" ] || [ "$RELEASES" = "null" ]; then
-  echo "Error: Failed to fetch releases from GitHub API" >&2
-  exit 1
+if [ -z "$RELEASES" ] || [ "$RELEASES" = "null" ] || [ "$RELEASES" = "[]" ]; then
+  echo "No releases found for $REPO" >&2
+  exit 0
 fi
 
 # JSON output mode
