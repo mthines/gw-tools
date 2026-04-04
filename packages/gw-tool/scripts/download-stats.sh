@@ -2,20 +2,28 @@
 #
 # Download Stats Script for gw-tools
 #
-# Fetches download counts from GitHub Releases API for the gw-tools repository.
-# Since Homebrew custom taps download binaries from GitHub Releases, these counts
-# serve as a direct proxy for brew install counts.
+# Tracks two data sources:
+#   1. Homebrew tap traffic (github.com/mthines/homebrew-gw-tools) — clone counts
+#      directly represent `brew install` / `brew update` activity.
+#   2. GitHub Release downloads (github.com/mthines/gw-tools) — binary download
+#      counts across all platforms and release channels.
 #
 # Usage:
-#   ./download-stats.sh                  # Summary of all releases
+#   ./download-stats.sh                  # Summary of all stats
 #   ./download-stats.sh --json           # JSON output
 #   ./download-stats.sh --latest         # Latest release only
 #   ./download-stats.sh --by-platform    # Breakdown by platform
 #
 # Requires: curl, jq
 #
-# Note: GitHub API is rate-limited to 60 requests/hour for unauthenticated requests.
-#       Set GITHUB_TOKEN env var for higher limits (5000/hour).
+# Authentication:
+#   GITHUB_TOKEN          — For higher API rate limits (optional for release data)
+#   HOMEBREW_TAP_TOKEN    — Required for tap traffic data (needs push access to
+#                           mthines/homebrew-gw-tools). Without this, only release
+#                           download counts are shown.
+#
+# Note: GitHub traffic API only retains 14 days of data. Use the GitHub Actions
+#       workflow (.github/workflows/download-stats.yml) to collect weekly snapshots.
 #
 
 set -e
@@ -29,7 +37,9 @@ for cmd in curl jq; do
 done
 
 REPO="mthines/gw-tools"
+TAP_REPO="mthines/homebrew-gw-tools"
 API_URL="https://api.github.com/repos/$REPO/releases"
+TAP_API_URL="https://api.github.com/repos/$TAP_REPO/traffic"
 
 # Colors
 GREEN='\033[0;32m'
@@ -58,29 +68,54 @@ for arg in "$@"; do
       echo "  --latest        Show latest release only"
       echo "  --by-platform   Show breakdown by platform"
       echo "  -h, --help      Show this help message"
+      echo ""
+      echo "Environment:"
+      echo "  GITHUB_TOKEN          Higher API rate limits (optional)"
+      echo "  HOMEBREW_TAP_TOKEN    Required for brew install tracking"
+      echo "                        (needs push access to $TAP_REPO)"
       exit 0
       ;;
   esac
 done
 
-# Fetch releases from GitHub API
-fetch_releases() {
+# Fetch from GitHub API with error handling
+fetch_api() {
   local url="$1"
+  local token="${2:-$GITHUB_TOKEN}"
   local response
   response=$(curl -sf -H "Accept: application/vnd.github+json" \
-    ${GITHUB_TOKEN:+-H "Authorization: token $GITHUB_TOKEN"} \
+    ${token:+-H "Authorization: token $token"} \
     "$url") || {
-    echo "Error: Failed to fetch releases from GitHub API." >&2
+    echo "Error: Failed to fetch from $url" >&2
     echo "  Check your network connection or set GITHUB_TOKEN for higher rate limits." >&2
-    exit 1
+    return 1
   }
   echo "$response"
 }
 
+# =========================================================================
+# 1. Homebrew tap traffic (brew install/update signal)
+# =========================================================================
+TAP_CLONES_TOTAL=0
+TAP_CLONES_UNIQUE=0
+TAP_TOKEN="${HOMEBREW_TAP_TOKEN:-$GITHUB_TOKEN}"
+HAS_TAP_DATA=false
+
+if [ -n "$TAP_TOKEN" ]; then
+  TAP_CLONES=$(fetch_api "$TAP_API_URL/clones" "$TAP_TOKEN" 2>/dev/null) && {
+    TAP_CLONES_TOTAL=$(echo "$TAP_CLONES" | jq '.count // 0')
+    TAP_CLONES_UNIQUE=$(echo "$TAP_CLONES" | jq '.uniques // 0')
+    HAS_TAP_DATA=true
+  }
+fi
+
+# =========================================================================
+# 2. GitHub Release downloads
+# =========================================================================
 if [ "$LATEST_ONLY" = true ]; then
-  RELEASES=$(fetch_releases "$API_URL/latest" | jq '[.]')
+  RELEASES=$(fetch_api "$API_URL/latest" | jq '[.]')
 else
-  RELEASES=$(fetch_releases "$API_URL?per_page=100")
+  RELEASES=$(fetch_api "$API_URL?per_page=100")
 fi
 
 if [ -z "$RELEASES" ] || [ "$RELEASES" = "null" ] || [ "$RELEASES" = "[]" ]; then
@@ -90,17 +125,21 @@ fi
 
 # JSON output mode
 if [ "$JSON_OUTPUT" = true ]; then
-  echo "$RELEASES" | jq '[.[] | {
-    tag: .tag_name,
-    published: .published_at,
-    prerelease: .prerelease,
-    assets: [.assets[] | {
-      name: .name,
-      downloads: .download_count,
-      size: .size
-    }],
-    total_downloads: ([.assets[].download_count] | add // 0)
-  }]'
+  TAP_JSON="null"
+  if [ "$HAS_TAP_DATA" = true ]; then
+    TAP_JSON=$(echo "$TAP_CLONES" | jq '{clones_14d: {total: .count, unique: .uniques}, daily: .clones}')
+  fi
+
+  jq -n \
+    --argjson releases "$(echo "$RELEASES" | jq '[.[] | {
+      tag: .tag_name,
+      published: .published_at,
+      prerelease: .prerelease,
+      assets: [.assets[] | {name: .name, downloads: .download_count, size: .size}],
+      total_downloads: ([.assets[].download_count] | add // 0)
+    }]')" \
+    --argjson tap "$TAP_JSON" \
+    '{homebrew_tap: $tap, github_releases: $releases}'
   exit 0
 fi
 
@@ -110,6 +149,25 @@ TOTAL_RELEASES=$(echo "$RELEASES" | jq 'length')
 STABLE_DOWNLOADS=$(echo "$RELEASES" | jq '[.[] | select(.prerelease == false) | .assets[].download_count] | add // 0')
 BETA_DOWNLOADS=$(echo "$RELEASES" | jq '[.[] | select(.prerelease == true) | .assets[].download_count] | add // 0')
 
+# =========================================================================
+# Output
+# =========================================================================
+
+# Homebrew tap traffic section
+if [ "$HAS_TAP_DATA" = true ]; then
+  echo -e "${BOLD}Homebrew Tap Traffic (last 14 days)${NC}"
+  echo -e "${DIM}───────────────────────────────────${NC}"
+  echo ""
+  echo -e "  ${GREEN}Brew installs (total):${NC}   ${BOLD}$TAP_CLONES_TOTAL${NC}"
+  echo -e "  ${GREEN}Brew installs (unique):${NC}  ${BOLD}$TAP_CLONES_UNIQUE${NC}"
+  echo -e "  ${DIM}Source: clone traffic from github.com/$TAP_REPO${NC}"
+  echo ""
+else
+  echo -e "${YELLOW}Homebrew tap traffic: unavailable${NC}"
+  echo -e "${DIM}Set HOMEBREW_TAP_TOKEN (with push access to $TAP_REPO) to enable.${NC}"
+  echo ""
+fi
+
 # Platform breakdown
 if [ "$BY_PLATFORM" = true ]; then
   MACOS_ARM64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("macos-arm64")) | .download_count] | add // 0')
@@ -118,8 +176,8 @@ if [ "$BY_PLATFORM" = true ]; then
   LINUX_ARM64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("linux-arm64")) | .download_count] | add // 0')
   WINDOWS_X64=$(echo "$RELEASES" | jq '[.[].assets[] | select(.name | test("windows-x64")) | .download_count] | add // 0')
 
-  echo -e "${BOLD}gw-tools Download Stats by Platform${NC}"
-  echo -e "${DIM}────────────────────────────────────${NC}"
+  echo -e "${BOLD}Binary Downloads by Platform${NC}"
+  echo -e "${DIM}────────────────────────────${NC}"
   echo ""
   echo -e "  ${CYAN}macOS arm64${NC}  (Apple Silicon)  ${BOLD}$MACOS_ARM64${NC}"
   echo -e "  ${CYAN}macOS x64${NC}    (Intel)          ${BOLD}$MACOS_X64${NC}"
@@ -133,9 +191,9 @@ if [ "$BY_PLATFORM" = true ]; then
   echo ""
 fi
 
-# Summary
-echo -e "${BOLD}gw-tools Download Statistics${NC}"
-echo -e "${DIM}────────────────────────────${NC}"
+# Release downloads summary
+echo -e "${BOLD}GitHub Release Downloads (all time)${NC}"
+echo -e "${DIM}───────────────────────────────────${NC}"
 echo ""
 echo -e "  ${GREEN}Total downloads:${NC}   ${BOLD}$TOTAL_DOWNLOADS${NC}"
 echo -e "  ${BLUE}Stable releases:${NC}   $STABLE_DOWNLOADS"
@@ -156,7 +214,7 @@ echo "$RELEASES" | jq -r '
 ' | column -t -s $'\t'
 echo ""
 
-# Source note
-echo -e "${DIM}Source: GitHub Releases API (github.com/$REPO/releases)${NC}"
-echo -e "${DIM}Note: Homebrew installs download from GitHub Releases, so these${NC}"
-echo -e "${DIM}counts include brew install/upgrade activity.${NC}"
+# Source notes
+echo -e "${DIM}Sources:${NC}"
+echo -e "${DIM}  Tap traffic: github.com/$TAP_REPO (clone count = brew install/update)${NC}"
+echo -e "${DIM}  Binaries:    github.com/$REPO/releases${NC}"

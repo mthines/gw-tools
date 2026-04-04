@@ -12,7 +12,7 @@
 
 Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncing, enhanced navigation, and autonomous workflows.
 
-[![GitHub Downloads](https://img.shields.io/github/downloads/mthines/gw-tools/total?label=Downloads&logo=github)](https://github.com/mthines/gw-tools/releases)
+[![Homebrew](https://img.shields.io/github/downloads/mthines/gw-tools/total?label=Homebrew%20%2B%20Binary%20Downloads&logo=homebrew)](https://github.com/mthines/homebrew-gw-tools)
 [![npm Downloads](https://img.shields.io/npm/dt/@gw-tools/gw?label=npm&logo=npm)](https://www.npmjs.com/package/@gw-tools/gw)
 
 ## 🛠️ gw CLI Tool
