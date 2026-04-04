@@ -1,5 +1,8 @@
 # gw - Git Worktree Tools
 
+[![Homebrew](https://img.shields.io/github/downloads/mthines/gw-tools/total?label=Homebrew%20%2B%20Binary%20Downloads&logo=homebrew)](https://github.com/mthines/homebrew-gw-tools)
+[![npm Downloads](https://img.shields.io/npm/dt/@gw-tools/gw?label=npm&logo=npm)](https://www.npmjs.com/package/@gw-tools/gw)
+
 A command-line tool for managing git worktrees, built with Deno.
 
 ## Table of Contents
