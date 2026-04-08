@@ -19,13 +19,8 @@ export class WorktreeItem extends vscode.TreeItem {
     this.tooltip = this.getTooltip();
     this.iconPath = this.getIcon();
 
-    if (!worktree.bare) {
-      this.command = {
-        command: 'gw.openWorktree',
-        title: 'Open Worktree',
-        arguments: [this],
-      };
-    }
+    // No command on single-click — single click just selects.
+    // Double-click is handled via onDidChangeSelection in extension.ts.
   }
 
   private getDescription(): string {

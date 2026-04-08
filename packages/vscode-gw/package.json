@@ -82,6 +82,12 @@
         "category": "gw"
       },
       {
+        "command": "gw.removeSelectedWorktrees",
+        "title": "Remove Selected Worktrees",
+        "icon": "$(trash)",
+        "category": "gw"
+      },
+      {
         "command": "gw.createWorktree",
         "title": "Create Worktree",
         "icon": "$(add)",
@@ -206,6 +212,10 @@
         {
           "command": "gw.switchWorktreeAcceptSameWindow",
           "when": "false"
+        },
+        {
+          "command": "gw.removeSelectedWorktrees",
+          "when": "false"
         }
       ],
       "view/title": [
@@ -278,7 +288,12 @@
         },
         {
           "command": "gw.removeWorktree",
-          "when": "view == gwWorktreeExplorer && viewItem == worktree",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree && !listMultiSelection",
+          "group": "danger@1"
+        },
+        {
+          "command": "gw.removeSelectedWorktrees",
+          "when": "view == gwWorktreeExplorer && viewItem == worktree && listMultiSelection",
           "group": "danger@1"
         },
         {

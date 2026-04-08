@@ -93,6 +93,29 @@ export function activate(context: vscode.ExtensionContext): void {
   const worktreeView = vscode.window.createTreeView('gwWorktreeExplorer', {
     treeDataProvider: worktreeProvider,
     showCollapseAll: true,
+    canSelectMany: true,
+  });
+
+  // Double-click detection: open worktree in new window on double-click
+  let lastSelectedItem: WorktreeItem | undefined;
+  let lastSelectedTime = 0;
+  const DOUBLE_CLICK_THRESHOLD = 500; // ms
+
+  worktreeView.onDidChangeSelection((e) => {
+    if (e.selection.length !== 1) return;
+    const item = e.selection[0];
+    if (item.worktree.bare) return;
+
+    const now = Date.now();
+    if (lastSelectedItem === item && now - lastSelectedTime < DOUBLE_CLICK_THRESHOLD) {
+      // Double-click detected — open in new window
+      vscode.commands.executeCommand('gw.openWorktree', item);
+      lastSelectedItem = undefined;
+      lastSelectedTime = 0;
+    } else {
+      lastSelectedItem = item;
+      lastSelectedTime = now;
+    }
   });
 
   const agentTasksView = vscode.window.createTreeView('gwAgentTasks', {
@@ -430,6 +453,86 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showErrorMessage(`Failed to remove worktree: ${stripAnsi(msg)}`);
       }
     }),
+
+    vscode.commands.registerCommand(
+      'gw.removeSelectedWorktrees',
+      async (_item?: WorktreeItem, selectedItems?: WorktreeItem[]) => {
+        const items = selectedItems && selectedItems.length > 0 ? selectedItems : [];
+        log(`Command: removeSelectedWorktrees (${items.length} items)`);
+
+        if (items.length === 0) {
+          vscode.window.showWarningMessage('No worktrees selected.');
+          return;
+        }
+
+        // Filter out bare worktrees
+        const removable = items.filter((i) => !i.worktree.bare);
+        if (removable.length === 0) return;
+
+        // Check for dirty changes across all selected worktrees
+        const dirtyChecks = await Promise.all(
+          removable.map(async (i) => ({
+            item: i,
+            dirty: await hasUncommittedChanges(i.worktree.path),
+          }))
+        );
+        const hasDirty = dirtyChecks.some((c) => c.dirty);
+
+        const branchNames = removable.map((i) => i.worktree.branch).join(', ');
+        const count = removable.length;
+        let confirm: string | undefined;
+        let forceRemove = false;
+
+        if (hasDirty) {
+          const dirtyBranches = dirtyChecks
+            .filter((c) => c.dirty)
+            .map((c) => c.item.worktree.branch)
+            .join(', ');
+          confirm = await vscode.window.showWarningMessage(
+            `Remove ${count} worktrees (${branchNames})?\n\nWorktrees with uncommitted changes: ${dirtyBranches}`,
+            { modal: true },
+            'Force Remove'
+          );
+          forceRemove = confirm === 'Force Remove';
+        } else {
+          confirm = await vscode.window.showWarningMessage(
+            `Remove ${count} worktrees (${branchNames})?`,
+            { modal: true },
+            'Remove'
+          );
+        }
+
+        if (!confirm) return;
+
+        const results: { branch: string; success: boolean; error?: string }[] = [];
+
+        for (const i of removable) {
+          try {
+            await removeWorktree(workspacePath, i.worktree.path, forceRemove);
+            results.push({ branch: i.worktree.branch, success: true });
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            results.push({ branch: i.worktree.branch, success: false, error: stripAnsi(msg) });
+          }
+        }
+
+        worktreeProvider.refresh();
+
+        const succeeded = results.filter((r) => r.success);
+        const failed = results.filter((r) => !r.success);
+
+        if (succeeded.length > 0) {
+          vscode.window.showInformationMessage(
+            `Removed ${succeeded.length} worktrees: ${succeeded.map((r) => r.branch).join(', ')}`
+          );
+        }
+        if (failed.length > 0) {
+          vscode.window.showErrorMessage(
+            `Failed to remove ${failed.length} worktrees: ${failed.map((r) => `${r.branch} (${r.error})`).join('; ')}`
+          );
+        }
+      }
+    ),
 
     vscode.commands.registerCommand('gw.createWorktree', async () => {
       log('Command: createWorktree');
