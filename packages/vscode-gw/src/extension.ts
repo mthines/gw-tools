@@ -18,6 +18,7 @@ import {
   removeWorktree,
   createWorktree,
   createWorktreeFromStaged,
+  checkoutPr,
   cleanWorktrees,
   syncWorktree,
   listWorktrees,
@@ -162,6 +163,7 @@ export function activate(context: vscode.ExtensionContext): void {
         branch?: string;
         isCreateNew?: boolean;
         isRemote?: boolean;
+        prUrl?: string;
       }
 
       const openInSameWindowButton: vscode.QuickInputButton = {
@@ -220,7 +222,7 @@ export function activate(context: vscode.ExtensionContext): void {
       const quickPick = vscode.window.createQuickPick<SwitchQuickPickItem>();
       quickPick.title = 'Switch Worktree';
       quickPick.placeholder =
-        'Search worktrees, branches, or type a new branch name (Shift+Enter to open in same window)';
+        'Search worktrees, branches, paste a GitHub PR URL, or type a new branch name';
       quickPick.matchOnDescription = true;
       quickPick.matchOnDetail = true;
       // Preserve our item order (worktrees first) instead of alphabetical sorting.
@@ -229,11 +231,29 @@ export function activate(context: vscode.ExtensionContext): void {
       (quickPick as unknown as { sortByLabel: boolean }).sortByLabel = false;
       quickPick.items = allStaticItems;
 
-      // Only use onDidChangeValue for the dynamic "Create new branch" item
+      // Detect GitHub PR URLs and show dynamic items
+      const ghPrUrlPattern = /(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/;
+
       quickPick.onDidChangeValue((value) => {
         const typedRaw = value.trim();
         if (typedRaw.length === 0 || branchNames.has(typedRaw) || worktreeBranches.has(typedRaw)) {
           quickPick.items = allStaticItems;
+          return;
+        }
+
+        // Check for GitHub PR URL
+        const prMatch = typedRaw.match(ghPrUrlPattern);
+        if (prMatch) {
+          const [, owner, repo, prNumber] = prMatch;
+          quickPick.items = [
+            {
+              label: `$(git-pull-request) Checkout PR #${prNumber}`,
+              description: `${owner}/${repo}`,
+              detail: `Fetch PR branch and create a worktree via gw pr`,
+              alwaysShow: true,
+              prUrl: typedRaw,
+            },
+          ];
           return;
         }
 
@@ -256,6 +276,42 @@ export function activate(context: vscode.ExtensionContext): void {
         quickPick.hide();
 
         if (!selected) return;
+
+        // GitHub PR URL — checkout PR via gw pr
+        if (selected.prUrl) {
+          const prMatch = selected.prUrl.match(ghPrUrlPattern);
+          const prNumber = prMatch ? prMatch[3] : 'PR';
+          log(`Checking out PR: ${selected.prUrl}`);
+
+          try {
+            await vscode.window.withProgress(
+              {
+                location: vscode.ProgressLocation.Notification,
+                title: `Checking out PR #${prNumber}...`,
+                cancellable: false,
+              },
+              async () => {
+                await checkoutPr(workspacePath, selected.prUrl!);
+              }
+            );
+            worktreeProvider.refresh();
+
+            // Find the newly created worktree by refreshing the list
+            const updatedWorktrees = await listWorktrees(workspacePath);
+            const newWorktree = updatedWorktrees.find(
+              (wt) => !wt.bare && wt.path !== currentPath && !worktrees.some((old) => old.path === wt.path)
+            );
+            if (newWorktree) {
+              await openNewWorktree(newWorktree.path, `Checked out PR #${prNumber}`);
+            } else {
+              vscode.window.showInformationMessage(`Checked out PR #${prNumber}`);
+            }
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err);
+            vscode.window.showErrorMessage(`Failed to checkout PR: ${stripAnsi(msg)}`);
+          }
+          return;
+        }
 
         // Existing worktree — open it
         if (selected.worktreePath) {

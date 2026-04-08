@@ -293,6 +293,13 @@ export function cleanWorktrees(cwd: string, opts: { force?: boolean; dryRun?: bo
 }
 
 /**
+ * Checkout a PR into a new worktree via gw pr
+ */
+export function checkoutPr(cwd: string, prIdentifier: string): Promise<string> {
+  return exec(`gw pr ${prIdentifier} --no-cd`, cwd);
+}
+
+/**
  * Sync files to a worktree via gw sync
  */
 export function syncWorktree(cwd: string, target?: string, from?: string): Promise<string> {
