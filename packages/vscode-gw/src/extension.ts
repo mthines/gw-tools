@@ -96,27 +96,25 @@ export function activate(context: vscode.ExtensionContext): void {
     canSelectMany: true,
   });
 
-  // Double-click detection: open worktree in new window on double-click
-  let lastSelectedItem: WorktreeItem | undefined;
-  let lastSelectedTime = 0;
+  // Double-click detection via click command on tree items
+  let lastClickedPath: string | undefined;
+  let lastClickTime = 0;
   const DOUBLE_CLICK_THRESHOLD = 500; // ms
 
-  worktreeView.onDidChangeSelection((e) => {
-    if (e.selection.length !== 1) return;
-    const item = e.selection[0];
-    if (item.worktree.bare) return;
-
-    const now = Date.now();
-    if (lastSelectedItem === item && now - lastSelectedTime < DOUBLE_CLICK_THRESHOLD) {
-      // Double-click detected — open in new window
-      vscode.commands.executeCommand('gw.openWorktree', item);
-      lastSelectedItem = undefined;
-      lastSelectedTime = 0;
-    } else {
-      lastSelectedItem = item;
-      lastSelectedTime = now;
-    }
-  });
+  context.subscriptions.push(
+    vscode.commands.registerCommand('gw.worktreeClick', (item: WorktreeItem) => {
+      const now = Date.now();
+      if (lastClickedPath === item.worktree.path && now - lastClickTime < DOUBLE_CLICK_THRESHOLD) {
+        // Double-click detected — open in new window
+        vscode.commands.executeCommand('gw.openWorktree', item);
+        lastClickedPath = undefined;
+        lastClickTime = 0;
+      } else {
+        lastClickedPath = item.worktree.path;
+        lastClickTime = now;
+      }
+    })
+  );
 
   const agentTasksView = vscode.window.createTreeView('gwAgentTasks', {
     treeDataProvider: agentTasksProvider,
