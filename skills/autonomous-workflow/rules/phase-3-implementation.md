@@ -64,13 +64,14 @@ Implement in logical order:
 
 **After Editing:**
 
-```bash
-# Does it compile?
-npm run build  # or tsc --noEmit
+Run the **edit** tier from the [verification strategy](./verification-strategy.md):
 
-# Does it pass linting?
-npm run lint -- <file-path>
 ```
+Read .gw/autonomous-workflow.json → verify.edit
+Run verify.edit.cmd with {files} = the file(s) just changed
+```
+
+This is the cheapest check (~1-3s) — typically lint on the changed file. Fix any failures immediately before proceeding.
 
 **Self-review questions:**
 
@@ -126,18 +127,23 @@ git commit -m "<type>(<scope>): <description>"
 
 ### Step 5: Continuous Validation
 
-After every 2-3 files changed:
+Run the **subtask** and **milestone** tiers from the [verification strategy](./verification-strategy.md):
 
-```bash
-# Full build
-npm run build
+**After completing a logical subtask** (function, component, endpoint):
 
-# All lint rules
-npm run lint
-
-# Quick test run
-npm test -- --coverage=false --maxWorkers=1
 ```
+Run verify.subtask.cmd with {testFiles} = related test files
+```
+
+**Every 2-3 files or at a milestone:**
+
+```
+Run verify.milestone.cmd (e.g., incremental type-check)
+```
+
+If no verify config exists in `.gw/autonomous-workflow.json`, auto-detect and write it. See [verification-strategy](./verification-strategy.md) for the full schema and auto-detection logic.
+
+> **Why tiered?** Full `npm run build` + `npm run lint` consumes 2-4GB RAM per instance. When multiple agents run in parallel worktrees, this exhausts system memory. The tiered approach keeps each agent lightweight while CI runs the full check before merge.
 
 **Self-assessment:**
 
@@ -168,8 +174,7 @@ git commit -m "feat(scope): implement <feature-name>
 
 - [ ] All planned files modified
 - [ ] Code follows existing patterns
-- [ ] Builds/compiles successfully
-- [ ] Linting passes
+- [ ] Verification tiers pass (edit + subtask + milestone from .gw/autonomous-workflow.json)
 - [ ] Commits are logical and clear
 - [ ] Self-reviewed all changes
 - [ ] Ready for testing

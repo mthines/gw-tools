@@ -30,16 +30,16 @@ Preserve worktree for user review.
 ```bash
 # All changes committed?
 git status  # Should show clean
-
-# All tests passing?
-npm test
-
-# Build succeeds?
-npm run build
-
-# Linting clean?
-npm run lint
 ```
+
+Run the **pre-pr** tier from the [verification strategy](./verification-strategy.md):
+
+```
+Read .gw/autonomous-workflow.json → verify.pre-pr
+Run verify.pre-pr.cmd from verify.pre-pr.cwd
+```
+
+This is the one expensive check — the full verification suite (tests, type-check, lint). It runs once before PR creation, not in a loop.
 
 **Documentation complete?**
 
@@ -47,7 +47,7 @@ npm run lint
 - CHANGELOG updated? ✓
 - API docs updated? ✓
 
-**If ANY check fails: Stop, fix, re-validate.**
+**If pre-pr verification fails: Stop, fix, re-validate. Do NOT create the PR.**
 
 ### Step 2: Push to Remote
 

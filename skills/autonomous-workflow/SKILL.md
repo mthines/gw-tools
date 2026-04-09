@@ -155,6 +155,7 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 | [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                      |
 | [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                         |
 | [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`                     |
+| [verification-strategy](./rules/verification-strategy.md)       | **HIGH** - Four-tier verification config (.gw/autonomous-workflow.json), auto-detection, parallel-safe |
 | [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with continuous validation                      |
 | [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)            |
 | [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                                       |

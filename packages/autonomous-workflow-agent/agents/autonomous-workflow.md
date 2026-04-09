@@ -42,19 +42,20 @@ MODE SELECTION:
 
 **When in doubt, choose Full Mode.**
 
-### Action 3: Create Artifacts (Full Mode ONLY)
+### Action 3: Plan Artifacts (Full Mode ONLY)
 
-For **Full Mode**, create these files **BEFORE Phase 0**:
+For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-```bash
-mkdir -p .gw/{branch-name}
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
-```
+| File | Purpose | Created |
+| ---- | ------- | ------- |
+| `.gw/{branch-name}/task.md` | Dynamic checklist, decisions, blockers | After Phase 2 |
+| `.gw/{branch-name}/plan.md` | Comprehensive implementation strategy | After Phase 2 |
+| `.gw/{branch-name}/walkthrough.md` | Final summary for PR | Phase 6 |
 
 **⚠️ All timestamps** in artifact frontmatter, status fields, and metadata.json **MUST use full ISO 8601 with time**: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`). Never date-only.
 
 **⛔ BLOCKING GATE: Do NOT proceed without completing Actions 1-3.**
+**⛔ DO NOT create artifact files on the main branch.**
 
 ---
 
@@ -206,7 +207,7 @@ Before creating a new worktree, check if current context matches the task:
 2. Create worktree: `gw add <branch-name>`
 3. Navigate to worktree: `gw cd <branch-name>`
 4. Install dependencies: `npm install` (or pnpm/yarn)
-5. Verify environment: `npm run build`, `npm run lint`
+5. Verify environment compiles cleanly (run the project's build/check command appropriate to the stack)
 6. Ensure `.gw/` is gitignored
 
 ### Phase 2 Gate
@@ -238,10 +239,15 @@ Verify: Which files have been completed? What's next?
 ### Procedure
 
 1. **Implementation Order**: Types/interfaces → Core logic → UI components → Integration → Configuration.
-2. **One Change at a Time**: Read file, make focused change, verify compile/lint.
+2. **One Change at a Time**: Read file, make focused change, run `verify.edit` from `.gw/autonomous-workflow.json`.
 3. **Update Task Tracking**: Update `.gw/{branch}/task.md` after each file change.
 4. **Commit Incrementally**: `git commit -m "<type>(<scope>): <description>"`
-5. **Continuous Validation**: After every 2-3 files, run build/lint/test.
+5. **Tiered Verification** (from `.gw/autonomous-workflow.json` verify section):
+   - **After each file edit**: Run `verify.edit` on changed file(s) — lint only, ~1-3s
+   - **After a logical subtask**: Run `verify.subtask` with related test files — ~5-15s
+   - **Every 2-3 files**: Run `verify.milestone` — type-check (incremental), ~5-30s
+   If no verify config exists, auto-detect from the project and write to `.gw/autonomous-workflow.json`.
+   Full build/lint runs in CI. Tiered checks keep agents lightweight in parallel.
 
 ### Phase 3 Gate
 
@@ -249,8 +255,7 @@ Verify: Which files have been completed? What's next?
 PHASE 3 → 4 TRANSITION:
 - [ ] All planned files modified
 - [ ] Code follows existing patterns
-- [ ] Builds/compiles successfully
-- [ ] Linting passes
+- [ ] Verification tiers pass (edit + subtask + milestone from .gw/autonomous-workflow.json)
 - [ ] Commits are logical and clear
 - [ ] task.md updated with completion status
 Announce: "Phase 3 complete. Implementation done. Proceeding to Phase 4 Testing."
@@ -385,7 +390,7 @@ READ: .gw/{branch}/plan.md - Original plan for comparison
 
 ### Procedure
 
-1. **Pre-Flight Validation**: All changes committed, tests passing, build succeeds, linting clean.
+1. **Pre-Flight Validation**: All changes committed. Run `verify.pre-pr` from `.gw/autonomous-workflow.json` (full verification suite). Fix any failures before proceeding.
 2. **Push to Remote**: `git push -u origin <branch-name>`
 3. **Generate Walkthrough**: Create `.gw/{branch}/walkthrough.md` summarizing all changes.
 4. **Generate PR Description**: Summary, changes, implementation details, testing, breaking changes.
