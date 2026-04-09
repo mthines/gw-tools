@@ -148,26 +148,26 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 ## Rules
 
-| Rule                                                            | Description                                                                           |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                            |
-| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree, prompt to continue or create new |
-| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                      |
-| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                         |
-| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`                     |
+| Rule                                                            | Description                                                                                            |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                                             |
+| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree, prompt to continue or create new                  |
+| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                                       |
+| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                                          |
+| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`                                      |
 | [verification-strategy](./rules/verification-strategy.md)       | **HIGH** - Four-tier verification config (.gw/autonomous-workflow.json), auto-detection, parallel-safe |
-| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with continuous validation                      |
-| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)            |
-| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                                       |
-| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                           |
-| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                                       |
-| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                          |
-| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                                      |
-| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback                      |
-| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                                 |
-| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Three-artifact pattern (Task, Plan, Walkthrough), file locations           |
-| [task-tracking](./rules/task-tracking.md)                       | **HIGH** - Dynamic task updates throughout workflow                                   |
-| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                                      |
+| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with continuous validation                                       |
+| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)                             |
+| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                                                        |
+| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                                            |
+| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                                                        |
+| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                                           |
+| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                                                       |
+| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback                                       |
+| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                                                  |
+| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Three-artifact pattern (Task, Plan, Walkthrough), file locations                            |
+| [task-tracking](./rules/task-tracking.md)                       | **HIGH** - Dynamic task updates throughout workflow                                                    |
+| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                                                       |
 
 ## Templates
 

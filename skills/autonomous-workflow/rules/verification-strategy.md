@@ -19,12 +19,12 @@ Research shows that strong autonomous agents validate ~35% of their steps, and t
 
 ## The Four Tiers
 
-| Tier | When | What | Cost | Catches |
-|------|------|------|------|---------|
-| **edit** | After each file edit | Lint changed file | ~1-3s, negligible memory | Unused imports, formatting, naming violations |
-| **subtask** | After completing a logical unit (function, component, endpoint) | Targeted tests for the changed area | ~5-15s | Broken behavior, regressions in the area |
-| **milestone** | Every 2-3 files or at a milestone | Type-check (incremental if available) | ~5-30s with cache | Cross-file type errors, broken imports |
-| **pre-pr** | Before creating PR (Phase 6) | Full verification suite | ~1-5 min | Everything — this is the safety net |
+| Tier          | When                                                            | What                                  | Cost                     | Catches                                       |
+| ------------- | --------------------------------------------------------------- | ------------------------------------- | ------------------------ | --------------------------------------------- |
+| **edit**      | After each file edit                                            | Lint changed file                     | ~1-3s, negligible memory | Unused imports, formatting, naming violations |
+| **subtask**   | After completing a logical unit (function, component, endpoint) | Targeted tests for the changed area   | ~5-15s                   | Broken behavior, regressions in the area      |
+| **milestone** | Every 2-3 files or at a milestone                               | Type-check (incremental if available) | ~5-30s with cache        | Cross-file type errors, broken imports        |
+| **pre-pr**    | Before creating PR (Phase 6)                                    | Full verification suite               | ~1-5 min                 | Everything — this is the safety net           |
 
 ## Config Schema
 
@@ -35,20 +35,20 @@ Verification commands are stored in `.gw/autonomous-workflow.json`, keyed by dir
   "verify": {
     ".": {
       "edit": "eslint {files}",
-      "pre-pr": "npm run verify"
+      "pre-pr": "npm run verify",
     },
     "components/ui": {
       "edit": "eslint --no-error-on-unmatched-pattern {files}",
       "subtask": "vitest run {testFiles}",
       "milestone": "tsc --noEmit --incremental",
-      "pre-pr": "npm run verify"
+      "pre-pr": "npm run verify",
     },
     "components/api": {
       "edit": "golangci-lint run {files}",
       "subtask": "go test ./...",
-      "pre-pr": "make verify"
-    }
-  }
+      "pre-pr": "make verify",
+    },
+  },
 }
 ```
 
@@ -138,21 +138,21 @@ Running `npm run build` + `npm run lint` (with type-aware rules) on every valida
 {
   "verify": {
     ".": {
-      "pre-pr": "npm run verify"
+      "pre-pr": "npm run verify",
     },
     "components/ui": {
       "edit": "eslint --no-error-on-unmatched-pattern {files}",
       "subtask": "vitest run {testFiles}",
       "milestone": "tsc --noEmit --incremental",
-      "pre-pr": "npm run verify"
+      "pre-pr": "npm run verify",
     },
     "components/api": {
       "edit": "golangci-lint run {files}",
       "subtask": "go test ./...",
       "milestone": "go build ./...",
-      "pre-pr": "make verify"
-    }
-  }
+      "pre-pr": "make verify",
+    },
+  },
 }
 ```
 
@@ -164,9 +164,9 @@ Running `npm run build` + `npm run lint` (with type-aware rules) on every valida
     ".": {
       "edit": "eslint {files}",
       "subtask": "npm test -- --changed",
-      "pre-pr": "npm run lint && npm test"
-    }
-  }
+      "pre-pr": "npm run lint && npm test",
+    },
+  },
 }
 ```
 
@@ -179,9 +179,9 @@ Running `npm run build` + `npm run lint` (with type-aware rules) on every valida
       "edit": "golangci-lint run {files}",
       "subtask": "go test ./...",
       "milestone": "go build ./...",
-      "pre-pr": "make verify"
-    }
-  }
+      "pre-pr": "make verify",
+    },
+  },
 }
 ```
 

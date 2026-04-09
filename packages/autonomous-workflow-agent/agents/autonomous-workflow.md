@@ -46,11 +46,11 @@ MODE SELECTION:
 
 For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-| File | Purpose | Created |
-| ---- | ------- | ------- |
-| `.gw/{branch-name}/task.md` | Dynamic checklist, decisions, blockers | After Phase 2 |
-| `.gw/{branch-name}/plan.md` | Comprehensive implementation strategy | After Phase 2 |
-| `.gw/{branch-name}/walkthrough.md` | Final summary for PR | Phase 6 |
+| File                               | Purpose                                | Created       |
+| ---------------------------------- | -------------------------------------- | ------------- |
+| `.gw/{branch-name}/task.md`        | Dynamic checklist, decisions, blockers | After Phase 2 |
+| `.gw/{branch-name}/plan.md`        | Comprehensive implementation strategy  | After Phase 2 |
+| `.gw/{branch-name}/walkthrough.md` | Final summary for PR                   | Phase 6       |
 
 **⚠️ All timestamps** in artifact frontmatter, status fields, and metadata.json **MUST use full ISO 8601 with time**: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`). Never date-only.
 
@@ -246,8 +246,8 @@ Verify: Which files have been completed? What's next?
    - **After each file edit**: Run `verify.edit` on changed file(s) — lint only, ~1-3s
    - **After a logical subtask**: Run `verify.subtask` with related test files — ~5-15s
    - **Every 2-3 files**: Run `verify.milestone` — type-check (incremental), ~5-30s
-   If no verify config exists, auto-detect from the project and write to `.gw/autonomous-workflow.json`.
-   Full build/lint runs in CI. Tiered checks keep agents lightweight in parallel.
+     If no verify config exists, auto-detect from the project and write to `.gw/autonomous-workflow.json`.
+     Full build/lint runs in CI. Tiered checks keep agents lightweight in parallel.
 
 ### Phase 3 Gate
 
