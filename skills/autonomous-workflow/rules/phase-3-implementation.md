@@ -67,8 +67,8 @@ Implement in logical order:
 Run the **edit** tier from the [verification strategy](./verification-strategy.md):
 
 ```
-Read .gw/autonomous-workflow.json → verify.edit
-Run verify.edit.cmd with {files} = the file(s) just changed
+Read .gw/autonomous-workflow.json → find the matched directory key for changed files
+Run the "edit" command string, substituting {files} with the file(s) just changed
 ```
 
 This is the cheapest check (~1-3s) — typically lint on the changed file. Fix any failures immediately before proceeding.
@@ -132,13 +132,13 @@ Run the **subtask** and **milestone** tiers from the [verification strategy](./v
 **After completing a logical subtask** (function, component, endpoint):
 
 ```
-Run verify.subtask.cmd with {testFiles} = related test files
+Run the "subtask" command string, substituting {testFiles} with related test files
 ```
 
 **Every 2-3 files or at a milestone:**
 
 ```
-Run verify.milestone.cmd (e.g., incremental type-check)
+Run the "milestone" command string (e.g., incremental type-check)
 ```
 
 If no verify config exists in `.gw/autonomous-workflow.json`, auto-detect and write it. See [verification-strategy](./verification-strategy.md) for the full schema and auto-detection logic.

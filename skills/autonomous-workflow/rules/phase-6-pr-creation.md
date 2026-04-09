@@ -35,8 +35,8 @@ git status  # Should show clean
 Run the **pre-pr** tier from the [verification strategy](./verification-strategy.md):
 
 ```
-Read .gw/autonomous-workflow.json → verify.pre-pr
-Run verify.pre-pr.cmd from verify.pre-pr.cwd
+Read .gw/autonomous-workflow.json → find the matched directory key for changed files
+Run the "pre-pr" command string from that directory key, with cwd = the matched directory
 ```
 
 This is the one expensive check — the full verification suite (tests, type-check, lint). It runs once before PR creation, not in a loop.

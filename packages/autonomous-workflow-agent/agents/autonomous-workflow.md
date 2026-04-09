@@ -209,6 +209,11 @@ Before creating a new worktree, check if current context matches the task:
 4. Install dependencies: `npm install` (or pnpm/yarn)
 5. Verify environment compiles cleanly (run the project's build/check command appropriate to the stack)
 6. Ensure `.gw/` is gitignored
+7. **Create & Populate Artifacts** (Full Mode ONLY):
+   ```bash
+   mkdir -p .gw/{branch-name}
+   ```
+   Write the plan.md and task.md content prepared during Phase 1 into the worktree files.
 
 ### Phase 2 Gate
 
@@ -219,6 +224,7 @@ PHASE 2 → 3 TRANSITION:
 - [ ] Dependencies installed
 - [ ] Environment builds/compiles
 - [ ] .gw/ is gitignored
+- [ ] ⛔ Artifact files created and populated in worktree (Full Mode only)
 Announce: "Phase 2 complete. Worktree ready. Proceeding to Phase 3 Implementation."
 ```
 
