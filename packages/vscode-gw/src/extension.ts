@@ -221,8 +221,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
       const quickPick = vscode.window.createQuickPick<SwitchQuickPickItem>();
       quickPick.title = 'Switch Worktree';
-      quickPick.placeholder =
-        'Search worktrees, branches, paste a GitHub PR URL, or type a new branch name';
+      quickPick.placeholder = 'Search worktrees, branches, paste a GitHub PR URL, or type a new branch name';
       quickPick.matchOnDescription = true;
       quickPick.matchOnDetail = true;
       // Preserve our item order (worktrees first) instead of alphabetical sorting.
