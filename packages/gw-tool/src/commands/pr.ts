@@ -3,7 +3,7 @@
  * Fetches a pull request's branch and creates a worktree for it
  */
 
-import { promptAndRunAutoClean } from '../lib/auto-clean.ts';
+import { runAutoClean } from '../lib/auto-clean.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import { listWorktrees } from '../lib/git-utils.ts';
@@ -550,8 +550,8 @@ export async function executePr(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees if enabled
-  await promptAndRunAutoClean();
+  // Auto-cleanup stale worktrees in the background (non-blocking)
+  runAutoClean();
 
   output.success(`Worktree ${output.bold(`"${worktreeName}"`)} created for PR #${prNumber}`);
 

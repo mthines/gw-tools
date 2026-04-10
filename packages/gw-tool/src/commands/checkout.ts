@@ -3,7 +3,7 @@
  * Creates a new worktree and optionally copies files
  */
 
-import { promptAndRunAutoClean } from '../lib/auto-clean.ts';
+import { runAutoClean } from '../lib/auto-clean.ts';
 import { loadConfig } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import {
@@ -782,8 +782,8 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees if enabled (interactive prompt)
-  await promptAndRunAutoClean();
+  // Auto-cleanup stale worktrees in the background (non-blocking)
+  runAutoClean();
 
   output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 

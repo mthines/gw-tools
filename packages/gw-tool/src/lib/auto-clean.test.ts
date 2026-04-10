@@ -5,499 +5,436 @@
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { createConfigWithAutoClean, readTestConfig, writeTestConfig } from '../test-utils/fixtures.ts';
+import {
+  createConfigWithAutoClean,
+  readTestConfig,
+  writeTestConfig,
+} from '../test-utils/fixtures.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
-import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
-import { executeAutoClean, promptAndRunAutoClean } from './auto-clean.ts';
+import { executeAutoClean } from './auto-clean.ts';
 
 /**
- * Helper to make a worktree appear old by backdating its .git file
+ * Helper to make a worktree appear old by backdating
+ * its .git file
  * @param worktreePath Path to the worktree
  * @param daysOld How many days old to make it
  */
-async function makeWorktreeOld(worktreePath: string, daysOld: number): Promise<void> {
+async function makeWorktreeOld(
+  worktreePath: string,
+  daysOld: number,
+): Promise<void> {
   const gitFilePath = join(worktreePath, '.git');
-  const oldTime = new Date(Date.now() - daysOld * 24 * 60 * 60 * 1000);
+  const oldTime = new Date(
+    Date.now() - daysOld * 24 * 60 * 60 * 1000,
+  );
   await Deno.utime(gitFilePath, oldTime, oldTime);
 
-  // Backdate the last commit so getWorktreeAgeDays (which checks commit date) sees it as old
+  // Backdate the last commit so getWorktreeAgeDays
+  // (which checks commit date) sees it as old
   const oldDate = oldTime.toISOString();
   const cmd = new Deno.Command('git', {
-    args: ['-C', worktreePath, 'commit', '--allow-empty', '--amend', '--no-edit', '--date', oldDate],
+    args: [
+      '-C',
+      worktreePath,
+      'commit',
+      '--allow-empty',
+      '--amend',
+      '--no-edit',
+      '--date',
+      oldDate,
+    ],
     stdout: 'null',
     stderr: 'null',
-    env: { ...Deno.env.toObject(), GIT_COMMITTER_DATE: oldDate },
+    env: {
+      ...Deno.env.toObject(),
+      GIT_COMMITTER_DATE: oldDate,
+    },
   });
   await cmd.output();
 }
 
-Deno.test('executeAutoClean - returns 0 when auto-clean is disabled', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create config with auto-clean disabled (default)
-    const config = {
-      root: repo.path,
-      defaultBranch: 'main',
-      cleanThreshold: 7,
-      autoClean: false,
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - returns empty result when disabled',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      const removedCount = await executeAutoClean();
-      assertEquals(removedCount, 0);
+      await repo.init();
+
+      const config = {
+        root: repo.path,
+        defaultBranch: 'main',
+        cleanThreshold: 7,
+        autoClean: false,
+      };
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+        assertEquals(result.removed, []);
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('executeAutoClean - respects cooldown period', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create config with auto-clean enabled and recent lastAutoCleanTime
-    const config = {
-      root: repo.path,
-      defaultBranch: 'main',
-      cleanThreshold: 7,
-      autoClean: true,
-      lastAutoCleanTime: Date.now() - 1000, // 1 second ago (within 24h cooldown)
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - respects cooldown period',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      const removedCount = await executeAutoClean();
-      assertEquals(removedCount, 0);
+      await repo.init();
+
+      const config = {
+        root: repo.path,
+        defaultBranch: 'main',
+        cleanThreshold: 7,
+        autoClean: true,
+        lastAutoCleanTime: Date.now() - 1000,
+      };
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+        assertEquals(result.removed, []);
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('executeAutoClean - never removes defaultBranch worktree', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a worktree for the defaultBranch (main is already the main worktree)
-    // The main worktree IS on the defaultBranch
-
-    // Create config with auto-clean enabled
-    const config = createConfigWithAutoClean(repo.path, 1); // 1 day threshold
-    await writeTestConfig(repo.path, config);
-
-    // Make the main worktree "old" (but it should still not be cleaned)
-    await makeWorktreeOld(repo.path, 10);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - never removes defaultBranch worktree',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      const removedCount = await executeAutoClean();
-      // Should not remove main worktree even though it's old
-      assertEquals(removedCount, 0);
+      await repo.init();
 
-      // Verify the worktree still exists
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(repo.path), true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
+      const config = createConfigWithAutoClean(
+        repo.path,
+        1,
+      );
+      await writeTestConfig(repo.path, config);
 
-Deno.test('executeAutoClean - removes old non-defaultBranch worktrees', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
+      // Make the main worktree "old"
+      // (but it should still not be cleaned)
+      await makeWorktreeOld(repo.path, 10);
 
-    // Create a feature worktree
-    const featureWorktreePath = await repo.createWorktree('feat-old-branch', 'feat-old-branch');
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
 
-    // Make the feature worktree old
-    await makeWorktreeOld(featureWorktreePath, 10);
-
-    // Create config with auto-clean enabled (1 day threshold)
-    const config = createConfigWithAutoClean(repo.path, 1);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const removedCount = await executeAutoClean();
-      // Should remove the old feature worktree
-      assertEquals(removedCount, 1);
-
-      // Verify the worktree was removed
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(featureWorktreePath), false);
-
-      // Main worktree should still exist
-      assertEquals(worktrees.includes(repo.path), true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - updates lastAutoCleanTime after running', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create config with auto-clean enabled and no lastAutoCleanTime
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const beforeTime = Date.now();
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      await executeAutoClean();
-
-      // Verify lastAutoCleanTime was updated
-      const savedConfig = await readTestConfig(repo.path);
-      assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');
-      assertEquals(savedConfig.lastAutoCleanTime! >= beforeTime, true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - does not remove worktrees younger than threshold', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a feature worktree (will be "young" - just created)
-    const featureWorktreePath = await repo.createWorktree('feat-young-branch', 'feat-young-branch');
-
-    // Create config with auto-clean enabled (7 day threshold)
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const removedCount = await executeAutoClean();
-      // Should not remove the young worktree
-      assertEquals(removedCount, 0);
-
-      // Verify the worktree still exists
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(featureWorktreePath), true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - protects custom defaultBranch', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a develop worktree (creates branch automatically)
-    const developWorktreePath = await repo.createWorktree('develop', 'develop');
-
-    // Make it old
-    await makeWorktreeOld(developWorktreePath, 10);
-
-    // Create config with develop as defaultBranch
-    const config = {
-      root: repo.path,
-      defaultBranch: 'develop',
-      cleanThreshold: 1,
-      autoClean: true,
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const removedCount = await executeAutoClean();
-      // Should NOT remove the develop worktree (it's the defaultBranch)
-      assertEquals(removedCount, 0);
-
-      // Verify the develop worktree still exists
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(developWorktreePath), true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-// Tests for promptAndRunAutoClean()
-
-Deno.test('promptAndRunAutoClean - removes worktrees when user accepts (y)', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with auto-clean enabled
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      // Mock prompt response: "y"
-      await withMockedPrompt(['y'], async () => {
-        await promptAndRunAutoClean();
-
-        // Verify worktree was removed
         const worktrees = await repo.listWorktrees();
-        assertEquals(worktrees.includes(oldWorktreePath), false);
-      });
+        assertEquals(
+          worktrees.includes(repo.path),
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('promptAndRunAutoClean - removes worktrees when user accepts (empty/default)', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with auto-clean enabled
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - removes old worktrees and returns names',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Mock prompt response: "" (empty/Enter = default yes)
-      await withMockedPrompt([''], async () => {
-        await promptAndRunAutoClean();
+      await repo.init();
 
-        // Verify worktree was removed
+      const featureWorktreePath =
+        await repo.createWorktree(
+          'feat-old-branch',
+          'feat-old-branch',
+        );
+      await makeWorktreeOld(featureWorktreePath, 10);
+
+      const config = createConfigWithAutoClean(
+        repo.path,
+        1,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 1);
+        assertEquals(result.removed, ['feat-old-branch']);
+
         const worktrees = await repo.listWorktrees();
-        assertEquals(worktrees.includes(oldWorktreePath), false);
-      });
+        assertEquals(
+          worktrees.includes(featureWorktreePath),
+          false,
+        );
+        assertEquals(
+          worktrees.includes(repo.path),
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('promptAndRunAutoClean - does NOT remove worktrees when user declines', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with auto-clean enabled
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - updates lastAutoCleanTime after running',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Mock prompt response: "n"
-      await withMockedPrompt(['n'], async () => {
-        await promptAndRunAutoClean();
+      await repo.init();
 
-        // Verify worktree still exists
+      const config = createConfigWithAutoClean(
+        repo.path,
+        7,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const beforeTime = Date.now();
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        await executeAutoClean();
+
+        const savedConfig =
+          await readTestConfig(repo.path);
+        assertEquals(
+          typeof savedConfig.lastAutoCleanTime,
+          'number',
+        );
+        assertEquals(
+          savedConfig.lastAutoCleanTime! >= beforeTime,
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  },
+);
+
+Deno.test(
+  'executeAutoClean - does not remove young worktrees',
+  async () => {
+    const repo = new GitTestRepo();
+    try {
+      await repo.init();
+
+      const featureWorktreePath =
+        await repo.createWorktree(
+          'feat-young-branch',
+          'feat-young-branch',
+        );
+
+      const config = createConfigWithAutoClean(
+        repo.path,
+        7,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+        assertEquals(result.removed, []);
+
         const worktrees = await repo.listWorktrees();
-        assertEquals(worktrees.includes(oldWorktreePath), true);
-      });
+        assertEquals(
+          worktrees.includes(featureWorktreePath),
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('promptAndRunAutoClean - updates timestamp even when user declines', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with auto-clean enabled and no lastAutoCleanTime
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const beforeTime = Date.now();
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - protects custom defaultBranch',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Mock prompt response: "n" (decline)
-      await withMockedPrompt(['n'], async () => {
-        await promptAndRunAutoClean();
+      await repo.init();
 
-        // Verify timestamp was updated even though user declined
-        const savedConfig = await readTestConfig(repo.path);
-        assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');
-        assertEquals(savedConfig.lastAutoCleanTime! >= beforeTime, true);
-      });
+      const developWorktreePath =
+        await repo.createWorktree('develop', 'develop');
+      await makeWorktreeOld(developWorktreePath, 10);
+
+      const config = {
+        root: repo.path,
+        defaultBranch: 'develop',
+        cleanThreshold: 1,
+        autoClean: true,
+      };
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+
+        const worktrees = await repo.listWorktrees();
+        assertEquals(
+          worktrees.includes(developWorktreePath),
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test("promptAndRunAutoClean - no prompt when cooldown hasn't passed", async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with recent lastAutoCleanTime (within cooldown)
-    const config = {
-      root: repo.path,
-      defaultBranch: 'main',
-      cleanThreshold: 7,
-      autoClean: true,
-      lastAutoCleanTime: Date.now() - 1000, // 1 second ago
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - never removes gw_root worktree',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Should not prompt (and should not call mock prompt)
-      await promptAndRunAutoClean();
+      await repo.init();
 
-      // Verify worktree still exists (no cleanup happened)
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(oldWorktreePath), true);
+      const gwRootPath = await repo.createWorktree(
+        'gw_root',
+        'gw_root',
+      );
+      await makeWorktreeOld(gwRootPath, 10);
+
+      const config = createConfigWithAutoClean(
+        repo.path,
+        1,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+
+        const worktrees = await repo.listWorktrees();
+        assertEquals(
+          worktrees.includes(gwRootPath),
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('promptAndRunAutoClean - no prompt when autoClean is disabled', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create an old worktree
-    const oldWorktreePath = await repo.createWorktree('old-branch', 'old-branch');
-    await makeWorktreeOld(oldWorktreePath, 10);
-
-    // Create config with autoClean disabled
-    const config = {
-      root: repo.path,
-      defaultBranch: 'main',
-      cleanThreshold: 7,
-      autoClean: false,
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - removes multiple old worktrees',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Should not prompt (and should not call mock prompt)
-      await promptAndRunAutoClean();
+      await repo.init();
 
-      // Verify worktree still exists (no cleanup happened)
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(oldWorktreePath), true);
+      const wt1 = await repo.createWorktree(
+        'feat-alpha',
+        'feat-alpha',
+      );
+      const wt2 = await repo.createWorktree(
+        'feat-beta',
+        'feat-beta',
+      );
+      await makeWorktreeOld(wt1, 10);
+      await makeWorktreeOld(wt2, 15);
+
+      const config = createConfigWithAutoClean(
+        repo.path,
+        1,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 2);
+        assertEquals(
+          result.removed.includes('feat-alpha'),
+          true,
+        );
+        assertEquals(
+          result.removed.includes('feat-beta'),
+          true,
+        );
+
+        const worktrees = await repo.listWorktrees();
+        assertEquals(worktrees.includes(wt1), false);
+        assertEquals(worktrees.includes(wt2), false);
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);
 
-Deno.test('promptAndRunAutoClean - no prompt when no cleanable worktrees exist', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a young worktree (not old enough)
-    await repo.createWorktree('young-branch', 'young-branch');
-
-    // Create config with auto-clean enabled
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
+Deno.test(
+  'executeAutoClean - updates timestamp even when nothing to clean',
+  async () => {
+    const repo = new GitTestRepo();
     try {
-      // Should not prompt because no worktrees are cleanable
-      await promptAndRunAutoClean();
+      await repo.init();
 
-      // Verify timestamp was updated
-      const savedConfig = await readTestConfig(repo.path);
-      assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');
+      // Create a young worktree (not old enough)
+      await repo.createWorktree(
+        'young-branch',
+        'young-branch',
+      );
+
+      const config = createConfigWithAutoClean(
+        repo.path,
+        7,
+      );
+      await writeTestConfig(repo.path, config);
+
+      const beforeTime = Date.now();
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        const result = await executeAutoClean();
+        assertEquals(result.removedCount, 0);
+
+        const savedConfig =
+          await readTestConfig(repo.path);
+        assertEquals(
+          typeof savedConfig.lastAutoCleanTime,
+          'number',
+        );
+        assertEquals(
+          savedConfig.lastAutoCleanTime! >= beforeTime,
+          true,
+        );
+      } finally {
+        cwd.restore();
+      }
     } finally {
-      cwd.restore();
+      await repo.cleanup();
     }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - never removes gw_root worktree', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a gw_root worktree
-    const gwRootPath = await repo.createWorktree('gw_root', 'gw_root');
-
-    // Make it old
-    await makeWorktreeOld(gwRootPath, 10);
-
-    // Create config with auto-clean enabled (1 day threshold)
-    const config = createConfigWithAutoClean(repo.path, 1);
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const removedCount = await executeAutoClean();
-      // Should NOT remove the gw_root worktree (it's protected)
-      assertEquals(removedCount, 0);
-
-      // Verify the gw_root worktree still exists
-      const worktrees = await repo.listWorktrees();
-      assertEquals(worktrees.includes(gwRootPath), true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
+  },
+);

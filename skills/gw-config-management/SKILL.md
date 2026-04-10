@@ -60,7 +60,7 @@ Configure gw-tools for optimal workflows across different project types and team
 | `hooks`          | Pre/post checkout commands    | `{}`          |
 | `updateStrategy` | merge or rebase              | `"merge"`     |
 | `cleanThreshold` | Days before stale            | `7`           |
-| `autoClean`      | Prompt for cleanup           | `false`       |
+| `autoClean`      | Background cleanup           | `false`       |
 
 ## IDE Autocompletion
 

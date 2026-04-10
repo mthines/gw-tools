@@ -3,7 +3,7 @@
  * Lists all worktrees in the repository
  */
 
-import { promptAndRunAutoClean } from '../lib/auto-clean.ts';
+import { runAutoClean } from '../lib/auto-clean.ts';
 import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
 /**
@@ -25,6 +25,6 @@ export async function executeList(args: string[]): Promise<void> {
 
   await executeGitWorktree('list', args);
 
-  // Auto-cleanup stale worktrees if enabled (interactive prompt)
-  await promptAndRunAutoClean();
+  // Auto-cleanup stale worktrees in the background (non-blocking)
+  runAutoClean();
 }

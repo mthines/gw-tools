@@ -242,7 +242,7 @@ gw init --pre-checkout "echo 'Starting...'" \
 
 ## `autoClean`
 
-**Purpose**: Enable prompts to clean stale worktrees after commands.
+**Purpose**: Enable silent background cleanup of stale worktrees after commands.
 
 **Type**: Boolean
 
@@ -256,10 +256,12 @@ gw init --pre-checkout "echo 'Starting...'" \
 
 **Behavior**:
 
-- Prompts after `gw checkout` or `gw list` when stale worktrees detected
-- Only prompts once per 24 hours
+- Runs silently in the background after `gw checkout` or `gw list` — never blocks the user
+- Shows a brief non-blocking notification to stderr if worktrees were removed
+- Only runs once per 24 hours (cooldown)
 - Uses `cleanThreshold` for age check
 - Never removes `defaultBranch` worktree
+- Only removes worktrees with no uncommitted changes and no unpushed commits
 
 **Set during init**: `gw init --auto-clean`
 
@@ -269,7 +271,7 @@ gw init --pre-checkout "echo 'Starting...'" \
 
 **Type**: Integer (managed automatically)
 
-**Important**: Do not edit manually. gw uses this to enforce the 24-hour cooldown for auto-clean prompts.
+**Important**: Do not edit manually. gw uses this to enforce the 24-hour cooldown for auto-clean.
 
 ## Decision Table: Which Options to Set
 

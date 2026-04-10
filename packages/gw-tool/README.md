@@ -361,7 +361,7 @@ gw init --root /path/to/your/repo.git
   - **hooks.checkout.pre**: Array of commands to run before creating a worktree
   - **hooks.checkout.post**: Array of commands to run after creating a worktree
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
-- **autoClean**: Prompt to remove stale worktrees when running `gw checkout` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
+- **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
 - **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
@@ -931,7 +931,7 @@ gw init [repository-url] [directory] [options]
 - `--pre-checkout <command>`: Command to run before `gw checkout` creates a worktree (can be specified multiple times)
 - `--post-checkout <command>`: Command to run after `gw checkout` creates a worktree (can be specified multiple times)
 - `--clean-threshold <days>`: Number of days before worktrees are considered stale for `gw clean` (default: 7)
-- `--auto-clean`: Enable automatic cleanup of stale worktrees (runs on `gw checkout` and `gw list` with 24-hour cooldown)
+- `--auto-clean`: Enable silent background cleanup of stale worktrees (runs non-blocking on `gw checkout` and `gw list` with 24-hour cooldown)
 - `--update-strategy <strategy>`: Set default update strategy: 'merge' or 'rebase' (default: merge)
 - `-h, --help`: Show help message
 
