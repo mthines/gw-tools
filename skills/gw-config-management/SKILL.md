@@ -21,7 +21,7 @@ Configure gw-tools for optimal workflows across different project types and team
 | Rule                                              | Description                                               |
 | ------------------------------------------------- | --------------------------------------------------------- |
 | [fundamentals](./rules/fundamentals.md)           | **HIGH** - Config file location, creation, and precedence |
-| [options-reference](./rules/options-reference.md) | **HIGH** - Complete reference for all config options       |
+| [options-reference](./rules/options-reference.md) | **HIGH** - Complete reference for all config options      |
 | [setup](./rules/setup.md)                         | **HIGH** - Initial setup flow, secrets, team onboarding   |
 | [auto-copy](./rules/auto-copy.md)                 | **HIGH** - File patterns to copy, what to include/exclude |
 | [team-config](./rules/team-config.md)             | **MEDIUM** - Sharing config, documentation, onboarding    |
@@ -39,28 +39,28 @@ Configure gw-tools for optimal workflows across different project types and team
 
 ## Quick Reference
 
-| Task                    | Command                                       |
-| ----------------------- | --------------------------------------------- |
-| Initialize config       | `gw init`                                     |
-| Initialize with options | `gw init --auto-copy-files .env,secrets/`     |
-| Interactive setup       | `gw init --interactive`                       |
-| Clone and initialize    | `gw init git@github.com:user/repo.git`        |
-| Sync files to worktree  | `gw sync feature-branch`                      |
-| Show setup command      | `gw show-init`                                |
+| Task                    | Command                                   |
+| ----------------------- | ----------------------------------------- |
+| Initialize config       | `gw init`                                 |
+| Initialize with options | `gw init --auto-copy-files .env,secrets/` |
+| Interactive setup       | `gw init --interactive`                   |
+| Clone and initialize    | `gw init git@github.com:user/repo.git`    |
+| Sync files to worktree  | `gw sync feature-branch`                  |
+| Show setup command      | `gw show-init`                            |
 
 ## Configuration Options
 
-| Option           | Purpose                      | Default       |
-| ---------------- | ---------------------------- | ------------- |
-| `$schema`        | JSON Schema for IDE support  | (auto-set)    |
-| `configVersion`  | Schema migration version     | (auto-managed)|
-| `root`           | Repository root path         | Auto-detected |
-| `defaultBranch`  | Source for file copying       | `"main"`      |
-| `autoCopyFiles`  | Files to auto-copy           | `[]`          |
-| `hooks`          | Pre/post checkout commands    | `{}`          |
-| `updateStrategy` | merge or rebase              | `"merge"`     |
-| `cleanThreshold` | Days before stale            | `7`           |
-| `autoClean`      | Background cleanup           | `false`       |
+| Option           | Purpose                     | Default        |
+| ---------------- | --------------------------- | -------------- |
+| `$schema`        | JSON Schema for IDE support | (auto-set)     |
+| `configVersion`  | Schema migration version    | (auto-managed) |
+| `root`           | Repository root path        | Auto-detected  |
+| `defaultBranch`  | Source for file copying     | `"main"`       |
+| `autoCopyFiles`  | Files to auto-copy          | `[]`           |
+| `hooks`          | Pre/post checkout commands  | `{}`           |
+| `updateStrategy` | merge or rebase             | `"merge"`      |
+| `cleanThreshold` | Days before stale           | `7`            |
+| `autoClean`      | Background cleanup          | `false`        |
 
 ## IDE Autocompletion
 

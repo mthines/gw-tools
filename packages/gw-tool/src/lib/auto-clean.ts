@@ -41,9 +41,7 @@ export interface AutoCleanResult {
 /**
  * Check if enough time has passed since last auto-clean
  */
-function shouldRunAutoClean(
-  lastRunTime: number | undefined,
-): boolean {
+function shouldRunAutoClean(lastRunTime: number | undefined): boolean {
   if (lastRunTime === undefined) {
     return true; // Never run before
   }
@@ -62,16 +60,11 @@ function shouldRunAutoClean(
  * @param defaultBranch Branch name that should never be
  *   cleaned (e.g., "main")
  */
-async function getCleanableWorktrees(
-  threshold: number,
-  defaultBranch: string,
-): Promise<CleanableWorktree[]> {
+async function getCleanableWorktrees(threshold: number, defaultBranch: string): Promise<CleanableWorktree[]> {
   const worktrees = await listWorktrees();
 
   // Filter out bare repository
-  const nonBareWorktrees = worktrees.filter(
-    (wt) => !wt.bare,
-  );
+  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare);
 
   const cleanable: CleanableWorktree[] = [];
 
@@ -88,10 +81,8 @@ async function getCleanableWorktrees(
       continue;
     }
 
-    const hasUncommitted =
-      await hasUncommittedChanges(wt.path);
-    const hasUnpushed =
-      await hasUnpushedCommits(wt.path);
+    const hasUncommitted = await hasUncommittedChanges(wt.path);
+    const hasUnpushed = await hasUnpushedCommits(wt.path);
 
     // Only include if passes ALL safety checks
     // (no force mode in auto-clean)
@@ -135,10 +126,7 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
     const defaultBranch = config.defaultBranch ?? 'main';
 
     // Find cleanable worktrees (excludes defaultBranch)
-    const cleanableWorktrees = await getCleanableWorktrees(
-      threshold,
-      defaultBranch,
-    );
+    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
 
     if (cleanableWorktrees.length === 0) {
       // Update timestamp even if nothing to clean
@@ -187,16 +175,9 @@ export function runAutoClean(): void {
   executeAutoClean()
     .then((result) => {
       if (result.removedCount > 0) {
-        const worktreeWord =
-          result.removedCount === 1
-            ? 'worktree'
-            : 'worktrees';
-        const names = result.removed
-          .map((name) => output.path(name))
-          .join(', ');
-        console.error(
-          `\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`,
-        );
+        const worktreeWord = result.removedCount === 1 ? 'worktree' : 'worktrees';
+        const names = result.removed.map((name) => output.path(name)).join(', ');
+        console.error(`\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`);
       }
     })
     .catch(() => {

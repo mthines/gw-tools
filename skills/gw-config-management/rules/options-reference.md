@@ -39,18 +39,14 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
   // Hooks
   "hooks": {
     "checkout": {
-      "pre": [
-        "echo 'Creating worktree: {worktree}'"
-      ],
-      "post": [
-        "cd {worktreePath} && pnpm install"
-      ]
-    }
+      "pre": ["echo 'Creating worktree: {worktree}'"],
+      "post": ["cd {worktreePath} && pnpm install"],
+    },
   },
 
   // Advanced Options
   "autoClean": false,
-  "updateStrategy": "merge"
+  "updateStrategy": "merge",
 }
 ```
 
@@ -159,15 +155,10 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
 {
   "hooks": {
     "checkout": {
-      "pre": [
-        "echo 'Creating worktree: {worktree}'"
-      ],
-      "post": [
-        "cd {worktreePath} && pnpm install",
-        "cd {worktreePath} && pnpm build"
-      ]
-    }
-  }
+      "pre": ["echo 'Creating worktree: {worktree}'"],
+      "post": ["cd {worktreePath} && pnpm install", "cd {worktreePath} && pnpm build"],
+    },
+  },
 }
 ```
 
@@ -175,9 +166,9 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
 
 Available for substitution in hook commands:
 
-| Variable         | Description                       |
-| ---------------- | --------------------------------- |
-| `{worktree}`     | The worktree name                 |
+| Variable         | Description                        |
+| ---------------- | ---------------------------------- |
+| `{worktree}`     | The worktree name                  |
 | `{worktreePath}` | Full absolute path to the worktree |
 | `{gitRoot}`      | The git repository root path       |
 | `{branch}`       | The branch name                    |
