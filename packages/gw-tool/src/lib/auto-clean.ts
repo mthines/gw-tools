@@ -161,27 +161,24 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
 }
 
 /**
- * Run auto-clean in the background without blocking
- * the main command. Shows a brief, non-blocking
+ * Run auto-clean silently and show a brief, non-blocking
  * notification if worktrees were removed.
  *
  * This is the main entry point for commands to call.
  * The user's `autoClean: true` config IS the consent —
  * no confirmation prompt is needed.
  */
-export function runAutoClean(): void {
-  // Fire and forget — don't await, let it run in
-  // background so the main command completes immediately
-  executeAutoClean()
-    .then((result) => {
-      if (result.removedCount > 0) {
-        const worktreeWord = result.removedCount === 1 ? 'worktree' : 'worktrees';
-        const names = result.removed.map((name) => output.path(name)).join(', ');
-        console.error(`\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`);
-      }
-    })
-    .catch(() => {
-      // Silently ignore errors — auto-clean should
-      // never affect the main command
-    });
+export async function runAutoClean(): Promise<void> {
+  const result = await executeAutoClean();
+
+  if (result.removedCount > 0) {
+    const worktreeWord =
+      result.removedCount === 1 ? "worktree" : "worktrees";
+    const names = result.removed
+      .map((name) => output.path(name))
+      .join(", ");
+    console.error(
+      `\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`,
+    );
+  }
 }

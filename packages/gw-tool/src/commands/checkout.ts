@@ -782,8 +782,8 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees in the background (non-blocking)
-  runAutoClean();
+  // Auto-cleanup stale worktrees silently (non-blocking, no prompt)
+  await runAutoClean();
 
   output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 
