@@ -51,7 +51,7 @@ Deno.test('executeAutoClean - returns empty result when disabled', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
       assertEquals(result.removed, []);
     } finally {
       cwd.restore();
@@ -78,7 +78,7 @@ Deno.test('executeAutoClean - respects cooldown period', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
       assertEquals(result.removed, []);
     } finally {
       cwd.restore();
@@ -103,7 +103,7 @@ Deno.test('executeAutoClean - never removes defaultBranch worktree', async () =>
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
 
       const worktrees = await repo.listWorktrees();
       assertEquals(worktrees.includes(repo.path), true);
@@ -129,7 +129,7 @@ Deno.test('executeAutoClean - removes old worktrees and returns names', async ()
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 1);
+      assertEquals(result.removed.length, 1);
       assertEquals(result.removed, ['feat-old-branch']);
 
       const worktrees = await repo.listWorktrees();
@@ -181,7 +181,7 @@ Deno.test('executeAutoClean - does not remove young worktrees', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
       assertEquals(result.removed, []);
 
       const worktrees = await repo.listWorktrees();
@@ -213,7 +213,7 @@ Deno.test('executeAutoClean - protects custom defaultBranch', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
 
       const worktrees = await repo.listWorktrees();
       assertEquals(worktrees.includes(developWorktreePath), true);
@@ -239,7 +239,7 @@ Deno.test('executeAutoClean - never removes gw_root worktree', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
 
       const worktrees = await repo.listWorktrees();
       assertEquals(worktrees.includes(gwRootPath), true);
@@ -267,7 +267,7 @@ Deno.test('executeAutoClean - removes multiple old worktrees', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 2);
+      assertEquals(result.removed.length, 2);
       assertEquals(result.removed.includes('feat-alpha'), true);
       assertEquals(result.removed.includes('feat-beta'), true);
 
@@ -298,7 +298,7 @@ Deno.test('executeAutoClean - updates timestamp even when nothing to clean', asy
     const cwd = new TempCwd(repo.path);
     try {
       const result = await executeAutoClean();
-      assertEquals(result.removedCount, 0);
+      assertEquals(result.removed.length, 0);
 
       const savedConfig = await readTestConfig(repo.path);
       assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');

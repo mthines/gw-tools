@@ -34,8 +34,6 @@ interface CleanableWorktree extends WorktreeInfo {
 export interface AutoCleanResult {
   /** Names/branches of worktrees that were removed */
   removed: string[];
-  /** Total number of worktrees removed */
-  removedCount: number;
 }
 
 /**
@@ -104,7 +102,7 @@ async function getCleanableWorktrees(threshold: number, defaultBranch: string): 
  * Silently removes stale worktrees and updates cooldown
  * timestamp
  *
- * @returns Result with removed worktree names and count
+ * @returns Result with removed worktree names
  */
 export async function executeAutoClean(): Promise<AutoCleanResult> {
   try {
@@ -113,12 +111,12 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
 
     // Check if auto-clean is enabled
     if (!config.autoClean) {
-      return { removed: [], removedCount: 0 };
+      return { removed: [] };
     }
 
     // Check cooldown
     if (!shouldRunAutoClean(config.lastAutoCleanTime)) {
-      return { removed: [], removedCount: 0 };
+      return { removed: [] };
     }
 
     // Get threshold (default 7 days) and defaultBranch
@@ -132,7 +130,7 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
       // Update timestamp even if nothing to clean
       config.lastAutoCleanTime = Date.now();
       await saveConfig(gitRoot, config);
-      return { removed: [], removedCount: 0 };
+      return { removed: [] };
     }
 
     // Remove worktrees silently (no force flag needed —
@@ -152,28 +150,47 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
     config.lastAutoCleanTime = Date.now();
     await saveConfig(gitRoot, config);
 
-    return { removed, removedCount: removed.length };
+    return { removed };
   } catch {
     // If anything fails, silently return empty result
     // Auto-clean should never interrupt the main command
-    return { removed: [], removedCount: 0 };
+    return { removed: [] };
   }
 }
 
+/** Pending fire-and-forget promise for test draining */
+let _pending: Promise<void> = Promise.resolve();
+
 /**
- * Run auto-clean silently and show a brief, non-blocking
- * notification if worktrees were removed.
+ * Run auto-clean silently in the background and show a
+ * brief notification if worktrees were removed.
  *
  * This is the main entry point for commands to call.
  * The user's `autoClean: true` config IS the consent —
  * no confirmation prompt is needed.
+ *
+ * Fire-and-forget: Deno waits for pending async ops before
+ * process exit, so cleanup completes without blocking the
+ * caller.
  */
-export async function runAutoClean(): Promise<void> {
-  const result = await executeAutoClean();
+export function runAutoClean(): void {
+  _pending = executeAutoClean()
+    .then((result) => {
+      if (result.removed.length > 0) {
+        const count = result.removed.length;
+        const worktreeWord = count === 1 ? 'worktree' : 'worktrees';
+        const names = result.removed.map((name) => output.path(name)).join(', ');
+        console.error(`\n${output.dim(`[gw] Auto-cleaned ${count} stale ${worktreeWord}: ${names}`)}`);
+      }
+    })
+    .catch(() => {});
+}
 
-  if (result.removedCount > 0) {
-    const worktreeWord = result.removedCount === 1 ? 'worktree' : 'worktrees';
-    const names = result.removed.map((name) => output.path(name)).join(', ');
-    console.error(`\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`);
-  }
+/**
+ * @internal Test-only: await the pending fire-and-forget
+ * promise so Deno's test sanitizer doesn't complain about
+ * leaked async ops.
+ */
+export function _drainAutoClean(): Promise<void> {
+  return _pending;
 }

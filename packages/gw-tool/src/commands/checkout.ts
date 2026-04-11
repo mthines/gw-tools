@@ -782,13 +782,13 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees silently (non-blocking, no prompt)
-  await runAutoClean();
-
   output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 
   // Navigate to new worktree unless --no-cd flag is set
   if (!parsed.noNavigate) {
     await signalNavigation(worktreePath);
   }
+
+  // Auto-cleanup stale worktrees silently in background
+  runAutoClean();
 }

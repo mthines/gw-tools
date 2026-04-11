@@ -550,13 +550,13 @@ export async function executePr(args: string[]): Promise<void> {
     }
   }
 
-  // Auto-cleanup stale worktrees silently (non-blocking, no prompt)
-  await runAutoClean();
-
   output.success(`Worktree ${output.bold(`"${worktreeName}"`)} created for PR #${prNumber}`);
 
   // Navigate to new worktree unless --no-cd flag is set
   if (!parsed.noNavigate) {
     await signalNavigation(worktreePath);
   }
+
+  // Auto-cleanup stale worktrees silently in background
+  runAutoClean();
 }

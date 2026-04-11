@@ -25,6 +25,6 @@ export async function executeList(args: string[]): Promise<void> {
 
   await executeGitWorktree('list', args);
 
-  // Auto-cleanup stale worktrees silently (non-blocking, no prompt)
-  await runAutoClean();
+  // Auto-cleanup stale worktrees silently in background
+  runAutoClean();
 }

@@ -5,6 +5,7 @@
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
 import { executeCheckout } from './checkout.ts';
+import { _drainAutoClean } from '../lib/auto-clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
@@ -51,6 +52,7 @@ Deno.test('checkout command - creates worktree for local branch not in any workt
       await withMockedExit(async () => {
         await executeCheckout(['feature-x']);
       });
+      await _drainAutoClean();
 
       // Verify a worktree was created (new checkout behavior creates worktrees)
       const listCmd = new Deno.Command('git', {
@@ -85,6 +87,7 @@ Deno.test('checkout command - navigates to worktree when branch is checked out e
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['feature-branch']);
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode, 0);
 
@@ -114,6 +117,7 @@ Deno.test('checkout command - says already on branch when current branch matches
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['main']); // Already on main
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode, 0);
     } finally {
@@ -174,6 +178,7 @@ Deno.test('checkout command - remote-only branch creates local tracking branch (
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['remote-feature']);
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode === undefined || exitCode === 0, true, 'checkout should succeed');
 
@@ -235,6 +240,7 @@ Deno.test('checkout command - creates worktree with new branch when branch does 
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['new-feature-branch']);
       });
+      await _drainAutoClean();
 
       // The checkout command should succeed by creating a new branch from main
       // exitCode is undefined when the command completes normally (success)
@@ -286,6 +292,7 @@ Deno.test('checkout command - does NOT overwrite tracking for existing local bra
     const cwd = new TempCwd(localRepo.path);
     try {
       await executeCheckout(['existing-tracked']);
+      await _drainAutoClean();
 
       // Verify worktree was created
       const listCmd = new Deno.Command('git', {
@@ -332,6 +339,7 @@ Deno.test('checkout command - sets up tracking for truly new branches', async ()
     const cwd = new TempCwd(repo.path);
     try {
       await executeCheckout(['new-feature-branch-tracking']);
+      await _drainAutoClean();
 
       // Verify worktree was created
       const listCmd = new Deno.Command('git', {
@@ -412,6 +420,7 @@ Deno.test('checkout command - --from-staged copies staged files to new worktree'
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['feat-from-staged', '--from-staged']);
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
@@ -451,6 +460,7 @@ Deno.test('checkout command - --from-staged with specific files only copies thos
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['feat-specific', '--from-staged', 'include-me.txt']);
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
@@ -493,6 +503,7 @@ Deno.test('checkout command - --from-staged fails when no files are staged', asy
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['feat-no-staged', '--from-staged']);
       });
+      await _drainAutoClean();
 
       // Should fail with exit code 1
       assertEquals(exitCode, 1);
@@ -531,6 +542,7 @@ Deno.test('checkout command - --from-staged preserves nested directory structure
       const { exitCode } = await withMockedExit(async () => {
         await executeCheckout(['feat-nested', '--from-staged']);
       });
+      await _drainAutoClean();
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
 
