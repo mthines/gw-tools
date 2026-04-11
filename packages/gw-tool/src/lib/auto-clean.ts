@@ -172,13 +172,8 @@ export async function runAutoClean(): Promise<void> {
   const result = await executeAutoClean();
 
   if (result.removedCount > 0) {
-    const worktreeWord =
-      result.removedCount === 1 ? "worktree" : "worktrees";
-    const names = result.removed
-      .map((name) => output.path(name))
-      .join(", ");
-    console.error(
-      `\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`,
-    );
+    const worktreeWord = result.removedCount === 1 ? 'worktree' : 'worktrees';
+    const names = result.removed.map((name) => output.path(name)).join(', ');
+    console.error(`\n${output.dim(`[gw] Auto-cleaned ${result.removedCount} stale ${worktreeWord}: ${names}`)}`);
   }
 }
