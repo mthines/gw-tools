@@ -60,12 +60,12 @@ See [phase-4-testing](./phase-4-testing.md) for the full iteration strategy.
 
 ### Hallucinated Commands
 
-| Hallucinated Command | Correct Command             |
-| -------------------- | --------------------------- |
-| `gw create`          | `gw checkout` or `gw add`   |
-| `gw switch`          | `gw cd`                     |
-| `gw delete`          | `gw remove`                 |
-| `gw new`             | `gw checkout`               |
+| Hallucinated Command | Correct Command           |
+| -------------------- | ------------------------- |
+| `gw create`          | `gw checkout` or `gw add` |
+| `gw switch`          | `gw cd`                   |
+| `gw delete`          | `gw remove`               |
+| `gw new`             | `gw checkout`             |
 
 ### Stuck in Loop
 

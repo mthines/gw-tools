@@ -153,10 +153,10 @@ console.log(systemPrompt.length); // ~16KB of battle-tested instructions
 
 The agent automatically detects the right workflow mode:
 
-| Mode     | When                               | Artifacts                              |
-| -------- | ---------------------------------- | -------------------------------------- |
+| Mode     | When                               | Artifacts                   |
+| -------- | ---------------------------------- | --------------------------- |
 | **Full** | 4+ files OR architectural changes  | `plan.md`, `walkthrough.md` |
-| **Lite** | 1-3 files, straightforward changes | Mental plan only                       |
+| **Lite** | 1-3 files, straightforward changes | Mental plan only            |
 
 ### The 8 Phases
 

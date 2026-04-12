@@ -90,6 +90,7 @@ This is opt-in — install the rule to enable automatic routing.
 **Use when:** Multi-file features, significant refactors, new capabilities (4+ files)
 
 Creates `.gw/{branch}/` artifacts:
+
 - `plan.md` — Implementation strategy, decisions, progress log (single source of truth)
 - `walkthrough.md` — Final summary generated at Phase 6
 

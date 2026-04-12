@@ -46,10 +46,10 @@ Analyze the task scope to determine the workflow mode:
 
 For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-| File             | Purpose                                                          | Created       |
-| ---------------- | ---------------------------------------------------------------- | ------------- |
-| `plan.md`        | Implementation strategy, decisions, requirements, progress log   | After Phase 2 |
-| `walkthrough.md` | Final summary for PR delivery                                    | Phase 6       |
+| File             | Purpose                                                        | Created       |
+| ---------------- | -------------------------------------------------------------- | ------------- |
+| `plan.md`        | Implementation strategy, decisions, requirements, progress log | After Phase 2 |
+| `walkthrough.md` | Final summary for PR delivery                                  | Phase 6       |
 
 **plan.md is the single source of truth.** It must be comprehensive enough that a new Claude session can execute from it alone without the original conversation.
 
@@ -124,32 +124,32 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 ## Rules
 
-| Rule                                                            | Description                                                                   |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                     |
-| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree before creating new       |
-| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work              |
-| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                 |
-| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`             |
-| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with verification after each change     |
-| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)    |
-| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                              |
-| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                   |
-| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                               |
-| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                  |
-| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                              |
-| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback              |
-| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                         |
-| [artifacts-overview](./rules/artifacts-overview.md)              | **HIGH** - Two-artifact pattern (Plan, Walkthrough), file locations           |
-| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                              |
+| Rule                                                            | Description                                                                |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                 |
+| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree before creating new    |
+| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work           |
+| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning              |
+| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`          |
+| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with verification after each change  |
+| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern) |
+| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                            |
+| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                |
+| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                            |
+| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions               |
+| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                           |
+| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback           |
+| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                      |
+| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Two-artifact pattern (Plan, Walkthrough), file locations        |
+| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                           |
 
 ## Templates
 
-| Template                                                                     | Purpose                                              |
-| ---------------------------------------------------------------------------- | ---------------------------------------------------- |
-| [plan.template.md](./templates/plan.template.md)                             | Implementation plan with progress log                |
-| [walkthrough.template.md](./templates/walkthrough.template.md)               | Final summary for PR delivery                        |
-| [routing-rule.template.md](./templates/routing-rule.template.md)             | Auto-trigger rule (copy to `.claude/rules/`)         |
+| Template                                                         | Purpose                                      |
+| ---------------------------------------------------------------- | -------------------------------------------- |
+| [plan.template.md](./templates/plan.template.md)                 | Implementation plan with progress log        |
+| [walkthrough.template.md](./templates/walkthrough.template.md)   | Final summary for PR delivery                |
+| [routing-rule.template.md](./templates/routing-rule.template.md) | Auto-trigger rule (copy to `.claude/rules/`) |
 
 ## Auto-Trigger Setup (Recommended)
 
@@ -171,12 +171,12 @@ This enables Claude to automatically use the `autonomous-workflow` agent when it
 | ----------------- | ---------------------------------------------------------------------------- |
 | 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                 |
 | 1. Planning       | Analyze codebase, prepare plan content in conversation (verbose, all detail) |
-| 2. Worktree       | `gw add feat/feature-name`, then CREATE & POPULATE `.gw/{branch}/plan.md`   |
-| 3. Implementation | Code in worktree, verify after editing, update Progress Log at milestones   |
-| 4. Testing        | `npm test`, iterate until passing, log results in Progress Log              |
+| 2. Worktree       | `gw add feat/feature-name`, then CREATE & POPULATE `.gw/{branch}/plan.md`    |
+| 3. Implementation | Code in worktree, verify after editing, update Progress Log at milestones    |
+| 4. Testing        | `npm test`, iterate until passing, log results in Progress Log               |
 | 5. Documentation  | Update README, CHANGELOG                                                     |
-| 6. PR Creation    | CREATE `walkthrough.md`, `gh pr create --draft`, SHOW walkthrough to user   |
-| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                 |
+| 6. PR Creation    | CREATE `walkthrough.md`, `gh pr create --draft`, SHOW walkthrough to user    |
+| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                  |
 
 ### Lite Mode (1-3 files, simple changes)
 
@@ -204,10 +204,10 @@ This enables Claude to automatically use the `autonomous-workflow` agent when it
 
 The workflow produces two artifacts in `.gw/{branch-name}/`:
 
-| Artifact        | File             | Created       | Purpose                                           |
-| --------------- | ---------------- | ------------- | ------------------------------------------------- |
-| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy, decisions, progress log  |
-| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR delivery                     |
+| Artifact        | File             | Created       | Purpose                                          |
+| --------------- | ---------------- | ------------- | ------------------------------------------------ |
+| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy, decisions, progress log |
+| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR delivery                    |
 
 Files are gitignored and grouped by branch for easy browsing.
 
@@ -260,15 +260,15 @@ while not all_tests_pass:
 
 ## Troubleshooting Quick Reference
 
-| Issue                  | Check                       | Recovery                                                              |
-| ---------------------- | --------------------------- | --------------------------------------------------------------------- |
-| Wrong worktree         | `gw list`, `pwd`            | `gw cd <correct-branch>`                                             |
-| gw command not found   | `which gw`                  | `npm install -g @gw-tools/gw`                                        |
-| Secrets missing        | `cat .gw/config.json`       | `gw sync <branch> .env`                                              |
-| Tests keep failing     | plan.md Progress Log        | Focus on ONE failure, escalate at 7+                                  |
-| Agent hallucinated cmd | Error message               | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
-| plan.md empty          | `cat .gw/{branch}/plan.md`  | STOP, populate plan.md before proceeding                              |
-| walkthrough.md missing | `ls .gw/{branch}/`          | Create before announcing completion                                   |
+| Issue                  | Check                      | Recovery                                                              |
+| ---------------------- | -------------------------- | --------------------------------------------------------------------- |
+| Wrong worktree         | `gw list`, `pwd`           | `gw cd <correct-branch>`                                              |
+| gw command not found   | `which gw`                 | `npm install -g @gw-tools/gw`                                         |
+| Secrets missing        | `cat .gw/config.json`      | `gw sync <branch> .env`                                               |
+| Tests keep failing     | plan.md Progress Log       | Focus on ONE failure, escalate at 7+                                  |
+| Agent hallucinated cmd | Error message              | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
+| plan.md empty          | `cat .gw/{branch}/plan.md` | STOP, populate plan.md before proceeding                              |
+| walkthrough.md missing | `ls .gw/{branch}/`         | Create before announcing completion                                   |
 
 ## Related Skills
 
