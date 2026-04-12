@@ -163,21 +163,20 @@ Once installed, your AI agent can:
 
 ### 🤖 Use as a Claude Code Agent
 
-Want Claude Code to autonomously implement features end-to-end? Install the autonomous workflow agent:
-
-One-liner - installs agent and skill (global - works in all projects)
+Want Claude Code to autonomously implement features end-to-end? Install the autonomous workflow skill:
 
 ```bash
-mkdir -p ~/.claude/agents && \
-  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
-  -o ~/.claude/agents/autonomous-workflow.md && \
-  npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-Or manually: copy the file from `packages/autonomous-workflow-agent/agents/autonomous-workflow.md` to `~/.claude/agents/` (global) or `.claude/agents/` (per-project)
+Optionally, enable auto-triggering so Claude automatically uses the agent when you say "do this independently":
 
-Once installed, Claude will automatically use this agent when you ask it to implement features, and it will:
+```bash
+cp skills/autonomous-workflow/templates/routing-rule.template.md \
+   .claude/rules/autonomous-workflow-routing.md
+```
+
+Once the skill is installed, Claude will execute the autonomous workflow when you ask it to implement features, and it will:
 
 - Create isolated worktrees for each task
 - Plan and implement incrementally

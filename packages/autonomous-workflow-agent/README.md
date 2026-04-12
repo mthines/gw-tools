@@ -40,23 +40,20 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
 
 ## Quick Install for Claude Code
 
-With prerequisites installed, add the agent to Claude Code:
+With prerequisites installed, enable the autonomous workflow in Claude Code.
 
-One-liner - installs agent and skill (global - works in all projects)
+Install the skill globally:
 
 ```bash
-mkdir -p ~/.claude/agents && \
-  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
-  -o ~/.claude/agents/autonomous-workflow.md && \
-  npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
+Optionally, enable auto-triggering so Claude automatically uses the agent when you say "do this independently":
 
-- `~/.claude/agents/` — Available in all your projects
-- `.claude/agents/` — Available only in that project (commit to git for team sharing)
-
-That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
+```bash
+cp skills/autonomous-workflow/templates/routing-rule.template.md \
+   .claude/rules/autonomous-workflow-routing.md
+```
 
 ## For Agent SDK Developers
 
@@ -100,7 +97,7 @@ This agent implements a battle-tested 8-phase workflow that turns "implement X" 
 7. **Creates** a draft PR with full context
 8. **Cleans up** the worktree after merge
 
-The agent tracks its own progress, recovers from errors, and knows when to stop and ask for help instead of guessing.
+The agent maintains a comprehensive plan file for context recovery, recovers from errors, and knows when to stop and ask for help instead of guessing.
 
 ## Installation
 
@@ -158,7 +155,7 @@ The agent automatically detects the right workflow mode:
 
 | Mode     | When                               | Artifacts                              |
 | -------- | ---------------------------------- | -------------------------------------- |
-| **Full** | 4+ files OR architectural changes  | `task.md`, `plan.md`, `walkthrough.md` |
+| **Full** | 4+ files OR architectural changes  | `plan.md`, `walkthrough.md` |
 | **Lite** | 1-3 files, straightforward changes | Mental plan only                       |
 
 ### The 8 Phases
@@ -196,7 +193,7 @@ interface AgentDefinition {
   maxTurns?: number;
 }
 
-type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Task' | 'Skill';
+type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Skill';
 ```
 
 ### Default Configuration
@@ -359,13 +356,10 @@ With worktrees, the agent works in a completely separate directory. Your main ch
 
 ### Watching Agent Progress
 
-For Full Mode tasks, the agent maintains progress artifacts you can monitor:
+For Full Mode tasks, the agent maintains artifacts you can monitor:
 
 ```bash
-# Watch real-time progress (Full Mode)
-tail -f .gw/<branch>/task.md
-
-# Check the implementation plan
+# Check the implementation plan and progress
 cat .gw/<branch>/plan.md
 
 # After completion, review the walkthrough
@@ -409,13 +403,13 @@ The agent includes "smart detection" to reuse existing worktrees. If you're seei
 
 ### Tests keep failing
 
-The agent will iterate up to 20 times on test failures. If it's still stuck, it will stop and ask for help. Check the `task.md` file in `.gw/<branch>/` for iteration history.
+The agent will iterate up to 20 times on test failures. If it's still stuck, it will stop and ask for help. Check the Progress Log in `.gw/<branch>/plan.md` for iteration history.
 
 ### Agent issued an invalid gw command
 
 If the agent hallucinates a `gw` command that doesn't exist:
 
-1. Check `.gw/<branch>/task.md` for what the agent was trying to do
+1. Check `.gw/<branch>/plan.md` for what the agent was trying to do
 2. Look at the error message for the actual command attempted
 3. Manually run the correct command or guide the agent
 
@@ -429,7 +423,7 @@ Common hallucinations:
 
 If the agent keeps trying the same fix repeatedly:
 
-1. Check `.gw/<branch>/task.md` for iteration history
+1. Check `.gw/<branch>/plan.md` Progress Log for iteration history
 2. Look for repeated "Attempt N" entries with similar fixes
 3. Interrupt and provide guidance: "Try a different approach—the issue is X"
 

@@ -21,44 +21,30 @@ Preserve worktree for user review.
 - **Draft PR only**: Never mark ready-to-merge automatically.
 - **Comprehensive description**: Reviewers understand context.
 - **Preserve worktree**: User may want to review locally.
-- **No AI co-author tags**: NEVER add `Co-Authored-By` lines (e.g., `Co-Authored-By: Claude ...`) to commit messages or PR descriptions. The user owns the commits.
+- **No AI co-author tags**: NEVER add `Co-Authored-By` lines to commit messages or PR descriptions. The user owns the commits.
 
 ## Procedure
 
 ### Step 1: Pre-Flight Validation
 
+Run the full verification suite (from plan.md's Verification section):
+
 ```bash
 # All changes committed?
 git status  # Should show clean
 
-# All tests passing?
-npm test
-
-# Build succeeds?
-npm run build
-
-# Linting clean?
-npm run lint
+# Run full suite — build, test, lint
+# Use whatever commands the project uses, e.g.:
+npm test && npm run build && npm run lint
 ```
 
-**Documentation complete?**
-
-- README updated? ✓
-- CHANGELOG updated? ✓
-- API docs updated? ✓
-
-**If ANY check fails: Stop, fix, re-validate.**
+**If ANY check fails: Stop, fix, re-validate. Do NOT create the PR.**
 
 ### Step 2: Push to Remote
 
 ```bash
 git push -u origin <branch-name>
 ```
-
-**Validation:**
-
-- Push succeeded?
-- Branch visible on GitHub?
 
 ### Step 3: Generate PR Description
 
@@ -83,10 +69,6 @@ git push -u origin <branch-name>
 - [x] Integration tests pass
 - [x] Manual testing completed
 
-## Screenshots (if UI)
-
-[Attach or request user to add]
-
 ## Breaking Changes
 
 [None / List with migration path]
@@ -96,35 +78,17 @@ git push -u origin <branch-name>
 Closes #[issue-number]
 ```
 
-### Step 4: Generate Walkthrough
+### Step 4: Generate Walkthrough (Full Mode)
 
-Create `.gw/{branch}/walkthrough.md` using the template:
+Create `.gw/{branch}/walkthrough.md` using `templates/walkthrough.template.md`:
 
-```bash
-# Use templates/walkthrough.template.md structure
-```
+**Source information from:**
 
-**Include:**
+- plan.md (decisions, requirements, file changes)
+- git diff/log (actual changes made)
+- Phase 4 results (test outcomes)
 
-- Quick Reference (branch, PR, worktree path)
-- Summary (2-3 sentences)
-- Files Changed (from task.md Completed items)
-- Key Decisions (from task.md Decisions Log)
-- Testing Results (from Phase 4 iterations)
-- How to Verify (step-by-step instructions)
-- Next Steps
-
-Update `metadata.json`:
-
-```json
-{
-  "phase": 6,
-  "status": "completed",
-  "pr": <pr-number>
-}
-```
-
-See [walkthrough-generation](./walkthrough-generation.md) for full details.
+See [walkthrough-generation](./walkthrough-generation.md) for details.
 
 ### Step 5: Create Draft PR
 
@@ -140,47 +104,19 @@ EOF
 
 **Always use `--draft` flag.**
 
-### Step 6: Report Completion
+### Step 6: Update Progress Log (Full Mode)
 
 ```markdown
-✅ **Feature implementation complete!**
-
-**Delivered:**
-
-- Branch: `feat/dark-mode-toggle`
-- Worktree: `/path/to/worktree`
-- Draft PR: https://github.com/user/repo/pull/123
-
-**Summary:**
-
-- Implemented dark mode toggle
-- All tests passing
-- Documentation updated
-- Ready for your review
-
-**Next steps:**
-
-1. Review the draft PR
-2. Add screenshots if desired
-3. Mark as ready for review when satisfied
-4. Merge when approved
-
-**Cleanup:**
-Run `gw remove feat/dark-mode-toggle` after PR merged.
+- [TIMESTAMP] Phase 6: PR #XX created (draft), walkthrough.md generated
 ```
 
-### Step 7: Preserve Worktree
+### Step 7: Report Completion
 
-**Do NOT remove worktree yet.**
+Present walkthrough inline to user with PR link, summary, and next steps.
 
-User may want to:
+### Step 8: Preserve Worktree
 
-- Review changes locally
-- Make adjustments
-- Test manually
-- Add screenshots
-
-Cleanup happens in Phase 7 (optional).
+**Do NOT remove worktree yet.** User may want to review, adjust, or test locally.
 
 ## Delivery Checklist
 
@@ -189,13 +125,12 @@ Cleanup happens in Phase 7 (optional).
 - [ ] Branch pushed to remote
 - [ ] PR description comprehensive
 - [ ] Draft PR created
+- [ ] Walkthrough generated and shown to user (Full Mode)
 - [ ] PR link delivered to user
 - [ ] Worktree preserved for review
-- [ ] Workflow complete!
 
 ## References
 
 - Related rule: [phase-5-documentation](./phase-5-documentation.md)
-- Related rule: [phase-7-cleanup](./phase-7-cleanup.md)
 - Related rule: [walkthrough-generation](./walkthrough-generation.md)
 - Template: `templates/walkthrough.template.md`

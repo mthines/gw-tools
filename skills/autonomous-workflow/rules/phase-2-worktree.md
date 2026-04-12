@@ -59,22 +59,11 @@ See [smart-worktree-detection](./smart-worktree-detection.md).
 | `chore/`    | Tooling, dependencies |
 | `test/`     | Adding/fixing tests   |
 
-**Examples:**
-
-- `feat/dark-mode-toggle`
-- `fix/login-validation-error`
-- `refactor/api-client-structure`
-
 ### Step 2: Create Worktree
 
 ```bash
 gw add <branch-name>
 ```
-
-**Validation:**
-
-- Command succeeded?
-- Worktree appears in `gw list`?
 
 If fails, see [error-recovery](./error-recovery.md).
 
@@ -84,45 +73,23 @@ If fails, see [error-recovery](./error-recovery.md).
 gw cd <branch-name>
 ```
 
-**Validation:**
-
-- `pwd` shows correct directory?
-- `.git` symlink exists?
-
 ### Step 4: Install Dependencies
 
 ```bash
-# Check package manager
-npm install
-# or
-pnpm install
-# or
-yarn install
+# Use the project's package manager
+pnpm install  # or npm install, yarn install
 ```
-
-**Validation:**
-
-- `node_modules/` exists?
-- No installation errors?
 
 ### Step 5: Verify Environment
 
+Run the project's build/check command appropriate to the stack:
+
 ```bash
-# Build check
-npm run build  # or tsc --noEmit
-
-# Lint check
-npm run lint
-
-# Test framework check
-npm test -- --listTests
+# Examples — use whatever the project uses
+npx tsc --noEmit        # TypeScript projects
+npm run build            # General build check
+go vet ./...             # Go projects
 ```
-
-**Validation:**
-
-- No immediate errors?
-- Build system works?
-- Test framework found?
 
 ### Step 6: Sync Configuration (If Needed)
 
@@ -130,74 +97,38 @@ npm test -- --listTests
 gw sync <branch-name>
 ```
 
-**Validation:**
-
-- `.env` copied (if configured)?
-- Config files synced?
-
 ### Step 7: Ensure .gw/ is Gitignored
 
-Check if `.gw/` is gitignored:
-
 ```bash
-# Check if already ignored
 grep -q "^\.gw/$" .gitignore 2>/dev/null || echo ".gw/" >> .gitignore
 ```
 
-**Validation:**
-
-- `.gw/` appears in `.gitignore`?
-
-The `.gw/` folder contains working artifacts that should not be committed.
-See [artifacts-overview](./artifacts-overview.md) for details.
-
 ### Step 8: Create Artifact Files (Full Mode ONLY)
 
-**⚠️ CRITICAL: Artifacts must be created HERE — inside the worktree, not on the main branch.**
-
-After the worktree is set up and you have navigated into it, create the artifact files:
+**CRITICAL: Artifacts must be created HERE — inside the worktree, not on the main branch.**
 
 ```bash
-# Create artifact directory in the worktree
 mkdir -p .gw/{branch-name}
-
-# Create required files
-touch .gw/{branch-name}/task.md
-touch .gw/{branch-name}/plan.md
 ```
 
-**Now populate the artifacts** with the content prepared during Phase 1:
+**Populate plan.md** with the content prepared during Phase 1. This is the single source of truth — include all sections from the template.
 
-- Write `task.md` with phase checklist and decisions log
-- Write `plan.md` with the comprehensive implementation plan
-- Write `metadata.json` with branch metadata
+**Update plan.md Progress Log:**
 
-**Validation:**
-
-```bash
-ls -la .gw/{branch-name}/
-# Must show: task.md, plan.md
+```markdown
+- [TIMESTAMP] Phase 2: Worktree created at {branch-name}, plan.md populated
 ```
 
-**⛔ DO NOT proceed to Phase 3 without artifacts populated (Full Mode).**
+**DO NOT proceed to Phase 3 without plan.md populated (Full Mode).**
 
 ## gw Commands Reference
 
 ```bash
-# Create worktree
-gw add feat/my-feature
-
-# Create from different source
-gw add feat/my-feature --from develop
-
-# Navigate to worktree
-gw cd feat/my-feature
-
-# Verify worktree
-gw list
-
-# Check current status
-gw status
+gw add feat/my-feature         # Create worktree
+gw add feat/my-feature --from develop  # From different source
+gw cd feat/my-feature          # Navigate to worktree
+gw list                        # Verify worktree
+gw status                      # Check current status
 ```
 
 ## Setup Checklist
@@ -210,9 +141,8 @@ Before Phase 3 (Implementation):
 - [ ] Currently in worktree directory (`pwd` verified)
 - [ ] Dependencies installed
 - [ ] Environment builds/compiles
-- [ ] Configuration files synced
 - [ ] `.gw/` is gitignored
-- [ ] Artifact files created and populated in worktree (Full Mode only)
+- [ ] plan.md created and populated in worktree (Full Mode only)
 
 **If any marked item not checked, STOP and complete Phase 2.**
 
@@ -221,25 +151,13 @@ Before Phase 3 (Implementation):
 ### Branch Already Exists
 
 ```bash
-# Navigate to existing worktree
-gw cd <branch-name>
-
-# Or create with different name
-gw add <branch-name>-v2
-```
-
-### Worktree Already Exists
-
-```bash
-# gw add will prompt to navigate
-gw add feature-auth
-# "Worktree exists, navigate to it? [Y/n]"
+gw cd <branch-name>         # Navigate to existing
+gw add <branch-name>-v2     # Or create with different name
 ```
 
 ### Dependencies Failed
 
 ```bash
-# Clear and reinstall
 rm -rf node_modules
 npm install
 ```

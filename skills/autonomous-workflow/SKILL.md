@@ -8,7 +8,7 @@ description: >
 license: MIT
 metadata:
   author: mthines
-  version: '2.0.0'
+  version: '3.0.0'
   workflow_type: autonomous
   phases:
     - validation_questions
@@ -23,11 +23,11 @@ metadata:
 
 # Autonomous Workflow
 
-Execute complete feature development cycles autonomously—from task intake through tested PR delivery—using isolated Git worktrees.
+Execute complete feature development cycles autonomously — from task intake through tested PR delivery — using isolated Git worktrees.
 
 ---
 
-## ⚠️ CRITICAL: Before Starting ANY Work
+## CRITICAL: Before Starting ANY Work
 
 **You MUST complete these steps IN ORDER before writing any code:**
 
@@ -46,37 +46,20 @@ Analyze the task scope to determine the workflow mode:
 
 For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
 
-| File             | Purpose                                                                                                   | Created       | When to Update                                                              |
-| ---------------- | --------------------------------------------------------------------------------------------------------- | ------------- | --------------------------------------------------------------------------- |
-| `task.md`        | Dynamic checklist, decisions, blockers                                                                    | After Phase 2 | **At milestones (every 2-3 files)**                                         |
-| `plan.md`        | Comprehensive implementation strategy (ALL discussion context, decisions, requirements, technical design) | After Phase 2 | After Phase 1 analysis (must be verbose — captures full Phase 0 discussion) |
-| `walkthrough.md` | Final summary for PR                                                                                      | Phase 6       | Phase 6 (MANDATORY)                                                         |
+| File             | Purpose                                                          | Created       |
+| ---------------- | ---------------------------------------------------------------- | ------------- |
+| `plan.md`        | Implementation strategy, decisions, requirements, progress log   | After Phase 2 |
+| `walkthrough.md` | Final summary for PR delivery                                    | Phase 6       |
 
-**⚠️ Artifact files are created and populated inside the worktree at the end of Phase 2. Phase 1 planning happens in conversation.**
+**plan.md is the single source of truth.** It must be comprehensive enough that a new Claude session can execute from it alone without the original conversation.
 
-**⛔ DO NOT create artifact files on the main branch.**
-
----
-
-## ⚠️ ARTIFACT UPDATE TRIGGERS (Full Mode)
-
-**Update `.gw/{branch}/task.md` at these key points:**
-
-| Trigger                         | Update Action                     |
-| ------------------------------- | --------------------------------- |
-| Logical milestone (2-3 files)   | Batch update Completed items      |
-| Phase transition                | Update Status section, move items |
-| Decision made                   | Add row to Decisions Log          |
-| Test iteration (fail→fix→rerun) | Log result in Test Iterations     |
-| Blocker encountered             | Update Blockers section           |
-
-**Batch updates preferred**: Update after completing a logical unit of work rather than after every single file. This reduces overhead while maintaining visibility.
+**DO NOT create artifact files on the main branch.**
 
 ### Step 3: Announce Mode Selection
 
 State your mode selection explicitly:
 
-> "This is a **Full Mode** task (affects 5+ files). Creating `.gw/{branch-name}/` artifacts now."
+> "This is a **Full Mode** task (affects 5+ files). Creating `.gw/{branch-name}/` artifacts after worktree setup."
 
 or
 
@@ -119,10 +102,6 @@ source ~/.zshrc
 # For bash (add to ~/.bashrc)
 echo 'eval "$(gw install-shell)"' >> ~/.bashrc
 source ~/.bashrc
-
-# For fish (add to ~/.config/fish/config.fish)
-echo 'gw install-shell | source' >> ~/.config/fish/config.fish
-source ~/.config/fish/config.fish
 ```
 
 **Verify installation:**
@@ -135,10 +114,7 @@ gw --help
 **Then initialize gw in the repository (if not already done):**
 
 ```bash
-# For existing repositories
 gw init
-
-# With auto-copy files (recommended)
 gw init --auto-copy-files .env,secrets/ --post-checkout "npm install"
 ```
 
@@ -148,50 +124,59 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 ## Rules
 
-| Rule                                                            | Description                                                                           |
-| --------------------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                            |
-| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree, prompt to continue or create new |
-| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work                      |
-| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                         |
-| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`                     |
-| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with continuous validation                      |
-| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)            |
-| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                                       |
-| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                           |
-| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                                       |
-| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                          |
-| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                                      |
-| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback                      |
-| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                                 |
-| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Three-artifact pattern (Task, Plan, Walkthrough), file locations           |
-| [task-tracking](./rules/task-tracking.md)                       | **HIGH** - Dynamic task updates throughout workflow                                   |
-| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                                      |
+| Rule                                                            | Description                                                                   |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                     |
+| [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree before creating new       |
+| [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work              |
+| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning                 |
+| [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`             |
+| [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with verification after each change     |
+| [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern)    |
+| [phase-5-documentation](./rules/phase-5-documentation.md)       | **MEDIUM** - Update README, CHANGELOG, API docs                              |
+| [phase-6-pr-creation](./rules/phase-6-pr-creation.md)           | **HIGH** - Create draft PR, deliver results                                   |
+| [phase-7-cleanup](./rules/phase-7-cleanup.md)                   | **LOW** - Optional worktree removal after merge                               |
+| [decision-framework](./rules/decision-framework.md)             | **HIGH** - Branch naming, test strategy, iteration decisions                  |
+| [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                              |
+| [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback              |
+| [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                         |
+| [artifacts-overview](./rules/artifacts-overview.md)              | **HIGH** - Two-artifact pattern (Plan, Walkthrough), file locations           |
+| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                              |
 
 ## Templates
 
-Structured templates for consistent artifact generation:
+| Template                                                                     | Purpose                                              |
+| ---------------------------------------------------------------------------- | ---------------------------------------------------- |
+| [plan.template.md](./templates/plan.template.md)                             | Implementation plan with progress log                |
+| [walkthrough.template.md](./templates/walkthrough.template.md)               | Final summary for PR delivery                        |
+| [routing-rule.template.md](./templates/routing-rule.template.md)             | Auto-trigger rule (copy to `.claude/rules/`)         |
 
-| Template                                                       | Purpose                |
-| -------------------------------------------------------------- | ---------------------- |
-| [task.template.md](./templates/task.template.md)               | Dynamic task checklist |
-| [plan.template.md](./templates/plan.template.md)               | Implementation plan    |
-| [walkthrough.template.md](./templates/walkthrough.template.md) | Final summary          |
+## Auto-Trigger Setup (Recommended)
+
+To automatically route tasks to the autonomous workflow agent when you use phrases like "independently", "autonomously", "in isolation":
+
+```bash
+# Copy the routing rule to your project
+cp skills/autonomous-workflow/templates/routing-rule.template.md \
+   .claude/rules/autonomous-workflow-routing.md
+```
+
+This enables Claude to automatically use the `autonomous-workflow` agent when it detects intent for independent work. See [routing-rule.template.md](./templates/routing-rule.template.md) for details.
 
 ## Quick Reference
 
 ### Full Mode (4+ files, complex changes)
 
-| Phase             | Command/Action                                                                                                                        |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                                                                          |
-| 1. Planning       | Analyze codebase, **PREPARE** plan content in conversation **(ALL sections, verbose — capture every detail from Phase 0 discussion)** |
-| 2. Worktree       | `gw add feat/feature-name`, then **CREATE & POPULATE** `.gw/{branch}/task.md` and `plan.md` inside worktree                           |
-| 3. Implementation | Code in worktree, **UPDATE `task.md` at milestones**                                                                                  |
-| 4. Testing        | `npm test`, **LOG each iteration in `task.md`**                                                                                       |
-| 5. Documentation  | Update README, CHANGELOG                                                                                                              |
-| 6. PR Creation    | **CREATE `walkthrough.md`**, `gh pr create --draft`, **SHOW walkthrough to user**                                                     |
-| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                                                                           |
+| Phase             | Command/Action                                                               |
+| ----------------- | ---------------------------------------------------------------------------- |
+| 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                 |
+| 1. Planning       | Analyze codebase, prepare plan content in conversation (verbose, all detail) |
+| 2. Worktree       | `gw add feat/feature-name`, then CREATE & POPULATE `.gw/{branch}/plan.md`   |
+| 3. Implementation | Code in worktree, verify after editing, update Progress Log at milestones   |
+| 4. Testing        | `npm test`, iterate until passing, log results in Progress Log              |
+| 5. Documentation  | Update README, CHANGELOG                                                     |
+| 6. PR Creation    | CREATE `walkthrough.md`, `gh pr create --draft`, SHOW walkthrough to user   |
+| 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                 |
 
 ### Lite Mode (1-3 files, simple changes)
 
@@ -204,80 +189,50 @@ Structured templates for consistent artifact generation:
 | 4. Testing        | `npm test`, fix any failures                 |
 | 5. PR Creation    | `gh pr create --draft`                       |
 
-## Workflow Modes
-
-| Mode     | Files Changed | Artifacts | Use When                             |
-| -------- | ------------- | --------- | ------------------------------------ |
-| **Lite** | 1-3 files     | No        | Simple fixes, small enhancements     |
-| **Full** | 4+ files      | Yes       | Features, refactors, complex changes |
-
-**Full Mode**: Creates `.gw/{branch}/` artifacts for progress tracking and context recovery.
-
-**Lite Mode**: Faster execution without artifact overhead. Still uses worktree isolation.
-
 ## Key Principles
 
 1. **Detect workflow mode FIRST**: Determine Full vs Lite before any other action.
-2. **Create artifacts AFTER worktree setup (Full Mode)**: `.gw/{branch}/task.md` and `plan.md` are MANDATORY — created inside the worktree, never on main.
+2. **plan.md is the single source of truth**: Must be comprehensive enough for a new session to execute alone.
 3. **Always validate first (Phase 0)**: Never skip directly to implementation.
-4. **Always create worktree (Phase 2)**: Isolation is mandatory (can skip for trivial fixes).
-5. **Update task.md at milestones**: Every 2-3 files or at logical checkpoints (not every file).
-6. **Smart worktree detection**: Check if current worktree matches task before creating new.
-7. **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
-8. **Fast feedback loops**: Run tests frequently, fix failures immediately.
-9. **Self-validate continuously**: Check work at every step.
-10. **⛔ CREATE walkthrough.md AND SHOW IT at Phase 6**: This is MANDATORY for Full Mode.
-11. **Stop and ask when blocked**: Don't guess on ambiguity.
+4. **Always create worktree (Phase 2)**: Isolation is mandatory.
+5. **Verify after editing**: Run fast checks after each change, full suite before PR.
+6. **Iterate until correct**: No artificial iteration limits (Ralph Wiggum pattern).
+7. **CREATE walkthrough.md AND SHOW IT at Phase 6**: MANDATORY for Full Mode.
+8. **Stop and ask when blocked**: Don't guess on ambiguity.
 
 ## Artifact System
 
-Inspired by Google Antigravity, this workflow produces three artifacts in `.gw/{branch-name}/`:
+The workflow produces two artifacts in `.gw/{branch-name}/`:
 
-| Artifact        | File             | Created       | Purpose                                   |
-| --------------- | ---------------- | ------------- | ----------------------------------------- |
-| **Task**        | `task.md`        | Phase 2 (end) | Dynamic checklist, decisions, discoveries |
-| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy                   |
-| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR                      |
+| Artifact        | File             | Created       | Purpose                                           |
+| --------------- | ---------------- | ------------- | ------------------------------------------------- |
+| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy, decisions, progress log  |
+| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR delivery                     |
 
 Files are gitignored and grouped by branch for easy browsing.
 
-**⚠️ All timestamps** in artifact frontmatter (`created:`), status fields (`Last Updated:`), and `metadata.json` **MUST use full ISO 8601 with time**: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`). Never use date-only formats.
-
-### ⚠️ CRITICAL: Artifact Update Requirements
-
-| Artifact         | Update Frequency                      | Blocking Gate                                                                      |
-| ---------------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
-| `plan.md`        | Created & populated at end of Phase 2 | ⛔ Must be COMPREHENSIVELY POPULATED (all sections filled, verbose) before Phase 3 |
-| `task.md`        | At milestones (every 2-3 files)       | ⛔ Must reflect completed work at phase transitions                                |
-| `walkthrough.md` | Once in Phase 6                       | ⛔ Must be CREATED AND SHOWN to user before completion                             |
+**All timestamps** in artifact frontmatter MUST use full ISO 8601 with time: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`).
 
 ## Workflow Flow
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  MODE DETECTION ← MANDATORY FIRST STEP              │
-│  Analyze task → Choose Full (4+ files) or Lite      │
-│  ⚠️ Do NOT create artifact files yet                │
-└─────────────────────────────────────────────────────┘
-    ↓
-Phase 0: Validation ← MANDATORY
-    ↓ (user confirms)
+Phase 0: Validation <- MANDATORY
+    | (user confirms)
 Phase 1: Planning (prepare content IN CONVERSATION, no files yet)
-    ↓ (plan validated)
-Phase 2: Worktree Setup ← MANDATORY (with smart detection)
-    ⛔ Full Mode: CREATE & POPULATE artifacts INSIDE worktree
-    ↓ (worktree created, artifacts populated)
+    | (plan validated)
+Phase 2: Worktree Setup <- MANDATORY
+    | Full Mode: CREATE & POPULATE plan.md INSIDE worktree
+    | (worktree created, plan.md populated)
 Phase 3: Implementation
-    📝 Full Mode: UPDATE task.md at milestones (every 2-3 files)
-    ↓ (code complete)
-Phase 4: Testing ← iterate until passing
-    📝 Full Mode: LOG each test iteration in task.md
-    ↓ (all tests pass)
+    | Verify after editing. Update Progress Log at milestones.
+    | (code complete)
+Phase 4: Testing <- iterate until passing
+    | (all tests pass)
 Phase 5: Documentation
-    ↓ (docs complete)
+    | (docs complete)
 Phase 6: PR Creation
-    ⛔ Full Mode: CREATE walkthrough.md + SHOW to user
-    ↓ (draft PR delivered)
+    | Full Mode: CREATE walkthrough.md + SHOW to user
+    | (draft PR delivered)
 Phase 7: Cleanup (optional)
 ```
 
@@ -299,7 +254,7 @@ Based on the Ralph Wiggum pattern:
 while not all_tests_pass:
     1. Run tests
     2. If pass: done
-    3. If fail: analyze → fix → commit → continue
+    3. If fail: analyze -> fix -> commit -> continue
     4. Safety: warn at 10 iterations, stop at 20
 ```
 
@@ -307,14 +262,12 @@ while not all_tests_pass:
 
 | Issue                  | Check                       | Recovery                                                              |
 | ---------------------- | --------------------------- | --------------------------------------------------------------------- |
-| Wrong worktree         | `gw list`, `pwd`            | `gw cd <correct-branch>`                                              |
-| gw command not found   | `which gw`                  | `npm install -g @gw-tools/gw`                                         |
-| Secrets missing        | `cat .gw/config.json`       | `gw sync <branch> .env`                                               |
-| Agent stuck in loop    | `task.md` iteration history | Try alternative approach, ask user                                    |
-| Tests keep failing     | `task.md` test results      | Focus on ONE failure, escalate at 7+                                  |
+| Wrong worktree         | `gw list`, `pwd`            | `gw cd <correct-branch>`                                             |
+| gw command not found   | `which gw`                  | `npm install -g @gw-tools/gw`                                        |
+| Secrets missing        | `cat .gw/config.json`       | `gw sync <branch> .env`                                              |
+| Tests keep failing     | plan.md Progress Log        | Focus on ONE failure, escalate at 7+                                  |
 | Agent hallucinated cmd | Error message               | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
 | plan.md empty          | `cat .gw/{branch}/plan.md`  | STOP, populate plan.md before proceeding                              |
-| task.md not updated    | `cat .gw/{branch}/task.md`  | Update immediately with all completed work                            |
 | walkthrough.md missing | `ls .gw/{branch}/`          | Create before announcing completion                                   |
 
 ## Related Skills
@@ -332,7 +285,7 @@ Detailed examples and scenarios (loaded on-demand):
 
 ## Research Sources
 
-- [Google Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/) - Three-artifact pattern
+- [Google Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/) - Artifact pattern
 - [Ralph Wiggum AI Coding Loops](https://ralph-wiggum.ai) - Iteration pattern
 - [Addy Osmani's LLM Workflow](https://addyosmani.com/blog/ai-coding-workflow/) - Fast feedback loops
 - [Claude Code Worktree Support](https://code.claude.com/docs/en/common-workflows) - Best practices

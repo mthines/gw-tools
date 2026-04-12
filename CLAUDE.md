@@ -26,7 +26,7 @@ When adding, changing, or removing features in the gw CLI tool, always update th
 2. **Skills documentation:**
    - `skills/config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
-   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features (@gw-autonomous-workflow)
+   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features (@autonomous-workflow)
 
 3. **Example files** (in `skills/*/references/`):
    - Update relevant examples that reference the changed feature
@@ -104,18 +104,20 @@ The `.gw/config.json` file uses a versioned migration system for schema changes.
 
 When the user requests autonomous feature development or end-to-end implementation:
 
-1. **Use the @gw-autonomous-workflow skill** - It provides complete procedures for autonomous execution
-2. **Phase 0 is MANDATORY** - Always start by asking clarifying questions and validating understanding
-3. **Iterate continuously** - Self-validate and refine at every step, no hard iteration limits
-4. **Follow the 8 phases**:
-   - Phase 0: Validation & Questions (MANDATORY)
-   - Phase 1: Task Intake & Planning
-   - Phase 2: Worktree Setup
-   - Phase 3: Implementation
-   - Phase 4: Testing & Iteration
-   - Phase 5: Documentation
-   - Phase 6: PR Creation & Delivery
-   - Phase 7: Cleanup (Optional)
+1. **Use the @autonomous-workflow skill** — It provides complete procedures for autonomous execution
+2. **Phase 0 is MANDATORY** — Always ask clarifying questions and validate understanding first
+3. **plan.md is the single source of truth** — Must be comprehensive enough for a new session to execute alone
+4. **Two artifacts only** — `plan.md` (with Progress Log) and `walkthrough.md` (at PR delivery)
+5. **Verify after editing** — Run fast checks after each change, full suite before PR
+6. **Iterate until correct** — No artificial limits (Ralph Wiggum pattern)
+7. **Quality gates** — Don't proceed to next phase until current phase is validated
+8. **Stop and ask** when encountering fundamental blockers or ambiguities
 
-5. **Quality gates** - Don't proceed to next phase until current phase is validated
-6. **Stop and ask** when encountering fundamental blockers or ambiguities
+### Auto-Trigger Setup
+
+To automatically route independent tasks to the autonomous workflow agent:
+
+```bash
+cp skills/autonomous-workflow/templates/routing-rule.template.md \
+   .claude/rules/autonomous-workflow-routing.md
+```
