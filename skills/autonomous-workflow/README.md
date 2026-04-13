@@ -63,7 +63,7 @@ After installing this skill, trigger autonomous execution with requests like:
 To automatically route tasks to the autonomous workflow agent when you say things like "do this independently" or "handle this in isolation":
 
 ```bash
-cp skills/autonomous-workflow/templates/routing-rule.template.md \
+cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
 

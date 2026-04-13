@@ -156,8 +156,8 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 To automatically route tasks to the autonomous workflow agent when you use phrases like "independently", "autonomously", "in isolation":
 
 ```bash
-# Copy the routing rule to your project
-cp skills/autonomous-workflow/templates/routing-rule.template.md \
+# Copy the routing rule to your project (after global skill install)
+cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
 
@@ -184,7 +184,7 @@ This enables Claude to automatically use the `autonomous-workflow` agent when it
 | ----------------- | -------------------------------------------- |
 | 0. Validation     | Quick clarification if needed                |
 | 1. Planning       | Brief mental plan (no artifact files)        |
-| 2. Worktree       | `gw add fix/bug-name` (optional for trivial) |
+| 2. Worktree       | `gw add fix/bug-name`                        |
 | 3. Implementation | Code directly, commit when done              |
 | 4. Testing        | `npm test`, fix any failures                 |
 | 5. PR Creation    | `gh pr create --draft`                       |

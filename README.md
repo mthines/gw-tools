@@ -110,7 +110,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
 Optionally, enable auto-triggering so Claude automatically uses the agent when you say "do this independently":
 
 ```bash
-cp skills/autonomous-workflow/templates/routing-rule.template.md \
+cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
 

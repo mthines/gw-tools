@@ -1,7 +1,7 @@
 ---
-created: { { TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ) } }
-branch: { { BRANCH } }
-task: { { TASK_DESCRIPTION } }
+created: {{TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ)}}
+branch: {{BRANCH}}
+task: {{TASK_DESCRIPTION}}
 complexity: <!-- LOW | MEDIUM | HIGH -->
 status: planning <!-- planning | approved | in-progress | testing | documenting | delivered -->
 approved: false
