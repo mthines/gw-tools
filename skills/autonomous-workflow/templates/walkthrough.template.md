@@ -1,8 +1,8 @@
 ---
-created: {{TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ)}}
-branch: {{BRANCH}}
-task: {{TASK_DESCRIPTION}}
-pr: {{PR_NUMBER}}
+created: { { TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ) } }
+branch: { { BRANCH } }
+task: { { TASK_DESCRIPTION } }
+pr: { { PR_NUMBER } }
 ---
 
 # Walkthrough: {{TASK_DESCRIPTION}}

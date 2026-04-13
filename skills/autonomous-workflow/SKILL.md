@@ -180,14 +180,14 @@ This enables Claude to automatically use the `autonomous-workflow` agent when it
 
 ### Lite Mode (1-3 files, simple changes)
 
-| Phase             | Command/Action                               |
-| ----------------- | -------------------------------------------- |
-| 0. Validation     | Quick clarification if needed                |
-| 1. Planning       | Brief mental plan (no artifact files)        |
-| 2. Worktree       | `gw add fix/bug-name`                        |
-| 3. Implementation | Code directly, commit when done              |
-| 4. Testing        | `npm test`, fix any failures                 |
-| 5. PR Creation    | `gh pr create --draft`                       |
+| Phase             | Command/Action                        |
+| ----------------- | ------------------------------------- |
+| 0. Validation     | Quick clarification if needed         |
+| 1. Planning       | Brief mental plan (no artifact files) |
+| 2. Worktree       | `gw add fix/bug-name`                 |
+| 3. Implementation | Code directly, commit when done       |
+| 4. Testing        | `npm test`, fix any failures          |
+| 5. PR Creation    | `gh pr create --draft`                |
 
 ## Key Principles
 
