@@ -101,20 +101,23 @@ Give the agent a task and walk away:
 
 **Prerequisites:** gw CLI must be installed first (see above)
 
-**Global setup (once):**
-
 ```bash
-# Install skill + agent definition
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
-  mkdir -p ~/.claude/agents && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md
+# Install the skill
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-**Per-project auto-trigger (each project):**
+Then install the agent + routing rule — either **globally** or **per-project**:
 
 ```bash
-mkdir -p .claude/rules && \
+# Global (personal use — works in all projects)
+mkdir -p ~/.claude/agents && \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+     ~/.claude/agents/autonomous-workflow.md
+
+# Per-project (team use — committable to git)
+mkdir -p .claude/agents .claude/rules && \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+     .claude/agents/autonomous-workflow.md && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```

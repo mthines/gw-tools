@@ -121,3 +121,5 @@ To automatically route independent tasks to the autonomous workflow agent:
 ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
+
+See `skills/autonomous-workflow/README.md` for global vs project-level install options.

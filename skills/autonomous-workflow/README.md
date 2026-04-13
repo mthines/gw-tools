@@ -17,20 +17,27 @@ This skill enables AI agents to autonomously execute complete feature developmen
 
 ## Installation
 
-### Global setup (once)
+### Step 1: Install prerequisites
 
 ```bash
 # Install gw CLI
 npm install -g @gw-tools/gw
 
-# Install skill + agent definition
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
-  mkdir -p ~/.claude/agents && \
+# Install the skill
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+```
+
+### Step 2: Install the agent and routing rule
+
+**Option A: Global** (personal use — works in all projects)
+
+```bash
+mkdir -p ~/.claude/agents && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-### Per-project auto-trigger
+Then add the routing rule per-project:
 
 ```bash
 mkdir -p .claude/rules && \
@@ -38,7 +45,19 @@ mkdir -p .claude/rules && \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Say _"implement X independently"_ and the agent takes over. You can commit the routing rule to share with your team.
+**Option B: Project-level** (team use — committable to git, customizable)
+
+```bash
+mkdir -p .claude/agents .claude/rules && \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+     .claude/agents/autonomous-workflow.md && \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
+```
+
+To customize the agent for a specific project, copy instead of symlink and edit the file.
+
+Say _"implement X independently"_ and the agent takes over.
 
 ## Prerequisites
 
