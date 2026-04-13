@@ -38,17 +38,9 @@ The agent delegates workflow logic to this skill. Install it globally:
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-## Quick Install for Claude Code
+### 3. (Optional) Enable auto-triggering
 
-With prerequisites installed, enable the autonomous workflow in Claude Code.
-
-Install the skill globally:
-
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-```
-
-Optionally, enable auto-triggering so Claude automatically uses the agent when you say "do this independently":
+So Claude automatically uses the agent when you say "do this independently", "work in isolation", etc.:
 
 ```bash
 cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
@@ -144,7 +136,7 @@ const myAgent = {
 import { systemPrompt } from '@gw-tools/autonomous-workflow-agent';
 
 // Use in your own agent framework
-console.log(systemPrompt.length); // ~16KB of battle-tested instructions
+console.log(systemPrompt.length); // ~8KB lean orchestrator prompt
 ```
 
 ## How It Works
@@ -245,12 +237,13 @@ The agent defaults to **Sonnet** which handles ~80% of tasks effectively. Consid
 | Large refactoring (10+ files)                      | Focused changes (1-5 files)       |
 | Novel problem domains                              | Familiar patterns in the codebase |
 
-````typescript
+```typescript
 // Override model for complex tasks
 const myAgent = {
   ...autonomousWorkflowAgent,
   model: 'opus',
 };
+```
 
 ### Installing gw CLI
 
@@ -276,7 +269,7 @@ gw init --auto-copy-files .env,secrets/,.env.local
 cd main
 cp .env.example .env
 # Edit .env with your actual secrets
-````
+```
 
 **How it works:**
 
