@@ -145,12 +145,12 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 ## Templates
 
-| Template                                                         | Purpose                                        |
-| ---------------------------------------------------------------- | ---------------------------------------------- |
-| [plan.template.md](./templates/plan.template.md)                 | Implementation plan with progress log          |
-| [walkthrough.template.md](./templates/walkthrough.template.md)   | Final summary for PR delivery                  |
-| [agent.template.md](./templates/agent.template.md)               | Agent file (copy to `~/.claude/agents/`)       |
-| [routing-rule.template.md](./templates/routing-rule.template.md) | Auto-trigger rule (copy to `.claude/rules/`)   |
+| Template                                                         | Purpose                                      |
+| ---------------------------------------------------------------- | -------------------------------------------- |
+| [plan.template.md](./templates/plan.template.md)                 | Implementation plan with progress log        |
+| [walkthrough.template.md](./templates/walkthrough.template.md)   | Final summary for PR delivery                |
+| [agent.template.md](./templates/agent.template.md)               | Agent file (copy to `~/.claude/agents/`)     |
+| [routing-rule.template.md](./templates/routing-rule.template.md) | Auto-trigger rule (copy to `.claude/rules/`) |
 
 ## Auto-Trigger Setup (Recommended)
 
