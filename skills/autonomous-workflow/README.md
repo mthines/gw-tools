@@ -15,22 +15,30 @@ This skill enables AI agents to autonomously execute complete feature developmen
 - **Phase 6: PR Creation & Delivery** - Create comprehensive draft PR
 - **Phase 7: Cleanup** - Safe worktree removal (optional)
 
-## Quick Install
+## Installation
+
+### Global setup (once)
 
 ```bash
-# 1. Install gw CLI (if not already installed)
+# Install gw CLI
 npm install -g @gw-tools/gw
 
-# 2. Install skill + auto-trigger rule
+# Install skill + agent definition
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
-  mkdir -p ~/.claude/agents .claude/rules && \
+  mkdir -p ~/.claude/agents && \
   cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md && \
+     ~/.claude/agents/autonomous-workflow.md
+```
+
+### Per-project auto-trigger
+
+```bash
+mkdir -p .claude/rules && \
   cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-**That's it.** Say _"implement X independently"_ and the agent takes over.
+Say _"implement X independently"_ and the agent takes over. You can commit the routing rule to share with your team.
 
 ## Prerequisites
 
