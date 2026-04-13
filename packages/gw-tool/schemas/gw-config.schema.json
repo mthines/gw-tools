@@ -55,9 +55,7 @@
                 "type": "string",
                 "description": "Shell command to execute. Supports variables: {worktree}, {worktreePath}, {gitRoot}, {branch}."
               },
-              "examples": [
-                ["echo 'Creating worktree: {worktree}'"]
-              ]
+              "examples": [["echo 'Creating worktree: {worktree}'"]]
             },
             "post": {
               "type": "array",

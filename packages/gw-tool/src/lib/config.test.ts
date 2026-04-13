@@ -529,7 +529,7 @@ Deno.test('saveConfigTemplate - shows commented examples for unconfigured advanc
     // Verify advanced options are commented
     assertEquals(rawContent.includes('// "autoClean": false'), true);
     assertEquals(rawContent.includes('// "updateStrategy": "merge"'), true);
-    assertEquals(rawContent.includes('Automatically clean stale worktrees'), true);
+    assertEquals(rawContent.includes('Silently clean stale worktrees in background'), true);
   } finally {
     await repo.cleanup();
   }
