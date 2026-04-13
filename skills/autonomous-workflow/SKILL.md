@@ -154,18 +154,27 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 
 ## Auto-Trigger Setup (Recommended)
 
-To automatically route tasks to the autonomous workflow agent when you use phrases like "independently", "autonomously", "in isolation":
+### Global (once, after skill install)
+
+Install the agent definition so Claude Code knows about the autonomous-workflow agent:
 
 ```bash
-# Copy the agent (global) and routing rule (project) after skill install
-mkdir -p ~/.claude/agents .claude/rules && \
+mkdir -p ~/.claude/agents && \
   cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md && \
+     ~/.claude/agents/autonomous-workflow.md
+```
+
+### Per-project
+
+Install the routing rule so Claude auto-triggers the agent on phrases like _"independently"_, _"in isolation"_:
+
+```bash
+mkdir -p .claude/rules && \
   cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-This enables Claude to automatically use the `autonomous-workflow` agent when it detects intent for independent work. See [routing-rule.template.md](./templates/routing-rule.template.md) for details.
+Commit the routing rule to share auto-triggering with your team. See [routing-rule.template.md](./templates/routing-rule.template.md) for details.
 
 ## Quick Reference
 

@@ -4,42 +4,25 @@
 
 ## Quick Start (Claude Code)
 
-Two commands. Then just say _"implement X independently"_ and the agent takes over.
+### Step 1: Global setup (once)
+
+Install the gw CLI, the skill, and the agent definition. This is done once and works across all your projects.
 
 ```bash
-# 1. Install the gw CLI (manages Git worktrees)
+# Install gw CLI (manages Git worktrees)
 npm install -g @gw-tools/gw
 
-# 2. Install the skill, agent, and auto-trigger rule
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
-  mkdir -p ~/.claude/agents .claude/rules && \
+# Install the autonomous-workflow skill (globally)
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+
+# Install the agent definition (globally)
+mkdir -p ~/.claude/agents && \
   cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md && \
-  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
-     .claude/rules/autonomous-workflow-routing.md
+     ~/.claude/agents/autonomous-workflow.md
 ```
 
-**That's it.** Claude Code now automatically uses the autonomous workflow agent when you ask it to work independently, in isolation, or autonomously.
-
-### How to use it
-
-Just tell Claude what to build using natural language:
-
-```
-"Implement dark mode toggle independently"
-"Add user auth end-to-end with tests and PR"
-"Handle this in isolation — refactor the API client to use retry logic"
-```
-
-The agent will ask clarifying questions (Phase 0), plan the implementation, create an isolated worktree, implement, test, and deliver a draft PR.
-
-### What triggers the agent automatically
-
-Phrases like: _"independently"_, _"autonomously"_, _"in isolation"_, _"alone"_, _"on your own"_, _"end-to-end"_, _"handle this without me"_
-
-You can also invoke it explicitly: `@autonomous-workflow implement X`
-
-### Alternative gw CLI installs
+<details>
+<summary>Alternative gw CLI installs</summary>
 
 ```bash
 # Homebrew (macOS & Linux)
@@ -52,6 +35,36 @@ yay -S gw-tools
 Then initialize gw in your project: `gw init`
 
 See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup.
+
+</details>
+
+### Step 2: Per-project setup (each project that wants auto-triggering)
+
+Copy the routing rule into the project. This tells Claude to automatically use the agent when you say things like _"do this independently"_.
+
+```bash
+mkdir -p .claude/rules && \
+  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
+```
+
+You can commit this file to share auto-triggering with your team.
+
+### How to use it
+
+Just tell Claude what to build:
+
+```
+"Implement dark mode toggle independently"
+"Add user auth end-to-end with tests and PR"
+"Handle this in isolation — refactor the API client to use retry logic"
+```
+
+The agent will ask clarifying questions, plan the implementation, create an isolated worktree, implement, test, and deliver a draft PR.
+
+**What triggers the agent automatically:** _"independently"_, _"autonomously"_, _"in isolation"_, _"alone"_, _"on your own"_, _"end-to-end"_, _"handle this without me"_
+
+**Explicit invocation** (works without the routing rule): `@autonomous-workflow implement X`
 
 ## For Agent SDK Developers
 
