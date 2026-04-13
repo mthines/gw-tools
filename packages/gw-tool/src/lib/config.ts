@@ -393,9 +393,9 @@ function generateConfigTemplate(config: Config): string {
   // autoClean
   if (config.autoClean !== undefined) {
     lines.push(`  "autoClean": ${config.autoClean},`);
-    lines.push('  // Automatically clean stale worktrees (older than cleanThreshold)');
+    lines.push('  // Silently clean stale worktrees in background (older than cleanThreshold)');
   } else {
-    lines.push('  // "autoClean": false,  // Automatically clean stale worktrees');
+    lines.push('  // "autoClean": false,  // Silently clean stale worktrees in background');
   }
 
   // updateStrategy

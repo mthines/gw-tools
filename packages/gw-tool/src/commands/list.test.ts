@@ -3,6 +3,7 @@
  */
 
 import { executeList } from './list.ts';
+import { _drainAutoClean } from '../lib/auto-clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
@@ -22,6 +23,7 @@ Deno.test('list command - lists all worktrees', async () => {
       // executeList forwards to git and outputs to stdout
       // We just verify it doesn't throw an error
       await executeList([]);
+      await _drainAutoClean();
     } finally {
       cwd.restore();
     }
@@ -64,6 +66,7 @@ Deno.test('list command - works with no worktrees (just main)', async () => {
     try {
       // Should list just the main worktree
       await executeList([]);
+      await _drainAutoClean();
     } finally {
       cwd.restore();
     }
