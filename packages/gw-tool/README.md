@@ -171,7 +171,7 @@ Want Claude Code to autonomously implement features end-to-end?
 # Install skill + agent definition
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
   mkdir -p ~/.claude/agents && \
-  cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
@@ -179,7 +179,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
 
 ```bash
 mkdir -p .claude/rules && \
-  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 

@@ -17,7 +17,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
 
 # Install the agent definition (globally)
 mkdir -p ~/.claude/agents && \
-  cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
@@ -44,7 +44,7 @@ Copy the routing rule into the project. This tells Claude to automatically use t
 
 ```bash
 mkdir -p .claude/rules && \
-  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
