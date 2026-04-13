@@ -18,7 +18,13 @@ Install the autonomous-workflow skill:
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-Or via npm: `npm install -g @gw-tools/gw` | AUR: `yay -S gw-tools`
+```bash
+npm install -g @gw-tools/gw
+```
+
+```bash
+yay -S gw-tools
+```
 
 Then initialize gw in your project: `gw init`
 

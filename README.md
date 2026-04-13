@@ -35,7 +35,13 @@ Install the `gw` CLI tool, then add shell integration to your shell config for c
 brew install mthines/gw-tools/gw
 ```
 
-Or via npm: `npm install -g @gw-tools/gw` | AUR: `yay -S gw-tools`
+```bash
+npm install -g @gw-tools/gw
+```
+
+```bash
+yay -S gw-tools
+```
 
 Then add to your shell config (`~/.zshrc` or `~/.bashrc`):
 
