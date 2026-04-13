@@ -11,7 +11,7 @@ tags:
 
 ---
 
-## ⚠️ PREREQUISITE GATE: Workflow Mode Detection
+## PREREQUISITE GATE: Workflow Mode Detection
 
 **Before ANY Phase 1 work, you MUST have completed:**
 
@@ -24,7 +24,7 @@ Confirm which mode applies to this task:
 | **Full** | 4+ files OR complex changes | **REQUIRED**   |
 | **Lite** | 1-3 files AND simple        | Skip artifacts |
 
-**⚠️ NOTE: Artifact files are NOT created yet.** Phase 1 planning happens in conversation. Artifact files (`.gw/{branch}/task.md`, `plan.md`) are created after Phase 2 worktree setup, so they live in the worktree — not on the main branch.
+**NOTE: Artifact files are NOT created yet.** Phase 1 planning happens in conversation. The `plan.md` file is created after Phase 2 worktree setup, so it lives in the worktree — not on the main branch.
 
 ---
 
@@ -120,7 +120,16 @@ Don't just list categories — list actual test cases in a single table:
 | manual      | toggle and verify      | —                 | Visual check       |
 ```
 
-#### 2e: Document Risks with Mitigations
+#### 2e: Define Verification Commands
+
+Identify the project's verification commands to use during implementation:
+
+- **After editing**: What fast check to run (e.g., `npx tsc --noEmit`, `go vet ./...`)
+- **Before PR**: What full suite to run (e.g., `npm test && npm run build && npm run lint`)
+
+Check `package.json` scripts, `Makefile`, or project config to determine the right commands.
+
+#### 2f: Document Risks with Mitigations
 
 ```markdown
 | Risk                | Likelihood | Impact | Mitigation              |
@@ -154,17 +163,9 @@ Ask yourself:
 
 ### Step 4: Prepare Artifact Content (Full Mode)
 
-**⚠️ Do NOT write artifact files to disk yet.** Artifact files are created after Phase 2 worktree setup so they live in the worktree, not on the main branch.
+**Do NOT write artifact files to disk yet.** Artifact files are created after Phase 2 worktree setup so they live in the worktree, not on the main branch.
 
-Prepare the following content in conversation (to be written to disk after worktree setup):
-
-**task.md** - Plan to initialize with:
-
-- Phase 0 and Phase 1 marked complete
-- Phase 2-6 in Upcoming
-- Decisions from Phase 0 in Decisions Log
-
-**plan.md** - Prepare ALL sections from the template (`templates/plan.template.md`):
+Prepare the **plan.md** content in conversation — ALL sections from `templates/plan.template.md`:
 
 - **Summary**: What, why, and definition of "done"
 - **Background & Context**: Full motivation and history from discussion
@@ -176,23 +177,12 @@ Prepare the following content in conversation (to be written to disk after workt
 - **Tests**: Specific test cases with type (unit/integration/manual)
 - **Dependencies**: With versions, mark new additions
 - **Risks**: With likelihood, impact, and mitigations
+- **Verification**: After-edit and before-PR commands
+- **Progress Log**: Initialize with "Phase 1: Plan created"
 
-**⚠️ The plan.md content should be detailed and comprehensive — a new Claude session must be able to execute from it alone without the original conversation. Optimize for information density: be thorough in content, but use tables and structured formats rather than prose where possible.**
+**The plan.md content should be detailed and comprehensive — a new Claude session must be able to execute from it alone without the original conversation. Optimize for information density: be thorough in content, but use tables and structured formats rather than prose where possible.**
 
-**metadata.json** - Prepare with:
-
-```json
-{
-  "branch": "<branch-name>",
-  "task": "<task-description>",
-  "created": "<ISO-8601-with-time e.g. 2026-03-07T14:30:00Z>",
-  "updated": "<ISO-8601-with-time e.g. 2026-03-07T14:30:00Z>",
-  "phase": 1,
-  "status": "in_progress"
-}
-```
-
-**These files will be written to `.gw/{branch}/` after the worktree is created in Phase 2.**
+**This content will be written to `.gw/{branch}/plan.md` after the worktree is created in Phase 2.**
 
 See [artifacts-overview](./artifacts-overview.md) for full details.
 
@@ -201,9 +191,8 @@ See [artifacts-overview](./artifacts-overview.md) for full details.
 If self-validation reveals issues:
 
 1. Refine the plan
-2. Update `plan.md`
-3. Re-validate
-4. Iterate until plan is solid
+2. Re-validate
+3. Iterate until plan is solid
 
 **Do NOT proceed to Phase 2 until plan is validated.**
 
@@ -218,6 +207,7 @@ If self-validation reveals issues:
 - [ ] File changes table complete (creates, modifies, doc updates)
 - [ ] Tests defined as specific cases (not just categories)
 - [ ] Risks documented with likelihood, impact, and mitigations
+- [ ] Verification commands identified (after-edit + before-PR)
 - [ ] Plan self-validated — a new session could execute from plan.md alone
 
 ## References
@@ -225,5 +215,4 @@ If self-validation reveals issues:
 - Related rule: [phase-0-validation](./phase-0-validation.md)
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
 - Related rule: [artifacts-overview](./artifacts-overview.md)
-- Template: `templates/task.template.md`
 - Template: `templates/plan.template.md`

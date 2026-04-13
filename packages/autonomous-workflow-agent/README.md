@@ -1,62 +1,55 @@
 # @gw-tools/autonomous-workflow-agent
 
-**Ship features while you sleep.** Give this agent a task description and walk away—it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
+**Ship features while you sleep.** Give this agent a task description and walk away — it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 
-## Prerequisites
+## Quick Start (Claude Code)
 
-This agent requires:
-
-1. **gw CLI** — Manages Git worktrees
-2. **autonomous-workflow skill** — Contains the workflow instructions the agent follows
-
-### 1. Install gw CLI
+Two commands. Then just say _"implement X independently"_ and the agent takes over.
 
 ```bash
-# Install (Homebrew on macOS)
-brew install mthines/gw-tools/gw
-
-# Or install via npm
+# 1. Install the gw CLI (manages Git worktrees)
 npm install -g @gw-tools/gw
 
-# Or install via Linux package manager
+# 2. Install the skill + auto-trigger rule
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p .claude/rules && \
+  cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
+```
+
+**That's it.** Claude Code now automatically uses the autonomous workflow agent when you ask it to work independently, in isolation, or autonomously.
+
+### How to use it
+
+Just tell Claude what to build using natural language:
+
+```
+"Implement dark mode toggle independently"
+"Add user auth end-to-end with tests and PR"
+"Handle this in isolation — refactor the API client to use retry logic"
+```
+
+The agent will ask clarifying questions (Phase 0), plan the implementation, create an isolated worktree, implement, test, and deliver a draft PR.
+
+### What triggers the agent automatically
+
+Phrases like: _"independently"_, _"autonomously"_, _"in isolation"_, _"alone"_, _"on your own"_, _"end-to-end"_, _"handle this without me"_
+
+You can also invoke it explicitly: `@autonomous-workflow implement X`
+
+### Alternative gw CLI installs
+
+```bash
+# Homebrew (macOS & Linux)
+brew install mthines/gw-tools/gw
+
+# Linux (AUR)
 yay -S gw-tools
 ```
 
-Then initialize gw in your project:
+Then initialize gw in your project: `gw init`
 
-```bash
-gw init <repo-url>
-```
-
-See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup instructions.
-
-### 2. Install the autonomous-workflow skill
-
-The agent delegates workflow logic to this skill. Install it globally:
-
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-```
-
-## Quick Install for Claude Code
-
-With prerequisites installed, add the agent to Claude Code:
-
-One-liner - installs agent and skill (global - works in all projects)
-
-```bash
-mkdir -p ~/.claude/agents && \
-  curl -fsSL https://raw.githubusercontent.com/mthines/gw-tools/main/packages/autonomous-workflow-agent/agents/autonomous-workflow.md \
-  -o ~/.claude/agents/autonomous-workflow.md && \
-  npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-```
-
-Or manually copy [`agents/autonomous-workflow.md`](./agents/autonomous-workflow.md) to:
-
-- `~/.claude/agents/` — Available in all your projects
-- `.claude/agents/` — Available only in that project (commit to git for team sharing)
-
-That's it. Claude Code will now automatically delegate feature implementation tasks to this agent.
+See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup.
 
 ## For Agent SDK Developers
 
@@ -100,7 +93,7 @@ This agent implements a battle-tested 8-phase workflow that turns "implement X" 
 7. **Creates** a draft PR with full context
 8. **Cleans up** the worktree after merge
 
-The agent tracks its own progress, recovers from errors, and knows when to stop and ask for help instead of guessing.
+The agent maintains a comprehensive plan file for context recovery, recovers from errors, and knows when to stop and ask for help instead of guessing.
 
 ## Installation
 
@@ -147,7 +140,7 @@ const myAgent = {
 import { systemPrompt } from '@gw-tools/autonomous-workflow-agent';
 
 // Use in your own agent framework
-console.log(systemPrompt.length); // ~16KB of battle-tested instructions
+console.log(systemPrompt.length); // ~8KB lean orchestrator prompt
 ```
 
 ## How It Works
@@ -156,10 +149,10 @@ console.log(systemPrompt.length); // ~16KB of battle-tested instructions
 
 The agent automatically detects the right workflow mode:
 
-| Mode     | When                               | Artifacts                              |
-| -------- | ---------------------------------- | -------------------------------------- |
-| **Full** | 4+ files OR architectural changes  | `task.md`, `plan.md`, `walkthrough.md` |
-| **Lite** | 1-3 files, straightforward changes | Mental plan only                       |
+| Mode     | When                               | Artifacts                   |
+| -------- | ---------------------------------- | --------------------------- |
+| **Full** | 4+ files OR architectural changes  | `plan.md`, `walkthrough.md` |
+| **Lite** | 1-3 files, straightforward changes | Mental plan only            |
 
 ### The 8 Phases
 
@@ -196,7 +189,7 @@ interface AgentDefinition {
   maxTurns?: number;
 }
 
-type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Task' | 'Skill';
+type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearch' | 'Skill';
 ```
 
 ### Default Configuration
@@ -248,65 +241,23 @@ The agent defaults to **Sonnet** which handles ~80% of tasks effectively. Consid
 | Large refactoring (10+ files)                      | Focused changes (1-5 files)       |
 | Novel problem domains                              | Familiar patterns in the codebase |
 
-````typescript
+```typescript
 // Override model for complex tasks
 const myAgent = {
   ...autonomousWorkflowAgent,
   model: 'opus',
 };
-
-### Installing gw CLI
-
-This agent uses the `gw` CLI under the hood to manage Git worktrees. The CLI handles:
-
-- Creating isolated worktrees (`gw checkout feat/my-feature`)
-- Auto-copying secrets and config files to new worktrees
-- Running post-checkout hooks (dependency installation, etc.)
-- Navigating between worktrees (`gw cd`)
-- Cleaning up merged worktrees (`gw clean`)
+```
 
 ### Secret Handling in Worktrees
 
-When the agent creates a new worktree, `gw` automatically copies configured files from your default branch (usually `main`). This ensures secrets and environment files are available without committing them to git.
-
-**Setup (one-time):**
+When the agent creates a new worktree, `gw` automatically copies configured files (`.env`, secrets) from your default branch. Setup:
 
 ```bash
-# Configure which files to auto-copy
 gw init --auto-copy-files .env,secrets/,.env.local
-
-# Ensure secrets exist in your main worktree first
-cd main
-cp .env.example .env
-# Edit .env with your actual secrets
-````
-
-**How it works:**
-
-1. Secrets are stored in your `main` worktree (the source)
-2. When `gw checkout` creates a new worktree, it copies `autoCopyFiles` from `main`
-3. Worktree secrets are independent—changes don't affect other worktrees
-4. Use `gw sync <worktree>` to update secrets in existing worktrees
-
-**Security notes:**
-
-- `.env` files are never committed (ensure they're in `.gitignore`)
-- Each worktree gets its own copy—no shared state
-- The agent never reads or logs secret values
-
-📖 **Full details:** [gw-tools secret handling](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool#initial-setup-secrets-in-the-default-branch)
-
-```bash
-# Via npm
-npm install -g @gw-tools/gw
-
-# Via Homebrew
-brew install mthines/tap/gw
-
-# Or download from releases
 ```
 
-📖 **Full CLI documentation:** [gw-tools README](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool)
+📖 **Full details:** [gw-tools secret handling](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool#initial-setup-secrets-in-the-default-branch)
 
 ## Examples
 
@@ -359,13 +310,10 @@ With worktrees, the agent works in a completely separate directory. Your main ch
 
 ### Watching Agent Progress
 
-For Full Mode tasks, the agent maintains progress artifacts you can monitor:
+For Full Mode tasks, the agent maintains artifacts you can monitor:
 
 ```bash
-# Watch real-time progress (Full Mode)
-tail -f .gw/<branch>/task.md
-
-# Check the implementation plan
+# Check the implementation plan and progress
 cat .gw/<branch>/plan.md
 
 # After completion, review the walkthrough
@@ -409,13 +357,13 @@ The agent includes "smart detection" to reuse existing worktrees. If you're seei
 
 ### Tests keep failing
 
-The agent will iterate up to 20 times on test failures. If it's still stuck, it will stop and ask for help. Check the `task.md` file in `.gw/<branch>/` for iteration history.
+The agent will iterate up to 20 times on test failures. If it's still stuck, it will stop and ask for help. Check the Progress Log in `.gw/<branch>/plan.md` for iteration history.
 
 ### Agent issued an invalid gw command
 
 If the agent hallucinates a `gw` command that doesn't exist:
 
-1. Check `.gw/<branch>/task.md` for what the agent was trying to do
+1. Check `.gw/<branch>/plan.md` for what the agent was trying to do
 2. Look at the error message for the actual command attempted
 3. Manually run the correct command or guide the agent
 
@@ -429,7 +377,7 @@ Common hallucinations:
 
 If the agent keeps trying the same fix repeatedly:
 
-1. Check `.gw/<branch>/task.md` for iteration history
+1. Check `.gw/<branch>/plan.md` Progress Log for iteration history
 2. Look for repeated "Attempt N" entries with similar fixes
 3. Interrupt and provide guidance: "Try a different approach—the issue is X"
 

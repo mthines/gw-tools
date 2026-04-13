@@ -11,7 +11,7 @@ tags:
 
 ---
 
-## ⚠️ CRITICAL: First Step - Mode Detection
+## CRITICAL: First Step - Mode Detection
 
 **Before starting ANY phase, you MUST determine the workflow mode:**
 
@@ -20,7 +20,7 @@ tags:
 | **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
 | **Lite** | 1-3 files AND simple/straightforward | No                  |
 
-**For Full Mode:** Plan artifact content during Phase 1, then create `.gw/{branch-name}/task.md` and `plan.md` inside the worktree AFTER Phase 2 setup. **Never create artifact files on the main branch.**
+**For Full Mode:** Plan artifact content during Phase 1, then create `.gw/{branch-name}/plan.md` inside the worktree AFTER Phase 2 setup. **Never create artifact files on the main branch.**
 
 **State your mode selection explicitly before proceeding.**
 
@@ -28,27 +28,26 @@ tags:
 
 ## Overview
 
-Execute complete feature development cycles autonomously—from task intake through tested PR delivery—using isolated Git worktrees.
+Execute complete feature development cycles autonomously — from task intake through tested PR delivery — using isolated Git worktrees.
 This workflow operates with high autonomy after initial validation.
 
 ## Core Principles
 
 - **Always validate first (Phase 0)**: Never skip directly to implementation.
 - **Always create worktree (Phase 2)**: Isolation is mandatory.
-- **Track progress with artifacts**: Use `.gw/{branch}/` files for transparency.
+- **plan.md is the single source of truth**: A new session must be able to execute from it alone.
 - **Iterate until correct**: No artificial iteration limits.
 - **Self-validate continuously**: Check work at every step.
 - **Stop and ask when blocked**: Don't guess on ambiguity.
 
 ## Artifact System
 
-Inspired by Google Antigravity, this workflow produces three artifacts:
+The workflow produces two artifacts:
 
-| Artifact        | File                          | Purpose                                   |
-| --------------- | ----------------------------- | ----------------------------------------- |
-| **Task**        | `.gw/{branch}/task.md`        | Dynamic checklist, decisions, discoveries |
-| **Plan**        | `.gw/{branch}/plan.md`        | Implementation strategy                   |
-| **Walkthrough** | `.gw/{branch}/walkthrough.md` | Final summary for PR                      |
+| Artifact        | File                          | Purpose                                        |
+| --------------- | ----------------------------- | ---------------------------------------------- |
+| **Plan**        | `.gw/{branch}/plan.md`        | Implementation strategy, progress log, context |
+| **Walkthrough** | `.gw/{branch}/walkthrough.md` | Final summary for PR delivery                  |
 
 See [artifacts-overview](./artifacts-overview.md) for full details.
 
@@ -68,27 +67,22 @@ See [artifacts-overview](./artifacts-overview.md) for full details.
 ## Phase Flow
 
 ```
-┌─────────────────────────────────────────────────────┐
-│  MODE DETECTION ← MANDATORY FIRST STEP              │
-│  Analyze task → Choose Full (4+ files) or Lite      │
-│  ⚠️ Do NOT create artifact files yet                │
-└─────────────────────────────────────────────────────┘
-    ↓
 Phase 0: Validation + Mode Detection
-    ↓ (user confirms, mode selected)
+    | (user confirms, mode selected)
 Phase 1: Planning (Full: prepare plan in conversation, Lite: mental plan)
-    ↓ (plan validated)
-Phase 2: Worktree Setup 🔴 MANDATORY
-    ⛔ Full Mode: CREATE & POPULATE artifacts INSIDE worktree
-    ↓ (worktree created, artifacts populated)
-Phase 3: Implementation (Full: update task.md, Lite: just code)
-    ↓ (code complete)
-Phase 4: Testing & Iteration ← iterate until passing
-    ↓ (all tests pass)
+    | (plan validated)
+Phase 2: Worktree Setup - MANDATORY
+    | Full Mode: CREATE & POPULATE plan.md INSIDE worktree
+    | (worktree created, plan.md populated)
+Phase 3: Implementation (Full: update Progress Log, Lite: just code)
+    | Verify after editing. Verify periodically. Fix failures immediately.
+    | (code complete)
+Phase 4: Testing & Iteration <- iterate until passing
+    | (all tests pass)
 Phase 5: Documentation
-    ↓ (docs complete)
+    | (docs complete)
 Phase 6: PR Creation (Full: generate walkthrough.md)
-    ↓ (PR delivered)
+    | (PR delivered)
 Phase 7: Cleanup (optional)
 ```
 
@@ -114,8 +108,8 @@ Phase 7: Cleanup (optional)
 
 Use for complex, multi-file changes:
 
-- Creates `.gw/{branch}/task.md`, `plan.md`, `walkthrough.md`
-- Tracks progress, decisions, and discoveries
+- Creates `.gw/{branch}/plan.md` and `walkthrough.md`
+- Tracks progress via plan.md Progress Log
 - Enables context recovery and handoff
 - Generates comprehensive PR summary
 
@@ -144,14 +138,14 @@ Use for simple, focused changes:
 ### Decision Flow
 
 ```
-⚠️ DECIDE MODE FIRST (before any work):
+DECIDE MODE FIRST (before any work):
 
 Is this a complex change? (4+ files OR architectural)
-├── Yes → Full Mode
-│   └── Plan artifacts in Phase 1 (in conversation)
-│   └── Create artifact files INSIDE worktree (after Phase 2)
-└── No (1-3 files, straightforward)
-    └── Lite Mode (no artifacts, still use worktree)
+|-- Yes -> Full Mode
+|   |-- Plan artifacts in Phase 1 (in conversation)
+|   |-- Create plan.md INSIDE worktree (after Phase 2)
+|-- No (1-3 files, straightforward)
+    |-- Lite Mode (no artifacts, still use worktree)
 ```
 
 ## Expected Outcomes

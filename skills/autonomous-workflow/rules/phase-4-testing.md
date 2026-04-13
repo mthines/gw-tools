@@ -26,8 +26,6 @@ Fast iteration loops with continuous self-validation.
 
 ## The "Ship Until Done" Loop
 
-Inspired by the [Ralph Wiggum pattern](https://ralph-wiggum.ai):
-
 ```
 iteration = 0
 while not all_tests_pass:
@@ -71,7 +69,9 @@ npm test -- --testPathPattern="relevant"
 
 ### Step 3: Iteration Loop
 
-#### Iteration 1: Fix Obvious Issues
+**CRITICAL: Focus on ONE failing test at a time.**
+
+#### Attempts 1-2: Fix Obvious Issues
 
 1. Read error message completely
 2. Identify assertion that failed
@@ -79,7 +79,7 @@ npm test -- --testPathPattern="relevant"
 4. Rerun tests
 5. Assess: Did failures decrease?
 
-#### Iteration 2: Deep Analysis
+#### Attempts 3-4: Deep Analysis
 
 If still failing:
 
@@ -89,7 +89,7 @@ If still failing:
 4. Fix root cause (not symptom)
 5. Rerun tests
 
-#### Iteration 3+: Alternative Approach
+#### Attempts 5-6: Alternative Approach
 
 If still failing:
 
@@ -99,61 +99,32 @@ If still failing:
 4. Refactor if necessary
 5. Rerun tests
 
-### Step 4: Iteration Tracking
+#### Attempts 7+: Escalate
 
-Track iterations in `.gw/{branch}/task.md`:
+If still failing after 6 focused attempts, escalate to user with:
 
-```markdown
-## Testing Iterations
+- What you've tried
+- What you think the root cause is
+- What you'd try next
 
-### Iteration 1
+### Step 4: Self-Reflection Checkpoint
 
-- Tests: 5 pass, 3 fail
-- Changed: Fixed import path in ThemeContext
-- Status: Reduced failures
+Every 3 iterations, ask yourself:
 
-### Iteration 2
-
-- Tests: 7 pass, 1 fail
-- Changed: Updated mock for localStorage
-- Status: Almost there
-
-### Iteration 3
-
-- Tests: 8 pass, 0 fail
-- Status: All passing
-```
-
-Update task.md sections:
-
-- Move test-related items to Completed
-- Update Current with active fix
-- Log test discoveries in Discoveries
-- Update metadata.json with phase: 4
+- Are failures decreasing? (Good — keep going)
+- Am I fixing the same thing repeatedly? (Bad — try different approach)
+- Am I making the problem worse? (Bad — revert and rethink)
 
 ### Step 5: Fresh Context Strategy
 
 If iteration > 5 and making no progress:
 
 1. Commit current state
-2. Document: "Iteration checkpoint - [status]"
-3. Step back and review approach from scratch
-4. Ask: Is the approach fundamentally wrong?
-5. Consider alternative implementation
+2. Step back and review approach from scratch
+3. Ask: Is the approach fundamentally wrong?
+4. Consider alternative implementation
 
-### Step 6: Cost Controls
-
-**Safety limits:**
-
-- Iteration 10: Warn user, show progress
-- Iteration 20: Hard stop, ask for guidance
-
-**Token budget:**
-
-- Estimate tokens per iteration
-- Warn if approaching high costs (>$10)
-
-### Step 7: Add New Tests
+### Step 6: Add New Tests
 
 If new functionality added:
 
@@ -166,25 +137,24 @@ describe('DarkModeToggle', () => {
   it('should persist preference', () => {
     // Test persistence
   });
-
-  it('should respect system preference', () => {
-    // Test edge case from Phase 0
-  });
 });
 ```
 
-### Step 8: Final Validation
+### Step 7: Final Validation
+
+Run full suite using plan.md's before-PR verification commands:
 
 ```bash
 npm test -- --coverage
 ```
 
-**Self-assessment:**
+### Step 8: Update Progress Log (Full Mode)
 
-- All requirements from Phase 0 validated?
-- Edge cases tested?
-- No regressions introduced?
-- Tests are reliable (not flaky)?
+Append to plan.md's Progress Log:
+
+```markdown
+- [TIMESTAMP] Phase 4: Tests passing (X iterations, fixed Y and Z)
+```
 
 ### Step 9: Commit Test Changes
 
@@ -196,15 +166,6 @@ git commit -m "test(scope): add comprehensive tests
 - Integration tests for Y
 - Edge case coverage for Z"
 ```
-
-## Self-Validation Checkpoints
-
-| After          | Validation Question                      |
-| -------------- | ---------------------------------------- |
-| Each iteration | Are failures decreasing?                 |
-| 5 iterations   | Am I making progress or stuck?           |
-| 10 iterations  | Is the approach fundamentally correct?   |
-| Test pass      | Do tests actually validate requirements? |
 
 ## When to Stop and Ask
 

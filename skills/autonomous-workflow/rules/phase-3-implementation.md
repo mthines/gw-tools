@@ -11,7 +11,7 @@ tags:
 
 ## Overview
 
-Incremental implementation with continuous validation.
+Incremental implementation with continuous verification.
 Work in the isolated worktree created in Phase 2.
 Follow existing patterns, commit logically.
 
@@ -23,7 +23,7 @@ Follow existing patterns, commit logically.
 - Currently in worktree directory (`pwd` check)
 - Dependencies installed
 - Environment validated
-- Artifacts initialized (`.gw/{branch}/task.md` exists)
+- plan.md populated (Full Mode)
 
 **If worktree not created, STOP and return to Phase 2.**
 
@@ -31,14 +31,14 @@ Follow existing patterns, commit logically.
 
 - **Follow existing patterns**: Consistency with codebase.
 - **Implement incrementally**: Small, focused changes.
-- **Validate continuously**: Self-check at every step.
+- **Verify after editing**: Run fast checks after each change.
 - **Commit logically**: Meaningful commit messages.
 
 ## Procedure
 
 ### Step 1: Implementation Order
 
-Implement in logical order:
+Implement in logical order (per plan.md Implementation Order):
 
 1. Types/interfaces (if TypeScript)
 2. Core logic/functions
@@ -60,49 +60,20 @@ Implement in logical order:
 - Make focused change (one concern)
 - Follow existing code style
 - Maintain consistent formatting
-- Add comments only if logic non-obvious
 
-**After Editing:**
+**After Editing — Verify:**
+
+Run the fast check identified in plan.md's Verification section. Examples:
 
 ```bash
-# Does it compile?
-npm run build  # or tsc --noEmit
-
-# Does it pass linting?
-npm run lint -- <file-path>
+npx tsc --noEmit           # TypeScript type check
+go vet ./...               # Go vet
+npm run lint -- <file>     # Lint changed file
 ```
 
-**Self-review questions:**
+If verification fails, fix immediately before moving on. Max 3 attempts per failure — if still failing after 3 tries, reassess your approach rather than continuing to iterate.
 
-- Does this match existing patterns?
-- Is naming consistent?
-- Are imports organized correctly?
-- Is this the simplest solution?
-
-### Step 3: Update Task Tracking
-
-After each file change, update `.gw/{branch}/task.md`:
-
-```markdown
-## Completed
-
-- [x] Created ThemeContext.tsx # Move from Current/Upcoming
-
-## Current
-
-- [ ] Creating ThemeToggle <- **IN PROGRESS**
-```
-
-**Update on:**
-
-- File created → Add to Completed
-- Decision made → Add to Decisions Log
-- Discovery found → Add to Discoveries
-- Blocker hit → Update Blockers section
-
-See [task-tracking](./task-tracking.md) for full details.
-
-### Step 4: Commit Incrementally
+### Step 3: Commit Incrementally
 
 After each logical unit:
 
@@ -124,37 +95,36 @@ git commit -m "<type>(<scope>): <description>"
 - Keep commits atomic
 - NEVER add `Co-Authored-By` lines to commit messages
 
-### Step 5: Continuous Validation
+### Step 4: Periodic Validation
 
-After every 2-3 files changed:
+After every 2-3 files changed, run a broader check:
 
 ```bash
-# Full build
+# Run tests related to changed code
+npm test -- --testPathPattern="relevant"
+
+# Full build check
 npm run build
-
-# All lint rules
-npm run lint
-
-# Quick test run
-npm test -- --coverage=false --maxWorkers=1
 ```
 
 **Self-assessment:**
 
-- Is implementation on track?
+- Is implementation on track with plan.md?
 - Any deviations from plan?
 - Need to adjust approach?
 
-### Step 6: Integration Check
+### Step 5: Update Progress Log (Full Mode)
 
-After all implementation:
+At key milestones (not after every file), append to plan.md's Progress Log:
 
-- All files compile together?
-- No TypeScript/lint errors?
-- Imports resolve correctly?
-- No circular dependencies?
+```markdown
+- [TIMESTAMP] Phase 3: Implemented ThemeContext and ThemeToggle components
+- [TIMESTAMP] Phase 3: Updated Tailwind config for dark mode classes
+```
 
-### Step 7: Pre-Testing Commit
+### Step 6: Pre-Testing Commit
+
+After all implementation complete:
 
 ```bash
 git add .
@@ -168,14 +138,13 @@ git commit -m "feat(scope): implement <feature-name>
 
 - [ ] All planned files modified
 - [ ] Code follows existing patterns
-- [ ] Builds/compiles successfully
-- [ ] Linting passes
+- [ ] Verification passes after each change
 - [ ] Commits are logical and clear
 - [ ] Self-reviewed all changes
+- [ ] Progress Log updated (Full Mode)
 - [ ] Ready for testing
 
 ## References
 
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
 - Related rule: [phase-4-testing](./phase-4-testing.md)
-- Related rule: [task-tracking](./task-tracking.md)

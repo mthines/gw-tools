@@ -25,34 +25,31 @@ src/
 ├── index.ts                          # Public exports
 └── lib/
     ├── autonomous-workflow-agent.ts  # Agent definition and types
-    ├── system-prompt.ts              # ~400 line system prompt
+    ├── system-prompt.ts              # ~250 line system prompt (lean orchestrator)
     └── *.spec.ts                     # Tests
-agents/
-└── autonomous-workflow.md            # Claude Code agent file (copied to dist)
 ```
 
 ## Key Concepts
 
 - **AgentDefinition** - Interface matching Claude Agent SDK's expected shape
-- **systemPrompt** - The large prompt string exported for custom agent builds
-- **agents/\*.md** - Markdown files Claude Code loads as subagents
+- **systemPrompt** - Lean prompt that loads the full skill at runtime via `Skill(skill: "autonomous-workflow")`
+- The system prompt is an **orchestrator**, not a duplicate of the skill content
 
 ## Gotchas
 
-- The `agents/` directory is copied to `dist/` via project.json assets config
 - Package uses ES modules (`"type": "module"`) - use `.js` extensions in imports
-- `systemPrompt` is ~20KB - changes affect agent behavior significantly
+- `systemPrompt` is ~8KB — it references the skill for detailed procedures, not duplicates them
 - The system prompt references the `autonomous-workflow` skill which must be installed
 
-## ⚠️ Coupled Documentation
+## Coupled Documentation
 
-This package and `skills/autonomous-workflow/` describe the **same workflow** and must stay in sync. When changing workflow behavior (phase ordering, artifact timing, worktree setup, etc.):
+This package and `skills/autonomous-workflow/` describe the **same workflow** and must stay in sync:
 
-1. Update the skill files first: `skills/autonomous-workflow/SKILL.md`, `rules/*.md`, `references/*.md`, `README.md`
-2. Then update the system prompt here: `src/lib/system-prompt.ts`
+1. Update the skill files first: `skills/autonomous-workflow/SKILL.md`, `rules/*.md`, `README.md`
+2. Then update `src/lib/system-prompt.ts` — keep it lean, reference skill for details
 3. Verify the two do not contradict each other
 
-The skill is the **source of truth** — the system prompt should mirror it.
+The skill is the **source of truth**. The system prompt is a lean orchestrator that loads the skill.
 
 ## Related
 

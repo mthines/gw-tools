@@ -3,6 +3,7 @@ created: { { TIMESTAMP (ISO 8601 with time: YYYY-MM-DDTHH:MM:SSZ) } }
 branch: { { BRANCH } }
 task: { { TASK_DESCRIPTION } }
 complexity: <!-- LOW | MEDIUM | HIGH -->
+status: planning <!-- planning | approved | in-progress | testing | documenting | delivered -->
 approved: false
 ---
 
@@ -89,3 +90,17 @@ approved: false
 
 | Risk | Likelihood | Impact | Mitigation |
 | ---- | ---------- | ------ | ---------- |
+
+## Verification
+
+<!-- What commands to run. The agent figures out the right commands from project config. -->
+<!-- Examples: npx tsc --noEmit, npm test, npm run lint, go vet ./... -->
+
+- **After editing**: <!-- fast check: type-check or compile changed files -->
+- **Before PR**: <!-- full suite: build + test + lint -->
+
+## Progress Log
+
+<!-- Append-only log updated at phase transitions and key milestones. Enables context recovery. -->
+
+- [TIMESTAMP] Phase 1: Plan created

@@ -135,6 +135,12 @@ git commit -m "docs(feature): document dark mode toggle
 - [ ] Style consistent with project
 - [ ] Ready for PR creation
 
+**Update Progress Log (Full Mode):**
+
+```markdown
+- [TIMESTAMP] Phase 5: Documentation updated (README, CHANGELOG)
+```
+
 ## References
 
 - Related rule: [phase-4-testing](./phase-4-testing.md)

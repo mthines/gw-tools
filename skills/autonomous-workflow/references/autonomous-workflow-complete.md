@@ -177,9 +177,9 @@ $ gw sync feat/dark-mode-toggle
 
 # Create artifact files INSIDE the worktree (Full Mode)
 $ mkdir -p .gw/feat-dark-mode-toggle
-# Populate task.md and plan.md with content prepared in Phase 1
+# Populate plan.md with content prepared in Phase 1
 # (written to disk here, not on main branch)
-✓ Artifacts created: .gw/feat-dark-mode-toggle/task.md, plan.md
+✓ Artifact created: .gw/feat-dark-mode-toggle/plan.md
 ```
 
 **✅ Environment ready, artifacts populated - proceeding to implementation**

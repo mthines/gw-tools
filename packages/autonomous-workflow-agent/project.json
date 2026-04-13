@@ -24,11 +24,6 @@
             "input": "packages/autonomous-workflow-agent",
             "glob": "README.md",
             "output": "."
-          },
-          {
-            "input": "packages/autonomous-workflow-agent",
-            "glob": "agents/**/*",
-            "output": "."
           }
         ]
       }
