@@ -1,51 +1,55 @@
 # @gw-tools/autonomous-workflow-agent
 
-**Ship features while you sleep.** Give this agent a task description and walk away—it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
+**Ship features while you sleep.** Give this agent a task description and walk away — it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 
-## Prerequisites
+## Quick Start (Claude Code)
 
-This agent requires:
-
-1. **gw CLI** — Manages Git worktrees
-2. **autonomous-workflow skill** — Contains the workflow instructions the agent follows
-
-### 1. Install gw CLI
+Two commands. Then just say _"implement X independently"_ and the agent takes over.
 
 ```bash
-# Install (Homebrew on macOS)
-brew install mthines/gw-tools/gw
-
-# Or install via npm
+# 1. Install the gw CLI (manages Git worktrees)
 npm install -g @gw-tools/gw
 
-# Or install via Linux package manager
+# 2. Install the skill + auto-trigger rule
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p .claude/rules && \
+  cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
+```
+
+**That's it.** Claude Code now automatically uses the autonomous workflow agent when you ask it to work independently, in isolation, or autonomously.
+
+### How to use it
+
+Just tell Claude what to build using natural language:
+
+```
+"Implement dark mode toggle independently"
+"Add user auth end-to-end with tests and PR"
+"Handle this in isolation — refactor the API client to use retry logic"
+```
+
+The agent will ask clarifying questions (Phase 0), plan the implementation, create an isolated worktree, implement, test, and deliver a draft PR.
+
+### What triggers the agent automatically
+
+Phrases like: _"independently"_, _"autonomously"_, _"in isolation"_, _"alone"_, _"on your own"_, _"end-to-end"_, _"handle this without me"_
+
+You can also invoke it explicitly: `@autonomous-workflow implement X`
+
+### Alternative gw CLI installs
+
+```bash
+# Homebrew (macOS & Linux)
+brew install mthines/gw-tools/gw
+
+# Linux (AUR)
 yay -S gw-tools
 ```
 
-Then initialize gw in your project:
+Then initialize gw in your project: `gw init`
 
-```bash
-gw init <repo-url>
-```
-
-See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup instructions.
-
-### 2. Install the autonomous-workflow skill
-
-The agent delegates workflow logic to this skill. Install it globally:
-
-```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-```
-
-### 3. (Optional) Enable auto-triggering
-
-So Claude automatically uses the agent when you say "do this independently", "work in isolation", etc.:
-
-```bash
-cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
-   .claude/rules/autonomous-workflow-routing.md
-```
+See the [gw Quick Start guide](https://www.npmjs.com/package/@gw-tools/gw#quick-start) for detailed setup.
 
 ## For Agent SDK Developers
 
@@ -245,58 +249,15 @@ const myAgent = {
 };
 ```
 
-### Installing gw CLI
-
-This agent uses the `gw` CLI under the hood to manage Git worktrees. The CLI handles:
-
-- Creating isolated worktrees (`gw checkout feat/my-feature`)
-- Auto-copying secrets and config files to new worktrees
-- Running post-checkout hooks (dependency installation, etc.)
-- Navigating between worktrees (`gw cd`)
-- Cleaning up merged worktrees (`gw clean`)
-
 ### Secret Handling in Worktrees
 
-When the agent creates a new worktree, `gw` automatically copies configured files from your default branch (usually `main`). This ensures secrets and environment files are available without committing them to git.
-
-**Setup (one-time):**
+When the agent creates a new worktree, `gw` automatically copies configured files (`.env`, secrets) from your default branch. Setup:
 
 ```bash
-# Configure which files to auto-copy
 gw init --auto-copy-files .env,secrets/,.env.local
-
-# Ensure secrets exist in your main worktree first
-cd main
-cp .env.example .env
-# Edit .env with your actual secrets
 ```
-
-**How it works:**
-
-1. Secrets are stored in your `main` worktree (the source)
-2. When `gw checkout` creates a new worktree, it copies `autoCopyFiles` from `main`
-3. Worktree secrets are independent—changes don't affect other worktrees
-4. Use `gw sync <worktree>` to update secrets in existing worktrees
-
-**Security notes:**
-
-- `.env` files are never committed (ensure they're in `.gitignore`)
-- Each worktree gets its own copy—no shared state
-- The agent never reads or logs secret values
 
 📖 **Full details:** [gw-tools secret handling](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool#initial-setup-secrets-in-the-default-branch)
-
-```bash
-# Via npm
-npm install -g @gw-tools/gw
-
-# Via Homebrew
-brew install mthines/tap/gw
-
-# Or download from releases
-```
-
-📖 **Full CLI documentation:** [gw-tools README](https://github.com/mthines/gw-tools/tree/main/packages/gw-tool)
 
 ## Examples
 

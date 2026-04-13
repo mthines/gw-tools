@@ -15,18 +15,25 @@ This skill enables AI agents to autonomously execute complete feature developmen
 - **Phase 6: PR Creation & Delivery** - Create comprehensive draft PR
 - **Phase 7: Cleanup** - Safe worktree removal (optional)
 
-## Installation
+## Quick Install
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill
+# 1. Install gw CLI (if not already installed)
+npm install -g @gw-tools/gw
+
+# 2. Install skill + auto-trigger rule
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p .claude/rules && \
+  cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
 ```
 
-Select `autonomous-workflow` from the interactive menu.
+**That's it.** Say _"implement X independently"_ and the agent takes over.
 
 ## Prerequisites
 
-- `gw` CLI tool installed
-- Git worktree support
+- `gw` CLI tool installed (`npm install -g @gw-tools/gw`)
+- Git worktree support (Git 2.5+)
 - Testing framework available in project
 - GitHub CLI (`gh`) for PR creation
 
@@ -48,26 +55,17 @@ Select `autonomous-workflow` from the interactive menu.
 - **[Error Recovery](./references/error-recovery-scenarios.md)** - Common errors and recovery procedures
 - **[Iterative Refinement](./references/iterative-refinement.md)** - Progressive improvement examples
 
-## Quick Start
+## Usage
 
-After installing this skill, trigger autonomous execution with requests like:
+After installing, trigger autonomous execution with natural language:
 
 ```
-"Implement dark mode toggle autonomously"
+"Implement dark mode toggle independently"
 "Add user authentication feature end-to-end"
-"Create a new API endpoint for user profiles with full test coverage"
+"Handle this in isolation — refactor the API client to use retry logic"
 ```
 
-### Auto-Trigger Setup (Recommended)
-
-To automatically route tasks to the autonomous workflow agent when you say things like "do this independently" or "handle this in isolation":
-
-```bash
-cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
-   .claude/rules/autonomous-workflow-routing.md
-```
-
-This is opt-in — install the rule to enable automatic routing.
+You can also invoke explicitly: `@autonomous-workflow implement X`
 
 ## When to Use This Skill
 

@@ -101,18 +101,15 @@ Give the agent a task and walk away:
 
 **Prerequisites:** gw CLI must be installed first (see above)
 
-Install the skill globally:
-
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
+# Install skill + auto-trigger rule (one command)
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p .claude/rules && \
+  cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+     .claude/rules/autonomous-workflow-routing.md
 ```
 
-Optionally, enable auto-triggering so Claude automatically uses the agent when you say "do this independently":
-
-```bash
-cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
-   .claude/rules/autonomous-workflow-routing.md
-```
+Then just say _"implement X independently"_ and the agent takes over.
 
 ### For Agent SDK Developers
 
