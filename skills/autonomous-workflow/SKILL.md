@@ -157,7 +157,7 @@ To automatically route tasks to the autonomous workflow agent when you use phras
 
 ```bash
 # Copy the routing rule to your project (after global skill install)
-cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
 

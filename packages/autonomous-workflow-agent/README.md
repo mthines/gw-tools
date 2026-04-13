@@ -13,7 +13,7 @@ npm install -g @gw-tools/gw
 # 2. Install the skill + auto-trigger rule
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
   mkdir -p .claude/rules && \
-  cp ~/.claude/autonomous-workflow/templates/routing-rule.template.md \
+  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
