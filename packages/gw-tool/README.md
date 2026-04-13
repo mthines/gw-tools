@@ -165,20 +165,25 @@ Once installed, your AI agent can:
 
 Want Claude Code to autonomously implement features end-to-end?
 
+Install the skill:
+
 ```bash
-# Install the skill
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
 Then install the agent + routing rule — either globally or per-project:
 
+**Global** (personal use):
+
 ```bash
-# Global (personal use)
 mkdir -p ~/.claude/agents && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
+```
 
-# Per-project (team use — committable to git, customizable)
+**Per-project** (team use — committable to git, customizable):
+
+```bash
 mkdir -p .claude/agents .claude/rules && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \

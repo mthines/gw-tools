@@ -19,11 +19,15 @@ This skill enables AI agents to autonomously execute complete feature developmen
 
 ### Step 1: Install prerequisites
 
-```bash
-# Install gw CLI
-npm install -g @gw-tools/gw
+Install the gw CLI:
 
-# Install the skill
+```bash
+brew install mthines/gw-tools/gw
+```
+
+Install the skill:
+
+```bash
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 

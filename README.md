@@ -32,15 +32,21 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 Install the `gw` CLI tool, then add shell integration to your shell config for commands like `gw cd`:
 
 ```bash
-# Homebrew (macOS & linux)
 brew install mthines/gw-tools/gw
+```
 
-# Linux
-yay -S gw-tools
+<details>
+<summary>Alternative installs (npm, AUR)</summary>
 
-# npm (auto-adds shell integration)
+```bash
 npm install -g @gw-tools/gw
 ```
+
+```bash
+yay -S gw-tools
+```
+
+</details>
 
 Then add to your shell config (`~/.zshrc` or `~/.bashrc`):
 
@@ -101,20 +107,25 @@ Give the agent a task and walk away:
 
 **Prerequisites:** gw CLI must be installed first (see above)
 
+Install the skill:
+
 ```bash
-# Install the skill
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
 Then install the agent + routing rule — either **globally** or **per-project**:
 
+**Global** (personal use — works in all projects):
+
 ```bash
-# Global (personal use — works in all projects)
 mkdir -p ~/.claude/agents && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
+```
 
-# Per-project (team use — committable to git)
+**Per-project** (team use — committable to git):
+
+```bash
 mkdir -p .claude/agents .claude/rules && \
   ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \

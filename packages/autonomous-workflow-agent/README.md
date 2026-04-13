@@ -6,20 +6,31 @@
 
 ### Step 1: Install prerequisites
 
-```bash
-# Install gw CLI (manages Git worktrees)
-npm install -g @gw-tools/gw
+Install the gw CLI (manages Git worktrees):
 
-# Install the autonomous-workflow skill
+```bash
+brew install mthines/gw-tools/gw
+```
+
+Install the autonomous-workflow skill:
+
+```bash
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
 <details>
-<summary>Alternative gw CLI installs (Homebrew, AUR)</summary>
+<summary>Alternative gw CLI installs (npm, AUR)</summary>
+
+npm:
 
 ```bash
-brew install mthines/gw-tools/gw  # macOS & Linux
-yay -S gw-tools                    # Arch Linux
+npm install -g @gw-tools/gw
+```
+
+Arch Linux (AUR):
+
+```bash
+yay -S gw-tools
 ```
 
 Then initialize gw in your project: `gw init`
