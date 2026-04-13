@@ -18,24 +18,9 @@ Install the autonomous-workflow skill:
 npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
 ```
 
-<details>
-<summary>Alternative gw CLI installs (npm, AUR)</summary>
-
-npm:
-
-```bash
-npm install -g @gw-tools/gw
-```
-
-Arch Linux (AUR):
-
-```bash
-yay -S gw-tools
-```
+Or via npm: `npm install -g @gw-tools/gw` | AUR: `yay -S gw-tools`
 
 Then initialize gw in your project: `gw init`
-
-</details>
 
 ### Step 2: Install the agent and routing rule
 
