@@ -160,7 +160,7 @@ Install the agent definition so Claude Code knows about the autonomous-workflow 
 
 ```bash
 mkdir -p ~/.claude/agents && \
-  cp ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
@@ -170,7 +170,7 @@ Install the routing rule so Claude auto-triggers the agent on phrases like _"ind
 
 ```bash
 mkdir -p .claude/rules && \
-  cp ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
