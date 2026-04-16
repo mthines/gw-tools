@@ -159,28 +159,26 @@ Install the agent and routing rule so Claude auto-triggers on phrases like _"ind
 **Option A: Global** (personal use — works in all projects)
 
 ```bash
-mkdir -p ~/.claude/agents && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p ~/.claude/agents && \
+  ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Then add the routing rule per-project:
+Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+
+**Option B: Per-project** (team use — committable to git)
 
 ```bash
-mkdir -p .claude/rules && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
-     .claude/rules/autonomous-workflow-routing.md
-```
-
-**Option B: Project-level** (team use — committable to git, customizable)
-
-```bash
-mkdir -p .claude/agents .claude/rules && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+  mkdir -p .claude/agents .claude/rules && \
+  ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+  ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
+
+Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
 
 To customize the agent for a specific project, copy instead of symlink and edit directly. See [routing-rule.template.md](./templates/routing-rule.template.md) and [agent.template.md](./templates/agent.template.md) for details.
 

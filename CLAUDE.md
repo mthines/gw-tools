@@ -118,7 +118,7 @@ When the user requests autonomous feature development or end-to-end implementati
 To automatically route independent tasks to the autonomous workflow agent:
 
 ```bash
-ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
    .claude/rules/autonomous-workflow-routing.md
 ```
 
