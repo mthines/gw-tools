@@ -56,14 +56,40 @@ Execute complete feature development cycles autonomously using isolated worktree
 
 - Smart worktree detection (fuzzy match task to current worktree)
 - Autonomous feature implementation from requirements to PR
+- Quality-gated planning with confidence assessment
 - Fast iteration loops until tests pass (Ralph Wiggum pattern)
 - Worktree creation and environment setup
 - Continuous testing and self-validation
-- Documentation generation
 - Draft PR creation with comprehensive descriptions
 - Multi-agent coordination support
 
 **Best for:** AI agents executing end-to-end feature development, autonomous task completion, production-ready deliverables
+
+---
+
+### 4. [Confidence](./confidence/)
+
+Quality gate for validating plans, code implementations, or bug analyses.
+
+**Modes:** `plan` (pre-execution gate), `code` (post-implementation review), `bug-analysis` (investigation validation)
+
+**Best for:** Quality gates before autonomous execution, implementation review, investigation validation
+
+---
+
+### 5. [Create Plan](./create-plan/)
+
+Generate structured `plan.md` artifacts from conversation context.
+
+**Best for:** Capturing Phase 0-1 discussion into self-contained implementation plans that enable session handoff
+
+---
+
+### 6. [Create Walkthrough](./create-walkthrough/)
+
+Generate `walkthrough.md` summaries for PR delivery.
+
+**Best for:** Producing consistent PR summaries from plan.md + git history + test results
 
 ---
 

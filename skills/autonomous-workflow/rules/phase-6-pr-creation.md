@@ -80,15 +80,13 @@ Closes #[issue-number]
 
 ### Step 4: Generate Walkthrough (Full Mode)
 
-Create `.gw/{branch}/walkthrough.md` using `templates/walkthrough.template.md`:
+Invoke the walkthrough skill to generate `.gw/{branch}/walkthrough.md`:
 
-**Source information from:**
+```
+Skill(skill: "create-walkthrough")
+```
 
-- plan.md (decisions, requirements, file changes)
-- git diff/log (actual changes made)
-- Phase 4 results (test outcomes)
-
-See [walkthrough-generation](./walkthrough-generation.md) for details.
+This skill gathers information from plan.md, git history, and test results to produce the walkthrough. It also presents the walkthrough inline in the conversation.
 
 ### Step 5: Create Draft PR
 
@@ -132,5 +130,4 @@ Present walkthrough inline to user with PR link, summary, and next steps.
 ## References
 
 - Related rule: [phase-5-documentation](./phase-5-documentation.md)
-- Related rule: [walkthrough-generation](./walkthrough-generation.md)
-- Template: `templates/walkthrough.template.md`
+- Related skill: [create-walkthrough](../../create-walkthrough/SKILL.md)

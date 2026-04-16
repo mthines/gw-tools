@@ -107,18 +107,22 @@ Install the skill + agent either **globally** or **per-project**:
 **Global** (personal use — works in all projects):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --global --yes && \
   mkdir -p ~/.claude/agents && \
   ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Per-project** (team use — committable to git):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --yes && \
   mkdir -p .claude/agents .claude/rules && \
   ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
@@ -126,7 +130,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
 
 Then just say _"implement X independently"_ and the agent takes over.
 
@@ -165,6 +169,9 @@ npx skills add https://github.com/mthines/gw-tools --skill
 Available skills:
 
 - **autonomous-workflow** - Autonomous feature development from requirements to PR
+- **create-plan** - Generate structured implementation plan artifacts
+- **create-walkthrough** - Generate PR walkthrough summaries
+- **confidence** - Quality gate for plan, code, or bug analysis validation
 - **git-worktree-workflows** - Master Git worktrees and gw workflows
 - **gw-config-management** - Configure gw for your project type (Next.js, monorepos, etc.)
 

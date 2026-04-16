@@ -42,20 +42,7 @@ Analyze the task scope to determine the workflow mode:
 
 **When in doubt, choose Full Mode.**
 
-### Step 2: Plan Artifact Content (Full Mode ONLY)
-
-For **Full Mode**, you will need these artifacts. **Do NOT create the files yet** — they must be created inside the worktree after Phase 2, not on the main branch.
-
-| File             | Purpose                                                        | Created       |
-| ---------------- | -------------------------------------------------------------- | ------------- |
-| `plan.md`        | Implementation strategy, decisions, requirements, progress log | After Phase 2 |
-| `walkthrough.md` | Final summary for PR delivery                                  | Phase 6       |
-
-**plan.md is the single source of truth.** It must be comprehensive enough that a new Claude session can execute from it alone without the original conversation.
-
-**DO NOT create artifact files on the main branch.**
-
-### Step 3: Announce Mode Selection
+### Step 2: Announce Mode Selection
 
 State your mode selection explicitly:
 
@@ -129,7 +116,7 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 | [overview](./rules/overview.md)                                 | **HIGH** - Workflow phases, when to use, expected outcomes                 |
 | [smart-worktree-detection](./rules/smart-worktree-detection.md) | **CRITICAL** - Fuzzy match task to current worktree before creating new    |
 | [phase-0-validation](./rules/phase-0-validation.md)             | **CRITICAL** - MANDATORY - Validate requirements before any work           |
-| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis and implementation planning              |
+| [phase-1-planning](./rules/phase-1-planning.md)                 | **HIGH** - Deep codebase analysis, planning, confidence gate               |
 | [phase-2-worktree](./rules/phase-2-worktree.md)                 | **CRITICAL** - MANDATORY - Create isolated worktree with `gw add`          |
 | [phase-3-implementation](./rules/phase-3-implementation.md)     | **HIGH** - Incremental implementation with verification after each change  |
 | [phase-4-testing](./rules/phase-4-testing.md)                   | **CRITICAL** - Fast iteration loop until tests pass (Ralph Wiggum pattern) |
@@ -140,15 +127,22 @@ Once `gw` is installed and configured, resume the workflow from Phase 2.
 | [error-recovery](./rules/error-recovery.md)                     | **HIGH** - Recovery procedures for common errors                           |
 | [safety-guardrails](./rules/safety-guardrails.md)               | **CRITICAL** - Validation checkpoints, resource limits, rollback           |
 | [parallel-coordination](./rules/parallel-coordination.md)       | **HIGH** - Multi-agent coordination, handoff protocol                      |
-| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Two-artifact pattern (Plan, Walkthrough), file locations        |
-| [walkthrough-generation](./rules/walkthrough-generation.md)     | **MEDIUM** - Final summary generation at Phase 6                           |
+| [artifacts-overview](./rules/artifacts-overview.md)             | **HIGH** - Two-artifact pattern, file locations, skill invocations         |
+
+## Companion Skills
+
+These skills handle artifact generation and quality gates. They are invoked by the workflow at the right phases.
+
+| Skill | Purpose | Invoked at |
+| --- | --- | --- |
+| [confidence](../confidence/SKILL.md) | Quality gate — validates plan, code, or bug analysis | Phase 1 (plan gate), Phase 6 (optional code gate) |
+| [create-plan](../create-plan/SKILL.md) | Generates `plan.md` from conversation context | After Phase 2 worktree setup |
+| [create-walkthrough](../create-walkthrough/SKILL.md) | Generates `walkthrough.md` from plan + git results | Phase 6 before PR creation |
 
 ## Templates
 
 | Template                                                         | Purpose                                      |
 | ---------------------------------------------------------------- | -------------------------------------------- |
-| [plan.template.md](./templates/plan.template.md)                 | Implementation plan with progress log        |
-| [walkthrough.template.md](./templates/walkthrough.template.md)   | Final summary for PR delivery                |
 | [agent.template.md](./templates/agent.template.md)               | Agent file (copy to `~/.claude/agents/`)     |
 | [routing-rule.template.md](./templates/routing-rule.template.md) | Auto-trigger rule (copy to `.claude/rules/`) |
 
@@ -159,18 +153,22 @@ Install the agent and routing rule so Claude auto-triggers on phrases like _"ind
 **Option A: Global** (personal use — works in all projects)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --global --yes && \
   mkdir -p ~/.claude/agents && \
   ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Option B: Per-project** (team use — committable to git)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --yes && \
   mkdir -p .claude/agents .claude/rules && \
   ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
@@ -178,7 +176,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
 
 To customize the agent for a specific project, copy instead of symlink and edit directly. See [routing-rule.template.md](./templates/routing-rule.template.md) and [agent.template.md](./templates/agent.template.md) for details.
 
@@ -189,12 +187,12 @@ To customize the agent for a specific project, copy instead of symlink and edit 
 | Phase             | Command/Action                                                               |
 | ----------------- | ---------------------------------------------------------------------------- |
 | 0. Validation     | Ask clarifying questions, get user confirmation, detect mode                 |
-| 1. Planning       | Analyze codebase, prepare plan content in conversation (verbose, all detail) |
-| 2. Worktree       | `gw add feat/feature-name`, then CREATE & POPULATE `.gw/{branch}/plan.md`    |
+| 1. Planning       | Analyze codebase, design approach, then `Skill("confidence", "plan")` gate   |
+| 2. Worktree       | `gw add feat/feature-name`, then `Skill("create-plan")` inside worktree     |
 | 3. Implementation | Code in worktree, verify after editing, update Progress Log at milestones    |
 | 4. Testing        | `npm test`, iterate until passing, log results in Progress Log               |
 | 5. Documentation  | Update README, CHANGELOG                                                     |
-| 6. PR Creation    | CREATE `walkthrough.md`, `gh pr create --draft`, SHOW walkthrough to user    |
+| 6. PR Creation    | `Skill("create-walkthrough")`, `gh pr create --draft`, SHOW walkthrough      |
 | 7. Cleanup        | `gw remove feat/feature-name` (after merge)                                  |
 
 ### Lite Mode (1-3 files, simple changes)
@@ -221,28 +219,30 @@ To customize the agent for a specific project, copy instead of symlink and edit 
 
 ## Artifact System
 
-The workflow produces two artifacts in `.gw/{branch-name}/`:
+The workflow produces two artifacts in `.gw/{branch-name}/`, each generated by a dedicated skill:
 
-| Artifact        | File             | Created       | Purpose                                          |
-| --------------- | ---------------- | ------------- | ------------------------------------------------ |
-| **Plan**        | `plan.md`        | Phase 2 (end) | Implementation strategy, decisions, progress log |
-| **Walkthrough** | `walkthrough.md` | Phase 6       | Final summary for PR delivery                    |
+| Artifact        | File             | Generated by                    | When          |
+| --------------- | ---------------- | ------------------------------- | ------------- |
+| **Plan**        | `plan.md`        | `Skill("create-plan")`          | After Phase 2 |
+| **Walkthrough** | `walkthrough.md` | `Skill("create-walkthrough")`   | Phase 6       |
 
 Files are gitignored and grouped by branch for easy browsing.
 
-**All timestamps** in artifact frontmatter MUST use full ISO 8601 with time: `YYYY-MM-DDTHH:MM:SSZ` (e.g. `2026-03-07T14:30:00Z`).
+**Quality gate**: Before plan creation, `Skill("confidence", "plan")` must reach 90%+.
 
 ## Workflow Flow
 
 ```
 Phase 0: Validation <- MANDATORY
     | (user confirms)
-Phase 1: Planning (prepare content IN CONVERSATION, no files yet)
+Phase 1: Planning (deep analysis, design approach)
+    | Skill("confidence", "plan") <- quality gate (90%+)
     | (plan validated)
 Phase 2: Worktree Setup <- MANDATORY
-    | Full Mode: CREATE & POPULATE plan.md INSIDE worktree
-    | (worktree created, plan.md populated)
+    | Skill("create-plan") <- generates plan.md inside worktree
+    | (worktree created, plan.md written)
 Phase 3: Implementation
+    | Read plan.md -> execute Implementation Order
     | Verify after editing. Update Progress Log at milestones.
     | (code complete)
 Phase 4: Testing <- iterate until passing
@@ -250,7 +250,8 @@ Phase 4: Testing <- iterate until passing
 Phase 5: Documentation
     | (docs complete)
 Phase 6: PR Creation
-    | Full Mode: CREATE walkthrough.md + SHOW to user
+    | Skill("create-walkthrough") <- generates walkthrough.md
+    | gh pr create --draft, SHOW walkthrough to user
     | (draft PR delivered)
 Phase 7: Cleanup (optional)
 ```
@@ -286,8 +287,8 @@ while not all_tests_pass:
 | Secrets missing        | `cat .gw/config.json`      | `gw sync <branch> .env`                                               |
 | Tests keep failing     | plan.md Progress Log       | Focus on ONE failure, escalate at 7+                                  |
 | Agent hallucinated cmd | Error message              | See [error-recovery](./rules/error-recovery.md#hallucinated-commands) |
-| plan.md empty          | `cat .gw/{branch}/plan.md` | STOP, populate plan.md before proceeding                              |
-| walkthrough.md missing | `ls .gw/{branch}/`         | Create before announcing completion                                   |
+| plan.md empty          | `cat .gw/{branch}/plan.md` | Re-run `Skill("create-plan")`                                         |
+| walkthrough.md missing | `ls .gw/{branch}/`         | Run `Skill("create-walkthrough")` before announcing completion        |
 
 ## Related Skills
 

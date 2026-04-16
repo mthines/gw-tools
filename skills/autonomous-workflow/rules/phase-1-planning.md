@@ -74,7 +74,7 @@ Tools: `Grep`, `Read`
 
 ### Step 2: Create Implementation Plan
 
-**This is the most important step.** The plan.md must be comprehensive enough to serve as complete context for a new Claude session. Use the `templates/plan.template.md` as your structure and fill in EVERY section thoroughly.
+**This is the most important step.** The plan.md must be comprehensive enough to serve as complete context for a new Claude session. The `create-plan` skill provides the exact template structure and validation checklist.
 
 #### 2a: Capture Phase 0 Discussion Context
 
@@ -137,82 +137,45 @@ Check `package.json` scripts, `Makefile`, or project config to determine the rig
 | Breaking API change | LOW        | HIGH   | Add deprecation warning |
 ```
 
-### Step 3: Self-Validation
+### Step 3: Confidence Gate (Full Mode — MANDATORY)
 
-Ask yourself:
+After completing your analysis and planning, validate the plan quality:
 
-**Completeness:**
+```
+Skill(skill: "confidence", args: "plan")
+```
 
-- Does this plan achieve all requirements from Phase 0?
-- Are edge cases addressed?
+**Gate rules:**
 
-**Correctness:**
+- **90%+**: Proceed to Phase 2
+- **Below 90%**: Do up to 2 iterations of additional research, analysis, and evidence collection, then re-assess
+- **Still below 90% after 2 iterations**: Present findings to user and ask whether to proceed or refine further
 
-- Does this follow existing project patterns?
-- Are dependencies correct?
+**Do NOT proceed to Phase 2 until the confidence gate passes or the user explicitly approves.**
 
-**Testability:**
+### Step 4: Create Plan Artifact (Full Mode — MANDATORY)
 
-- Can this be validated with tests?
-- Are test cases comprehensive?
+After the confidence gate passes and the worktree is created (Phase 2), generate the plan artifact:
 
-**Maintainability:**
+```
+Skill(skill: "create-plan")
+```
 
-- Is this approach simple enough?
-- Will other developers understand this?
+This skill provides the exact template structure and validation checklist. It captures all Phase 0-1 discussion into a self-contained document inside `.gw/{branch}/plan.md`.
 
-### Step 4: Prepare Artifact Content (Full Mode)
-
-**Do NOT write artifact files to disk yet.** Artifact files are created after Phase 2 worktree setup so they live in the worktree, not on the main branch.
-
-Prepare the **plan.md** content in conversation — ALL sections from `templates/plan.template.md`:
-
-- **Summary**: What, why, and definition of "done"
-- **Background & Context**: Full motivation and history from discussion
-- **Requirements**: Every requirement (tagged [user-stated] or [inferred]), plus out-of-scope items
-- **Decisions**: Every decision with rejected alternatives and rationale
-- **Technical Approach**: Architecture, patterns to follow, edge cases, API/interface designs
-- **Implementation Order**: Numbered step-by-step execution sequence
-- **File Changes**: Single table covering creates, modifies, and doc updates with rationale
-- **Tests**: Specific test cases with type (unit/integration/manual)
-- **Dependencies**: With versions, mark new additions
-- **Risks**: With likelihood, impact, and mitigations
-- **Verification**: After-edit and before-PR commands
-- **Progress Log**: Initialize with "Phase 1: Plan created"
-
-**The plan.md content should be detailed and comprehensive — a new Claude session must be able to execute from it alone without the original conversation. Optimize for information density: be thorough in content, but use tables and structured formats rather than prose where possible.**
-
-**This content will be written to `.gw/{branch}/plan.md` after the worktree is created in Phase 2.**
-
-See [artifacts-overview](./artifacts-overview.md) for full details.
-
-### Step 5: Iterate if Needed
-
-If self-validation reveals issues:
-
-1. Refine the plan
-2. Re-validate
-3. Iterate until plan is solid
-
-**Do NOT proceed to Phase 2 until plan is validated.**
+**The plan.md is the single source of truth.** A new Claude session must be able to execute from it alone.
 
 ## Planning Checklist
 
 - [ ] Codebase analyzed (structure, patterns, stack)
-- [ ] Background & context documented (the "why")
-- [ ] ALL requirements captured with tags ([user-stated]/[inferred]) + out-of-scope items
-- [ ] ALL decisions documented with rejected alternatives and rationale
-- [ ] Technical approach detailed (architecture, patterns, edge cases, APIs)
-- [ ] Implementation order defined (numbered steps)
-- [ ] File changes table complete (creates, modifies, doc updates)
-- [ ] Tests defined as specific cases (not just categories)
-- [ ] Risks documented with likelihood, impact, and mitigations
-- [ ] Verification commands identified (after-edit + before-PR)
-- [ ] Plan self-validated — a new session could execute from plan.md alone
+- [ ] Technical approach designed with specific file references
+- [ ] Confidence gate passed (90%+ or user-approved)
+- [ ] Worktree created (Phase 2)
+- [ ] `Skill("create-plan")` invoked to generate plan.md inside worktree
 
 ## References
 
 - Related rule: [phase-0-validation](./phase-0-validation.md)
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
-- Related rule: [artifacts-overview](./artifacts-overview.md)
-- Template: `templates/plan.template.md`
+- Related skill: [confidence](../../confidence/SKILL.md)
+- Related skill: [create-plan](../../create-plan/SKILL.md)

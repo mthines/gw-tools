@@ -32,18 +32,22 @@ Choose **global** or **per-project**:
 **Option A: Global** (personal use — works in all projects)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --global --yes && \
   mkdir -p ~/.claude/agents && \
   ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Option B: Per-project** (team use — committable to git)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --yes && \
   mkdir -p .claude/agents .claude/rules && \
   ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
@@ -51,7 +55,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
 
 To customize the agent for a specific project, copy instead of symlink and edit the file.
 
@@ -70,10 +74,14 @@ Say _"implement X independently"_ and the agent takes over.
 
 - **[SKILL.md](./SKILL.md)** - Complete autonomous workflow procedures
 
+### Companion Skills
+
+- **[confidence](../confidence/SKILL.md)** - Quality gate for plan, code, or bug analysis validation
+- **[create-plan](../create-plan/SKILL.md)** - Generates `plan.md` artifact with consistent structure
+- **[create-walkthrough](../create-walkthrough/SKILL.md)** - Generates `walkthrough.md` summary for PR delivery
+
 ### Templates
 
-- **[plan.template.md](./templates/plan.template.md)** - Implementation plan with progress log
-- **[walkthrough.template.md](./templates/walkthrough.template.md)** - Final summary for PR delivery
 - **[routing-rule.template.md](./templates/routing-rule.template.md)** - Auto-trigger rule for Claude Code
 
 ### References (Lazy-loaded)
