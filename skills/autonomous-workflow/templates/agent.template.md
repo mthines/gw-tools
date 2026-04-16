@@ -19,7 +19,7 @@ Skill(skill: "autonomous-workflow")
 ```
 
 If the skill is unavailable, ask the user to install it:
-`npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes`
+`npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow create-plan create-walkthrough confidence --yes`
 
 ## Then: Detect workflow mode
 

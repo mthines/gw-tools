@@ -80,7 +80,7 @@ Your `autonomous-workflow` skill is on version **{local_version}**, but **{lates
 To update, run:
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow create-plan create-walkthrough confidence
 ```
 ````
 

@@ -46,6 +46,28 @@
           "cwd": "dist/packages/autonomous-workflow-agent"
         }
       }
+    },
+    "install-local": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "echo '📦 Installing skills to ~/.agents/skills/ ...'",
+          "rsync -a --delete skills/autonomous-workflow/ ~/.agents/skills/autonomous-workflow/",
+          "rsync -a --delete skills/create-plan/ ~/.agents/skills/create-plan/",
+          "rsync -a --delete skills/create-walkthrough/ ~/.agents/skills/create-walkthrough/",
+          "rsync -a --delete skills/confidence/ ~/.agents/skills/confidence/",
+          "echo '🔗 Ensuring symlinks in ~/.claude/ ...'",
+          "mkdir -p ~/.claude/agents ~/.claude/skills",
+          "ln -sfn ~/.agents/skills/autonomous-workflow ~/.claude/skills/autonomous-workflow",
+          "ln -sfn ~/.agents/skills/create-plan ~/.claude/skills/create-plan",
+          "ln -sfn ~/.agents/skills/create-walkthrough ~/.claude/skills/create-walkthrough",
+          "ln -sfn ~/.agents/skills/confidence ~/.claude/skills/confidence",
+          "ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md ~/.claude/agents/autonomous-workflow.md",
+          "echo '✅ Done. Installed skills: autonomous-workflow, create-plan, create-walkthrough, confidence'"
+        ],
+        "cwd": "{workspaceRoot}",
+        "parallel": false
+      }
     }
   }
 }

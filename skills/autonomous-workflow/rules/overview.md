@@ -20,7 +20,7 @@ tags:
 | **Full** | 4+ files OR complex/architectural    | **YES - MANDATORY** |
 | **Lite** | 1-3 files AND simple/straightforward | No                  |
 
-**For Full Mode:** Plan artifact content during Phase 1, then create `.gw/{branch-name}/plan.md` inside the worktree AFTER Phase 2 setup. **Never create artifact files on the main branch.**
+**For Full Mode:** Plan during Phase 1, validate with `Skill("confidence", "plan")`, then generate plan.md via `Skill("create-plan")` inside the worktree AFTER Phase 2 setup. **Never create artifact files on the main branch.**
 
 **State your mode selection explicitly before proceeding.**
 
@@ -69,19 +69,22 @@ See [artifacts-overview](./artifacts-overview.md) for full details.
 ```
 Phase 0: Validation + Mode Detection
     | (user confirms, mode selected)
-Phase 1: Planning (Full: prepare plan in conversation, Lite: mental plan)
+Phase 1: Planning (Full: deep analysis + confidence gate, Lite: mental plan)
+    | Skill("confidence", "plan") <- 90%+ gate
     | (plan validated)
 Phase 2: Worktree Setup - MANDATORY
-    | Full Mode: CREATE & POPULATE plan.md INSIDE worktree
-    | (worktree created, plan.md populated)
-Phase 3: Implementation (Full: update Progress Log, Lite: just code)
-    | Verify after editing. Verify periodically. Fix failures immediately.
+    | Skill("create-plan") <- generates plan.md INSIDE worktree
+    | (worktree created, plan.md written)
+Phase 3: Implementation (Full: follow plan.md, update Progress Log)
+    | Verify after editing. Fix failures immediately.
     | (code complete)
 Phase 4: Testing & Iteration <- iterate until passing
     | (all tests pass)
 Phase 5: Documentation
     | (docs complete)
-Phase 6: PR Creation (Full: generate walkthrough.md)
+Phase 6: PR Creation
+    | Skill("create-walkthrough") <- generates walkthrough.md
+    | gh pr create --draft, SHOW walkthrough
     | (PR delivered)
 Phase 7: Cleanup (optional)
 ```
@@ -108,10 +111,11 @@ Phase 7: Cleanup (optional)
 
 Use for complex, multi-file changes:
 
-- Creates `.gw/{branch}/plan.md` and `walkthrough.md`
+- Validates plan via `Skill("confidence", "plan")` before execution
+- Generates `.gw/{branch}/plan.md` via `Skill("create-plan")`
 - Tracks progress via plan.md Progress Log
 - Enables context recovery and handoff
-- Generates comprehensive PR summary
+- Generates walkthrough via `Skill("create-walkthrough")` at PR time
 
 **Triggers:**
 
@@ -169,4 +173,7 @@ Is this a complex change? (4+ files OR architectural)
 - Related rule: [phase-0-validation](./phase-0-validation.md)
 - Related rule: [phase-2-worktree](./phase-2-worktree.md)
 - Related rule: [artifacts-overview](./artifacts-overview.md)
+- Related skill: [confidence](../../confidence/SKILL.md)
+- Related skill: [create-plan](../../create-plan/SKILL.md)
+- Related skill: [create-walkthrough](../../create-walkthrough/SKILL.md)
 - Research: [Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/)

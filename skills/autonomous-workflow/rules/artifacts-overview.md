@@ -30,7 +30,7 @@ mkdir -p .gw/{branch-name}
 
 ## Overview
 
-The autonomous workflow uses a two-artifact pattern for documenting decisions, tracking progress, and generating summaries. These artifacts provide explicit, user-visible files that survive context compaction and enable session handoff.
+The autonomous workflow uses a two-artifact pattern for documenting decisions, tracking progress, and generating summaries. Artifact creation is handled by dedicated skills that guarantee consistent, complete output.
 
 ## When to Use Artifacts
 
@@ -51,19 +51,22 @@ See [overview](./overview.md) for the complete decision flow.
 
 ## Two-Artifact Pattern
 
-| Artifact        | File             | Purpose                                           | Created       |
-| --------------- | ---------------- | ------------------------------------------------- | ------------- |
-| **Plan**        | `plan.md`        | Implementation strategy, decisions, progress log  | Phase 2 (end) |
-| **Walkthrough** | `walkthrough.md` | Final summary, verification steps for PR delivery | Phase 6       |
+| Artifact        | File             | Created by                       | When          |
+| --------------- | ---------------- | -------------------------------- | ------------- |
+| **Plan**        | `plan.md`        | `Skill("create-plan")`           | After Phase 2 |
+| **Walkthrough** | `walkthrough.md` | `Skill("create-walkthrough")`    | Phase 6       |
 
-**plan.md** is the single source of truth. It contains:
+**plan.md** is the single source of truth. A new Claude session should be able to execute from it alone.
 
-- Full Phase 0 discussion context (requirements, decisions, rationale)
-- Technical approach and implementation order
-- Verification commands for the project
-- **Progress Log** — append-only log updated at phase transitions and milestones
+## Quality Gate
 
-A new Claude session should be able to execute from plan.md alone.
+Before creating plan.md, the plan is validated via:
+
+```
+Skill(skill: "confidence", args: "plan")
+```
+
+The confidence gate must reach 90%+ (or be user-approved) before proceeding.
 
 ## File Location
 
@@ -99,23 +102,18 @@ When context is compacted or a new session starts, read `.gw/{branch}/plan.md` t
 
 **Instruction**: "If context has been compacted, read `.gw/{branch}/plan.md` to recover full context."
 
-## Templates
-
-Use templates from `skills/autonomous-workflow/templates/` for consistency:
-
-- `plan.template.md` - Implementation plan structure with Progress Log
-- `walkthrough.template.md` - Summary structure for PR delivery
-
 ## Key Principles
 
-- **Plan in Phase 1**: Prepare artifact content in conversation during codebase analysis
-- **Create AFTER Phase 2**: Write artifact files inside the worktree (never on main branch)
-- **Populate at end of Phase 2**: Fill `plan.md` with planning content from Phase 1
+- **Plan in Phase 1**: Analyze codebase and prepare plan content in conversation
+- **Validate with confidence gate**: `Skill("confidence", "plan")` must pass before artifact creation
+- **Create AFTER Phase 2**: Artifact files go inside the worktree (never on main branch)
+- **Use dedicated skills**: `Skill("create-plan")` and `Skill("create-walkthrough")` guarantee format consistency
 - **Update Progress Log at milestones**: Append entries at phase transitions and key completions
-- **Generate walkthrough at Phase 6**: Create `walkthrough.md` for PR delivery
 
 ## References
 
-- Related rule: [walkthrough-generation](./walkthrough-generation.md)
+- Related skill: [confidence](../../confidence/SKILL.md) — Quality gate for plan validation
+- Related skill: [create-plan](../../create-plan/SKILL.md) — Plan artifact generation
+- Related skill: [create-walkthrough](../../create-walkthrough/SKILL.md) — Walkthrough artifact generation
 - Related rule: [phase-1-planning](./phase-1-planning.md)
 - Research: [Antigravity Artifacts](https://developers.googleblog.com/build-with-google-antigravity-our-new-agentic-development-platform/)

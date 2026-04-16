@@ -17,18 +17,22 @@ Install the skill + agent either **globally** or **per-project**:
 **Option A: Global** (recommended for personal use — works in all projects)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --global --yes && \
   mkdir -p ~/.claude/agents && \
   ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Option B: Per-project** (recommended for teams — committable to git)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+npx skills add https://github.com/mthines/gw-tools \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+  --yes && \
   mkdir -p .claude/agents .claude/rules && \
   ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
@@ -36,7 +40,7 @@ npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow -
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
 
 Then initialize gw in your project: `gw init`
 
