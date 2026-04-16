@@ -12,53 +12,33 @@ Install the gw CLI (manages Git worktrees):
 brew install mthines/gw-tools/gw
 ```
 
-Install the autonomous-workflow skill:
+Install the skill + agent either **globally** or **per-project**:
+
+**Option A: Global** (recommended for personal use — works in all projects)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes
-```
-
-```bash
-npm install -g @gw-tools/gw
-```
-
-```bash
-yay -S gw-tools
-```
-
-Then initialize gw in your project: `gw init`
-
-### Step 2: Install the agent and routing rule
-
-Choose **global** (works in all projects) or **project-level** (customizable per project, committable to git):
-
-**Option A: Global install** (recommended for personal use)
-
-```bash
-mkdir -p ~/.claude/agents && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --global --yes && \
+  mkdir -p ~/.claude/agents && \
+  ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
      ~/.claude/agents/autonomous-workflow.md
 ```
 
-Then add the routing rule to each project where you want auto-triggering:
+Installs the skill to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
+
+**Option B: Per-project** (recommended for teams — committable to git)
 
 ```bash
-mkdir -p .claude/rules && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
-     .claude/rules/autonomous-workflow-routing.md
-```
-
-**Option B: Project-level install** (recommended for teams)
-
-```bash
-mkdir -p .claude/agents .claude/rules && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/agent.template.md \
+npx skills add https://github.com/mthines/gw-tools --skill autonomous-workflow --yes && \
+  mkdir -p .claude/agents .claude/rules && \
+  ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
      .claude/agents/autonomous-workflow.md && \
-  ln -sf ~/.claude/skills/autonomous-workflow/templates/routing-rule.template.md \
+  ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
      .claude/rules/autonomous-workflow-routing.md
 ```
 
-Both files can be committed to git so the whole team gets the agent and auto-triggering. To customize the agent behavior for a specific project, copy instead of symlink and edit the file directly.
+Installs the skill to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+
+Then initialize gw in your project: `gw init`
 
 ### How to use it
 
