@@ -51,10 +51,10 @@ See [overview](./overview.md) for the complete decision flow.
 
 ## Two-Artifact Pattern
 
-| Artifact        | File             | Created by                       | When          |
-| --------------- | ---------------- | -------------------------------- | ------------- |
-| **Plan**        | `plan.md`        | `Skill("create-plan")`           | After Phase 2 |
-| **Walkthrough** | `walkthrough.md` | `Skill("create-walkthrough")`    | Phase 6       |
+| Artifact        | File             | Created by                    | When          |
+| --------------- | ---------------- | ----------------------------- | ------------- |
+| **Plan**        | `plan.md`        | `Skill("create-plan")`        | After Phase 2 |
+| **Walkthrough** | `walkthrough.md` | `Skill("create-walkthrough")` | Phase 6       |
 
 **plan.md** is the single source of truth. A new Claude session should be able to execute from it alone.
 

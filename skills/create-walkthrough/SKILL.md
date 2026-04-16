@@ -69,10 +69,10 @@ After writing the file, output the walkthrough content directly in the conversat
 
 ```markdown
 ---
-created: {TIMESTAMP}
-branch: {BRANCH}
-task: {TASK_DESCRIPTION}
-pr: {PR_NUMBER}
+created: { TIMESTAMP }
+branch: { BRANCH }
+task: { TASK_DESCRIPTION }
+pr: { PR_NUMBER }
 ---
 
 # Walkthrough: {TASK_DESCRIPTION}
