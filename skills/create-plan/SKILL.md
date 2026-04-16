@@ -58,10 +58,10 @@ After writing, verify against the checklist at the bottom of this skill. If any 
 
 ```markdown
 ---
-created: {TIMESTAMP}
-branch: {BRANCH}
-task: {TASK_DESCRIPTION}
-complexity: {LOW | MEDIUM | HIGH}
+created: { TIMESTAMP }
+branch: { BRANCH }
+task: { TASK_DESCRIPTION }
+complexity: { LOW | MEDIUM | HIGH }
 status: approved
 approved: true
 ---
@@ -128,20 +128,20 @@ approved: true
 
 <!-- ALL files: create, modify, or delete. Include docs. -->
 
-| Action | File | Change | Reason |
-| ------ | ---- | ------ | ------ |
-| create | {path} | {purpose / key exports} | {why} |
-| modify | {path} | {specific changes} | {why} |
+| Action | File   | Change                  | Reason |
+| ------ | ------ | ----------------------- | ------ |
+| create | {path} | {purpose / key exports} | {why}  |
+| modify | {path} | {specific changes}      | {why}  |
 
 ## Tests
 
 <!-- Specific test cases, not categories. Each row is a concrete test. -->
 
-| Type | Test Case | File | Validates |
-| ---- | --------- | ---- | --------- |
-| unit | {case} | {file} | {behavior} |
-| integration | | | |
-| manual | {step-by-step} | | |
+| Type        | Test Case      | File   | Validates  |
+| ----------- | -------------- | ------ | ---------- |
+| unit        | {case}         | {file} | {behavior} |
+| integration |                |        |            |
+| manual      | {step-by-step} |        |            |
 
 ## Dependencies
 
@@ -194,11 +194,11 @@ After writing plan.md, verify ALL of the following. **Fix any failures immediate
 
 ## Common Failures
 
-| Failure | Fix |
-| ------- | --- |
+| Failure                              | Fix                                                                   |
+| ------------------------------------ | --------------------------------------------------------------------- |
 | Sparse sections ("TBD", "see above") | Fill from conversation context — every section must be self-contained |
-| Missing decisions rationale | Add "Alternatives Rejected" and "Rationale" for each decision |
-| Vague implementation steps | Make each step atomic: "Add X to file Y" not "implement feature" |
-| No file paths in Patterns | Reference specific existing files, not abstract descriptions |
-| Requirements not tagged | Add `[user-stated]` or `[inferred]` to every requirement |
-| Timestamps missing time component | Use `2026-03-07T14:30:00Z` not `2026-03-07` |
+| Missing decisions rationale          | Add "Alternatives Rejected" and "Rationale" for each decision         |
+| Vague implementation steps           | Make each step atomic: "Add X to file Y" not "implement feature"      |
+| No file paths in Patterns            | Reference specific existing files, not abstract descriptions          |
+| Requirements not tagged              | Add `[user-stated]` or `[inferred]` to every requirement              |
+| Timestamps missing time component    | Use `2026-03-07T14:30:00Z` not `2026-03-07`                           |

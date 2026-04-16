@@ -23,11 +23,11 @@ Rate your confidence that the current work fully solves the stated requirement.
 
 Check the arguments: `$ARGUMENTS`
 
-| Argument | Default | Validates | When to use |
-| --- | --- | --- | --- |
-| `plan` | | Implementation plan completeness | After Phase 1 planning, before autonomous execution |
-| `code` | **yes** | Code implementation correctness | After writing code, before PR |
-| `bug-analysis` | | Root cause analysis accuracy | During investigation, before proposing fix |
+| Argument       | Default | Validates                        | When to use                                         |
+| -------------- | ------- | -------------------------------- | --------------------------------------------------- |
+| `plan`         |         | Implementation plan completeness | After Phase 1 planning, before autonomous execution |
+| `code`         | **yes** | Code implementation correctness  | After writing code, before PR                       |
+| `bug-analysis` |         | Root cause analysis accuracy     | During investigation, before proposing fix          |
 
 If no argument is provided, default to `code`.
 
@@ -39,27 +39,27 @@ If arguments contain **"fix"** (e.g., `code fix`, `plan fix`), run in **Fix Mode
 
 ### For `plan` mode
 
-| Dimension | Weight | What to evaluate |
-| --- | --- | --- |
-| **Completeness** | 40% | Are ALL Phase 0 requirements captured? All sections populated? Could a new session execute from this plan alone? |
-| **Feasibility** | 30% | Is the technical approach sound? Are patterns consistent with the codebase? Are risks identified? |
-| **No ambiguity** | 30% | Are implementation steps specific enough to execute without interpretation? Are edge cases addressed? |
+| Dimension        | Weight | What to evaluate                                                                                                 |
+| ---------------- | ------ | ---------------------------------------------------------------------------------------------------------------- |
+| **Completeness** | 40%    | Are ALL Phase 0 requirements captured? All sections populated? Could a new session execute from this plan alone? |
+| **Feasibility**  | 30%    | Is the technical approach sound? Are patterns consistent with the codebase? Are risks identified?                |
+| **No ambiguity** | 30%    | Are implementation steps specific enough to execute without interpretation? Are edge cases addressed?            |
 
 ### For `code` mode
 
-| Dimension | Weight | What to evaluate |
-| --- | --- | --- |
-| **Correctness** | 40% | Does the logic actually address the problem as described? |
-| **Completeness** | 30% | Are all cases, edge cases, and requirements covered? |
-| **No regressions** | 30% | Could this break existing behavior or introduce side effects? |
+| Dimension          | Weight | What to evaluate                                              |
+| ------------------ | ------ | ------------------------------------------------------------- |
+| **Correctness**    | 40%    | Does the logic actually address the problem as described?     |
+| **Completeness**   | 30%    | Are all cases, edge cases, and requirements covered?          |
+| **No regressions** | 30%    | Could this break existing behavior or introduce side effects? |
 
 ### For `bug-analysis` mode
 
-| Dimension | Weight | What to evaluate |
-| --- | --- | --- |
-| **Evidence strength** | 40% | Is the analysis backed by concrete evidence (logs, traces, code paths)? |
-| **Root cause certainty** | 30% | Is this the root cause or just a symptom? How deep did the investigation go? |
-| **Fix confidence** | 30% | Will the proposed fix resolve the issue without introducing new problems? |
+| Dimension                | Weight | What to evaluate                                                             |
+| ------------------------ | ------ | ---------------------------------------------------------------------------- |
+| **Evidence strength**    | 40%    | Is the analysis backed by concrete evidence (logs, traces, code paths)?      |
+| **Root cause certainty** | 30%    | Is this the root cause or just a symptom? How deep did the investigation go? |
+| **Fix confidence**       | 30%    | Will the proposed fix resolve the issue without introducing new problems?    |
 
 ---
 
@@ -85,10 +85,10 @@ Calculate the overall score as the weighted average using the weights above.
 
 ## Score Thresholds
 
-| Score | Action |
-| --- | --- |
-| **90-100%** | Proceed — work is ready |
-| **70-89%** | List specific concerns and what would raise confidence. If in Fix Mode, apply fixes. |
+| Score         | Action                                                                                      |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| **90-100%**   | Proceed — work is ready                                                                     |
+| **70-89%**    | List specific concerns and what would raise confidence. If in Fix Mode, apply fixes.        |
 | **Below 70%** | Recommend concrete next steps to validate or fix. Do NOT proceed with autonomous execution. |
 
 ---
