@@ -6,7 +6,6 @@ description: >
   Use before committing to autonomous execution, after implementation, or during investigation.
   Triggers on confidence check, validate plan, rate confidence, or quality gate.
 license: MIT
-disable-model-invocation: true
 metadata:
   author: mthines
   version: '1.0.0'
