@@ -32,22 +32,21 @@ Before invoking this skill:
 
 ## Procedure
 
-### Step 1: Gather information
+### Step 1: Determine file location and gather information
 
-**From plan.md:**
+Run this command to get the artifact path and gather git information — do NOT guess the branch name:
 
 ```bash
-cat .gw/{branch-name}/plan.md
+BRANCH=$(git branch --show-current) && mkdir -p ".gw/${BRANCH}" && echo "Artifact path: .gw/${BRANCH}/walkthrough.md" && echo "---" && git diff --stat main...HEAD && echo "---" && git log --oneline main...HEAD
+```
+
+**From plan.md** (read the file at the path determined above):
+
+```bash
+cat ".gw/${BRANCH}/plan.md"
 ```
 
 Extract: Summary, Decisions, Requirements, File Changes table.
-
-**From git:**
-
-```bash
-git diff --stat main...HEAD
-git log --oneline main...HEAD
-```
 
 **From test results:**
 
@@ -55,7 +54,7 @@ Recall or re-run the test suite to confirm current status.
 
 ### Step 2: Write walkthrough.md
 
-Create `.gw/{branch-name}/walkthrough.md` using the template below.
+Create the file at the path from Step 1 using the template below. **Do NOT hardcode or guess the branch name.**
 
 ### Step 3: Present to user
 
@@ -129,7 +128,7 @@ pr: { PR_NUMBER }
 
 After writing walkthrough.md, verify:
 
-- [ ] **File location**: `.gw/{branch-name}/walkthrough.md` inside the worktree
+- [ ] **File location**: Path from `git branch --show-current` — inside the worktree
 - [ ] **Frontmatter**: created, branch, task, pr — all filled
 - [ ] **Timestamps**: ISO 8601 with time
 - [ ] **Summary**: Concise, describes what was done and the outcome

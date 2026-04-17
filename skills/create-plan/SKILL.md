@@ -36,15 +36,17 @@ Before invoking this skill:
 
 ### Step 1: Determine file location
 
+Run this command to get the artifact path — do NOT guess the branch name:
+
 ```bash
-# The branch name comes from the worktree
-# File goes in .gw/{branch-name}/plan.md
-mkdir -p .gw/{branch-name}
+BRANCH=$(git branch --show-current) && mkdir -p ".gw/${BRANCH}" && echo ".gw/${BRANCH}/plan.md"
 ```
+
+Use the output as the file path. **Do NOT hardcode or guess the branch name.**
 
 ### Step 2: Write plan.md
 
-Create the file using the EXACT template structure below. **Every section is MANDATORY for Full Mode.** Fill each section from the Phase 0-1 conversation context.
+Create the file at the path from Step 1 using the EXACT template structure below. **Every section is MANDATORY.** Fill each section from the Phase 0-1 conversation context.
 
 ### Step 3: Validate completeness
 
@@ -173,7 +175,7 @@ approved: true
 
 After writing plan.md, verify ALL of the following. **Fix any failures immediately.**
 
-- [ ] **File location**: `.gw/{branch-name}/plan.md` inside the worktree (NOT on main)
+- [ ] **File location**: Path from `git branch --show-current` — inside the worktree (NOT on main)
 - [ ] **Frontmatter complete**: created, branch, task, complexity, status, approved — all filled
 - [ ] **Timestamps**: All timestamps use ISO 8601 with time (`YYYY-MM-DDTHH:MM:SSZ`)
 - [ ] **Summary**: Concise what/why/done definition (2-3 sentences)
