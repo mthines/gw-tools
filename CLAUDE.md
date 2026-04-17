@@ -24,7 +24,7 @@ When adding, changing, or removing features in the gw CLI tool, always update th
    - `README.md` - Root repo overview (if applicable)
 
 2. **Skills documentation:**
-   - `skills/config-management/SKILL.md` - Configuration-related features
+   - `skills/gw-config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
    - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features (@autonomous-workflow)
 
@@ -107,10 +107,10 @@ When the user requests autonomous feature development or end-to-end implementati
 1. **Use the @autonomous-workflow skill** — It provides complete procedures for autonomous execution
 2. **Phase 0 is MANDATORY** — Always ask clarifying questions and validate understanding first
 3. **plan.md is the single source of truth** — Must be comprehensive enough for a new session to execute alone
-4. **Two artifacts only** — `plan.md` (with Progress Log) and `walkthrough.md` (at PR delivery)
-5. **Verify after editing** — Run fast checks after each change, full suite before PR
-6. **Iterate until correct** — No artificial limits (Ralph Wiggum pattern)
-7. **Quality gates** — Don't proceed to next phase until current phase is validated
+4. **Companion skills generate artifacts** — Use `Skill("create-plan")` after worktree setup and `Skill("create-walkthrough")` at PR delivery
+5. **Quality gates** — `Skill("confidence", "plan")` must reach 90%+ before plan creation
+6. **Verify after editing** — Run fast checks after each change, full suite before PR
+7. **Iterate until correct** — No artificial limits (Ralph Wiggum pattern)
 8. **Stop and ask** when encountering fundamental blockers or ambiguities
 
 ### Auto-Trigger Setup

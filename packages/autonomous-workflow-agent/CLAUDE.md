@@ -40,17 +40,22 @@ src/
 - Package uses ES modules (`"type": "module"`) - use `.js` extensions in imports
 - `systemPrompt` is ~8KB — it references the skill for detailed procedures, not duplicates them
 - The system prompt references the `autonomous-workflow` skill which must be installed
+- Companion skills (`confidence`, `create-plan`, `create-walkthrough`) must also be installed — the workflow invokes them via `Skill()`
 
 ## Coupled Documentation
 
 This package and `skills/autonomous-workflow/` describe the **same workflow** and must stay in sync:
 
 1. Update the skill files first: `skills/autonomous-workflow/SKILL.md`, `rules/*.md`, `README.md`
-2. Then update `src/lib/system-prompt.ts` — keep it lean, reference skill for details
-3. Verify the two do not contradict each other
+2. Update companion skills if artifact format changes: `skills/create-plan/`, `skills/create-walkthrough/`, `skills/confidence/`
+3. Then update `src/lib/system-prompt.ts` — keep it lean, reference skill for details
+4. Verify the skill, companion skills, and system prompt do not contradict each other
 
-The skill is the **source of truth**. The system prompt is a lean orchestrator that loads the skill.
+The skill is the **source of truth**. Companion skills handle artifact generation. The system prompt is a lean orchestrator.
 
 ## Related
 
 @../../skills/autonomous-workflow/SKILL.md
+@../../skills/create-plan/SKILL.md
+@../../skills/create-walkthrough/SKILL.md
+@../../skills/confidence/SKILL.md
