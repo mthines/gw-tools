@@ -286,7 +286,7 @@ export async function getWorktreePath(cwd: string, branchName: string): Promise<
  * Clean up stale worktrees via gw clean
  */
 export function cleanWorktrees(cwd: string, opts: { force?: boolean; dryRun?: boolean } = {}): Promise<string> {
-  const flags: string[] = ['--yes'];
+  const flags: string[] = ['--auto', '--yes'];
   if (opts.force) flags.push('--force');
   if (opts.dryRun) flags.push('--dry-run');
   return exec(`gw clean ${flags.join(' ')}`, cwd);

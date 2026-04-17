@@ -62,44 +62,69 @@ export class ArtifactWatcher implements vscode.Disposable {
   }
 
   /**
-   * Find ALL .gw directories walking up from the workspace root.
-   * Watches all roots so artifacts are detected regardless of which
-   * .gw/ directory the autonomous workflow created them in.
+   * Find ALL .gw directories relevant to the current workspace:
+   * 1. Walk up from workspace root to find .gw/ directories.
+   * 2. Read .gw/config.json to find the default branch worktree and check
+   *    for a .gw/ inside it (handles artifacts accidentally created there).
    */
   private findGwRoots(): string[] {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!workspacePath) return [];
 
     const roots: string[] = [];
+    const seen = new Set<string>();
+
     let dir = workspacePath;
     for (let i = 0; i < 5; i++) {
       const gwPath = path.join(dir, '.gw');
       if (fs.existsSync(gwPath) && fs.statSync(gwPath).isDirectory()) {
-        roots.push(gwPath);
+        const real = fs.realpathSync(gwPath);
+        if (!seen.has(real)) {
+          seen.add(real);
+          roots.push(gwPath);
+        }
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
+
+    // Also check the default branch worktree for a .gw/ directory
+    for (const gwRoot of roots) {
+      const configPath = path.join(gwRoot, 'config.json');
+      try {
+        const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
+        const repoRoot: string | undefined = config.root;
+        const defaultBranch: string | undefined = config.defaultBranch;
+        if (!repoRoot || !defaultBranch) continue;
+
+        const defaultWorktreeGw = path.join(repoRoot, defaultBranch, '.gw');
+        if (fs.existsSync(defaultWorktreeGw) && fs.statSync(defaultWorktreeGw).isDirectory()) {
+          const real = fs.realpathSync(defaultWorktreeGw);
+          if (!seen.has(real)) {
+            seen.add(real);
+            roots.push(defaultWorktreeGw);
+          }
+        }
+        break;
+      } catch {
+        // config.json missing or invalid
+      }
+    }
+
     return roots;
   }
 
+  /**
+   * Returns parent directories of each .gw/ root as watch bases for VS Code watchers.
+   */
   private getWatchBases(): vscode.Uri[] {
-    const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspacePath) return [];
-
-    const bases: vscode.Uri[] = [];
-    let dir = workspacePath;
-    for (let i = 0; i < 5; i++) {
-      const gwPath = path.join(dir, '.gw');
-      if (fs.existsSync(gwPath)) {
-        bases.push(vscode.Uri.file(dir));
-      }
-      const parent = path.dirname(dir);
-      if (parent === dir) break;
-      dir = parent;
+    const gwRoots = this.findGwRoots();
+    if (gwRoots.length === 0) {
+      const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      return workspacePath ? [vscode.Uri.file(workspacePath)] : [];
     }
-    return bases.length > 0 ? bases : [vscode.Uri.file(workspacePath || '/')];
+    return gwRoots.map((gwRoot) => vscode.Uri.file(path.dirname(gwRoot)));
   }
 
   private setupWatchers(): void {
