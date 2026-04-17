@@ -158,9 +158,7 @@ export class ArtifactWatcher implements vscode.Disposable {
 
     for (const base of watchBases) {
       for (const pattern of patterns) {
-        const watcher = vscode.workspace.createFileSystemWatcher(
-          new vscode.RelativePattern(base, `.gw/${pattern}`)
-        );
+        const watcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(base, `.gw/${pattern}`));
 
         watcher.onDidChange((uri) => {
           const basename = path.basename(uri.fsPath);
@@ -179,9 +177,7 @@ export class ArtifactWatcher implements vscode.Disposable {
       }
 
       // Watch for new branch directories
-      const dirWatcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(base, '.gw/**')
-      );
+      const dirWatcher = vscode.workspace.createFileSystemWatcher(new vscode.RelativePattern(base, '.gw/**'));
       dirWatcher.onDidCreate(() => this._onArtifactChanged.fire('directory'));
       dirWatcher.onDidDelete(() => this._onArtifactChanged.fire('directory'));
       this.vscodeWatchers.push(dirWatcher);
