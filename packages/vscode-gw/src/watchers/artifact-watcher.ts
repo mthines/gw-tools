@@ -20,7 +20,7 @@ import * as os from 'os';
 const ARTIFACT_FILES = new Set(['task.md', 'plan.md', 'walkthrough.md']);
 
 export class ArtifactWatcher implements vscode.Disposable {
-  private fsWatcher: fs.FSWatcher | undefined;
+  private fsWatchers: fs.FSWatcher[] = [];
   private vscodeWatchers: vscode.FileSystemWatcher[] = [];
   private knownWalkthroughs = new Set<string>();
   /** Per-file debounce timers so simultaneous changes to different files fire independently */
@@ -33,13 +33,14 @@ export class ArtifactWatcher implements vscode.Disposable {
 
   constructor() {
     this.scanExistingWalkthroughs();
-    this.setupWatcher();
+    this.setupWatchers();
   }
 
   private scanExistingWalkthroughs(): void {
-    const gwRoot = this.findGwRoot();
-    if (!gwRoot) return;
-    this.scanWalkthroughsRecursive(gwRoot);
+    const gwRoots = this.findGwRoots();
+    for (const gwRoot of gwRoots) {
+      this.scanWalkthroughsRecursive(gwRoot);
+    }
   }
 
   private scanWalkthroughsRecursive(dir: string): void {
@@ -60,50 +61,56 @@ export class ArtifactWatcher implements vscode.Disposable {
     }
   }
 
-  private findGwRoot(): string | undefined {
+  /**
+   * Find ALL .gw directories walking up from the workspace root.
+   * Watches all roots so artifacts are detected regardless of which
+   * .gw/ directory the autonomous workflow created them in.
+   */
+  private findGwRoots(): string[] {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspacePath) return undefined;
+    if (!workspacePath) return [];
 
+    const roots: string[] = [];
     let dir = workspacePath;
     for (let i = 0; i < 5; i++) {
       const gwPath = path.join(dir, '.gw');
       if (fs.existsSync(gwPath) && fs.statSync(gwPath).isDirectory()) {
-        return gwPath;
+        roots.push(gwPath);
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
-    return undefined;
+    return roots;
   }
 
-  private getWatchBase(): vscode.Uri {
+  private getWatchBases(): vscode.Uri[] {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspacePath) return vscode.Uri.file('/');
+    if (!workspacePath) return [];
 
+    const bases: vscode.Uri[] = [];
     let dir = workspacePath;
     for (let i = 0; i < 5; i++) {
       const gwPath = path.join(dir, '.gw');
       if (fs.existsSync(gwPath)) {
-        return vscode.Uri.file(dir);
+        bases.push(vscode.Uri.file(dir));
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
-
-    return vscode.Uri.file(workspacePath);
+    return bases.length > 0 ? bases : [vscode.Uri.file(workspacePath || '/')];
   }
 
-  private setupWatcher(): void {
-    const gwRoot = this.findGwRoot();
-    if (!gwRoot) return;
+  private setupWatchers(): void {
+    const gwRoots = this.findGwRoots();
+    if (gwRoots.length === 0) return;
 
-    // fs.watch with recursive: true works reliably on macOS and Windows
-    // but is not supported on Linux. Fall back to VS Code watchers there.
     const platform = os.platform();
     if (platform === 'darwin' || platform === 'win32') {
-      this.setupNativeWatcher(gwRoot);
+      for (const gwRoot of gwRoots) {
+        this.setupNativeWatcher(gwRoot);
+      }
     } else {
       this.setupVscodeWatchers();
     }
@@ -115,7 +122,7 @@ export class ArtifactWatcher implements vscode.Disposable {
    */
   private setupNativeWatcher(gwRoot: string): void {
     try {
-      this.fsWatcher = fs.watch(gwRoot, { recursive: true }, (eventType, filename) => {
+      const watcher = fs.watch(gwRoot, { recursive: true }, (eventType, filename) => {
         if (!filename) return;
 
         const basename = path.basename(filename);
@@ -129,11 +136,13 @@ export class ArtifactWatcher implements vscode.Disposable {
         }
       });
 
-      this.fsWatcher.on('error', () => {
+      watcher.on('error', () => {
         // Silently ignore — watcher will stop but extension continues
       });
+
+      this.fsWatchers.push(watcher);
     } catch {
-      // If fs.watch fails, fall back to VS Code watchers
+      // If fs.watch fails for this root, fall back to VS Code watchers
       this.setupVscodeWatchers();
     }
   }
@@ -145,35 +154,38 @@ export class ArtifactWatcher implements vscode.Disposable {
    */
   private setupVscodeWatchers(): void {
     const patterns = ['**/task.md', '**/plan.md', '**/walkthrough.md'];
+    const watchBases = this.getWatchBases();
 
-    for (const pattern of patterns) {
-      const watcher = vscode.workspace.createFileSystemWatcher(
-        new vscode.RelativePattern(this.getWatchBase(), `.gw/${pattern}`)
+    for (const base of watchBases) {
+      for (const pattern of patterns) {
+        const watcher = vscode.workspace.createFileSystemWatcher(
+          new vscode.RelativePattern(base, `.gw/${pattern}`)
+        );
+
+        watcher.onDidChange((uri) => {
+          const basename = path.basename(uri.fsPath);
+          this.emitDebounced(uri.fsPath, basename, 'change');
+        });
+        watcher.onDidCreate((uri) => {
+          const basename = path.basename(uri.fsPath);
+          this.emitDebounced(uri.fsPath, basename, 'rename');
+        });
+        watcher.onDidDelete((uri) => {
+          const basename = path.basename(uri.fsPath);
+          this.onFileDeleted(uri.fsPath, basename);
+        });
+
+        this.vscodeWatchers.push(watcher);
+      }
+
+      // Watch for new branch directories
+      const dirWatcher = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(base, '.gw/**')
       );
-
-      watcher.onDidChange((uri) => {
-        const basename = path.basename(uri.fsPath);
-        this.emitDebounced(uri.fsPath, basename, 'change');
-      });
-      watcher.onDidCreate((uri) => {
-        const basename = path.basename(uri.fsPath);
-        this.emitDebounced(uri.fsPath, basename, 'rename');
-      });
-      watcher.onDidDelete((uri) => {
-        const basename = path.basename(uri.fsPath);
-        this.onFileDeleted(uri.fsPath, basename);
-      });
-
-      this.vscodeWatchers.push(watcher);
+      dirWatcher.onDidCreate(() => this._onArtifactChanged.fire('directory'));
+      dirWatcher.onDidDelete(() => this._onArtifactChanged.fire('directory'));
+      this.vscodeWatchers.push(dirWatcher);
     }
-
-    // Watch for new branch directories
-    const dirWatcher = vscode.workspace.createFileSystemWatcher(
-      new vscode.RelativePattern(this.getWatchBase(), '.gw/**')
-    );
-    dirWatcher.onDidCreate(() => this._onArtifactChanged.fire('directory'));
-    dirWatcher.onDidDelete(() => this._onArtifactChanged.fire('directory'));
-    this.vscodeWatchers.push(dirWatcher);
   }
 
   /**
@@ -245,8 +257,8 @@ export class ArtifactWatcher implements vscode.Disposable {
     for (const timer of this.debounceTimers.values()) {
       clearTimeout(timer);
     }
-    if (this.fsWatcher) {
-      this.fsWatcher.close();
+    for (const watcher of this.fsWatchers) {
+      watcher.close();
     }
     for (const watcher of this.vscodeWatchers) {
       watcher.dispose();

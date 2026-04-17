@@ -247,33 +247,40 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   private _onDidChangeTreeData = new vscode.EventEmitter<AgentTaskTreeItem | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
 
-  private gwRoot: string | undefined;
+  private gwRoots: string[];
 
   constructor() {
-    this.gwRoot = this.findGwRoot();
+    this.gwRoots = this.findGwRoots();
   }
 
   refresh(): void {
-    this.gwRoot = this.findGwRoot();
+    this.gwRoots = this.findGwRoots();
     this._onDidChangeTreeData.fire();
   }
 
-  private findGwRoot(): string | undefined {
+  /**
+   * Find ALL .gw directories walking up from the workspace root.
+   * This handles the case where .gw/ exists both inside a worktree
+   * (e.g. the main worktree) and at the bare repo root. Scanning
+   * all roots ensures artifacts are visible regardless of where
+   * the autonomous workflow created them.
+   */
+  private findGwRoots(): string[] {
     const workspacePath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-    if (!workspacePath) return undefined;
+    if (!workspacePath) return [];
 
-    // Walk up to find .gw directory (might be in parent for worktrees)
+    const roots: string[] = [];
     let dir = workspacePath;
     for (let i = 0; i < 5; i++) {
       const gwPath = path.join(dir, '.gw');
       if (fs.existsSync(gwPath) && fs.statSync(gwPath).isDirectory()) {
-        return gwPath;
+        roots.push(gwPath);
       }
       const parent = path.dirname(dir);
       if (parent === dir) break;
       dir = parent;
     }
-    return undefined;
+    return roots;
   }
 
   getTreeItem(element: AgentTaskTreeItem): vscode.TreeItem {
@@ -281,7 +288,7 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   }
 
   async getChildren(element?: AgentTaskTreeItem): Promise<AgentTaskTreeItem[]> {
-    if (!this.gwRoot) {
+    if (this.gwRoots.length === 0) {
       return [];
     }
 
@@ -349,7 +356,7 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
   }
 
   private getBranchItems(): AgentBranchItem[] {
-    if (!this.gwRoot) return [];
+    if (this.gwRoots.length === 0) return [];
 
     interface BranchItemWithMeta {
       item: AgentBranchItem;
@@ -359,66 +366,78 @@ export class AgentTasksProvider implements vscode.TreeDataProvider<AgentTaskTree
       hasInProgress: boolean;
     }
 
-    const items: BranchItemWithMeta[] = [];
-    const branchRelPaths = this.findBranchDirs(this.gwRoot);
+    // Collect branches from all .gw/ roots, deduplicating by relPath
+    // (prefer the entry with the most recent mtime when duplicates exist)
+    const itemsByRelPath = new Map<string, BranchItemWithMeta>();
 
-    for (const relPath of branchRelPaths) {
-      const branchDir = path.join(this.gwRoot, relPath);
-      const taskPath = path.join(branchDir, 'task.md');
-      const planPath = path.join(branchDir, 'plan.md');
-      const walkthroughPath = path.join(branchDir, 'walkthrough.md');
+    for (const gwRoot of this.gwRoots) {
+      const branchRelPaths = this.findBranchDirs(gwRoot);
 
-      const hasTaskFile = fs.existsSync(taskPath);
-      const hasPlanFile = fs.existsSync(planPath);
-      if (!hasTaskFile && !hasPlanFile) {
-        continue;
-      }
+      for (const relPath of branchRelPaths) {
+        const branchDir = path.join(gwRoot, relPath);
+        const taskPath = path.join(branchDir, 'task.md');
+        const planPath = path.join(branchDir, 'plan.md');
+        const walkthroughPath = path.join(branchDir, 'walkthrough.md');
 
-      let task: ParsedTask | undefined;
-      let plan: ParsedPlan | undefined;
-      let latestMtime = 0;
+        const hasTaskFile = fs.existsSync(taskPath);
+        const hasPlanFile = fs.existsSync(planPath);
+        if (!hasTaskFile && !hasPlanFile) {
+          continue;
+        }
 
-      if (hasTaskFile) {
-        try {
-          task = parseTaskMd(fs.readFileSync(taskPath, 'utf-8'));
-          const stat = fs.statSync(taskPath);
-          latestMtime = Math.max(latestMtime, stat.mtimeMs);
-        } catch {
-          // ignore parse errors
+        let task: ParsedTask | undefined;
+        let plan: ParsedPlan | undefined;
+        let latestMtime = 0;
+
+        if (hasTaskFile) {
+          try {
+            task = parseTaskMd(fs.readFileSync(taskPath, 'utf-8'));
+            const stat = fs.statSync(taskPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
+          } catch {
+            // ignore parse errors
+          }
+        }
+
+        if (hasPlanFile) {
+          try {
+            plan = parsePlanMd(fs.readFileSync(planPath, 'utf-8'));
+            const stat = fs.statSync(planPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
+          } catch {
+            // ignore parse errors
+          }
+        }
+
+        const hasWalkthrough = fs.existsSync(walkthroughPath);
+        if (hasWalkthrough) {
+          try {
+            const stat = fs.statSync(walkthroughPath);
+            latestMtime = Math.max(latestMtime, stat.mtimeMs);
+          } catch {
+            // ignore stat errors
+          }
+        }
+
+        const hasInProgress = task?.taskSections.some((s) => s.items.some((t) => t.inProgress)) ?? false;
+
+        const candidate: BranchItemWithMeta = {
+          item: new AgentBranchItem(relPath, branchDir, task, plan, hasWalkthrough),
+          mtime: latestMtime,
+          name: relPath.toLowerCase(),
+          hasWalkthrough,
+          hasInProgress,
+        };
+
+        // Deduplicate: keep the entry with the most recent mtime
+        const existing = itemsByRelPath.get(relPath);
+        if (!existing || candidate.mtime > existing.mtime) {
+          itemsByRelPath.set(relPath, candidate);
         }
       }
-
-      if (hasPlanFile) {
-        try {
-          plan = parsePlanMd(fs.readFileSync(planPath, 'utf-8'));
-          const stat = fs.statSync(planPath);
-          latestMtime = Math.max(latestMtime, stat.mtimeMs);
-        } catch {
-          // ignore parse errors
-        }
-      }
-
-      const hasWalkthrough = fs.existsSync(walkthroughPath);
-      if (hasWalkthrough) {
-        try {
-          const stat = fs.statSync(walkthroughPath);
-          latestMtime = Math.max(latestMtime, stat.mtimeMs);
-        } catch {
-          // ignore stat errors
-        }
-      }
-
-      // Check if any task is in progress
-      const hasInProgress = task?.taskSections.some((s) => s.items.some((t) => t.inProgress)) ?? false;
-
-      items.push({
-        item: new AgentBranchItem(relPath, branchDir, task, plan, hasWalkthrough),
-        mtime: latestMtime,
-        name: relPath.toLowerCase(),
-        hasWalkthrough,
-        hasInProgress,
-      });
     }
+
+    const items = Array.from(itemsByRelPath.values());
 
     // Get sort settings from configuration
     const config = vscode.workspace.getConfiguration('gw');
