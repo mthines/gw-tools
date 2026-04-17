@@ -103,23 +103,17 @@ gw sync <branch-name>
 grep -q "^\.gw/$" .gitignore 2>/dev/null || echo ".gw/" >> .gitignore
 ```
 
-### Step 8: Create Artifact Files (Full Mode ONLY)
+### Step 8: Generate plan.md (Full Mode ONLY)
 
-**CRITICAL: Artifacts must be created HERE — inside the worktree, not on the main branch.**
+**CRITICAL: The artifact must be created HERE — inside the worktree, not on the main branch.**
 
-```bash
-mkdir -p .gw/{branch-name}
+```
+Skill(skill: "create-plan")
 ```
 
-**Populate plan.md** with the content prepared during Phase 1. This is the single source of truth — include all sections from the template.
+This generates `.gw/{branch-name}/plan.md` from the Phase 1 planning conversation.
 
-**Update plan.md Progress Log:**
-
-```markdown
-- [TIMESTAMP] Phase 2: Worktree created at {branch-name}, plan.md populated
-```
-
-**DO NOT proceed to Phase 3 without plan.md populated (Full Mode).**
+**DO NOT proceed to Phase 3 without plan.md generated (Full Mode).**
 
 ## gw Commands Reference
 

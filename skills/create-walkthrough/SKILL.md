@@ -40,10 +40,10 @@ Run this command to get the artifact path and gather git information — do NOT 
 BRANCH=$(git branch --show-current) && mkdir -p ".gw/${BRANCH}" && echo "Artifact path: .gw/${BRANCH}/walkthrough.md" && echo "---" && git diff --stat main...HEAD && echo "---" && git log --oneline main...HEAD
 ```
 
-**From plan.md** (read the file at the path determined above):
+**From plan.md** (read the file — must run in the same shell session as above, or re-assign `BRANCH`):
 
 ```bash
-cat ".gw/${BRANCH}/plan.md"
+BRANCH=$(git branch --show-current) && cat ".gw/${BRANCH}/plan.md"
 ```
 
 Extract: Summary, Decisions, Requirements, File Changes table.
