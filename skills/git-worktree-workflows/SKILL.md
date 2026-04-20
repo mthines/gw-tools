@@ -57,6 +57,32 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 - **One branch per worktree**: Cannot check out same branch in multiple worktrees.
 - **Clean up when done**: Use `gw remove`, `gw clean`, or `gw prune`.
 
+## External Tool Integration
+
+gw works alongside any tool that creates worktrees. When a worktree is created
+externally (e.g., by Claude Code's `isolation: "worktree"`, an IDE, or raw
+`git worktree add`), run `gw sync` inside it to copy your configured secrets
+and files.
+
+For Claude Code, wire `gw sync` into the `WorktreeCreate` hook:
+
+```jsonc
+// .claude/settings.json
+{
+  "hooks": {
+    "WorktreeCreate": [{
+      "hooks": [{
+        "type": "command",
+        "command": "cat > /dev/null && gw sync && echo 'gw: synced files'",
+        "timeout": 60
+      }]
+    }]
+  }
+}
+```
+
+See the [full integration guide](../../packages/gw-tool/README.md#using-gw-with-external-tools) for fallback patterns, migration guides, and examples without gw.
+
 ## Related Skills
 
 - [gw-config-management](../gw-config-management/) - Configure auto-copy files and hooks
