@@ -70,14 +70,18 @@ For Claude Code, wire `gw sync` into the `WorktreeCreate` hook:
 // .claude/settings.json
 {
   "hooks": {
-    "WorktreeCreate": [{
-      "hooks": [{
-        "type": "command",
-        "command": "cat > /dev/null && gw sync && echo 'gw: synced files'",
-        "timeout": 60
-      }]
-    }]
-  }
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat > /dev/null && gw sync && echo 'gw: synced files'",
+            "timeout": 60,
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 

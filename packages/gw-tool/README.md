@@ -1582,18 +1582,18 @@ gw is a standalone git worktree tool — it works from the terminal, scripts, CI
 
 Tools like Claude Code, IDEs, and CI systems can run commands when worktrees are created. Here's what gw handles versus what you'd need to build yourself:
 
-| Capability | gw | Tool-specific hooks (e.g., Claude Code) |
-|---|---|---|
-| Create worktree + copy secrets in one command | `gw checkout` | Separate steps — create worktree, then run hook script |
-| Auto-copy configured files | `autoCopyFiles` in config | Manual `cp` in hook script (or `gw sync`) |
-| Navigate between worktrees | `gw cd` with tab completion | Not available |
-| On-demand file sync | `gw sync` (anytime, not just at creation) | Not available |
-| Update branch from main | `gw update` (merge or rebase) | Not available |
-| Interactive cleanup | `gw clean` / `gw prune` | Not available |
-| PR checkout into worktree | `gw pr 123` | Not available |
-| Shell completions | `gw install-shell` | Not available |
-| Run commands on worktree events | `hooks.checkout.pre/post` | Yes — native to the tool |
-| Committable team config | `.gw/config.json` | Tool-specific settings files |
+| Capability                                    | gw                                        | Tool-specific hooks (e.g., Claude Code)                |
+| --------------------------------------------- | ----------------------------------------- | ------------------------------------------------------ |
+| Create worktree + copy secrets in one command | `gw checkout`                             | Separate steps — create worktree, then run hook script |
+| Auto-copy configured files                    | `autoCopyFiles` in config                 | Manual `cp` in hook script (or `gw sync`)              |
+| Navigate between worktrees                    | `gw cd` with tab completion               | Not available                                          |
+| On-demand file sync                           | `gw sync` (anytime, not just at creation) | Not available                                          |
+| Update branch from main                       | `gw update` (merge or rebase)             | Not available                                          |
+| Interactive cleanup                           | `gw clean` / `gw prune`                   | Not available                                          |
+| PR checkout into worktree                     | `gw pr 123`                               | Not available                                          |
+| Shell completions                             | `gw install-shell`                        | Not available                                          |
+| Run commands on worktree events               | `hooks.checkout.pre/post`                 | Yes — native to the tool                               |
+| Committable team config                       | `.gw/config.json`                         | Tool-specific settings files                           |
 
 **In short:** Tool hooks handle "run a command when a worktree is created." gw handles the full worktree lifecycle — creation, navigation, syncing, updating, and cleanup. They complement each other: use `gw sync` inside your tool's hook to get the best of both.
 
