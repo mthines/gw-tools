@@ -34,7 +34,7 @@ import type { Config } from './types.ts';
 /**
  * Current config version - increment when adding migrations
  */
-export const CURRENT_CONFIG_VERSION = 1;
+export const CURRENT_CONFIG_VERSION = 2;
 
 /**
  * Migration definition
@@ -67,16 +67,16 @@ export const MIGRATIONS: Migration[] = [
       return config;
     },
   },
-  // Future migrations go here...
-  // {
-  //   version: 2,
-  //   description: 'Example future migration',
-  //   migrate: (config) => {
-  //     // Transform config...
-  //     config.configVersion = 2;
-  //     return config;
-  //   },
-  // },
+  {
+    version: 2,
+    description: 'Remove machine-specific fields to make config committable',
+    migrate: (config) => {
+      delete config.root;
+      delete config.lastAutoCleanTime;
+      config.configVersion = 2;
+      return config;
+    },
+  },
 ];
 
 /**

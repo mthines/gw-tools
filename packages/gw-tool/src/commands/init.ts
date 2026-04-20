@@ -607,7 +607,6 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       config.defaultBranch = detectedBranch;
     }
 
-    config.root = fullPath;
     await saveConfigTemplate(fullPath, config as Config);
     output.success('Configuration created');
 
@@ -830,7 +829,6 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
 
   // Create config
   const config: Config = {
-    root: rootPath,
     defaultBranch: parsed.defaultBranch || 'main',
     cleanThreshold: 7, // Default value
   };

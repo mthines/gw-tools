@@ -27,7 +27,7 @@ Deno.test('init command - creates config with auto-detected root', async () => {
 
       // Verify config content
       const config = await readTestConfig(repo.path);
-      assertEquals(config.root, repo.path);
+      assertEquals((config as Record<string, unknown>).root, undefined);
       assertEquals(config.defaultBranch, 'main');
       assertEquals(config.cleanThreshold, 7);
     } finally {
@@ -54,7 +54,7 @@ Deno.test('init command - creates config with explicit root', async () => {
 
       // Verify config content
       const config = await readTestConfig(repo.path);
-      assertEquals(config.root, repo.path);
+      assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
       await Deno.remove(tempDir, { recursive: true });
@@ -619,7 +619,7 @@ Deno.test('init command - clone mode with file URL', async () => {
 
       // Verify config content
       const config = await readTestConfig(clonedRepoPath);
-      assertEquals(config.root, clonedRepoPath);
+      assertEquals((config as Record<string, unknown>).root, undefined);
 
       // Verify default worktree was created (inside the repository directory)
       await assertDirExists(join(clonedRepoPath, 'main'));
@@ -655,7 +655,7 @@ Deno.test('init command - clone mode with custom directory', async () => {
 
       // Verify config content
       const config = await readTestConfig(clonedRepoPath);
-      assertEquals(config.root, clonedRepoPath);
+      assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
@@ -786,7 +786,7 @@ Deno.test('init command - clone mode with empty repository', async () => {
 
       // Verify config content
       const config = await readTestConfig(clonedRepoPath);
-      assertEquals(config.root, clonedRepoPath);
+      assertEquals((config as Record<string, unknown>).root, undefined);
 
       // Verify default worktree was created
       await assertDirExists(join(clonedRepoPath, 'main'));
@@ -903,7 +903,7 @@ Deno.test('init command - existing repo mode when already initialized', async ()
 
       // Config should still exist and be unchanged
       const config = await readTestConfig(repo.path);
-      assertEquals(config.root, repo.path);
+      assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
     }
@@ -951,7 +951,7 @@ Deno.test('init command - interactive mode prompts for URL when not in git repo'
 
         // Verify config
         const config = await readTestConfig(clonedRepoPath);
-        assertEquals(config.root, clonedRepoPath);
+        assertEquals((config as Record<string, unknown>).root, undefined);
       } finally {
         await sourceRepo.cleanup();
       }

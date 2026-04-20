@@ -103,10 +103,6 @@ function validateConfig(data: unknown): data is Config {
     return false;
   }
 
-  if (config.root !== undefined && typeof config.root !== 'string') {
-    return false;
-  }
-
   if (config.defaultBranch !== undefined && typeof config.defaultBranch !== 'string') {
     return false;
   }
@@ -129,12 +125,6 @@ function validateConfig(data: unknown): data is Config {
 
   if (config.autoClean !== undefined) {
     if (typeof config.autoClean !== 'boolean') {
-      return false;
-    }
-  }
-
-  if (config.lastAutoCleanTime !== undefined) {
-    if (typeof config.lastAutoCleanTime !== 'number' || config.lastAutoCleanTime < 0) {
       return false;
     }
   }
@@ -181,9 +171,12 @@ export async function loadConfig(): Promise<{
         throw new Error('Invalid configuration file format');
       }
 
-      // Save migrated config and notify user if migrations were applied
-      if (migrated && migratedData.root) {
-        await saveConfig(migratedData.root, migratedData);
+      // Derive git root from the config file path (strip /.gw/config.json)
+      const gitRoot = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+
+      // Save migrated config if migrations were applied
+      if (migrated) {
+        await saveConfig(gitRoot, migratedData);
         console.log(
           `Config automatically updated (${appliedMigrations.length} migration${
             appliedMigrations.length > 1 ? 's' : ''
@@ -191,26 +184,7 @@ export async function loadConfig(): Promise<{
         );
       }
 
-      // If config has root, use it
-      if (migratedData.root) {
-        return { config: migratedData, gitRoot: migratedData.root };
-      }
-
-      // Alias for the rest of the function
-      const data = migratedData;
-
-      // Config exists but no root - try auto-detection and update config
-      try {
-        const detectedRoot = await findGitRoot();
-        data.root = detectedRoot;
-        await saveConfig(detectedRoot, data);
-        console.log(`Detected git root and updated config: ${detectedRoot}\n`);
-        return { config: data, gitRoot: detectedRoot };
-      } catch {
-        throw new Error(
-          "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually."
-        );
-      }
+      return { config: migratedData, gitRoot };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load config: ${message}`);
@@ -221,15 +195,13 @@ export async function loadConfig(): Promise<{
   try {
     const gitRoot = await findGitRoot();
 
-    // Create config with detected root
+    // Create default config (no root stored)
     const config = createDefaultConfig();
-    config.root = gitRoot;
 
     // Save config in the detected git root
     await saveConfig(gitRoot, config);
 
     console.log(`Created config at ${getConfigPath(gitRoot)}`);
-    console.log(`Detected git root: ${gitRoot}`);
     console.log(`Default source worktree: ${config.defaultBranch}\n`);
 
     return { config, gitRoot };
@@ -269,7 +241,8 @@ function generateConfigTemplate(config: Config): string {
   lines.push('  // gw Configuration File');
   lines.push('  // ============================================================================');
   lines.push('  // Documentation: https://github.com/mthines/gw-tools');
-  lines.push('  // All fields except "root" are optional.');
+  lines.push('  // This file is safe to commit to your repository.');
+  lines.push('  // All fields are optional.');
   lines.push('  // Supports JSONC: comments (// and /* */) and trailing commas are allowed.');
   lines.push('  // ============================================================================');
   lines.push('');
@@ -281,13 +254,6 @@ function generateConfigTemplate(config: Config): string {
   // Core Settings Section
   lines.push('  // Core Settings');
   lines.push('  // ----------------------------------------------------------------------------');
-
-  // root (always required if present)
-  if (config.root) {
-    lines.push(`  "root": ${JSON.stringify(config.root)},`);
-  } else {
-    lines.push('  // "root": "/path/to/your/repository",');
-  }
 
   // defaultBranch
   if (config.defaultBranch !== undefined) {
@@ -411,7 +377,6 @@ function generateConfigTemplate(config: Config): string {
   // Footer
   lines.push('  // Internal fields (managed automatically — do not edit):');
   lines.push('  // - configVersion: Schema version for config migrations');
-  lines.push('  // - lastAutoCleanTime: Unix timestamp of last auto-cleanup run');
 
   lines.push('}');
 

@@ -32,7 +32,7 @@ Deno.test('show-init command - generates init command with minimal config', asyn
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       cleanThreshold: 7,
     };
@@ -56,7 +56,7 @@ Deno.test('show-init command - generates init command with auto-copy files', asy
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       autoCopyFiles: ['.env', 'secrets/', 'config/local.json'],
       cleanThreshold: 7,
@@ -80,7 +80,7 @@ Deno.test('show-init command - generates init command with hooks', async () => {
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       hooks: {
         checkout: {
@@ -109,7 +109,7 @@ Deno.test('show-init command - generates init command with custom default branch
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'develop',
       cleanThreshold: 7,
     };
@@ -132,7 +132,7 @@ Deno.test('show-init command - generates init command with auto-clean enabled', 
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       cleanThreshold: 7,
       autoClean: true,
@@ -156,7 +156,7 @@ Deno.test('show-init command - generates complete init command with all options'
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'develop',
       autoCopyFiles: ['.env', 'secrets/'],
       hooks: {
@@ -191,7 +191,7 @@ Deno.test('show-init command - includes remote URL in output when remote exists'
     await repo.runCommand('git', ['remote', 'add', 'origin', remoteUrl], repo.path);
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       cleanThreshold: 7,
     };
@@ -227,7 +227,7 @@ Deno.test('show-init command - uses --root when no remote exists', async () => {
     await repo.init();
 
     const config: Config = {
-      root: repo.path,
+
       defaultBranch: 'main',
       cleanThreshold: 7,
     };

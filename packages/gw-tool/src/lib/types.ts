@@ -22,14 +22,16 @@ export interface HooksConfig {
 
 /**
  * Per-repository configuration stored at .gw/config.json
+ *
+ * This file is safe to commit to your repository. Machine-specific
+ * state (such as auto-cleanup timestamps) is managed internally and
+ * never written to this file.
  */
 export interface Config {
   /** JSON Schema reference for IDE autocompletion */
   $schema?: string;
   /** Config schema version for migrations (managed automatically) */
   configVersion?: number;
-  /** Absolute path to the git repository root */
-  root?: string;
   /** Default source worktree name (e.g., "main", "master") */
   defaultBranch?: string;
   /** Files to automatically copy when creating new worktrees */
@@ -40,8 +42,6 @@ export interface Config {
   cleanThreshold?: number;
   /** Enable automatic cleanup of stale worktrees (optional, default: false) */
   autoClean?: boolean;
-  /** Unix timestamp in milliseconds of last auto-cleanup run (managed automatically) */
-  lastAutoCleanTime?: number;
   /** Default update strategy for the update command (optional, default: "merge") */
   updateStrategy?: 'merge' | 'rebase';
 }

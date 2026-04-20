@@ -33,9 +33,8 @@ async function setupBareRepoWithWorktrees(
   return { repo, mainPath, featurePath };
 }
 
-function createConfig(root: string, autoCopyFiles?: string[]): Config {
+function createConfig(_root: string, autoCopyFiles?: string[]): Config {
   return {
-    root,
     defaultBranch: 'main',
     autoCopyFiles,
     cleanThreshold: 7,

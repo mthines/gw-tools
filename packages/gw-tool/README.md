@@ -334,13 +334,15 @@ cp dist/packages/gw-tool/gw /usr/local/bin/gw
 
 On first run, `gw` will automatically detect your git repository root and create a configuration file at `.gw/config.json`. The tool finds the config by walking up the directory tree from your current location, so you can run `gw` commands from anywhere within your repository.
 
+**The `.gw/config.json` file is safe to commit to your repository.** It contains only portable settings — no machine-specific paths or runtime state. The `root` field has been removed; gw auto-detects the repository root from the config file location. Runtime state like cleanup timestamps is managed internally and never written to the config file.
+
 ### Auto-Detection
 
 The tool automatically:
 
 1. **Searches for existing config**: Walks up from your current directory looking for `.gw/config.json`
-2. **Auto-detects git root**: If no config is found, detects the repository root automatically
-3. **Creates config**: Saves the detected root and default settings to `.gw/config.json`
+2. **Auto-detects git root**: Derives the git root from the config file's location (or detects it if no config exists)
+3. **Creates config**: Saves default settings to `.gw/config.json` (no machine-specific paths stored)
 
 If auto-detection fails (rare edge cases), you can manually initialize:
 
@@ -352,7 +354,6 @@ gw init --root /path/to/your/repo.git
 
 ```jsonc
 {
-  "root": "/Users/username/Workspace/my-project.git",
   "defaultBranch": "main",
   // Auto-copy these files when creating new worktrees
   "autoCopyFiles": [".env", "components/agents/.env", "components/ui/.vercel/"],
@@ -365,7 +366,6 @@ gw init --root /path/to/your/repo.git
   "cleanThreshold": 7,
   "autoClean": true,
   "updateStrategy": "merge",
-  "lastAutoCleanTime": 1706371200000, // trailing comma OK
 }
 ```
 
@@ -375,7 +375,6 @@ gw init --root /path/to/your/repo.git
 
 ### Configuration Options
 
-- **root**: Absolute path to the git repository root (automatically detected or manually set with `gw init`)
 - **defaultBranch**: Default source worktree name (optional, defaults to "main")
 - **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw checkout` (optional, only set via `gw init --auto-copy-files`)
 - **hooks**: Command hooks configuration (optional, set via `gw init --pre-checkout` and `--post-checkout`)
@@ -384,7 +383,6 @@ gw init --root /path/to/your/repo.git
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
 - **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
-- **lastAutoCleanTime**: Internal timestamp tracking last auto-cleanup run (managed automatically, do not edit manually)
 
 ## Commands
 
@@ -560,7 +558,6 @@ This creates:
 
 ```json
 {
-  "root": "/path/to/repo.git",
   "defaultBranch": "main",
   "autoCopyFiles": [".env", "secrets/", "components/ui/.vercel/"]
 }
@@ -1151,7 +1148,6 @@ If your `.gw/config.json` contains:
 
 ```json
 {
-  "root": "/Users/username/Workspace/repo.git",
   "defaultBranch": "main",
   "autoCopyFiles": [".env", "secrets/"],
   "hooks": {
