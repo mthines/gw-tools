@@ -154,10 +154,7 @@ Deno.test('runMigrations - v2: removes root and lastAutoCleanTime fields', () =>
 
   assertEquals(result.migrated, true);
   assertEquals(result.appliedMigrations.length, 1);
-  assertEquals(
-    result.appliedMigrations[0],
-    'v2: Remove machine-specific fields to make config committable'
-  );
+  assertEquals(result.appliedMigrations[0], 'v2: Remove machine-specific fields to make config committable');
   assertEquals(result.config.configVersion, 2);
   assertEquals((result.config as Record<string, unknown>).root, undefined);
   assertEquals((result.config as Record<string, unknown>).lastAutoCleanTime, undefined);

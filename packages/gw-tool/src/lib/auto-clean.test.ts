@@ -227,4 +227,3 @@ Deno.test('executeAutoClean - removes multiple old worktrees', async () => {
     await repo.cleanup();
   }
 });
-
