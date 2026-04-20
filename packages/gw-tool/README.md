@@ -84,6 +84,12 @@ A command-line tool for managing git worktrees, built with Deno.
       - [repair](#repair)
   - [Use Case](#use-case)
     - [Typical Workflow](#typical-workflow)
+  - [Using gw with External Tools](#using-gw-with-external-tools)
+    - [Post-creation file sync](#post-creation-file-sync)
+    - [Wiring into tool-specific hooks](#wiring-into-tool-specific-hooks)
+    - [Claude Code Integration](#claude-code-integration)
+    - [Without gw — plain shell hooks](#without-gw--plain-shell-hooks)
+    - [Migrating gw hooks to external hooks](#migrating-gw-hooks-to-external-hooks)
   - [Development](#development)
     - [Local Development \& Testing](#local-development--testing)
       - [Shell Alias Method (Recommended)](#shell-alias-method-recommended)
@@ -1566,6 +1572,198 @@ git worktree add feat-manual
 gw sync feat-manual .env
 gw cd feat-manual
 ```
+
+## Using gw with External Tools
+
+gw is a standalone git worktree tool — it works from the terminal, scripts, CI, or any tool that can shell out. Any tool that creates worktrees externally (outside of `gw checkout`) can use `gw sync` afterwards to copy your configured secrets and files.
+
+### Post-creation file sync
+
+When a worktree is created by something other than `gw checkout` (e.g., raw `git worktree add`, an IDE, or an AI coding tool), the new worktree won't have your secret files. Run `gw sync` inside it to copy them:
+
+```bash
+# After any tool creates a worktree, cd into it and sync
+cd /path/to/new-worktree
+gw sync
+```
+
+`gw sync` with no arguments copies all `autoCopyFiles` from your default branch worktree to the current worktree. This is the same logic that `gw checkout` runs automatically.
+
+### Wiring into tool-specific hooks
+
+Many tools support running a command after worktree creation. Since `gw sync` works from any worktree directory, you just need to call it:
+
+```bash
+# Generic hook pattern — works anywhere gw is installed
+gw sync && echo "gw: synced files to worktree"
+```
+
+If gw is not installed, add a fallback:
+
+```bash
+# With fallback for environments without gw
+command -v gw &>/dev/null && gw sync || echo "gw not installed, skipping file sync"
+```
+
+### Claude Code Integration
+
+[Claude Code](https://docs.anthropic.com/en/docs/claude-code) has a [hooks system](https://docs.anthropic.com/en/docs/claude-code/hooks) that fires a `WorktreeCreate` event when it creates worktrees (via `--worktree` flag or subagent `isolation: "worktree"`). The hook runs inside the new worktree, making `gw sync` a one-liner:
+
+```jsonc
+// .claude/settings.json (or settings.local.json for personal use)
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat > /dev/null && gw sync && echo 'gw: synced files to worktree'",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+> `cat > /dev/null` drains the JSON payload Claude pipes to stdin — gw doesn't need it since it detects everything from git context.
+
+To also run post-checkout hooks (e.g., `pnpm install`), chain gw's configured hooks with a setup script:
+
+```jsonc
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat > /dev/null && gw sync && pnpm install && echo 'Worktree ready'",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+For team repos where not everyone has gw installed, use a script with a fallback:
+
+```bash
+#!/usr/bin/env bash
+# .claude/hooks/setup-worktree.sh
+set -euo pipefail
+
+# Drain stdin (hook receives JSON we don't need)
+cat > /dev/null
+
+# Detect root repo from git
+ROOT_PATH="$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
+
+# Sync secrets — use gw if available, otherwise copy manually
+if command -v gw &>/dev/null; then
+  echo "Syncing files via gw..."
+  gw sync
+else
+  echo "gw not installed, copying files manually..."
+  for f in .env apps/web/.env.local secrets/credentials.json; do
+    if [ -f "$ROOT_PATH/$f" ]; then
+      mkdir -p "$(dirname "$f")"
+      cp "$ROOT_PATH/$f" "$f"
+      echo "  copied $f"
+    fi
+  done
+fi
+
+# Run additional setup (runs regardless of gw)
+pnpm install --frozen-lockfile
+
+echo "Worktree setup complete"
+```
+
+```jsonc
+// .claude/settings.json — safe to commit, works with or without gw
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/setup-worktree.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+> **Note:** `WorktreeCreate` only fires for Claude's built-in worktree isolation, not when you or Claude runs `gw checkout`. When using `gw checkout`, gw handles everything (auto-copy + hooks) natively.
+
+### Without gw — plain shell hooks
+
+If your team doesn't use gw, you can replicate the file-sync behavior with a shell script:
+
+```bash
+#!/usr/bin/env bash
+# .claude/hooks/setup-worktree.sh
+set -euo pipefail
+cat > /dev/null
+
+ROOT="$(git worktree list --porcelain | head -1 | sed 's/^worktree //')"
+
+# Copy secrets (equivalent to gw's autoCopyFiles)
+for f in .env apps/web/.env.local secrets/credentials.json; do
+  [ -f "$ROOT/$f" ] && mkdir -p "$(dirname "$f")" && cp "$ROOT/$f" "$f" && echo "  copied $f"
+done
+
+# Install dependencies
+pnpm install --frozen-lockfile
+```
+
+```jsonc
+// .claude/settings.json
+{
+  "hooks": {
+    "WorktreeCreate": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": ".claude/hooks/setup-worktree.sh",
+            "timeout": 300
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### Migrating gw hooks to external hooks
+
+If you want to move your gw hooks to your tool's native hook system, here's the mapping:
+
+| gw feature | What it does | How to replicate |
+|---|---|---|
+| `autoCopyFiles` | Copies listed files from default branch worktree | `gw sync` or manual `cp` from root worktree |
+| `hooks.checkout.post` | Runs commands after worktree creation | Call the same commands in your tool's post-create hook |
+| `hooks.checkout.pre` | Validates before worktree creation | Call validation scripts in your tool's pre-create hook |
+| `{worktree}`, `{worktreePath}`, etc. | Variable substitution in hook commands | Use `git worktree list`, `pwd`, `git rev-parse` to get the same values |
+
+**What you can't replicate with hooks alone** — these are gw's unique value:
+
+- **`gw cd`** — Shell navigation between worktrees with tab completion
+- **`gw sync`** — On-demand file sync (not just at creation time)
+- **`gw update`** — Merge/rebase from default branch
+- **`gw clean` / `gw prune`** — Interactive worktree lifecycle cleanup
+- **`gw pr`** — Check out a PR into a worktree
+- **`gw checkout`** — One command: create worktree + copy files + run hooks + navigate
 
 ## Development
 
