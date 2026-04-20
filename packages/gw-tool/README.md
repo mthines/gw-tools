@@ -1619,12 +1619,12 @@ command -v gw &>/dev/null && gw sync || echo "gw not installed, skipping file sy
           {
             "type": "command",
             "command": "cat > /dev/null && gw sync && echo 'gw: synced files to worktree'",
-            "timeout": 60
-          }
-        ]
-      }
-    ]
-  }
+            "timeout": 60,
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -1641,12 +1641,12 @@ To also run post-checkout hooks (e.g., `pnpm install`), chain gw's configured ho
           {
             "type": "command",
             "command": "cat > /dev/null && gw sync && pnpm install && echo 'Worktree ready'",
-            "timeout": 300
-          }
-        ]
-      }
-    ]
-  }
+            "timeout": 300,
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -1694,12 +1694,12 @@ echo "Worktree setup complete"
           {
             "type": "command",
             "command": ".claude/hooks/setup-worktree.sh",
-            "timeout": 300
-          }
-        ]
-      }
-    ]
-  }
+            "timeout": 300,
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -1736,12 +1736,12 @@ pnpm install --frozen-lockfile
           {
             "type": "command",
             "command": ".claude/hooks/setup-worktree.sh",
-            "timeout": 300
-          }
-        ]
-      }
-    ]
-  }
+            "timeout": 300,
+          },
+        ],
+      },
+    ],
+  },
 }
 ```
 
@@ -1749,12 +1749,12 @@ pnpm install --frozen-lockfile
 
 If you want to move your gw hooks to your tool's native hook system, here's the mapping:
 
-| gw feature | What it does | How to replicate |
-|---|---|---|
-| `autoCopyFiles` | Copies listed files from default branch worktree | `gw sync` or manual `cp` from root worktree |
-| `hooks.checkout.post` | Runs commands after worktree creation | Call the same commands in your tool's post-create hook |
-| `hooks.checkout.pre` | Validates before worktree creation | Call validation scripts in your tool's pre-create hook |
-| `{worktree}`, `{worktreePath}`, etc. | Variable substitution in hook commands | Use `git worktree list`, `pwd`, `git rev-parse` to get the same values |
+| gw feature                           | What it does                                     | How to replicate                                                       |
+| ------------------------------------ | ------------------------------------------------ | ---------------------------------------------------------------------- |
+| `autoCopyFiles`                      | Copies listed files from default branch worktree | `gw sync` or manual `cp` from root worktree                            |
+| `hooks.checkout.post`                | Runs commands after worktree creation            | Call the same commands in your tool's post-create hook                 |
+| `hooks.checkout.pre`                 | Validates before worktree creation               | Call validation scripts in your tool's pre-create hook                 |
+| `{worktree}`, `{worktreePath}`, etc. | Variable substitution in hook commands           | Use `git worktree list`, `pwd`, `git rev-parse` to get the same values |
 
 **What you can't replicate with hooks alone** — these are gw's unique value:
 
