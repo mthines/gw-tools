@@ -62,7 +62,18 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
 }
 
 /**
- * Ensure the config directory exists
+ * Content for .gw/.gitignore — keeps artifacts and state out of git
+ * while allowing config.json to be committed.
+ */
+const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed)
+*/
+
+# Runtime state
+state.json
+`;
+
+/**
+ * Ensure the config directory exists and has a .gitignore
  * @param dir Directory where .gw should be created
  */
 async function ensureConfigDir(dir: string): Promise<void> {
@@ -73,6 +84,17 @@ async function ensureConfigDir(dir: string): Promise<void> {
     if (!(error instanceof Deno.errors.AlreadyExists)) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create config directory: ${message}`);
+    }
+  }
+
+  // Create .gitignore if it doesn't exist — keeps artifacts/state ignored
+  // while allowing config.json to be committed
+  const gitignorePath = join(configDir, '.gitignore');
+  try {
+    await Deno.stat(gitignorePath);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      await Deno.writeTextFile(gitignorePath, GW_GITIGNORE_CONTENT);
     }
   }
 }

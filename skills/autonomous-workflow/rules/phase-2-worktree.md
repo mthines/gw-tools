@@ -97,11 +97,24 @@ go vet ./...             # Go projects
 gw sync <branch-name>
 ```
 
-### Step 7: Ensure .gw/ is Gitignored
+### Step 7: Ensure .gw/ Gitignore is Set Up
+
+The `.gw/.gitignore` file is automatically created by `gw init` and `gw checkout`.
+It ignores workflow artifacts (`*/`) and runtime state (`state.json`) while
+allowing `config.json` to be committed.
+
+If `.gw/.gitignore` doesn't exist (older gw version), create it:
 
 ```bash
-grep -q "^\.gw/$" .gitignore 2>/dev/null || echo ".gw/" >> .gitignore
+if [ ! -f .gw/.gitignore ]; then
+  mkdir -p .gw
+  printf '# Workflow artifacts (per-developer, not committed)\n*/\n\n# Runtime state\nstate.json\n' > .gw/.gitignore
+fi
 ```
+
+> **Note:** If your repo has `.gw/` in the root `.gitignore`, remove it —
+> the nested `.gw/.gitignore` handles selective ignoring so `config.json`
+> can be committed.
 
 ### Step 8: Generate plan.md (Full Mode ONLY)
 
