@@ -264,14 +264,34 @@ async function detectDefaultBranch(repoPath: string): Promise<string> {
 }
 
 /**
- * Check if gw is already initialized in current or parent directories
+ * Check if gw is already initialized in current or parent directories.
+ * Detects whether the config is in the worktree (committable) or only
+ * at the bare repo root (needs migration).
  */
-async function isAlreadyInitialized(): Promise<{ initialized: boolean; gitRoot?: string }> {
+async function isAlreadyInitialized(): Promise<{
+  initialized: boolean;
+  configDir?: string;
+  needsMigration?: boolean;
+}> {
   try {
+    const worktreeRoot = await getWorktreeRoot();
     const gitRoot = await findGitRoot();
-    const configPath = join(gitRoot, '.gw', 'config.json');
-    const exists = await pathExists(configPath);
-    return { initialized: exists, gitRoot };
+    const worktreeConfig = join(worktreeRoot, '.gw', 'config.json');
+    const bareRootConfig = join(gitRoot, '.gw', 'config.json');
+
+    // Config in worktree — already committable
+    if (await pathExists(worktreeConfig)) {
+      return { initialized: true, configDir: worktreeRoot };
+    }
+    // Config at bare root only — needs migration to worktree
+    if (await pathExists(bareRootConfig)) {
+      return {
+        initialized: true,
+        configDir: gitRoot,
+        needsMigration: worktreeRoot !== gitRoot,
+      };
+    }
+    return { initialized: false };
   } catch {
     return { initialized: false };
   }
@@ -452,8 +472,15 @@ Clone Examples:
         navigate to the repo directory (requires shell integration)
 
 Existing Repository Examples:
+  # Initialize and commit config to share with your team
+  gw init --auto-copy-files .env --post-checkout "pnpm install"
+  git add .gw/config.json && git commit -m "chore: share gw config"
+
+  # Migrate existing config to worktree (makes it committable)
+  # Just re-run gw init — it detects the old config and copies it
+  gw init
+
   # Interactive mode - prompts for all configuration options
-  # If not in a git repo, will first prompt for repository URL to clone
   gw init --interactive
 
   # Initialize with auto-detected root and auto-copy files
@@ -762,11 +789,33 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
  */
 async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   // Check if already initialized
-  const { initialized, gitRoot } = await isAlreadyInitialized();
+  const { initialized, configDir, needsMigration } = await isAlreadyInitialized();
+
+  if (initialized && needsMigration) {
+    // Config exists at bare root but not in worktree — copy it for committing
+    const worktreeRoot = await getWorktreeRoot();
+    const sourceConfig = join(configDir!, '.gw', 'config.json');
+    const targetDir = join(worktreeRoot, '.gw');
+    const targetConfig = join(targetDir, 'config.json');
+
+    try {
+      await Deno.mkdir(targetDir, { recursive: true });
+      await Deno.copyFile(sourceConfig, targetConfig);
+      output.success('Config copied to worktree (now committable)');
+      console.log(`  From: ${output.path(sourceConfig)}`);
+      console.log(`  To:   ${output.path(targetConfig)}`);
+      console.log(`\nCommit it: ${output.bold('git add .gw/config.json')}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.error(`Failed to copy config: ${message}`);
+      Deno.exit(1);
+    }
+    return;
+  }
 
   if (initialized && !parsed.interactive) {
     output.info('gw is already initialized in this repository');
-    console.log(`  Config: ${output.path(join(gitRoot!, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(join(configDir!, '.gw/config.json'))}`);
     console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);
     return;
   }
