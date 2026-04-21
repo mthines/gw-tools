@@ -342,9 +342,18 @@ The tool automatically:
 
 1. **Searches for existing config**: Walks up from your current directory looking for `.gw/config.json`
 2. **Auto-detects git root**: Derives the git root from the config file's location (or detects it if no config exists)
-3. **Creates config**: Saves default settings to `.gw/config.json` (no machine-specific paths stored)
+3. **Creates config**: Saves default settings to `.gw/config.json` in your worktree root
 
-If auto-detection fails (rare edge cases), you can manually initialize:
+Config is created inside the current worktree so it can be committed to git and shared with your team. This means everyone gets the same `autoCopyFiles`, `hooks`, `defaultBranch`, etc. without each person having to configure it.
+
+```bash
+# Initialize and commit (one-time, from any worktree)
+gw init --auto-copy-files .env --post-checkout "pnpm install"
+git add .gw/config.json
+git commit -m "chore: share gw config"
+```
+
+If auto-detection fails (rare edge cases), you can manually specify the root:
 
 ```bash
 gw init --root /path/to/your/repo.git
@@ -375,14 +384,16 @@ gw init --root /path/to/your/repo.git
 
 ### Configuration Options
 
-- **defaultBranch**: Default source worktree name (optional, defaults to "main")
-- **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw checkout` (optional, only set via `gw init --auto-copy-files`)
-- **hooks**: Command hooks configuration (optional, set via `gw init --pre-checkout` and `--post-checkout`)
+All fields are optional and safe to commit — no machine-specific paths or runtime state is stored.
+
+- **defaultBranch**: Default source worktree name (defaults to "main")
+- **autoCopyFiles**: Array of file/directory paths to automatically copy when creating worktrees with `gw checkout` (set via `gw init --auto-copy-files`)
+- **hooks**: Command hooks configuration (set via `gw init --pre-checkout` and `--post-checkout`)
   - **hooks.checkout.pre**: Array of commands to run before creating a worktree
   - **hooks.checkout.post**: Array of commands to run after creating a worktree
-- **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (optional, defaults to 7, set via `gw init --clean-threshold`)
-- **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (optional, defaults to false, set via `gw init --auto-clean`)
-- **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (optional, defaults to "merge", set via `gw init --update-strategy`)
+- **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (defaults to 7, set via `gw init --clean-threshold`)
+- **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (defaults to false, set via `gw init --auto-clean`)
+- **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (defaults to "merge", set via `gw init --update-strategy`)
 
 ## Commands
 
@@ -1542,6 +1553,10 @@ gw cd feat/new-feature
 # One-time setup: Configure auto-copy files and hooks
 gw init --auto-copy-files .env,components/agents/.env,components/ui/.vercel/ \
   --post-checkout "pnpm install"
+
+# Commit the config so your team gets the same setup
+git add .gw/config.json
+git commit -m "chore: share gw config"
 
 # From within any worktree of your repository
 # Create a new worktree with auto-copy and hooks

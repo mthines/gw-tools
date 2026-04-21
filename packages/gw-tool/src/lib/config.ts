@@ -6,7 +6,7 @@
 import { join, resolve } from '@std/path';
 import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from './types.ts';
-import { findGitRoot, pathExists } from './path-resolver.ts';
+import { findGitRoot, getWorktreeRoot, pathExists } from './path-resolver.ts';
 import { CURRENT_CONFIG_VERSION, runMigrations } from './config-migrations.ts';
 
 /**
@@ -195,13 +195,14 @@ export async function loadConfig(): Promise<{
   try {
     const gitRoot = await findGitRoot();
 
-    // Create default config (no root stored)
+    // Save config in the worktree root (committable by default)
+    // Falls back to git root if not inside a worktree
+    const configDir = await getWorktreeRoot();
     const config = createDefaultConfig();
 
-    // Save config in the detected git root
-    await saveConfig(gitRoot, config);
+    await saveConfig(configDir, config);
 
-    console.log(`Created config at ${getConfigPath(gitRoot)}`);
+    console.log(`Created config at ${getConfigPath(configDir)}`);
     console.log(`Default source worktree: ${config.defaultBranch}\n`);
 
     return { config, gitRoot };

@@ -5,7 +5,7 @@
 
 import { join, resolve } from '@std/path';
 import { saveConfigTemplate } from '../lib/config.ts';
-import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
+import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
@@ -786,10 +786,11 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
       Deno.exit(1);
     }
   } else {
-    // Try auto-detection
+    // Save config in the worktree root (committable by default).
+    // Falls back to git root if not inside a worktree.
     try {
-      rootPath = await findGitRoot();
-      output.info(`Auto-detected git root: ${output.path(rootPath)}`);
+      rootPath = await getWorktreeRoot();
+      output.info(`Auto-detected worktree root: ${output.path(rootPath)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Could not auto-detect git root - ${message}`);
@@ -866,7 +867,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     config.updateStrategy = parsed.updateStrategy;
   }
 
-  // Save config at the git root (so it can be found by all worktrees)
+  // Save config (committable by default — in worktree root)
   try {
     await saveConfigTemplate(rootPath, config);
     output.success('Configuration created successfully');
