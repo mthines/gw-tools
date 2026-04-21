@@ -465,3 +465,21 @@ Deno.test('fish completions - custom name uses namespaced functions', () => {
   assertStringIncludes(output, 'function __gw_dev_worktrees');
   assertStringIncludes(output, 'complete -c gw-dev');
 });
+
+// Nav marker stale path validation tests
+
+Deno.test('zsh function - includes directory existence check before cd', () => {
+  const output = getZshFunction();
+  // The nav_path cd should be guarded by a -d check, not just reading the file
+  assertStringIncludes(output, 'if [[ -d "$nav_path" ]];', 'Should check path exists before cd');
+});
+
+Deno.test('bash function - includes directory existence check before cd', () => {
+  const output = getBashFunction();
+  assertStringIncludes(output, 'if [[ -d "$nav_path" ]];', 'Should check path exists before cd');
+});
+
+Deno.test('fish function - includes directory existence check before cd', () => {
+  const output = getFishFunction();
+  assertStringIncludes(output, 'if test -d "$nav_path"', 'Should check path exists before cd');
+});

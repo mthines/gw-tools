@@ -96,6 +96,13 @@ Deno.test('checkout command - navigates to worktree when branch is checked out e
       const navFile = join(home, '.gw', 'tmp', 'last-nav');
       const navPath = await Deno.readTextFile(navFile);
       assertEquals(navPath, featureWorktreePath);
+
+      // Clean up nav marker to prevent stale markers affecting future tests
+      try {
+        await Deno.remove(navFile);
+      } catch {
+        // Ignore if already cleaned up
+      }
     } finally {
       cwd.restore();
     }

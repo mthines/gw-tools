@@ -269,7 +269,9 @@ ${commandName}() {
     if [[ -f "$nav_file" ]]; then
       local nav_path=$(cat "$nav_file")
       rm -f "$nav_file"
-      cd "$nav_path"
+      if [[ -d "$nav_path" ]]; then
+        cd "$nav_path"
+      fi
     fi
     return $exit_code
   else
@@ -322,7 +324,9 @@ ${commandName}() {
     if [[ -f "$nav_file" ]]; then
       local nav_path=$(cat "$nav_file")
       rm -f "$nav_file"
-      cd "$nav_path"
+      if [[ -d "$nav_path" ]]; then
+        cd "$nav_path"
+      fi
     fi
     return $exit_code
   else
@@ -375,7 +379,9 @@ function ${commandName}
         if test -f "$nav_file"
             set -l nav_path (cat "$nav_file")
             rm -f "$nav_file"
-            cd $nav_path
+            if test -d "$nav_path"
+                cd $nav_path
+            end
         end
         return $exit_code
     else
