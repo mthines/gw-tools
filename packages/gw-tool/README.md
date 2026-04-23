@@ -402,7 +402,7 @@ Create `.gw/config.local.json` to override any config value for your machine onl
 ```jsonc
 // .gw/config.local.json — personal overrides, not committed
 {
-  "autoCopyFiles": [".env", ".env.local", "my-personal-config.json"]
+  "autoCopyFiles": [".env", ".env.local", "my-personal-config.json"],
 }
 ```
 
