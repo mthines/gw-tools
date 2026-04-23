@@ -83,10 +83,9 @@ gw init git@github.com:user/repo.git \
 {
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
-  "configVersion": 1,
+  "configVersion": 2,
 
-  // Core Settings
-  "root": "/absolute/path/to/repo.git",
+  // Core Settings (safe to commit — no machine-specific paths)
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
@@ -116,7 +115,6 @@ IDE autocompletion: The `$schema` property enables autocompletion and validation
 1. `gw` searches for `.gw/config.json` walking up from current directory
 2. If not found, attempts auto-detection on first `gw checkout`
 3. Falls back to defaults:
-   - `root`: Auto-detected from `git worktree list`
    - `defaultBranch`: "main"
    - `autoCopyFiles`: `[]`
 

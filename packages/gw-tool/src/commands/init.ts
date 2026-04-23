@@ -443,7 +443,7 @@ Options:
                                   (can be specified multiple times for multiple hooks)
   --clean-threshold <days>        Number of days before worktrees are considered
                                   stale for 'gw clean' (default: 7)
-  --auto-clean                    Silently cleanup stale worktrees in background (after checkout/list, 24h cooldown)
+  --auto-clean                    Silently cleanup stale worktrees in background (after checkout/list, non-blocking)
   --update-strategy <strategy>    Set default update strategy: 'merge' or 'rebase'
                                   (default: merge)
   -h, --help                      Show this help message
@@ -937,7 +937,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     }
     if (config.autoClean) {
       console.log(
-        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking, 24h cooldown)')}`
+        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking, non-blocking)')}`
       );
     }
     if (config.updateStrategy) {

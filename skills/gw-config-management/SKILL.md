@@ -50,11 +50,12 @@ Configure gw-tools for optimal workflows across different project types and team
 
 ## Configuration Options
 
+All fields are safe to commit — no machine-specific paths or runtime state is stored.
+
 | Option           | Purpose                     | Default        |
 | ---------------- | --------------------------- | -------------- |
 | `$schema`        | JSON Schema for IDE support | (auto-set)     |
 | `configVersion`  | Schema migration version    | (auto-managed) |
-| `root`           | Repository root path        | Auto-detected  |
 | `defaultBranch`  | Source for file copying     | `"main"`       |
 | `autoCopyFiles`  | Files to auto-copy          | `[]`           |
 | `hooks`          | Pre/post checkout commands  | `{}`           |
