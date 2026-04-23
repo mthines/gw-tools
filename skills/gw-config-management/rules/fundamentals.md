@@ -96,8 +96,8 @@ gw init git@github.com:user/repo.git \
   "hooks": {
     "checkout": {
       "pre": ["echo 'Creating: {worktree}'"],
-      "post": ["cd {worktreePath} && pnpm install"]
-    }
+      "post": ["cd {worktreePath} && pnpm install"],
+    },
   },
 
   // Advanced Options

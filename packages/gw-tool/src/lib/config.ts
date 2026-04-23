@@ -210,29 +210,18 @@ export async function loadConfig(): Promise<{
       }
 
       // Load local overrides (.gw/config.local.json) if present
-      const configDir = configPath.replace(
-        /[/\\]config\.json$/, ''
-      );
-      const localConfigPath = join(
-        configDir, CONFIG_LOCAL_FILE_NAME
-      );
+      const configDir = configPath.replace(/[/\\]config\.json$/, '');
+      const localConfigPath = join(configDir, CONFIG_LOCAL_FILE_NAME);
       try {
-        const localContent = await Deno.readTextFile(
-          localConfigPath
-        );
-        const localData = parseJsonc(localContent) as Record<
-          string, unknown
-        >;
+        const localContent = await Deno.readTextFile(localConfigPath);
+        const localData = parseJsonc(localContent) as Record<string, unknown>;
         // Merge: local overrides base (shallow merge)
         Object.assign(migratedData, localData);
       } catch (error) {
         if (!(error instanceof Deno.errors.NotFound)) {
           // Only ignore "not found" — other errors should surface
-          const msg = error instanceof Error
-            ? error.message : String(error);
-          console.error(
-            `Warning: Failed to load ${CONFIG_LOCAL_FILE_NAME}: ${msg}`
-          );
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`Warning: Failed to load ${CONFIG_LOCAL_FILE_NAME}: ${msg}`);
         }
       }
 
