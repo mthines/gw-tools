@@ -113,8 +113,10 @@ IDE autocompletion: The `$schema` property enables autocompletion and validation
 ## Config Precedence
 
 1. `gw` searches for `.gw/config.json` walking up from current directory
-2. If not found, attempts auto-detection on first `gw checkout`
-3. Falls back to defaults:
+2. If found, loads it and applies any pending migrations
+3. Loads `.gw/config.local.json` if present (shallow merge, local wins)
+4. If not found, auto-creates `config.json` in the worktree root
+5. Falls back to defaults:
    - `defaultBranch`: "main"
    - `autoCopyFiles`: `[]`
 

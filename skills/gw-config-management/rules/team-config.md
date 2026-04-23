@@ -52,17 +52,16 @@ Files everyone needs:
 
 ### Personal (Don't Commit)
 
-Individual developer files:
+Create `.gw/config.local.json` for personal overrides. It's automatically
+gitignored by `.gw/.gitignore` and merged on top of `config.json` (local wins).
 
 ```bash
-# Create personal override
-cp .gw/config.json .gw/config.local.json
-
-# Add personal files
-# Edit .gw/config.local.json
-
-# Add to .gitignore
-echo ".gw/config.local.json" >> .gitignore
+# Create personal override with extra files
+cat > .gw/config.local.json << 'EOF'
+{
+  "autoCopyFiles": [".env", ".env.local", "my-dev-config.json"]
+}
+EOF
 ```
 
 ## Documentation

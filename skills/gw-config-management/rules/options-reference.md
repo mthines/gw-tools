@@ -14,7 +14,13 @@ tags:
 Complete reference for all `.gw/config.json` options.
 Each option affects specific gw commands and behaviors.
 
-The config file supports JSONC (JSON with Comments) — comments (`//`, `/* */`) and trailing commas are allowed.
+The config file is committable — no machine-specific paths or runtime state is stored.
+It supports JSONC (JSON with Comments) — comments (`//`, `/* */`) and trailing commas are allowed.
+
+### Local Overrides
+
+Create `.gw/config.local.json` to override any value for your machine only.
+It is automatically gitignored and merged on top of `config.json` (shallow merge, local wins).
 
 ## IDE Autocompletion
 

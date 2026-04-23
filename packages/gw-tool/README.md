@@ -395,6 +395,19 @@ All fields are optional and safe to commit — no machine-specific paths or runt
 - **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (defaults to "merge", set via `gw init --update-strategy`)
 
+### Local Overrides (`config.local.json`)
+
+Create `.gw/config.local.json` to override any config value for your machine only. It's automatically gitignored by `.gw/.gitignore`.
+
+```jsonc
+// .gw/config.local.json — personal overrides, not committed
+{
+  "autoCopyFiles": [".env", ".env.local", "my-personal-config.json"]
+}
+```
+
+Local config is merged on top of `config.json` (shallow merge, local wins). Useful for adding personal files to `autoCopyFiles` without modifying the team config.
+
 ## Commands
 
 ### checkout
