@@ -65,10 +65,13 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
  * Content for .gw/.gitignore — keeps artifacts and state out of git
  * while allowing config.json to be committed.
  */
+const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
+
 const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed)
 */
 
-# Runtime state
+# Local config overrides and runtime state
+config.local.json
 state.json
 `;
 
@@ -204,6 +207,33 @@ export async function loadConfig(): Promise<{
             appliedMigrations.length > 1 ? 's' : ''
           } applied)\n`
         );
+      }
+
+      // Load local overrides (.gw/config.local.json) if present
+      const configDir = configPath.replace(
+        /[/\\]config\.json$/, ''
+      );
+      const localConfigPath = join(
+        configDir, CONFIG_LOCAL_FILE_NAME
+      );
+      try {
+        const localContent = await Deno.readTextFile(
+          localConfigPath
+        );
+        const localData = parseJsonc(localContent) as Record<
+          string, unknown
+        >;
+        // Merge: local overrides base (shallow merge)
+        Object.assign(migratedData, localData);
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) {
+          // Only ignore "not found" — other errors should surface
+          const msg = error instanceof Error
+            ? error.message : String(error);
+          console.error(
+            `Warning: Failed to load ${CONFIG_LOCAL_FILE_NAME}: ${msg}`
+          );
+        }
       }
 
       return { config: migratedData, gitRoot };

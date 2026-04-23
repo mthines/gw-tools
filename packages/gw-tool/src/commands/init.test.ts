@@ -614,15 +614,15 @@ Deno.test('init command - clone mode with file URL', async () => {
       const clonedRepoPath = join(targetDir, expectedRepoName);
       await assertDirExists(join(clonedRepoPath, '.git'));
 
-      // Verify config was created
-      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
-
-      // Verify config content
-      const config = await readTestConfig(clonedRepoPath);
-      assertEquals((config as Record<string, unknown>).root, undefined);
-
       // Verify default worktree was created (inside the repository directory)
       await assertDirExists(join(clonedRepoPath, 'main'));
+
+      // Verify config was moved into worktree (committable)
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
+
+      // Verify config content
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
+      assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
@@ -651,10 +651,12 @@ Deno.test('init command - clone mode with custom directory', async () => {
       // Verify cloned to custom directory
       const clonedRepoPath = join(targetDir, 'custom-name');
       await assertDirExists(join(clonedRepoPath, '.git'));
-      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+      // Verify config was moved into worktree (committable)
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
       // Verify config content
-      const config = await readTestConfig(clonedRepoPath);
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
       assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
@@ -694,7 +696,8 @@ Deno.test('init command - clone mode with configuration options', async () => {
       });
 
       const clonedRepoPath = join(targetDir, expectedRepoName);
-      const config = await readTestConfig(clonedRepoPath);
+      // Config is moved into worktree (committable)
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
 
       assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
       assertEquals(config.hooks?.checkout?.post, ['echo "installed"']);
@@ -781,15 +784,15 @@ Deno.test('init command - clone mode with empty repository', async () => {
       // Verify the repository was cloned
       await assertDirExists(join(clonedRepoPath, '.git'));
 
-      // Verify config was created
-      await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
-
-      // Verify config content
-      const config = await readTestConfig(clonedRepoPath);
-      assertEquals((config as Record<string, unknown>).root, undefined);
-
       // Verify default worktree was created
       await assertDirExists(join(clonedRepoPath, 'main'));
+
+      // Verify config was moved into worktree (committable)
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
+
+      // Verify config content
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
+      assertEquals((config as Record<string, unknown>).root, undefined);
 
       // Verify that the main branch exists in the worktree
       const branchCmd = new Deno.Command('git', {
@@ -860,12 +863,12 @@ Deno.test('init command - clone mode with empty repository and custom default br
 
       const clonedRepoPath = join(targetDir, 'my-empty-repo');
 
-      // Verify config has custom default branch
-      const config = await readTestConfig(clonedRepoPath);
-      assertEquals(config.defaultBranch, 'develop');
-
       // Verify worktree was created with custom branch name
       await assertDirExists(join(clonedRepoPath, 'develop'));
+
+      // Verify config was moved into worktree (committable)
+      const config = await readTestConfig(join(clonedRepoPath, 'develop'));
+      assertEquals(config.defaultBranch, 'develop');
 
       // Verify the branch in the worktree
       const branchCmd = new Deno.Command('git', {
@@ -947,10 +950,12 @@ Deno.test('init command - interactive mode prompts for URL when not in git repo'
         // Verify repository was cloned (with .git suffix)
         const clonedRepoPath = join(tempDir, expectedRepoName);
         await assertDirExists(join(clonedRepoPath, '.git'));
-        await assertFileExists(join(clonedRepoPath, '.gw', 'config.json'));
+
+        // Verify config was moved into worktree (committable)
+        await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
         // Verify config
-        const config = await readTestConfig(clonedRepoPath);
+        const config = await readTestConfig(join(clonedRepoPath, 'main'));
         assertEquals((config as Record<string, unknown>).root, undefined);
       } finally {
         await sourceRepo.cleanup();

@@ -634,8 +634,8 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       config.defaultBranch = detectedBranch;
     }
 
+    // Save config temporarily at bare root (worktree doesn't exist yet)
     await saveConfigTemplate(fullPath, config as Config);
-    output.success('Configuration created');
 
     // Step 4: Create default worktree
     const defaultBranch = config.defaultBranch || detectedBranch;
@@ -694,11 +694,40 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       }
     }
 
+    // Move config from bare root into the worktree (committable)
+    const worktreePath = join(fullPath, defaultBranch);
+    const bareConfigDir = join(fullPath, '.gw');
+    const worktreeConfigDir = join(worktreePath, '.gw');
+    try {
+      await Deno.mkdir(worktreeConfigDir, { recursive: true });
+      // Copy config and gitignore to worktree
+      for (const fileName of ['config.json', '.gitignore']) {
+        const src = join(bareConfigDir, fileName);
+        const dst = join(worktreeConfigDir, fileName);
+        try {
+          await Deno.copyFile(src, dst);
+        } catch {
+          // .gitignore might not exist yet, that's fine
+        }
+      }
+      // Remove the bare root config (worktree copy is the source of truth)
+      try {
+        await Deno.remove(join(bareConfigDir, 'config.json'));
+      } catch {
+        // best effort
+      }
+      output.success('Configuration created (committable)');
+    } catch {
+      // If move fails, config stays at bare root — still works
+      output.success('Configuration created');
+    }
+
     // Success summary
     console.log('\n' + output.checkmark() + ' Repository initialized successfully!\n');
     console.log(`  Repository: ${output.path(fullPath)}`);
-    console.log(`  Config: ${output.path(join(fullPath, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(join(worktreePath, '.gw/config.json'))}`);
     console.log(`  Default worktree: ${output.bold(defaultBranch)}`);
+    console.log(`\n  Commit config: ${output.bold(`cd ${defaultBranch} && git add .gw/config.json`)}`);
     console.log();
 
     // Check for shell integration and offer to install if not present
