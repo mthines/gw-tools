@@ -27,6 +27,28 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 
 **VS Code users:** Install the [gw-worktrees extension](https://marketplace.visualstudio.com/items?itemName=mthines.gw-worktrees) for integrated worktree management.
 
+### Quick Start
+
+```bash
+# Clone and set up repository with gw
+gw init git@github.com:user/repo.git
+
+# Create a new worktree (auto-creates branch if needed, auto-copies files)
+gw add feature-auth
+
+# Navigate to worktree
+gw cd feature-auth
+
+# Sync files between worktrees
+gw sync feature-auth .env secrets/
+
+# List all worktrees
+gw list
+
+# Remove when done
+gw remove feature-auth
+```
+
 ### Installation
 
 Install the `gw` CLI tool, then add shell integration to your shell config for commands like `gw cd`:
@@ -53,28 +75,6 @@ For Fish, add to `~/.config/fish/config.fish`:
 
 ```fish
 gw install-shell | source
-```
-
-### Quick Start
-
-```bash
-# Clone and set up repository with gw
-gw init git@github.com:user/repo.git
-
-# Create a new worktree (auto-creates branch if needed, auto-copies files)
-gw add feature-auth
-
-# Navigate to worktree
-gw cd feature-auth
-
-# Sync files between worktrees
-gw sync feature-auth .env secrets/
-
-# List all worktrees
-gw list
-
-# Remove when done
-gw remove feature-auth
 ```
 
 📖 **Full documentation:** [packages/gw-tool/README.md](packages/gw-tool/README.md)

@@ -97,7 +97,7 @@ Generate `walkthrough.md` summaries for PR delivery.
 
 ### Prerequisites
 
-- [gw CLI tool](../README.md) installed (`npm install -g gw-tool`)
+- [gw CLI tool](../README.md) installed (`npm install -g @gw-tools/gw`)
 - Basic Git knowledge
 - Claude Code or another compatible AI agent
 
