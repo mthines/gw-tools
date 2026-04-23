@@ -39,7 +39,7 @@ Deno.test('saveConfig - writes valid JSON', async () => {
     await saveConfig(repo.path, config);
 
     const saved = await readTestConfig(repo.path);
-    assertEquals(saved.root, repo.path);
+    assertEquals((saved as Record<string, unknown>).root, undefined);
     assertEquals(saved.defaultBranch, 'main');
     assertEquals(saved.cleanThreshold, 7);
   } finally {
@@ -89,7 +89,7 @@ Deno.test('loadConfig - finds config in current directory', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
       assertEquals(gitRoot, repo.path);
     } finally {
       cwd.restore();
@@ -114,7 +114,7 @@ Deno.test('loadConfig - walks up directory tree to find config', async () => {
     const cwd = new TempCwd(subdir);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
       assertEquals(gitRoot, repo.path);
     } finally {
       cwd.restore();
@@ -132,13 +132,17 @@ Deno.test('loadConfig - auto-detects git root if no config exists', async () => 
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      // Config should be auto-created with detected root
+      // Config should be auto-created without persisting root
       assertEquals(gitRoot, repo.path);
-      assertEquals(loaded.root, repo.path);
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
       assertEquals(loaded.defaultBranch, 'main');
 
       // Config file should have been created
       await assertFileExists(join(repo.path, '.gw', 'config.json'));
+
+      // Verify root is NOT saved in the config file
+      const saved = await readTestConfig(repo.path);
+      assertEquals((saved as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
     }
@@ -174,13 +178,10 @@ Deno.test('loadConfig - handles config with missing root field', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      // Should auto-detect and update config with root
+      // Should derive gitRoot from config file path
       assertEquals(gitRoot, repo.path);
-      assertEquals(loaded.root, repo.path);
-
-      // Config should be updated with root
-      const saved = await readTestConfig(repo.path);
-      assertEquals(saved.root, repo.path);
+      // root should NOT be in the loaded config
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
     }
@@ -219,9 +220,8 @@ Deno.test('loadConfig - parses JSONC with single-line comments', async () => {
   try {
     await repo.init();
 
-    // Create config with single-line comments
+    // Create config with single-line comments (root field is ignored by migration)
     const jsoncConfig = `{
-  "root": "${repo.path}",
   // This is the default branch
   "defaultBranch": "main",
   "cleanThreshold": 7 // days before cleanup
@@ -232,7 +232,6 @@ Deno.test('loadConfig - parses JSONC with single-line comments', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
@@ -251,7 +250,6 @@ Deno.test('loadConfig - parses JSONC with multi-line comments', async () => {
 
     // Create config with multi-line comments
     const jsoncConfig = `{
-  "root": "${repo.path}",
   /*
    * Default branch configuration
    * This is used for creating new worktrees
@@ -265,7 +263,6 @@ Deno.test('loadConfig - parses JSONC with multi-line comments', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
@@ -284,7 +281,6 @@ Deno.test('loadConfig - parses JSONC with trailing commas', async () => {
 
     // Create config with trailing commas
     const jsoncConfig = `{
-  "root": "${repo.path}",
   "defaultBranch": "main",
   "autoCopyFiles": [
     ".env",
@@ -298,7 +294,6 @@ Deno.test('loadConfig - parses JSONC with trailing commas', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.autoCopyFiles, ['.env', 'secrets/']);
       assertEquals(loaded.cleanThreshold, 7);
@@ -330,7 +325,7 @@ Deno.test('saveConfig - writes clean JSON without comments', async () => {
 
     // Verify it's valid JSON (not JSONC)
     const parsed = JSON.parse(rawContent);
-    assertEquals(parsed.root, repo.path);
+    assertEquals(parsed.root, undefined);
     assertEquals(parsed.autoCopyFiles, ['.env', 'secrets/']);
   } finally {
     await repo.cleanup();
@@ -372,7 +367,7 @@ Deno.test('saveConfigTemplate - template is parseable by loadConfig', async () =
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded, gitRoot } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 7);
       assertEquals(gitRoot, repo.path);
@@ -558,7 +553,7 @@ Deno.test('saveConfigTemplate - preserves all config values', async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const { config: loaded } = await loadConfig();
-      assertEquals(loaded.root, repo.path);
+      assertEquals((loaded as Record<string, unknown>).root, undefined);
       assertEquals(loaded.defaultBranch, 'main');
       assertEquals(loaded.cleanThreshold, 14);
       assertEquals(loaded.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
@@ -595,7 +590,7 @@ Deno.test('saveConfigTemplate - includes section headers and documentation', asy
 
     // Verify documentation elements
     assertEquals(rawContent.includes('Documentation: https://github.com/mthines/gw-tools'), true);
-    assertEquals(rawContent.includes('All fields except'), true);
+    assertEquals(rawContent.includes('This file is safe to commit'), true);
     assertEquals(rawContent.includes('Internal fields (managed automatically'), true);
   } finally {
     await repo.cleanup();

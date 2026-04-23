@@ -5,7 +5,7 @@
 
 import { join, resolve } from '@std/path';
 import { saveConfigTemplate } from '../lib/config.ts';
-import { findGitRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
+import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
@@ -264,14 +264,34 @@ async function detectDefaultBranch(repoPath: string): Promise<string> {
 }
 
 /**
- * Check if gw is already initialized in current or parent directories
+ * Check if gw is already initialized in current or parent directories.
+ * Detects whether the config is in the worktree (committable) or only
+ * at the bare repo root (needs migration).
  */
-async function isAlreadyInitialized(): Promise<{ initialized: boolean; gitRoot?: string }> {
+async function isAlreadyInitialized(): Promise<{
+  initialized: boolean;
+  configDir?: string;
+  needsMigration?: boolean;
+}> {
   try {
+    const worktreeRoot = await getWorktreeRoot();
     const gitRoot = await findGitRoot();
-    const configPath = join(gitRoot, '.gw', 'config.json');
-    const exists = await pathExists(configPath);
-    return { initialized: exists, gitRoot };
+    const worktreeConfig = join(worktreeRoot, '.gw', 'config.json');
+    const bareRootConfig = join(gitRoot, '.gw', 'config.json');
+
+    // Config in worktree — already committable
+    if (await pathExists(worktreeConfig)) {
+      return { initialized: true, configDir: worktreeRoot };
+    }
+    // Config at bare root only — needs migration to worktree
+    if (await pathExists(bareRootConfig)) {
+      return {
+        initialized: true,
+        configDir: gitRoot,
+        needsMigration: worktreeRoot !== gitRoot,
+      };
+    }
+    return { initialized: false };
   } catch {
     return { initialized: false };
   }
@@ -423,7 +443,7 @@ Options:
                                   (can be specified multiple times for multiple hooks)
   --clean-threshold <days>        Number of days before worktrees are considered
                                   stale for 'gw clean' (default: 7)
-  --auto-clean                    Silently cleanup stale worktrees in background (after checkout/list, 24h cooldown)
+  --auto-clean                    Silently cleanup stale worktrees in background (after checkout/list, non-blocking)
   --update-strategy <strategy>    Set default update strategy: 'merge' or 'rebase'
                                   (default: merge)
   -h, --help                      Show this help message
@@ -452,8 +472,15 @@ Clone Examples:
         navigate to the repo directory (requires shell integration)
 
 Existing Repository Examples:
+  # Initialize and commit config to share with your team
+  gw init --auto-copy-files .env --post-checkout "pnpm install"
+  git add .gw/config.json && git commit -m "chore: share gw config"
+
+  # Migrate existing config to worktree (makes it committable)
+  # Just re-run gw init — it detects the old config and copies it
+  gw init
+
   # Interactive mode - prompts for all configuration options
-  # If not in a git repo, will first prompt for repository URL to clone
   gw init --interactive
 
   # Initialize with auto-detected root and auto-copy files
@@ -607,9 +634,8 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       config.defaultBranch = detectedBranch;
     }
 
-    config.root = fullPath;
+    // Save config temporarily at bare root (worktree doesn't exist yet)
     await saveConfigTemplate(fullPath, config as Config);
-    output.success('Configuration created');
 
     // Step 4: Create default worktree
     const defaultBranch = config.defaultBranch || detectedBranch;
@@ -668,11 +694,40 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       }
     }
 
+    // Move config from bare root into the worktree (committable)
+    const worktreePath = join(fullPath, defaultBranch);
+    const bareConfigDir = join(fullPath, '.gw');
+    const worktreeConfigDir = join(worktreePath, '.gw');
+    try {
+      await Deno.mkdir(worktreeConfigDir, { recursive: true });
+      // Copy config and gitignore to worktree
+      for (const fileName of ['config.json', '.gitignore']) {
+        const src = join(bareConfigDir, fileName);
+        const dst = join(worktreeConfigDir, fileName);
+        try {
+          await Deno.copyFile(src, dst);
+        } catch {
+          // .gitignore might not exist yet, that's fine
+        }
+      }
+      // Remove the bare root config (worktree copy is the source of truth)
+      try {
+        await Deno.remove(join(bareConfigDir, 'config.json'));
+      } catch {
+        // best effort
+      }
+      output.success('Configuration created (committable)');
+    } catch {
+      // If move fails, config stays at bare root — still works
+      output.success('Configuration created');
+    }
+
     // Success summary
     console.log('\n' + output.checkmark() + ' Repository initialized successfully!\n');
     console.log(`  Repository: ${output.path(fullPath)}`);
-    console.log(`  Config: ${output.path(join(fullPath, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(join(worktreePath, '.gw/config.json'))}`);
     console.log(`  Default worktree: ${output.bold(defaultBranch)}`);
+    console.log(`\n  Commit config: ${output.bold(`cd ${defaultBranch} && git add .gw/config.json`)}`);
     console.log();
 
     // Check for shell integration and offer to install if not present
@@ -763,11 +818,33 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
  */
 async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   // Check if already initialized
-  const { initialized, gitRoot } = await isAlreadyInitialized();
+  const { initialized, configDir, needsMigration } = await isAlreadyInitialized();
+
+  if (initialized && needsMigration) {
+    // Config exists at bare root but not in worktree — copy it for committing
+    const worktreeRoot = await getWorktreeRoot();
+    const sourceConfig = join(configDir!, '.gw', 'config.json');
+    const targetDir = join(worktreeRoot, '.gw');
+    const targetConfig = join(targetDir, 'config.json');
+
+    try {
+      await Deno.mkdir(targetDir, { recursive: true });
+      await Deno.copyFile(sourceConfig, targetConfig);
+      output.success('Config copied to worktree (now committable)');
+      console.log(`  From: ${output.path(sourceConfig)}`);
+      console.log(`  To:   ${output.path(targetConfig)}`);
+      console.log(`\nCommit it: ${output.bold('git add .gw/config.json')}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      output.error(`Failed to copy config: ${message}`);
+      Deno.exit(1);
+    }
+    return;
+  }
 
   if (initialized && !parsed.interactive) {
     output.info('gw is already initialized in this repository');
-    console.log(`  Config: ${output.path(join(gitRoot!, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(join(configDir!, '.gw/config.json'))}`);
     console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);
     return;
   }
@@ -787,10 +864,11 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
       Deno.exit(1);
     }
   } else {
-    // Try auto-detection
+    // Save config in the worktree root (committable by default).
+    // Falls back to git root if not inside a worktree.
     try {
-      rootPath = await findGitRoot();
-      output.info(`Auto-detected git root: ${output.path(rootPath)}`);
+      rootPath = await getWorktreeRoot();
+      output.info(`Auto-detected worktree root: ${output.path(rootPath)}`);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Could not auto-detect git root - ${message}`);
@@ -830,7 +908,6 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
 
   // Create config
   const config: Config = {
-    root: rootPath,
     defaultBranch: parsed.defaultBranch || 'main',
     cleanThreshold: 7, // Default value
   };
@@ -868,7 +945,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     config.updateStrategy = parsed.updateStrategy;
   }
 
-  // Save config at the git root (so it can be found by all worktrees)
+  // Save config (committable by default — in worktree root)
   try {
     await saveConfigTemplate(rootPath, config);
     output.success('Configuration created successfully');
@@ -889,7 +966,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     }
     if (config.autoClean) {
       console.log(
-        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking, 24h cooldown)')}`
+        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking, non-blocking)')}`
       );
     }
     if (config.updateStrategy) {

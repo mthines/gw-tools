@@ -131,7 +131,7 @@ Skill(skill: "confidence", args: "plan")
 3. \`gw cd <branch-name>\`
 4. Install dependencies
 5. Verify environment builds
-6. Ensure \`.gw/\` is gitignored
+6. Ensure \`.gw/.gitignore\` exists (auto-created by gw, keeps artifacts ignored)
 7. **Generate plan.md** (Full Mode):
 
 \`\`\`

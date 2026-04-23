@@ -5,7 +5,7 @@
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { createConfigWithAutoClean, readTestConfig, writeTestConfig } from '../test-utils/fixtures.ts';
+import { createConfigWithAutoClean, writeTestConfig } from '../test-utils/fixtures.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { executeAutoClean } from './auto-clean.ts';
 
@@ -41,37 +41,9 @@ Deno.test('executeAutoClean - returns empty result when disabled', async () => {
     await repo.init();
 
     const config = {
-      root: repo.path,
       defaultBranch: 'main',
       cleanThreshold: 7,
       autoClean: false,
-    };
-    await writeTestConfig(repo.path, config);
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const result = await executeAutoClean();
-      assertEquals(result.removed.length, 0);
-      assertEquals(result.removed, []);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - respects cooldown period', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    const config = {
-      root: repo.path,
-      defaultBranch: 'main',
-      cleanThreshold: 7,
-      autoClean: true,
-      lastAutoCleanTime: Date.now() - 1000,
     };
     await writeTestConfig(repo.path, config);
 
@@ -143,31 +115,6 @@ Deno.test('executeAutoClean - removes old worktrees and returns names', async ()
   }
 });
 
-Deno.test('executeAutoClean - updates lastAutoCleanTime after running', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const beforeTime = Date.now();
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      await executeAutoClean();
-
-      const savedConfig = await readTestConfig(repo.path);
-      assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');
-      assertEquals(savedConfig.lastAutoCleanTime! >= beforeTime, true);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
 Deno.test('executeAutoClean - does not remove young worktrees', async () => {
   const repo = new GitTestRepo();
   try {
@@ -203,7 +150,6 @@ Deno.test('executeAutoClean - protects custom defaultBranch', async () => {
     await makeWorktreeOld(developWorktreePath, 10);
 
     const config = {
-      root: repo.path,
       defaultBranch: 'develop',
       cleanThreshold: 1,
       autoClean: true,
@@ -274,35 +220,6 @@ Deno.test('executeAutoClean - removes multiple old worktrees', async () => {
       const worktrees = await repo.listWorktrees();
       assertEquals(worktrees.includes(wt1), false);
       assertEquals(worktrees.includes(wt2), false);
-    } finally {
-      cwd.restore();
-    }
-  } finally {
-    await repo.cleanup();
-  }
-});
-
-Deno.test('executeAutoClean - updates timestamp even when nothing to clean', async () => {
-  const repo = new GitTestRepo();
-  try {
-    await repo.init();
-
-    // Create a young worktree (not old enough)
-    await repo.createWorktree('young-branch', 'young-branch');
-
-    const config = createConfigWithAutoClean(repo.path, 7);
-    await writeTestConfig(repo.path, config);
-
-    const beforeTime = Date.now();
-
-    const cwd = new TempCwd(repo.path);
-    try {
-      const result = await executeAutoClean();
-      assertEquals(result.removed.length, 0);
-
-      const savedConfig = await readTestConfig(repo.path);
-      assertEquals(typeof savedConfig.lastAutoCleanTime, 'number');
-      assertEquals(savedConfig.lastAutoCleanTime! >= beforeTime, true);
     } finally {
       cwd.restore();
     }

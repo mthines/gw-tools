@@ -14,7 +14,13 @@ tags:
 Complete reference for all `.gw/config.json` options.
 Each option affects specific gw commands and behaviors.
 
-The config file supports JSONC (JSON with Comments) — comments (`//`, `/* */`) and trailing commas are allowed.
+The config file is committable — no machine-specific paths or runtime state is stored.
+It supports JSONC (JSON with Comments) — comments (`//`, `/* */`) and trailing commas are allowed.
+
+### Local Overrides
+
+Create `.gw/config.local.json` to override any value for your machine only.
+It is automatically gitignored and merged on top of `config.json` (shallow merge, local wins).
 
 ## IDE Autocompletion
 
@@ -26,10 +32,9 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
 {
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
-  "configVersion": 1,
+  "configVersion": 2,
 
   // Core Settings
-  "root": "/absolute/path/to/repo.git",
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
@@ -72,35 +77,20 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
 
 **Type**: Integer (managed automatically)
 
-**Current version**: `1`
+**Current version**: `2`
 
 ```json
 {
-  "configVersion": 1
+  "configVersion": 2
 }
 ```
 
 **Important**: Do not edit manually. gw uses this to determine which migrations to apply when the config schema changes between versions.
 
-## `root`
+## `root` (removed)
 
-**Purpose**: Absolute path to parent directory containing all worktrees.
-
-**Type**: String (absolute path)
-
-**Used by**: All gw commands for path resolution.
-
-```json
-{
-  "root": "/Users/you/projects/myapp.git"
-}
-```
-
-**When to set manually**:
-
-- Auto-detection fails
-- Non-standard directory structure
-- Using symlinks or network drives
+The `root` field was removed in config version 2 to make the config file committable.
+gw now always auto-detects the repository root. If auto-detection fails, use `gw init --root <path>` to specify where the config should be created.
 
 ## `defaultBranch`
 
@@ -249,20 +239,15 @@ gw init --pre-checkout "echo 'Starting...'" \
 
 - Runs silently in the background after `gw checkout` or `gw list` — never blocks the user
 - Shows a brief non-blocking notification to stderr if worktrees were removed
-- Only runs once per 24 hours (cooldown)
 - Uses `cleanThreshold` for age check
 - Never removes `defaultBranch` worktree
 - Only removes worktrees with no uncommitted changes and no unpushed commits
 
 **Set during init**: `gw init --auto-clean`
 
-## `lastAutoCleanTime`
+## `lastAutoCleanTime` (removed)
 
-**Purpose**: Unix timestamp in milliseconds of last auto-cleanup run.
-
-**Type**: Integer (managed automatically)
-
-**Important**: Do not edit manually. gw uses this to enforce the 24-hour cooldown for auto-clean.
+The `lastAutoCleanTime` field was removed in config version 2 to make the config file committable. Auto-clean now runs based on safety checks (threshold, uncommitted changes, unpushed commits) without a cooldown timer.
 
 ## Decision Table: Which Options to Set
 
@@ -271,7 +256,7 @@ gw init --pre-checkout "echo 'Starting...'" \
 | Solo project | `autoCopyFiles`                    |
 | Team project | All options, commit to repo        |
 | Monorepo     | `autoCopyFiles` with package paths |
-| CI/CD        | `root`, `defaultBranch`            |
+| CI/CD        | `defaultBranch`                    |
 
 ## References
 

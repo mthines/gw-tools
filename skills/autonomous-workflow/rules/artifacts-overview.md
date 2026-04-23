@@ -74,22 +74,30 @@ The confidence gate must reach 90%+ (or be user-approved) before proceeding.
 
 ```
 .gw/
+├── config.json           # Team-shared gw config (committed to git)
+├── .gitignore            # Ignores artifacts and state, allows config.json
 ├── feat-dark-mode/
 │   ├── plan.md           # Implementation plan + progress log
 │   └── walkthrough.md    # Final summary (created at Phase 6)
-├── fix-auth-bug/
-│   └── ...
-└── .gitignore            # Auto-created
+└── fix-auth-bug/
+    └── ...
 ```
 
 ## Gitignore
 
-The `.gw/` folder is gitignored. The workflow auto-adds to `.gitignore`:
+The `.gw/.gitignore` file (auto-created by gw) keeps workflow artifacts and
+runtime state out of git while allowing `config.json` to be committed:
 
 ```gitignore
-# gw-tools artifacts (working files, not committed)
-.gw/
+# Workflow artifacts (per-developer, not committed)
+*/
+
+# Runtime state
+state.json
 ```
+
+> **Note:** If your repo has `.gw/` in the root `.gitignore` (from older gw
+> versions), remove it. The nested `.gw/.gitignore` handles selective ignoring.
 
 ## Context Recovery
 

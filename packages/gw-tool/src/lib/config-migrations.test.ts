@@ -8,7 +8,6 @@ import { CURRENT_CONFIG_VERSION, MIGRATIONS, needsMigration, runMigrations } fro
 Deno.test('runMigrations - returns config unchanged when already at current version', () => {
   const config = {
     configVersion: CURRENT_CONFIG_VERSION,
-    root: '/test/path',
     defaultBranch: 'main',
   };
 
@@ -34,12 +33,16 @@ Deno.test('runMigrations - migrates hooks.add to hooks.checkout (v0 -> v1)', () 
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.appliedMigrations.length, 1);
+  // Both v1 and v2 are applied starting from v0
+  assertEquals(result.appliedMigrations.length, 2);
   assertEquals(result.appliedMigrations[0], 'v1: Rename hooks.add to hooks.checkout (command rename)');
-  assertEquals(result.config.configVersion, 1);
+  assertEquals(result.appliedMigrations[1], 'v2: Remove machine-specific fields to make config committable');
+  assertEquals(result.config.configVersion, 2);
   assertEquals(result.config.hooks?.checkout?.pre, ['echo pre']);
   assertEquals(result.config.hooks?.checkout?.post, ['npm install']);
   assertEquals((result.config.hooks as Record<string, unknown>).add, undefined);
+  // root should have been removed by v2
+  assertEquals((result.config as Record<string, unknown>).root, undefined);
 });
 
 Deno.test('runMigrations - does not overwrite existing hooks.checkout', () => {
@@ -74,8 +77,9 @@ Deno.test('runMigrations - handles config without hooks', () => {
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.config.configVersion, 1);
+  assertEquals(result.config.configVersion, 2);
   assertEquals(result.config.hooks, undefined);
+  assertEquals((result.config as Record<string, unknown>).root, undefined);
 });
 
 Deno.test('runMigrations - handles config with empty hooks', () => {
@@ -88,7 +92,7 @@ Deno.test('runMigrations - handles config with empty hooks', () => {
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.config.configVersion, 1);
+  assertEquals(result.config.configVersion, 2);
 });
 
 Deno.test('needsMigration - returns true for config without version', () => {
@@ -135,4 +139,41 @@ Deno.test('All migrations have required fields', () => {
     assertEquals(migration.version > 0, true);
     assertEquals(migration.description.length > 0, true);
   }
+});
+
+Deno.test('runMigrations - v2: removes root and lastAutoCleanTime fields', () => {
+  const config = {
+    configVersion: 1,
+    root: '/some/absolute/path',
+    lastAutoCleanTime: 1234567890,
+    defaultBranch: 'main',
+    cleanThreshold: 7,
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.migrated, true);
+  assertEquals(result.appliedMigrations.length, 1);
+  assertEquals(result.appliedMigrations[0], 'v2: Remove machine-specific fields to make config committable');
+  assertEquals(result.config.configVersion, 2);
+  assertEquals((result.config as Record<string, unknown>).root, undefined);
+  assertEquals((result.config as Record<string, unknown>).lastAutoCleanTime, undefined);
+  // Other fields should be preserved
+  assertEquals(result.config.defaultBranch, 'main');
+  assertEquals(result.config.cleanThreshold, 7);
+});
+
+Deno.test('runMigrations - v2: safe when root and lastAutoCleanTime are already absent', () => {
+  const config = {
+    configVersion: 1,
+    defaultBranch: 'develop',
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.migrated, true);
+  assertEquals(result.config.configVersion, 2);
+  assertEquals((result.config as Record<string, unknown>).root, undefined);
+  assertEquals((result.config as Record<string, unknown>).lastAutoCleanTime, undefined);
+  assertEquals(result.config.defaultBranch, 'develop');
 });

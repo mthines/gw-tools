@@ -5,7 +5,7 @@
  */
 
 import { isProtectedBranch } from './branch-protection.ts';
-import { loadConfig, saveConfig } from './config.ts';
+import { loadConfig } from './config.ts';
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
@@ -15,9 +15,6 @@ import {
   type WorktreeInfo,
 } from './git-utils.ts';
 import * as output from './output.ts';
-
-/** 24 hours in milliseconds */
-const COOLDOWN_MS = 24 * 60 * 60 * 1000;
 
 /**
  * Worktree with cleanability metadata
@@ -34,19 +31,6 @@ interface CleanableWorktree extends WorktreeInfo {
 export interface AutoCleanResult {
   /** Names/branches of worktrees that were removed */
   removed: string[];
-}
-
-/**
- * Check if enough time has passed since last auto-clean
- */
-function shouldRunAutoClean(lastRunTime: number | undefined): boolean {
-  if (lastRunTime === undefined) {
-    return true; // Never run before
-  }
-
-  const now = Date.now();
-  const timeSinceLastRun = now - lastRunTime;
-  return timeSinceLastRun >= COOLDOWN_MS;
 }
 
 /**
@@ -107,15 +91,10 @@ async function getCleanableWorktrees(threshold: number, defaultBranch: string): 
 export async function executeAutoClean(): Promise<AutoCleanResult> {
   try {
     // Load config
-    const { config, gitRoot } = await loadConfig();
+    const { config } = await loadConfig();
 
     // Check if auto-clean is enabled
     if (!config.autoClean) {
-      return { removed: [] };
-    }
-
-    // Check cooldown
-    if (!shouldRunAutoClean(config.lastAutoCleanTime)) {
       return { removed: [] };
     }
 
@@ -127,9 +106,6 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
     const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
 
     if (cleanableWorktrees.length === 0) {
-      // Update timestamp even if nothing to clean
-      config.lastAutoCleanTime = Date.now();
-      await saveConfig(gitRoot, config);
       return { removed: [] };
     }
 
@@ -145,10 +121,6 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
         // Don't let failures prevent other cleanups
       }
     }
-
-    // Update timestamp after cleanup
-    config.lastAutoCleanTime = Date.now();
-    await saveConfig(gitRoot, config);
 
     return { removed };
   } catch {

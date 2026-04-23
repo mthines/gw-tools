@@ -78,7 +78,6 @@ async function getRemoteUrl(gitRoot?: string): Promise<string | null> {
  */
 function generateInitCommand(
   config: {
-    root?: string;
     defaultBranch?: string;
     autoCopyFiles?: string[];
     hooks?: {
@@ -91,6 +90,7 @@ function generateInitCommand(
     autoClean?: boolean;
     updateStrategy?: 'merge' | 'rebase';
   },
+  gitRoot: string,
   remoteUrl?: string | null
 ): string {
   const parts: string[] = ['gw init'];
@@ -98,9 +98,9 @@ function generateInitCommand(
   // Add remote URL if available (takes precedence over --root)
   if (remoteUrl) {
     parts.push(escapeShellArg(remoteUrl));
-  } else if (config.root) {
-    // Add root if specified and no remote URL
-    parts.push(`--root ${escapeShellArg(config.root)}`);
+  } else {
+    // Use the detected git root as the --root argument
+    parts.push(`--root ${escapeShellArg(gitRoot)}`);
   }
 
   // Add default branch if not "main"
@@ -166,7 +166,7 @@ export async function executeShowInit(args: string[]): Promise<void> {
     const remoteUrl = await getRemoteUrl(gitRoot);
 
     // Generate the init command with URL
-    const initCommand = generateInitCommand(config, remoteUrl);
+    const initCommand = generateInitCommand(config, gitRoot, remoteUrl);
 
     // Output the command
     console.log(initCommand);

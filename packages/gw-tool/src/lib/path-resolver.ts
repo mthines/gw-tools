@@ -189,3 +189,35 @@ export async function findGitRoot(startPath?: string): Promise<string> {
     currentPath = parentPath;
   }
 }
+
+/**
+ * Get the worktree root directory (where config should be saved for committing).
+ *
+ * Returns the top-level directory of the current worktree, which is the natural
+ * place for committable config files. Falls back to findGitRoot() if not in a
+ * worktree (e.g., at the bare repo root).
+ *
+ * @param startPath Starting directory path (defaults to current working directory)
+ * @returns Absolute path to the worktree root
+ */
+export async function getWorktreeRoot(startPath?: string): Promise<string> {
+  const cwd = startPath ? resolve(startPath) : Deno.cwd();
+
+  // Walk up looking for a .git file/directory (worktree or repo root)
+  let currentPath = cwd;
+  while (true) {
+    const gitPath = join(currentPath, '.git');
+
+    if (await pathExists(gitPath)) {
+      // Found .git — this is the worktree root (or repo root)
+      return currentPath;
+    }
+
+    const parentPath = resolve(currentPath, '..');
+    if (parentPath === currentPath) {
+      // Reached filesystem root — fall back to findGitRoot
+      return findGitRoot(startPath);
+    }
+    currentPath = parentPath;
+  }
+}

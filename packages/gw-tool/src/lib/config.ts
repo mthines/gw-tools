@@ -6,7 +6,7 @@
 import { join, resolve } from '@std/path';
 import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from './types.ts';
-import { findGitRoot, pathExists } from './path-resolver.ts';
+import { findGitRoot, getWorktreeRoot, pathExists } from './path-resolver.ts';
 import { CURRENT_CONFIG_VERSION, runMigrations } from './config-migrations.ts';
 
 /**
@@ -62,7 +62,21 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
 }
 
 /**
- * Ensure the config directory exists
+ * Content for .gw/.gitignore — keeps artifacts and state out of git
+ * while allowing config.json to be committed.
+ */
+const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
+
+const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed)
+*/
+
+# Local config overrides and runtime state
+config.local.json
+state.json
+`;
+
+/**
+ * Ensure the config directory exists and has a .gitignore
  * @param dir Directory where .gw should be created
  */
 async function ensureConfigDir(dir: string): Promise<void> {
@@ -73,6 +87,17 @@ async function ensureConfigDir(dir: string): Promise<void> {
     if (!(error instanceof Deno.errors.AlreadyExists)) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to create config directory: ${message}`);
+    }
+  }
+
+  // Create .gitignore if it doesn't exist — keeps artifacts/state ignored
+  // while allowing config.json to be committed
+  const gitignorePath = join(configDir, '.gitignore');
+  try {
+    await Deno.stat(gitignorePath);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      await Deno.writeTextFile(gitignorePath, GW_GITIGNORE_CONTENT);
     }
   }
 }
@@ -103,10 +128,6 @@ function validateConfig(data: unknown): data is Config {
     return false;
   }
 
-  if (config.root !== undefined && typeof config.root !== 'string') {
-    return false;
-  }
-
   if (config.defaultBranch !== undefined && typeof config.defaultBranch !== 'string') {
     return false;
   }
@@ -129,12 +150,6 @@ function validateConfig(data: unknown): data is Config {
 
   if (config.autoClean !== undefined) {
     if (typeof config.autoClean !== 'boolean') {
-      return false;
-    }
-  }
-
-  if (config.lastAutoCleanTime !== undefined) {
-    if (typeof config.lastAutoCleanTime !== 'number' || config.lastAutoCleanTime < 0) {
       return false;
     }
   }
@@ -181,9 +196,12 @@ export async function loadConfig(): Promise<{
         throw new Error('Invalid configuration file format');
       }
 
-      // Save migrated config and notify user if migrations were applied
-      if (migrated && migratedData.root) {
-        await saveConfig(migratedData.root, migratedData);
+      // Derive git root from the config file path (strip /.gw/config.json)
+      const gitRoot = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+
+      // Save migrated config if migrations were applied
+      if (migrated) {
+        await saveConfig(gitRoot, migratedData);
         console.log(
           `Config automatically updated (${appliedMigrations.length} migration${
             appliedMigrations.length > 1 ? 's' : ''
@@ -191,26 +209,23 @@ export async function loadConfig(): Promise<{
         );
       }
 
-      // If config has root, use it
-      if (migratedData.root) {
-        return { config: migratedData, gitRoot: migratedData.root };
-      }
-
-      // Alias for the rest of the function
-      const data = migratedData;
-
-      // Config exists but no root - try auto-detection and update config
+      // Load local overrides (.gw/config.local.json) if present
+      const configDir = configPath.replace(/[/\\]config\.json$/, '');
+      const localConfigPath = join(configDir, CONFIG_LOCAL_FILE_NAME);
       try {
-        const detectedRoot = await findGitRoot();
-        data.root = detectedRoot;
-        await saveConfig(detectedRoot, data);
-        console.log(`Detected git root and updated config: ${detectedRoot}\n`);
-        return { config: data, gitRoot: detectedRoot };
-      } catch {
-        throw new Error(
-          "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually."
-        );
+        const localContent = await Deno.readTextFile(localConfigPath);
+        const localData = parseJsonc(localContent) as Record<string, unknown>;
+        // Merge: local overrides base (shallow merge)
+        Object.assign(migratedData, localData);
+      } catch (error) {
+        if (!(error instanceof Deno.errors.NotFound)) {
+          // Only ignore "not found" — other errors should surface
+          const msg = error instanceof Error ? error.message : String(error);
+          console.error(`Warning: Failed to load ${CONFIG_LOCAL_FILE_NAME}: ${msg}`);
+        }
       }
+
+      return { config: migratedData, gitRoot };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load config: ${message}`);
@@ -221,15 +236,14 @@ export async function loadConfig(): Promise<{
   try {
     const gitRoot = await findGitRoot();
 
-    // Create config with detected root
+    // Save config in the worktree root (committable by default)
+    // Falls back to git root if not inside a worktree
+    const configDir = await getWorktreeRoot();
     const config = createDefaultConfig();
-    config.root = gitRoot;
 
-    // Save config in the detected git root
-    await saveConfig(gitRoot, config);
+    await saveConfig(configDir, config);
 
-    console.log(`Created config at ${getConfigPath(gitRoot)}`);
-    console.log(`Detected git root: ${gitRoot}`);
+    console.log(`Created config at ${getConfigPath(configDir)}`);
     console.log(`Default source worktree: ${config.defaultBranch}\n`);
 
     return { config, gitRoot };
@@ -269,7 +283,8 @@ function generateConfigTemplate(config: Config): string {
   lines.push('  // gw Configuration File');
   lines.push('  // ============================================================================');
   lines.push('  // Documentation: https://github.com/mthines/gw-tools');
-  lines.push('  // All fields except "root" are optional.');
+  lines.push('  // This file is safe to commit to your repository.');
+  lines.push('  // All fields are optional.');
   lines.push('  // Supports JSONC: comments (// and /* */) and trailing commas are allowed.');
   lines.push('  // ============================================================================');
   lines.push('');
@@ -281,13 +296,6 @@ function generateConfigTemplate(config: Config): string {
   // Core Settings Section
   lines.push('  // Core Settings');
   lines.push('  // ----------------------------------------------------------------------------');
-
-  // root (always required if present)
-  if (config.root) {
-    lines.push(`  "root": ${JSON.stringify(config.root)},`);
-  } else {
-    lines.push('  // "root": "/path/to/your/repository",');
-  }
 
   // defaultBranch
   if (config.defaultBranch !== undefined) {
@@ -411,7 +419,6 @@ function generateConfigTemplate(config: Config): string {
   // Footer
   lines.push('  // Internal fields (managed automatically — do not edit):');
   lines.push('  // - configVersion: Schema version for config migrations');
-  lines.push('  // - lastAutoCleanTime: Unix timestamp of last auto-cleanup run');
 
   lines.push('}');
 

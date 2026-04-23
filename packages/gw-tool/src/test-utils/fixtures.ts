@@ -8,10 +8,10 @@ import type { Config } from '../lib/types.ts';
 
 /**
  * Create a minimal valid config
+ * @param _root Ignored — root is no longer stored in config (kept for call-site compatibility)
  */
-export function createMinimalConfig(root: string): Config {
+export function createMinimalConfig(_root?: string): Config {
   return {
-    root,
     defaultBranch: 'main',
     cleanThreshold: 7,
   };
@@ -19,10 +19,10 @@ export function createMinimalConfig(root: string): Config {
 
 /**
  * Create a config with auto-copy files
+ * @param _root Ignored — root is no longer stored in config (kept for call-site compatibility)
  */
-export function createConfigWithAutoCopy(root: string, files: string[]): Config {
+export function createConfigWithAutoCopy(_root: string, files: string[]): Config {
   return {
-    root,
     defaultBranch: 'main',
     autoCopyFiles: files,
     cleanThreshold: 7,
@@ -31,10 +31,10 @@ export function createConfigWithAutoCopy(root: string, files: string[]): Config 
 
 /**
  * Create a config with hooks
+ * @param _root Ignored — root is no longer stored in config (kept for call-site compatibility)
  */
-export function createConfigWithHooks(root: string, preCheckout?: string[], postCheckout?: string[]): Config {
+export function createConfigWithHooks(_root: string, preCheckout?: string[], postCheckout?: string[]): Config {
   const config: Config = {
-    root,
     defaultBranch: 'main',
     cleanThreshold: 7,
   };
@@ -56,10 +56,10 @@ export function createConfigWithHooks(root: string, preCheckout?: string[], post
 
 /**
  * Create a config with auto-clean enabled
+ * @param _root Ignored — root is no longer stored in config (kept for call-site compatibility)
  */
-export function createConfigWithAutoClean(root: string, cleanThreshold?: number): Config {
+export function createConfigWithAutoClean(_root: string, cleanThreshold?: number): Config {
   return {
-    root,
     defaultBranch: 'main',
     cleanThreshold: cleanThreshold ?? 7,
     autoClean: true,
@@ -68,10 +68,10 @@ export function createConfigWithAutoClean(root: string, cleanThreshold?: number)
 
 /**
  * Create a config with custom default branch
+ * @param _root Ignored — root is no longer stored in config (kept for call-site compatibility)
  */
-export function createConfigWithDefaultBranch(root: string, defaultBranch: string): Config {
+export function createConfigWithDefaultBranch(_root: string, defaultBranch: string): Config {
   return {
-    root,
     defaultBranch,
     cleanThreshold: 7,
   };

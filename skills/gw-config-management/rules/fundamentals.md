@@ -83,10 +83,9 @@ gw init git@github.com:user/repo.git \
 {
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
-  "configVersion": 1,
+  "configVersion": 2,
 
-  // Core Settings
-  "root": "/absolute/path/to/repo.git",
+  // Core Settings (safe to commit — no machine-specific paths)
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
@@ -97,8 +96,8 @@ gw init git@github.com:user/repo.git \
   "hooks": {
     "checkout": {
       "pre": ["echo 'Creating: {worktree}'"],
-      "post": ["cd {worktreePath} && pnpm install"]
-    }
+      "post": ["cd {worktreePath} && pnpm install"],
+    },
   },
 
   // Advanced Options
@@ -114,9 +113,10 @@ IDE autocompletion: The `$schema` property enables autocompletion and validation
 ## Config Precedence
 
 1. `gw` searches for `.gw/config.json` walking up from current directory
-2. If not found, attempts auto-detection on first `gw checkout`
-3. Falls back to defaults:
-   - `root`: Auto-detected from `git worktree list`
+2. If found, loads it and applies any pending migrations
+3. Loads `.gw/config.local.json` if present (shallow merge, local wins)
+4. If not found, auto-creates `config.json` in the worktree root
+5. Falls back to defaults:
    - `defaultBranch`: "main"
    - `autoCopyFiles`: `[]`
 
