@@ -4,10 +4,7 @@
  */
 
 import * as output from '../lib/output.ts';
-import {
-  hasUncommittedChanges,
-  listWorktrees,
-} from '../lib/git-utils.ts';
+import { hasUncommittedChanges, listWorktrees } from '../lib/git-utils.ts';
 import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
@@ -83,11 +80,7 @@ export async function executeCd(args: string[]): Promise<void> {
 
   // Check if the pattern matches a local branch that differs from
   // the worktree's current branch. Offer to switch when interactive.
-  if (
-    Deno.stdin.isTerminal() &&
-    target.branch !== pattern &&
-    target.branch.toLowerCase() !== pattern.toLowerCase()
-  ) {
+  if (Deno.stdin.isTerminal() && target.branch !== pattern && target.branch.toLowerCase() !== pattern.toLowerCase()) {
     // Check if pattern is actually a local branch name
     const branchCheckCmd = new Deno.Command('git', {
       args: ['rev-parse', '--verify', pattern],
@@ -108,20 +101,11 @@ export async function executeCd(args: string[]): Promise<void> {
 
       const answer = prompt(`Switch to ${output.bold(pattern)}? [Y/n]: `);
 
-      if (
-        answer === null ||
-        answer === '' ||
-        answer.toLowerCase() === 'y' ||
-        answer.toLowerCase() === 'yes'
-      ) {
+      if (answer === null || answer === '' || answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
         // Safety: refuse if there are uncommitted changes
         if (await hasUncommittedChanges(target.path)) {
-          output.error(
-            `Worktree has uncommitted changes on branch ${output.bold(target.branch)}`
-          );
-          console.error(
-            `Commit or stash your changes before switching to ${output.bold(pattern)}.`
-          );
+          output.error(`Worktree has uncommitted changes on branch ${output.bold(target.branch)}`);
+          console.error(`Commit or stash your changes before switching to ${output.bold(pattern)}.`);
           Deno.exit(1);
         }
 
