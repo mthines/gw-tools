@@ -121,6 +121,165 @@ Deno.test('cd command - errors when no match found', async () => {
   }
 });
 
+// =============================================================================
+// Branch mismatch prompt tests
+// =============================================================================
+
+/**
+ * Mock stdin/stdout as terminals and provide a canned stdin response.
+ * Restores originals when the returned function is called.
+ */
+function mockTerminalIO(stdinResponse: string): () => void {
+  const origStdinIsTerminal = Deno.stdin.isTerminal;
+  const origStdoutIsTerminal = Deno.stdout.isTerminal;
+  const origStdinRead = Deno.stdin.read;
+
+  // @ts-ignore - Intentionally replacing for testing
+  Deno.stdin.isTerminal = () => true;
+  // @ts-ignore - Intentionally replacing for testing
+  Deno.stdout.isTerminal = () => true;
+
+  const encoded = new TextEncoder().encode(stdinResponse + '\n');
+  let consumed = false;
+  // @ts-ignore - Intentionally replacing for testing
+  Deno.stdin.read = (buf: Uint8Array): Promise<number | null> => {
+    if (consumed) return Promise.resolve(null);
+    consumed = true;
+    buf.set(encoded.subarray(0, Math.min(encoded.length, buf.length)));
+    return Promise.resolve(Math.min(encoded.length, buf.length));
+  };
+
+  return () => {
+    // @ts-ignore - Restoring original
+    Deno.stdin.isTerminal = origStdinIsTerminal;
+    // @ts-ignore - Restoring original
+    Deno.stdout.isTerminal = origStdoutIsTerminal;
+    // @ts-ignore - Restoring original
+    Deno.stdin.read = origStdinRead;
+  };
+}
+
+Deno.test('cd command - prompts to switch branch when worktree has different branch (accept)', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create worktree "feature-x" on branch "feature-x"
+    await repo.createWorktree('feature-x', 'feature-x');
+    const featurePath = join(repo.path, 'feature-x');
+
+    // Switch the worktree to a different branch
+    await repo.createBranch('feature-y');
+    await repo.runCommand('git', ['-C', featurePath, 'checkout', 'feature-y']);
+
+    // Verify it's on feature-y now
+    const branchCmd = new Deno.Command('git', {
+      args: ['-C', featurePath, 'branch', '--show-current'],
+      stdout: 'piped',
+    });
+    const branchResult = await branchCmd.output();
+    assertEquals(new TextDecoder().decode(branchResult.stdout).trim(), 'feature-y');
+
+    const restoreIO = mockTerminalIO('');
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode, stdout } = await withMockedExit(
+        async () => {
+          await executeCd(['feature-x']);
+        },
+        { captureOutput: true }
+      );
+
+      assertEquals(exitCode === undefined || exitCode === 0, true);
+      assertEquals(stdout?.includes(featurePath), true);
+
+      // Verify branch was switched to feature-x
+      const afterCmd = new Deno.Command('git', {
+        args: ['-C', featurePath, 'branch', '--show-current'],
+        stdout: 'piped',
+      });
+      const afterResult = await afterCmd.output();
+      assertEquals(new TextDecoder().decode(afterResult.stdout).trim(), 'feature-x');
+    } finally {
+      cwd.restore();
+      restoreIO();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('cd command - prompts to switch branch when worktree has different branch (decline)', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    await repo.createWorktree('feature-x', 'feature-x');
+    const featurePath = join(repo.path, 'feature-x');
+
+    // Switch the worktree to a different branch
+    await repo.createBranch('feature-y');
+    await repo.runCommand('git', ['-C', featurePath, 'checkout', 'feature-y']);
+
+    const restoreIO = mockTerminalIO('n');
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode, stdout } = await withMockedExit(
+        async () => {
+          await executeCd(['feature-x']);
+        },
+        { captureOutput: true }
+      );
+
+      // Should still output the path (navigate without switching)
+      assertEquals(exitCode === undefined || exitCode === 0, true);
+      assertEquals(stdout?.includes(featurePath), true);
+
+      // Verify branch was NOT switched — still on feature-y
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', featurePath, 'branch', '--show-current'],
+        stdout: 'piped',
+      });
+      const branchResult = await branchCmd.output();
+      assertEquals(new TextDecoder().decode(branchResult.stdout).trim(), 'feature-y');
+    } finally {
+      cwd.restore();
+      restoreIO();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('cd command - no prompt when pattern is not a valid branch', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    await repo.createWorktree('feature-abc', 'feature-abc');
+    const featurePath = join(repo.path, 'feature-abc');
+
+    const restoreIO = mockTerminalIO('');
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode, stdout } = await withMockedExit(
+        async () => {
+          await executeCd(['feat']);
+        },
+        { captureOutput: true }
+      );
+
+      assertEquals(exitCode, undefined);
+      assertEquals(stdout?.trim(), featurePath);
+    } finally {
+      cwd.restore();
+      restoreIO();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 // Note: The shell integration warning only appears when stdout.isTerminal() is true.
 // In test environment with captured output, stdout is not a TTY, so the warning
 // won't appear. This is correct behavior - the warning shouldn't appear when
