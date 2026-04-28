@@ -7,6 +7,20 @@ import * as output from '../lib/output.ts';
 import { hasUncommittedChanges, listWorktrees } from '../lib/git-utils.ts';
 import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
+const encoder = new TextEncoder();
+
+/**
+ * Prompt on stderr (not stdout, which is reserved for path output).
+ * Returns the user's trimmed answer, or empty string on EOF/error.
+ */
+async function stderrPrompt(message: string): Promise<string> {
+  await Deno.stderr.write(encoder.encode(message));
+  const buf = new Uint8Array(256);
+  const n = await Deno.stdin.read(buf);
+  if (n === null) return '';
+  return new TextDecoder().decode(buf.subarray(0, n)).trim();
+}
+
 /**
  * Execute the cd command
  *
@@ -80,7 +94,12 @@ export async function executeCd(args: string[]): Promise<void> {
 
   // Check if the pattern matches a local branch that differs from
   // the worktree's current branch. Offer to switch when interactive.
-  if (Deno.stdin.isTerminal() && target.branch !== pattern && target.branch.toLowerCase() !== pattern.toLowerCase()) {
+  if (
+    Deno.stdin.isTerminal() &&
+    Deno.stdout.isTerminal() &&
+    target.branch !== pattern &&
+    target.branch.toLowerCase() !== pattern.toLowerCase()
+  ) {
     // Check if pattern is actually a local branch name
     const branchCheckCmd = new Deno.Command('git', {
       args: ['rev-parse', '--verify', pattern],
@@ -99,9 +118,9 @@ export async function executeCd(args: string[]): Promise<void> {
           `not ${output.bold(pattern)}.`
       );
 
-      const answer = prompt(`Switch to ${output.bold(pattern)}? [Y/n]: `);
+      const answer = await stderrPrompt(`Switch to ${pattern}? [Y/n]: `);
 
-      if (answer === null || answer === '' || answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
+      if (answer === '' || answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
         // Safety: refuse if there are uncommitted changes
         if (await hasUncommittedChanges(target.path)) {
           output.error(`Worktree has uncommitted changes on branch ${output.bold(target.branch)}`);
