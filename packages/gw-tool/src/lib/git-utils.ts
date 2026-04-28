@@ -144,10 +144,21 @@ export async function hasUnpushedCommits(worktreePath: string): Promise<boolean>
 
 /**
  * Get the age of a worktree in days
+ *
+ * Returns the smaller of:
+ * - days since the branch's last commit (reflects work activity)
+ * - days since the worktree's `.git` file was created (reflects when
+ *   the worktree itself was added)
+ *
+ * Bounding by the `.git` mtime prevents a freshly created worktree
+ * from being classified as stale just because it was checked out
+ * from a branch with old commits.
  */
 export async function getWorktreeAgeDays(worktreePath: string): Promise<number> {
+  const ages: number[] = [];
+
   try {
-    // Prefer last commit date on the branch (reflects actual work)
+    // Last commit date on the branch (reflects actual work)
     const commitCmd = new Deno.Command('git', {
       args: ['-C', worktreePath, 'log', '-1', '--format=%ct'],
       stdout: 'piped',
@@ -158,23 +169,29 @@ export async function getWorktreeAgeDays(worktreePath: string): Promise<number> 
       const timestamp = parseInt(new TextDecoder().decode(commitResult.stdout).trim(), 10);
       if (!isNaN(timestamp)) {
         const now = Date.now() / 1000;
-        return Math.floor((now - timestamp) / 86400);
+        ages.push(Math.floor((now - timestamp) / 86400));
       }
     }
+  } catch {
+    // Ignore — fall through to mtime check
+  }
 
-    // Fallback: use .git file modification time
+  try {
+    // .git file mtime acts as a proxy for worktree creation time —
+    // a worktree cannot be older than its own .git file.
     const gitPath = join(worktreePath, '.git');
     const stat = await Deno.stat(gitPath);
     const mtime = stat.mtime;
-
-    if (!mtime) return 0;
-
-    const now = new Date();
-    const ageMs = now.getTime() - mtime.getTime();
-    return Math.floor(ageMs / (1000 * 60 * 60 * 24));
+    if (mtime) {
+      const ageMs = Date.now() - mtime.getTime();
+      ages.push(Math.floor(ageMs / (1000 * 60 * 60 * 24)));
+    }
   } catch {
-    return 0; // On error, return 0 (won't be cleaned)
+    // Ignore — best-effort
   }
+
+  if (ages.length === 0) return 0;
+  return Math.min(...ages);
 }
 
 /**

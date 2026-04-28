@@ -197,6 +197,57 @@ Deno.test('executeAutoClean - never removes gw_root worktree', async () => {
   }
 });
 
+Deno.test('executeAutoClean - does not remove freshly created worktree from old branch', async () => {
+  // Regression: gw add was triggering auto-clean to immediately remove
+  // the just-created worktree because getWorktreeAgeDays used the last
+  // commit date — so a fresh worktree from an older branch appeared stale.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Create a branch with an old commit but DON'T backdate the .git file —
+    // simulates `git worktree add` checking out a branch whose last commit
+    // happened more than `cleanThreshold` days ago.
+    const featureWorktreePath = await repo.createWorktree('feat-fresh-from-old', 'feat-fresh-from-old');
+    const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const cmd = new Deno.Command('git', {
+      args: [
+        '-C',
+        featureWorktreePath,
+        'commit',
+        '--allow-empty',
+        '--amend',
+        '--no-edit',
+        '--date',
+        oldDate,
+      ],
+      stdout: 'null',
+      stderr: 'null',
+      env: {
+        ...Deno.env.toObject(),
+        GIT_COMMITTER_DATE: oldDate,
+      },
+    });
+    await cmd.output();
+
+    const config = createConfigWithAutoClean(repo.path, 7);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const result = await executeAutoClean();
+      assertEquals(result.removed, [], 'Fresh worktree must not be auto-cleaned even if its branch has old commits');
+
+      const worktrees = await repo.listWorktrees();
+      assertEquals(worktrees.includes(featureWorktreePath), true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('executeAutoClean - removes multiple old worktrees', async () => {
   const repo = new GitTestRepo();
   try {
