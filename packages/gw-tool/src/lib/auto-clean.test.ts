@@ -211,16 +211,7 @@ Deno.test('executeAutoClean - does not remove freshly created worktree from old 
     const featureWorktreePath = await repo.createWorktree('feat-fresh-from-old', 'feat-fresh-from-old');
     const oldDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
     const cmd = new Deno.Command('git', {
-      args: [
-        '-C',
-        featureWorktreePath,
-        'commit',
-        '--allow-empty',
-        '--amend',
-        '--no-edit',
-        '--date',
-        oldDate,
-      ],
+      args: ['-C', featureWorktreePath, 'commit', '--allow-empty', '--amend', '--no-edit', '--date', oldDate],
       stdout: 'null',
       stderr: 'null',
       env: {
