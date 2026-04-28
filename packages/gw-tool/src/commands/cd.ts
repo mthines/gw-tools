@@ -4,7 +4,10 @@
  */
 
 import * as output from '../lib/output.ts';
-import { listWorktrees } from '../lib/git-utils.ts';
+import {
+  hasUncommittedChanges,
+  listWorktrees,
+} from '../lib/git-utils.ts';
 import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 /**
@@ -76,8 +79,71 @@ export async function executeCd(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
+  const target = resolved[0];
+
+  // Check if the pattern matches a local branch that differs from
+  // the worktree's current branch. Offer to switch when interactive.
+  if (
+    Deno.stdin.isTerminal() &&
+    target.branch !== pattern &&
+    target.branch.toLowerCase() !== pattern.toLowerCase()
+  ) {
+    // Check if pattern is actually a local branch name
+    const branchCheckCmd = new Deno.Command('git', {
+      args: ['rev-parse', '--verify', pattern],
+      stdout: 'null',
+      stderr: 'null',
+    });
+    const branchCheckResult = await branchCheckCmd.output();
+
+    if (branchCheckResult.code === 0) {
+      // Pattern is a valid branch but the worktree has a different
+      // one checked out — ask whether to switch
+      console.error('');
+      console.error(
+        `Worktree at ${output.path(target.path)} is on ` +
+          `branch ${output.bold(target.branch)}, ` +
+          `not ${output.bold(pattern)}.`
+      );
+
+      const answer = prompt(`Switch to ${output.bold(pattern)}? [Y/n]: `);
+
+      if (
+        answer === null ||
+        answer === '' ||
+        answer.toLowerCase() === 'y' ||
+        answer.toLowerCase() === 'yes'
+      ) {
+        // Safety: refuse if there are uncommitted changes
+        if (await hasUncommittedChanges(target.path)) {
+          output.error(
+            `Worktree has uncommitted changes on branch ${output.bold(target.branch)}`
+          );
+          console.error(
+            `Commit or stash your changes before switching to ${output.bold(pattern)}.`
+          );
+          Deno.exit(1);
+        }
+
+        const switchCmd = new Deno.Command('git', {
+          args: ['-C', target.path, 'checkout', pattern],
+          stdout: 'inherit',
+          stderr: 'inherit',
+        });
+        const { code: switchCode } = await switchCmd.output();
+
+        if (switchCode !== 0) {
+          output.error(`Failed to switch to branch ${output.bold(pattern)}`);
+          Deno.exit(switchCode);
+        }
+
+        output.success(`Switched to branch ${output.bold(pattern)}`);
+      }
+    }
+  }
+
   // Output the path to stdout (only thing that goes to stdout)
-  console.log(resolved[0].path);
+  console.log(target.path);
 
   // Show helpful tip if shell integration not installed and output is a TTY
   // When piped (e.g., cd $(gw cd branch)), stdout is not a TTY so warning won't appear
