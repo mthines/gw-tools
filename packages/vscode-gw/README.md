@@ -38,11 +38,11 @@ The extension adds a "gw" activity bar icon with one view:
 
 ## Settings
 
-| Setting               | Default | Description                                    |
-| --------------------- | ------- | ---------------------------------------------- |
-| `gw.watchInterval`    | `3000`  | File watch interval in milliseconds            |
-| `gw.showBareWorktree` | `false` | Show bare repository in worktree list          |
-| `gw.autoOpenWorktree` | `true`  | Auto-open new worktree in a new window         |
+| Setting               | Default | Description                            |
+| --------------------- | ------- | -------------------------------------- |
+| `gw.watchInterval`    | `3000`  | File watch interval in milliseconds    |
+| `gw.showBareWorktree` | `false` | Show bare repository in worktree list  |
+| `gw.autoOpenWorktree` | `true`  | Auto-open new worktree in a new window |
 
 ## Development
 
