@@ -925,11 +925,7 @@ Deno.test('init command - fresh init writes $schema property', async () => {
       await executeInit([]);
 
       const configContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
-      assertEquals(
-        configContent.includes('"$schema"'),
-        true,
-        'Fresh init must include $schema for IDE autocompletion'
-      );
+      assertEquals(configContent.includes('"$schema"'), true, 'Fresh init must include $schema for IDE autocompletion');
     } finally {
       cwd.restore();
     }
@@ -949,10 +945,7 @@ Deno.test('init command - re-running init adds $schema to existing config that l
       const configDir = join(repo.path, '.gw');
       await Deno.mkdir(configDir, { recursive: true });
       const configPath = join(configDir, 'config.json');
-      await Deno.writeTextFile(
-        configPath,
-        JSON.stringify({ defaultBranch: 'main', cleanThreshold: 7 }, null, 2)
-      );
+      await Deno.writeTextFile(configPath, JSON.stringify({ defaultBranch: 'main', cleanThreshold: 7 }, null, 2));
 
       // Sanity: confirm setup
       const before = await Deno.readTextFile(configPath);
