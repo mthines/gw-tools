@@ -634,14 +634,23 @@ async function createBareRepoWithWorktree(): Promise<{
     }
   };
 
-  // Init bare repo
-  await run('git', ['init', '--bare', bareRoot]);
+  // Init bare repo (explicitly set default branch to main for CI compatibility)
+  await run('git', ['init', '--bare', '--initial-branch=main', bareRoot]).catch(
+    // --initial-branch requires git 2.28+; fall back to symlink approach
+    async () => {
+      await run('git', ['init', '--bare', bareRoot]);
+      // Manually set HEAD to point to main
+      await Deno.writeTextFile(join(bareRoot, 'HEAD'), 'ref: refs/heads/main\n');
+    }
+  );
 
-  // Clone to push an initial commit
+  // Clone and push an initial commit on the main branch
   await run('git', ['clone', bareRoot, cloneDir]);
   await run('git', ['config', 'user.email', 't@t.com'], cloneDir);
   await run('git', ['config', 'user.name', 'T'], cloneDir);
   await run('git', ['config', 'commit.gpgsign', 'false'], cloneDir);
+  // Ensure we're on main (git may default to master on older CI environments)
+  await run('git', ['checkout', '-B', 'main'], cloneDir);
   await run('git', ['commit', '--allow-empty', '-m', 'init'], cloneDir);
   await run('git', ['push', 'origin', 'main'], cloneDir);
 
