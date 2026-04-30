@@ -139,73 +139,60 @@ gw checkout main
 
 ## 🎓 AI Skills (for Claude Code, Copilot, Cursor, etc.)
 
-Enhance your AI agent with gw-tools knowledge using [skills.sh](https://skills.sh):
+The `gw`-specific skills live in this repo. The autonomous workflow and its companions live in [**`mthines/agent-skills`**](https://github.com/mthines/agent-skills#autonomous-workflow).
+
+**gw-specific skills** (this repo):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill
+npx skills add https://github.com/mthines/gw-tools \
+  --skill git-worktree-workflows gw-config-management \
+  --agent claude-code \
+  --yes
 ```
 
-Available skills:
+- **git-worktree-workflows** — Master Git worktrees and `gw` workflows
+- **gw-config-management** — Configure `gw` for your project type (Next.js, monorepos, etc.)
 
-- **autonomous-workflow** - Autonomous feature development from requirements to PR
-- **create-plan** - Generate structured implementation plan artifacts
-- **create-walkthrough** - Generate PR walkthrough summaries
-- **confidence** - Quality gate for plan, code, or bug analysis validation
-- **git-worktree-workflows** - Master Git worktrees and gw workflows
-- **gw-config-management** - Configure gw for your project type (Next.js, monorepos, etc.)
-
-Once installed, your AI agent can:
-
-- Execute complete feature development cycles autonomously
-- Create worktrees for bug fixes and features automatically
-- Configure gw for your specific project type
-- Navigate between worktrees and manage files
-- Create tested PRs from isolated worktrees
-
-📖 **Skill documentation:** [skills/README.md](../../skills/README.md)
+📖 **gw skill documentation:** [skills/README.md](../../skills/README.md)
 
 ### 🤖 Use as a Claude Code Agent
 
-Want Claude Code to autonomously implement features end-to-end?
-
-Install the skill + agent either **globally** or **per-project**:
+Want Claude Code to autonomously implement features end-to-end? Install the autonomous workflow skill + companion agents from [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow):
 
 **Global** (personal use — works in all projects):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools \
+npx skills add https://github.com/mthines/agent-skills \
   --skill autonomous-workflow create-plan create-walkthrough confidence \
-  --global --yes && \
-  mkdir -p ~/.claude/agents && \
-  ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --global --yes
+bash ~/.claude/skills/autonomous-workflow/install.sh --global
 ```
-
-Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Per-project** (team use — committable to git):
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools \
+npx skills add https://github.com/mthines/agent-skills \
   --skill autonomous-workflow create-plan create-walkthrough confidence \
-  --yes && \
-  mkdir -p .claude/agents .claude/rules && \
-  ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
-     .claude/agents/autonomous-workflow.md && \
-  ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
-     .claude/rules/autonomous-workflow-routing.md
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --yes
+bash .claude/skills/autonomous-workflow/install.sh
 ```
 
-Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+The `install.sh` script links the planner + executor agent definitions and the auto-routing rule into `.claude/`. Then say _"implement X independently"_ and the agent takes over. It will:
 
-Then say _"implement X independently"_ and the agent takes over. It will:
-
-- Create isolated worktrees for each task
+- Create isolated worktrees for each task (uses `gw` if installed, native `git worktree` otherwise)
 - Plan and implement incrementally
 - Run tests and iterate until passing
 - Create draft PRs with full context
 
 📦 **Building custom agents?** See [@gw-tools/autonomous-workflow-agent](https://www.npmjs.com/package/@gw-tools/autonomous-workflow-agent) for SDK integration.
+
+📊 **Visualize progress in VS Code:** Install the [Agent Tasks extension](https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks) to see `plan.md`, `task.md`, and `walkthrough.md` artifacts live in the sidebar.
 
 ## Initial Setup: Secrets in the Default Branch
 

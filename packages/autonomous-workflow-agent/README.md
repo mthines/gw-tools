@@ -2,47 +2,50 @@
 
 **Ship features while you sleep.** Give this agent a task description and walk away — it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 
+> The **skill itself** lives at [**`mthines/agent-skills` → autonomous-workflow**](https://github.com/mthines/agent-skills#autonomous-workflow). This npm package is a thin Claude Agent SDK wrapper that loads that skill at runtime.
+
 ## Quick Start (Claude Code)
 
 ### Step 1: Install prerequisites
 
-Install the gw CLI (manages Git worktrees):
+`gh` is required (PR creation). `gw` is optional but recommended for nicer worktree management — the workflow falls back to native `git worktree` if `gw` is absent.
 
 ```bash
-brew install mthines/gw-tools/gw
+brew install gh
+brew install mthines/gw-tools/gw   # optional but recommended
 ```
 
-Install the skill + agent either **globally** or **per-project**:
+### Step 2: Install the skill + companion agents
+
+Install from [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow):
 
 **Option A: Global** (recommended for personal use — works in all projects)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools \
+npx skills add https://github.com/mthines/agent-skills \
   --skill autonomous-workflow create-plan create-walkthrough confidence \
-  --global --yes && \
-  mkdir -p ~/.claude/agents && \
-  ln -sf ~/.agents/skills/autonomous-workflow/templates/agent.template.md \
-     ~/.claude/agents/autonomous-workflow.md
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --global --yes
+bash ~/.claude/skills/autonomous-workflow/install.sh --global
 ```
-
-Installs all skills to `~/.agents/skills/` and links the agent definition into `~/.claude/agents/` so it's available in every project.
 
 **Option B: Per-project** (recommended for teams — committable to git)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools \
+npx skills add https://github.com/mthines/agent-skills \
   --skill autonomous-workflow create-plan create-walkthrough confidence \
-  --yes && \
-  mkdir -p .claude/agents .claude/rules && \
-  ln -sf .agents/skills/autonomous-workflow/templates/agent.template.md \
-     .claude/agents/autonomous-workflow.md && \
-  ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
-     .claude/rules/autonomous-workflow-routing.md
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --yes
+bash .claude/skills/autonomous-workflow/install.sh
 ```
 
-Installs all skills to `.agents/skills/` in your project and links the agent + routing rule into `.claude/`. All paths are relative, so the setup can be committed and shared with your team.
+The `install.sh` script links the planner + executor agent definitions and the auto-routing rule into `.claude/` so Claude Code picks them up.
 
-Then initialize gw in your project: `gw init`
+If you're using `gw` for worktrees, run `gw init` once in the project to enable auto-copy of secrets, pre/post-checkout hooks, and shell-integrated `gw cd`.
 
 ### How to use it
 
@@ -211,17 +214,21 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 ## Requirements
 
 - **Git** with worktree support (Git 2.5+)
-- **[gw CLI](https://github.com/mthines/gw-tools)** for worktree management (v0.20+)
+- **`gh` CLI** for PR creation and CI watching
+- **[`autonomous-workflow` skill](https://github.com/mthines/agent-skills#autonomous-workflow)** installed (this package's system prompt loads it at runtime)
+- **[`gw` CLI](https://github.com/mthines/gw-tools)** — _recommended, optional_ — for worktree management with auto-copy + hooks (v0.20+). Falls back to native `git worktree` if absent.
 - **Node.js** project (npm/pnpm/yarn)
 
 ## Compatibility
 
-| Dependency      | Minimum Version | Notes                     |
-| --------------- | --------------- | ------------------------- |
-| Git             | 2.5+            | Worktree support required |
-| gw CLI          | 0.20+           | Earlier versions may work |
-| Claude Code SDK | 1.x             | Tested with v1.0.x        |
-| Node.js         | 18+             | For running the agent     |
+| Dependency                  | Minimum Version | Notes                                                                  |
+| --------------------------- | --------------- | ---------------------------------------------------------------------- |
+| Git                         | 2.5+            | Worktree support required                                              |
+| `gh`                        | recent          | Required for PR + CI                                                   |
+| `autonomous-workflow` skill | latest          | From [`mthines/agent-skills`](https://github.com/mthines/agent-skills) |
+| `gw` CLI                    | 0.20+           | Optional; native `git worktree` fallback                               |
+| Claude Code SDK             | 1.x             | Tested with v1.0.x                                                     |
+| Node.js                     | 18+             | For running the agent                                                  |
 
 ## Performance Characteristics
 

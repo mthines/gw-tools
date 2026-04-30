@@ -4,17 +4,20 @@
 
 ## What are Skills?
 
-Skills are reusable capabilities for AI agents that provide procedural knowledge about specific tools and workflows. These gw-tools skills help you master Git worktrees and the `gw` CLI tool for improved development workflows.
+Skills are reusable capabilities for AI agents that provide procedural knowledge about specific tools and workflows. The `gw`-specific skills help you master Git worktrees and the `gw` CLI.
 
-### Installation
+> **Looking for the autonomous workflow?** It now lives in the dedicated [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) repo, alongside its companions (`confidence`, `create-plan`, `create-walkthrough`, `tdd`, `ux`, `code-quality`, `holistic-analysis`, etc.). The skill no longer requires the `gw` CLI — it falls back to native `git worktree` if `gw` isn't installed. See the [autonomous-workflow section](https://github.com/mthines/agent-skills#autonomous-workflow) for install instructions.
 
-You can use the interactive skills installation:
+### Installation (gw-specific skills)
 
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill
+npx skills add https://github.com/mthines/gw-tools \
+  --skill git-worktree-workflows gw-config-management \
+  --agent claude-code \
+  --yes
 ```
 
-## Available Skills
+## Available Skills (in this repo)
 
 ### 1. [Git Worktree Workflows](./git-worktree-workflows/)
 
@@ -48,48 +51,29 @@ Configure and optimize gw-tools for different project types and team needs.
 
 ---
 
-### 3. [Autonomous Workflow](./autonomous-workflow/)
+## Skills That Moved to `mthines/agent-skills`
 
-Execute complete feature development cycles autonomously using isolated worktrees.
+These previously lived here and are still available, but the canonical source is now [`mthines/agent-skills`](https://github.com/mthines/agent-skills):
 
-**Capabilities:**
+| Skill                                                                                                         | What it does                                           |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [`autonomous-workflow`](https://github.com/mthines/agent-skills#autonomous-workflow)                          | Autonomous feature development from requirements to PR |
+| [`create-plan`](https://github.com/mthines/agent-skills/tree/main/skills/create-plan)                         | Generate structured `plan.md` artifacts                |
+| [`create-walkthrough`](https://github.com/mthines/agent-skills/tree/main/skills/create-walkthrough)           | Generate `walkthrough.md` summaries for PR delivery    |
+| [`confidence`](https://github.com/mthines/agent-skills/tree/main/skills/confidence)                           | Quality gate for plan / code / bug-analysis validation |
+| [`tdd`, `ux`, `code-quality`, `holistic-analysis`, …](https://github.com/mthines/agent-skills#whats-included) | Companion skills used by the autonomous workflow       |
 
-- Smart worktree detection (fuzzy match task to current worktree)
-- Autonomous feature implementation from requirements to PR
-- Quality-gated planning with confidence assessment
-- Fast iteration loops until tests pass (Ralph Wiggum pattern)
-- Worktree creation and environment setup
-- Continuous testing and self-validation
-- Draft PR creation with comprehensive descriptions
-- Multi-agent coordination support
+Install everything (autonomous workflow + companions) from there:
 
-**Best for:** AI agents executing end-to-end feature development, autonomous task completion, production-ready deliverables
-
----
-
-### 4. [Confidence](./confidence/)
-
-Quality gate for validating plans, code implementations, or bug analyses.
-
-**Modes:** `plan` (pre-execution gate), `code` (post-implementation review), `bug-analysis` (investigation validation)
-
-**Best for:** Quality gates before autonomous execution, implementation review, investigation validation
-
----
-
-### 5. [Create Plan](./create-plan/)
-
-Generate structured `plan.md` artifacts from conversation context.
-
-**Best for:** Capturing Phase 0-1 discussion into self-contained implementation plans that enable session handoff
-
----
-
-### 6. [Create Walkthrough](./create-walkthrough/)
-
-Generate `walkthrough.md` summaries for PR delivery.
-
-**Best for:** Producing consistent PR summaries from plan.md + git history + test results
+```bash
+npx skills add https://github.com/mthines/agent-skills \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --yes
+bash .claude/skills/autonomous-workflow/install.sh
+```
 
 ---
 
@@ -103,10 +87,11 @@ Generate `walkthrough.md` summaries for PR delivery.
 
 ### Installation
 
-Use the interactive installer to select which skills to install:
-
 ```bash
-npx skills add https://github.com/mthines/gw-tools --skill
+npx skills add https://github.com/mthines/gw-tools \
+  --skill git-worktree-workflows gw-config-management \
+  --agent claude-code \
+  --yes
 ```
 
 ### Using Skills
@@ -154,7 +139,7 @@ We recommend following this learning path:
 
 1. **Start with git-worktree-workflows** - Build a solid foundation in Git worktrees and basic gw usage
 2. **Add gw-config-management** - Optimize gw for your specific project type and team
-3. **Use autonomous-workflow** - Enable autonomous end-to-end feature development
+3. **Add the [autonomous-workflow skill](https://github.com/mthines/agent-skills#autonomous-workflow) from `mthines/agent-skills`** - Enable autonomous end-to-end feature development
 
 ---
 
