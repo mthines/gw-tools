@@ -968,6 +968,37 @@ Deno.test('init command - re-running init adds $schema to existing config that l
   }
 });
 
+Deno.test('init command - re-running init creates .gw/.gitignore when missing', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Pre-create a config without .gitignore (simulates pre-existing config)
+      const configDir = join(repo.path, '.gw');
+      await Deno.mkdir(configDir, { recursive: true });
+      await Deno.writeTextFile(
+        join(configDir, 'config.json'),
+        JSON.stringify({ defaultBranch: 'main' }, null, 2)
+      );
+
+      const gitignorePath = join(configDir, '.gitignore');
+      await assertRejects(() => Deno.stat(gitignorePath), Deno.errors.NotFound);
+
+      await executeInit([]);
+
+      const gitignore = await Deno.readTextFile(gitignorePath);
+      assertEquals(gitignore.includes('config.local.json'), true);
+      assertEquals(gitignore.includes('state.json'), true);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('init command - re-running init is idempotent when $schema is already present', async () => {
   const repo = new GitTestRepo();
   try {

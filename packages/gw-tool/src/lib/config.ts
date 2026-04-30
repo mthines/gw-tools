@@ -79,7 +79,7 @@ state.json
  * Ensure the config directory exists and has a .gitignore
  * @param dir Directory where .gw should be created
  */
-async function ensureConfigDir(dir: string): Promise<void> {
+export async function ensureConfigDir(dir: string): Promise<void> {
   const configDir = getConfigDir(dir);
   try {
     await Deno.mkdir(configDir, { recursive: true });
