@@ -196,12 +196,18 @@ export async function loadConfig(): Promise<{
         throw new Error('Invalid configuration file format');
       }
 
-      // Derive git root from the config file path (strip /.gw/config.json)
-      const gitRoot = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+      // Derive git root from the config file path.
+      // Strip /.gw/config.json to get the directory containing the config,
+      // then walk up to the actual git/bare-repo root. This is necessary for
+      // bare-repo worktree setups where config lives inside a worktree
+      // (e.g. repo.git/main/.gw/config.json) — we must return the bare root
+      // (repo.git), not the worktree dir (repo.git/main).
+      const worktreeDir = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+      const gitRoot = await findGitRoot(worktreeDir);
 
       // Save migrated config if migrations were applied
       if (migrated) {
-        await saveConfig(gitRoot, migratedData);
+        await saveConfig(worktreeDir, migratedData);
         console.log(
           `Config automatically updated (${appliedMigrations.length} migration${
             appliedMigrations.length > 1 ? 's' : ''
