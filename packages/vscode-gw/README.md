@@ -2,9 +2,22 @@
 
 Manage Git worktrees directly from the VS Code sidebar.
 
-## Looking for Agent Tasks?
-
-The Agent Tasks view has moved to a dedicated extension. Install **[Agent Tasks](https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks)** from the VS Code Marketplace to continue visualizing `plan.md`, `task.md`, and `walkthrough.md` artifacts from your autonomous workflow sessions.
+> ## 📦 Agent Tasks has moved
+>
+> Starting in **v0.69.0**, the Agent Tasks view (visualizing `plan.md`, `task.md`, and `walkthrough.md` from autonomous workflow sessions) is no longer part of this extension. It now lives in its own dedicated extension:
+>
+> ### → [Install Agent Tasks from the Marketplace](https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks)
+>
+> **Why?** The autonomous workflow no longer depends on the `gw` CLI, so the artifact viewer was decoupled and now ships from [`mthines/agent-skills`](https://github.com/mthines/agent-skills) where the workflow itself lives.
+>
+> **What's different in the new extension?**
+>
+> - Defaults to scanning `.agent/` directories (with `.gw/` as fallback)
+> - The directory list is **configurable** via `agentTasks.directories`
+> - Settings moved from `gw.*` → `agentTasks.*` (you'll re-pick your preferences once)
+> - View IDs and command IDs renamed to `agentTasks.*`
+>
+> **Existing users:** the first time this extension activates after upgrading, you'll see a one-time prompt with an "Install" button to switch to the new extension. Closing the prompt without choosing keeps it active for next session.
 
 ## Features
 
