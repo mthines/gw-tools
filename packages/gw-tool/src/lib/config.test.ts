@@ -5,6 +5,7 @@
 import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { loadConfig, saveConfig, saveConfigTemplate } from './config.ts';
+import { resolveWorktreePath } from './path-resolver.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import {
   createConfigWithAutoCopy,
@@ -596,3 +597,123 @@ Deno.test('saveConfigTemplate - includes section headers and documentation', asy
     await repo.cleanup();
   }
 });
+
+// ============================================================================
+// Bug fix: nested worktree root regression
+// When .gw/config.json lives inside a worktree (bare-repo setup), gitRoot
+// must be the bare repo root — not the worktree directory.
+// ============================================================================
+
+/**
+ * Create a bare repo with a main worktree in a temp directory.
+ * Returns { bareRoot, mainWorktreePath, cleanup }.
+ */
+async function createBareRepoWithWorktree(): Promise<{
+  bareRoot: string;
+  mainWorktreePath: string;
+  cleanup: () => Promise<void>;
+}> {
+  const tempDir = await Deno.makeTempDir({ prefix: 'gw-test-bare-' });
+  // Resolve symlinks (macOS /var -> /private/var)
+  const realTemp = await Deno.realPath(tempDir);
+  const bareRoot = join(realTemp, 'repo.git');
+  const cloneDir = join(realTemp, 'clone_tmp');
+  const mainWorktreePath = join(bareRoot, 'main');
+
+  const run = async (cmd: string, args: string[], cwd?: string) => {
+    const proc = new Deno.Command(cmd, {
+      args,
+      cwd,
+      stdout: 'piped',
+      stderr: 'piped',
+    });
+    const { code, stderr } = await proc.output();
+    if (code !== 0) {
+      const msg = new TextDecoder().decode(stderr);
+      throw new Error(`${cmd} ${args.join(' ')} failed: ${msg}`);
+    }
+  };
+
+  // Init bare repo (explicitly set default branch to main for CI compatibility)
+  await run('git', ['init', '--bare', '--initial-branch=main', bareRoot]).catch(
+    // --initial-branch requires git 2.28+; fall back to symlink approach
+    async () => {
+      await run('git', ['init', '--bare', bareRoot]);
+      // Manually set HEAD to point to main
+      await Deno.writeTextFile(join(bareRoot, 'HEAD'), 'ref: refs/heads/main\n');
+    }
+  );
+
+  // Clone and push an initial commit on the main branch
+  await run('git', ['clone', bareRoot, cloneDir]);
+  await run('git', ['config', 'user.email', 't@t.com'], cloneDir);
+  await run('git', ['config', 'user.name', 'T'], cloneDir);
+  await run('git', ['config', 'commit.gpgsign', 'false'], cloneDir);
+  // Ensure we're on main (git may default to master on older CI environments)
+  await run('git', ['checkout', '-B', 'main'], cloneDir);
+  await run('git', ['commit', '--allow-empty', '-m', 'init'], cloneDir);
+  await run('git', ['push', 'origin', 'main'], cloneDir);
+
+  // Create the main worktree from the bare repo
+  await run('git', ['worktree', 'add', mainWorktreePath, 'main'], bareRoot);
+
+  return {
+    bareRoot,
+    mainWorktreePath,
+    cleanup: async () => {
+      try {
+        await Deno.remove(realTemp, { recursive: true });
+      } catch {
+        // ignore
+      }
+    },
+  };
+}
+
+Deno.test('loadConfig - returns bare-repo root as gitRoot when config lives inside a worktree', async () => {
+  const { bareRoot, mainWorktreePath, cleanup } = await createBareRepoWithWorktree();
+  try {
+    // Place config inside the main worktree (the layout after the refactor)
+    const config = createMinimalConfig();
+    await writeTestConfig(mainWorktreePath, config);
+
+    const cwd = new TempCwd(mainWorktreePath);
+    try {
+      const { gitRoot } = await loadConfig();
+      // gitRoot must be the bare repo root, not the worktree directory
+      assertEquals(gitRoot, bareRoot, `Expected gitRoot to be bare repo root "${bareRoot}" but got "${gitRoot}"`);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await cleanup();
+  }
+});
+
+Deno.test(
+  'loadConfig - new worktree path is a sibling of the bare-repo root, not nested inside the current worktree',
+  async () => {
+    const { bareRoot, mainWorktreePath, cleanup } = await createBareRepoWithWorktree();
+    try {
+      const config = createMinimalConfig();
+      await writeTestConfig(mainWorktreePath, config);
+
+      const cwd = new TempCwd(mainWorktreePath);
+      try {
+        const { gitRoot } = await loadConfig();
+        const newWorktreePath = resolveWorktreePath(gitRoot, 'feat/my-feature');
+
+        // Must be a direct child of the bare repo root
+        assertEquals(
+          newWorktreePath,
+          join(bareRoot, 'feat/my-feature'),
+          `Expected new worktree at "${join(bareRoot, 'feat/my-feature')}" but got "${newWorktreePath}"`
+        );
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await cleanup();
+    }
+  }
+);
