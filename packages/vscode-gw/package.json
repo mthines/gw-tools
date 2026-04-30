@@ -1,8 +1,8 @@
 {
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
-  "description": "Manage Git worktrees and visualize autonomous agent workflows from the VS Code sidebar",
-  "version": "0.67.0",
+  "description": "Manage Git worktrees directly from the VS Code sidebar",
+  "version": "0.68.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -21,13 +21,10 @@
   "keywords": [
     "git",
     "worktree",
-    "gw",
-    "agent",
-    "workflow"
+    "gw"
   ],
   "activationEvents": [
-    "workspaceContains:.git",
-    "workspaceContains:.gw"
+    "workspaceContains:.git"
   ],
   "main": "./dist/extension.js",
   "contributes": {
@@ -47,12 +44,6 @@
           "name": "Worktrees",
           "icon": "$(git-branch)",
           "contextualTitle": "gw"
-        },
-        {
-          "id": "gwAgentTasks",
-          "name": "Agent Tasks",
-          "icon": "$(tasklist)",
-          "contextualTitle": "Agent Tasks"
         }
       ]
     },
@@ -99,39 +90,9 @@
         "category": "gw"
       },
       {
-        "command": "gw.refreshAgentTasks",
-        "title": "Refresh Agent Tasks",
-        "icon": "$(refresh)",
-        "category": "gw"
-      },
-      {
-        "command": "gw.openPlan",
-        "title": "Open Plan",
-        "icon": "$(notebook)",
-        "category": "gw"
-      },
-      {
-        "command": "gw.openTask",
-        "title": "Open Task File",
-        "icon": "$(tasklist)",
-        "category": "gw"
-      },
-      {
-        "command": "gw.openWalkthrough",
-        "title": "Open Walkthrough",
-        "icon": "$(book)",
-        "category": "gw"
-      },
-      {
         "command": "gw.clean",
         "title": "Clean Stale Worktrees",
         "icon": "$(clear-all)",
-        "category": "gw"
-      },
-      {
-        "command": "gw.sortAgentTasks",
-        "title": "Sort Agent Tasks",
-        "icon": "$(list-ordered)",
         "category": "gw"
       },
       {
@@ -156,12 +117,6 @@
         "command": "gw.focusWorktrees",
         "title": "Focus Worktrees View",
         "icon": "$(git-branch)",
-        "category": "gw"
-      },
-      {
-        "command": "gw.focusAgentTasks",
-        "title": "Focus Agent Tasks View",
-        "icon": "$(tasklist)",
         "category": "gw"
       },
       {
@@ -203,18 +158,6 @@
     "menus": {
       "commandPalette": [
         {
-          "command": "gw.openPlan",
-          "when": "false"
-        },
-        {
-          "command": "gw.openTask",
-          "when": "false"
-        },
-        {
-          "command": "gw.openWalkthrough",
-          "when": "false"
-        },
-        {
           "command": "gw.switchWorktreeAcceptSameWindow",
           "when": "false"
         },
@@ -251,16 +194,6 @@
         {
           "command": "gw.update",
           "when": "view == gwWorktreeExplorer",
-          "group": "navigation"
-        },
-        {
-          "command": "gw.refreshAgentTasks",
-          "when": "view == gwAgentTasks",
-          "group": "navigation"
-        },
-        {
-          "command": "gw.sortAgentTasks",
-          "when": "view == gwAgentTasks",
           "group": "navigation"
         }
       ],
@@ -304,16 +237,6 @@
           "command": "gw.removeSelectedWorktrees",
           "when": "view == gwWorktreeExplorer && viewItem == worktree && listMultiSelection",
           "group": "danger@1"
-        },
-        {
-          "command": "gw.openPlan",
-          "when": "view == gwAgentTasks && viewItem == agentBranch",
-          "group": "inline@1"
-        },
-        {
-          "command": "gw.openWalkthrough",
-          "when": "view == gwAgentTasks && viewItem == agentBranchCompleted",
-          "group": "inline@1"
         }
       ]
     },
@@ -344,58 +267,20 @@
     "configuration": {
       "title": "gw",
       "properties": {
-        "gw.autoOpenWalkthrough": {
-          "type": "boolean",
-          "default": true,
-          "description": "Automatically open walkthrough.md when it is created"
-        },
         "gw.watchInterval": {
           "type": "number",
           "default": 3000,
-          "description": "Interval in milliseconds for watching file changes (task.md, plan.md, etc.)"
+          "description": "Interval in milliseconds for watching file changes"
         },
         "gw.showBareWorktree": {
           "type": "boolean",
           "default": false,
           "description": "Show the bare repository entry in the worktree list"
         },
-        "gw.openMarkdownInPreview": {
-          "type": "boolean",
-          "default": true,
-          "description": "Open task.md, plan.md, and walkthrough.md in Markdown preview mode instead of the text editor"
-        },
         "gw.autoOpenWorktree": {
           "type": "boolean",
           "default": true,
           "description": "Automatically open a new worktree in a new window after creation. When disabled, a notification with an 'Open in New Window' button is shown instead."
-        },
-        "gw.agentTasksSortBy": {
-          "type": "string",
-          "default": "date",
-          "enum": [
-            "date",
-            "name",
-            "status"
-          ],
-          "enumDescriptions": [
-            "Sort by modification date",
-            "Sort by branch name",
-            "Sort by workflow status (in-progress first)"
-          ],
-          "description": "How to sort agent tasks in the sidebar"
-        },
-        "gw.agentTasksSortOrder": {
-          "type": "string",
-          "default": "desc",
-          "enum": [
-            "asc",
-            "desc"
-          ],
-          "enumDescriptions": [
-            "Ascending (oldest/A-Z first)",
-            "Descending (newest/Z-A first)"
-          ],
-          "description": "Sort order for agent tasks"
         }
       }
     }
