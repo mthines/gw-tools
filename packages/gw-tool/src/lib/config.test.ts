@@ -613,40 +613,40 @@ async function createBareRepoWithWorktree(): Promise<{
   mainWorktreePath: string;
   cleanup: () => Promise<void>;
 }> {
-  const tempDir = await Deno.makeTempDir({ prefix: "gw-test-bare-" });
+  const tempDir = await Deno.makeTempDir({ prefix: 'gw-test-bare-' });
   // Resolve symlinks (macOS /var -> /private/var)
   const realTemp = await Deno.realPath(tempDir);
-  const bareRoot = join(realTemp, "repo.git");
-  const cloneDir = join(realTemp, "clone_tmp");
-  const mainWorktreePath = join(bareRoot, "main");
+  const bareRoot = join(realTemp, 'repo.git');
+  const cloneDir = join(realTemp, 'clone_tmp');
+  const mainWorktreePath = join(bareRoot, 'main');
 
   const run = async (cmd: string, args: string[], cwd?: string) => {
     const proc = new Deno.Command(cmd, {
       args,
       cwd,
-      stdout: "piped",
-      stderr: "piped",
+      stdout: 'piped',
+      stderr: 'piped',
     });
     const { code, stderr } = await proc.output();
     if (code !== 0) {
       const msg = new TextDecoder().decode(stderr);
-      throw new Error(`${cmd} ${args.join(" ")} failed: ${msg}`);
+      throw new Error(`${cmd} ${args.join(' ')} failed: ${msg}`);
     }
   };
 
   // Init bare repo
-  await run("git", ["init", "--bare", bareRoot]);
+  await run('git', ['init', '--bare', bareRoot]);
 
   // Clone to push an initial commit
-  await run("git", ["clone", bareRoot, cloneDir]);
-  await run("git", ["config", "user.email", "t@t.com"], cloneDir);
-  await run("git", ["config", "user.name", "T"], cloneDir);
-  await run("git", ["config", "commit.gpgsign", "false"], cloneDir);
-  await run("git", ["commit", "--allow-empty", "-m", "init"], cloneDir);
-  await run("git", ["push", "origin", "main"], cloneDir);
+  await run('git', ['clone', bareRoot, cloneDir]);
+  await run('git', ['config', 'user.email', 't@t.com'], cloneDir);
+  await run('git', ['config', 'user.name', 'T'], cloneDir);
+  await run('git', ['config', 'commit.gpgsign', 'false'], cloneDir);
+  await run('git', ['commit', '--allow-empty', '-m', 'init'], cloneDir);
+  await run('git', ['push', 'origin', 'main'], cloneDir);
 
   // Create the main worktree from the bare repo
-  await run("git", ["worktree", "add", mainWorktreePath, "main"], bareRoot);
+  await run('git', ['worktree', 'add', mainWorktreePath, 'main'], bareRoot);
 
   return {
     bareRoot,
@@ -661,39 +661,30 @@ async function createBareRepoWithWorktree(): Promise<{
   };
 }
 
-Deno.test(
-  "loadConfig - returns bare-repo root as gitRoot when config lives inside a worktree",
-  async () => {
-    const { bareRoot, mainWorktreePath, cleanup } =
-      await createBareRepoWithWorktree();
-    try {
-      // Place config inside the main worktree (the layout after the refactor)
-      const config = createMinimalConfig();
-      await writeTestConfig(mainWorktreePath, config);
+Deno.test('loadConfig - returns bare-repo root as gitRoot when config lives inside a worktree', async () => {
+  const { bareRoot, mainWorktreePath, cleanup } = await createBareRepoWithWorktree();
+  try {
+    // Place config inside the main worktree (the layout after the refactor)
+    const config = createMinimalConfig();
+    await writeTestConfig(mainWorktreePath, config);
 
-      const cwd = new TempCwd(mainWorktreePath);
-      try {
-        const { gitRoot } = await loadConfig();
-        // gitRoot must be the bare repo root, not the worktree directory
-        assertEquals(
-          gitRoot,
-          bareRoot,
-          `Expected gitRoot to be bare repo root "${bareRoot}" but got "${gitRoot}"`,
-        );
-      } finally {
-        cwd.restore();
-      }
+    const cwd = new TempCwd(mainWorktreePath);
+    try {
+      const { gitRoot } = await loadConfig();
+      // gitRoot must be the bare repo root, not the worktree directory
+      assertEquals(gitRoot, bareRoot, `Expected gitRoot to be bare repo root "${bareRoot}" but got "${gitRoot}"`);
     } finally {
-      await cleanup();
+      cwd.restore();
     }
-  },
-);
+  } finally {
+    await cleanup();
+  }
+});
 
 Deno.test(
-  "loadConfig - new worktree path is a sibling of the bare-repo root, not nested inside the current worktree",
+  'loadConfig - new worktree path is a sibling of the bare-repo root, not nested inside the current worktree',
   async () => {
-    const { bareRoot, mainWorktreePath, cleanup } =
-      await createBareRepoWithWorktree();
+    const { bareRoot, mainWorktreePath, cleanup } = await createBareRepoWithWorktree();
     try {
       const config = createMinimalConfig();
       await writeTestConfig(mainWorktreePath, config);
@@ -701,13 +692,13 @@ Deno.test(
       const cwd = new TempCwd(mainWorktreePath);
       try {
         const { gitRoot } = await loadConfig();
-        const newWorktreePath = resolveWorktreePath(gitRoot, "feat/my-feature");
+        const newWorktreePath = resolveWorktreePath(gitRoot, 'feat/my-feature');
 
         // Must be a direct child of the bare repo root
         assertEquals(
           newWorktreePath,
-          join(bareRoot, "feat/my-feature"),
-          `Expected new worktree at "${join(bareRoot, "feat/my-feature")}" but got "${newWorktreePath}"`,
+          join(bareRoot, 'feat/my-feature'),
+          `Expected new worktree at "${join(bareRoot, 'feat/my-feature')}" but got "${newWorktreePath}"`
         );
       } finally {
         cwd.restore();
@@ -715,5 +706,5 @@ Deno.test(
     } finally {
       await cleanup();
     }
-  },
+  }
 );
