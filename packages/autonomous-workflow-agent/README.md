@@ -216,19 +216,19 @@ type ToolName = 'Read' | 'Write' | 'Edit' | 'Bash' | 'Glob' | 'Grep' | 'WebSearc
 - **Git** with worktree support (Git 2.5+)
 - **`gh` CLI** for PR creation and CI watching
 - **[`autonomous-workflow` skill](https://github.com/mthines/agent-skills#autonomous-workflow)** installed (this package's system prompt loads it at runtime)
-- **[`gw` CLI](https://github.com/mthines/gw-tools)** — *recommended, optional* — for worktree management with auto-copy + hooks (v0.20+). Falls back to native `git worktree` if absent.
+- **[`gw` CLI](https://github.com/mthines/gw-tools)** — _recommended, optional_ — for worktree management with auto-copy + hooks (v0.20+). Falls back to native `git worktree` if absent.
 - **Node.js** project (npm/pnpm/yarn)
 
 ## Compatibility
 
-| Dependency               | Minimum Version | Notes                                                |
-| ------------------------ | --------------- | ---------------------------------------------------- |
-| Git                      | 2.5+            | Worktree support required                            |
-| `gh`                     | recent          | Required for PR + CI                                 |
-| `autonomous-workflow` skill | latest       | From [`mthines/agent-skills`](https://github.com/mthines/agent-skills) |
-| `gw` CLI                 | 0.20+           | Optional; native `git worktree` fallback             |
-| Claude Code SDK          | 1.x             | Tested with v1.0.x                                   |
-| Node.js                  | 18+             | For running the agent                                |
+| Dependency                  | Minimum Version | Notes                                                                  |
+| --------------------------- | --------------- | ---------------------------------------------------------------------- |
+| Git                         | 2.5+            | Worktree support required                                              |
+| `gh`                        | recent          | Required for PR + CI                                                   |
+| `autonomous-workflow` skill | latest          | From [`mthines/agent-skills`](https://github.com/mthines/agent-skills) |
+| `gw` CLI                    | 0.20+           | Optional; native `git worktree` fallback                               |
+| Claude Code SDK             | 1.x             | Tested with v1.0.x                                                     |
+| Node.js                     | 18+             | For running the agent                                                  |
 
 ## Performance Characteristics
 

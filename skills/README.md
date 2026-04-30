@@ -55,13 +55,13 @@ Configure and optimize gw-tools for different project types and team needs.
 
 These previously lived here and are still available, but the canonical source is now [`mthines/agent-skills`](https://github.com/mthines/agent-skills):
 
-| Skill                                                                                                      | What it does                                                  |
-| ---------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------- |
-| [`autonomous-workflow`](https://github.com/mthines/agent-skills#autonomous-workflow)                       | Autonomous feature development from requirements to PR        |
-| [`create-plan`](https://github.com/mthines/agent-skills/tree/main/skills/create-plan)                      | Generate structured `plan.md` artifacts                       |
-| [`create-walkthrough`](https://github.com/mthines/agent-skills/tree/main/skills/create-walkthrough)        | Generate `walkthrough.md` summaries for PR delivery           |
-| [`confidence`](https://github.com/mthines/agent-skills/tree/main/skills/confidence)                        | Quality gate for plan / code / bug-analysis validation        |
-| [`tdd`, `ux`, `code-quality`, `holistic-analysis`, …](https://github.com/mthines/agent-skills#whats-included) | Companion skills used by the autonomous workflow            |
+| Skill                                                                                                         | What it does                                           |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
+| [`autonomous-workflow`](https://github.com/mthines/agent-skills#autonomous-workflow)                          | Autonomous feature development from requirements to PR |
+| [`create-plan`](https://github.com/mthines/agent-skills/tree/main/skills/create-plan)                         | Generate structured `plan.md` artifacts                |
+| [`create-walkthrough`](https://github.com/mthines/agent-skills/tree/main/skills/create-walkthrough)           | Generate `walkthrough.md` summaries for PR delivery    |
+| [`confidence`](https://github.com/mthines/agent-skills/tree/main/skills/confidence)                           | Quality gate for plan / code / bug-analysis validation |
+| [`tdd`, `ux`, `code-quality`, `holistic-analysis`, …](https://github.com/mthines/agent-skills#whats-included) | Companion skills used by the autonomous workflow       |
 
 Install everything (autonomous workflow + companions) from there:
 
