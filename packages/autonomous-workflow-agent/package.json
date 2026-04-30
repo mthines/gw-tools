@@ -1,7 +1,8 @@
 {
   "name": "@gw-tools/autonomous-workflow-agent",
   "version": "2.7.7",
-  "description": "Autonomous workflow agent for Claude Agent SDK - complete feature development from task to PR",
+  "description": "[DEPRECATED] Use the autonomous-workflow skill from https://github.com/mthines/agent-skills instead. This package is a thin SDK wrapper around the skill, which is now distributed and maintained directly in the agent-skills repository.",
+  "deprecated": "Use the autonomous-workflow skill from https://github.com/mthines/agent-skills instead. Install with: npx skills add https://github.com/mthines/agent-skills --skill autonomous-workflow create-plan create-walkthrough confidence --agent claude-code --yes",
   "type": "module",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
@@ -20,7 +21,8 @@
     "autonomous",
     "git",
     "worktree",
-    "pr"
+    "pr",
+    "deprecated"
   ],
   "repository": {
     "type": "git",

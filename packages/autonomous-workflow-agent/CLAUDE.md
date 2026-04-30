@@ -1,4 +1,6 @@
-# @gw-tools/autonomous-workflow-agent
+# @gw-tools/autonomous-workflow-agent — DEPRECATED
+
+> **This package is deprecated.** The skill it wraps now lives in [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) and ships with companion agents + an `install.sh`. New users should install the skill there directly. Do not add new features here.
 
 Claude Agent SDK package for autonomous feature development using Git worktrees.
 

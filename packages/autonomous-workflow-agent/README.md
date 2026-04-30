@@ -1,4 +1,42 @@
-# @gw-tools/autonomous-workflow-agent
+# @gw-tools/autonomous-workflow-agent — ⚠️ DEPRECATED
+
+> # ⚠️ This package is DEPRECATED
+>
+> **`@gw-tools/autonomous-workflow-agent` is no longer maintained and will not receive future updates.**
+>
+> It was a thin Claude Agent SDK wrapper around the `autonomous-workflow` skill. The skill now lives directly in [**`mthines/agent-skills`**](https://github.com/mthines/agent-skills#autonomous-workflow) and ships with companion agents (`autonomous-planner`, `autonomous-executor`) plus an `install.sh` that wires everything into Claude Code automatically — no SDK boilerplate required.
+>
+> ## Migrate now
+>
+> ```bash
+> # 1. Uninstall this package (if you have it as a dependency)
+> npm uninstall @gw-tools/autonomous-workflow-agent
+>
+> # 2. Install the skill + companions directly from mthines/agent-skills
+> npx skills add https://github.com/mthines/agent-skills \
+>   --skill autonomous-workflow create-plan create-walkthrough confidence \
+>           code-quality holistic-analysis tdd ux update-claude \
+>           review-changes create-pr ci-auto-fix \
+>   --agent claude-code \
+>   --yes
+> bash .claude/skills/autonomous-workflow/install.sh
+> ```
+>
+> Invocation is unchanged (`@autonomous-workflow implement X`, or routing phrases like _"implement X independently"_). The functionality is identical — only the distribution channel changed.
+>
+> **Why deprecated?** The skill no longer depends on the `gw` CLI (falls back to native `git worktree`), so co-locating the workflow with its companions in [`mthines/agent-skills`](https://github.com/mthines/agent-skills) makes the source of truth easier to maintain and discover. See <https://github.com/mthines/agent-skills#autonomous-workflow> for full docs.
+>
+> 📊 **Visualize artifacts in VS Code:** Install the [Agent Tasks extension](https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks).
+>
+> ---
+>
+> The documentation below is **kept for historical reference only**. Do not follow these install steps — use the migration command above instead.
+
+---
+
+## ⚠️ Legacy Documentation (deprecated)
+
+> Everything below this line documents the deprecated package as it existed prior to deprecation. Refer to it only if you maintain a codebase that still imports `@gw-tools/autonomous-workflow-agent` and need context on the old behavior.
 
 **Ship features while you sleep.** Give this agent a task description and walk away — it handles everything from planning to PR creation, all in an isolated Git worktree that won't touch your working branch.
 

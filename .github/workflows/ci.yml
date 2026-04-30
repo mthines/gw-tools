@@ -388,7 +388,11 @@ jobs:
   version-agent:
     # Waits for gw release to complete to avoid git push race conditions
     needs: [detect-changes, test-agent, release-gw]
-    # Agent only releases stable versions from main branch
+    # Package is DEPRECATED — only releases when explicitly forced via workflow_dispatch.
+    # Auto-release on push to main is disabled. The skill now lives in
+    # https://github.com/mthines/agent-skills and the npm package is no longer
+    # actively maintained. Use force_agent=true to publish a final patch if
+    # absolutely needed (e.g. critical security fix).
     if: |
       always() &&
       (needs.test-agent.result == 'success' || needs.test-agent.result == 'skipped') &&
@@ -396,7 +400,7 @@ jobs:
       needs.detect-changes.outputs.agent_changed == 'true' &&
       !inputs.dry_run &&
       github.ref == 'refs/heads/main' &&
-      (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && inputs.force_agent))
+      github.event_name == 'workflow_dispatch' && inputs.force_agent
     runs-on: ubuntu-latest
     permissions:
       contents: write
