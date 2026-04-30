@@ -9,7 +9,7 @@ paths: src/**/*.test.ts
 
 ## What to Test
 
-- Parser functions (git-worktree.ts, markdown-parser.ts)
+- Parser functions (git-worktree.ts)
 - Pure utility functions without VS Code dependencies
 
 ## What NOT to Test

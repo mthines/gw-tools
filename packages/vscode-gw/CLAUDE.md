@@ -1,6 +1,6 @@
 # vscode-gw
 
-VS Code extension for Git worktree management and autonomous agent workflow visualization.
+VS Code extension for Git worktree management.
 
 ## Commands
 
@@ -28,23 +28,23 @@ src/
   extension.ts           # Entry point, command registration
   providers/             # TreeDataProviders for sidebar views
     worktree-provider    # Worktree explorer view
-    agent-tasks-provider # Agent tasks view
-  parsers/               # Git and markdown parsing utilities
-  watchers/              # File system watchers for .gw/ artifacts
+  parsers/               # Git parsing utilities
+    git-worktree.ts      # Parses `git worktree list --porcelain`
+  watchers/              # File system watchers
+    worktree-watcher.ts  # Watches for worktree changes
 ```
 
 ## Key Concepts
 
 - **Worktrees**: Parsed from `git worktree list --porcelain`
-- **Agent Tasks**: Read from `.gw/{branch}/` directories (task.md, plan.md, walkthrough.md)
-- **Artifact Watcher**: Watches `.gw/` for changes, triggers view refresh
+- **WorktreeWatcher**: Watches `.git/worktrees/` for changes, triggers view refresh
 
 ## Extension Manifest
 
 All commands, views, settings, and keybindings are defined in `package.json`:
 
 - Commands: `contributes.commands`
-- Views: `contributes.views` (gwWorktreeExplorer, gwAgentTasks)
+- Views: `contributes.views` (gwWorktreeExplorer)
 - Settings: `contributes.configuration` (gw.\* namespace)
 - Keybindings: `contributes.keybindings`
 
@@ -53,14 +53,13 @@ All commands, views, settings, and keybindings are defined in `package.json`:
 - Use `vscode.window.withProgress` for long-running operations
 - Commands accept optional TreeItem for context menu invocation
 - Fall back to QuickPick when no item provided
-- Use `openMarkdownFile()` helper for consistent markdown opening behavior
 - **Always use `stripAnsi()` on CLI output** before displaying in notifications, dialogs, or error messages. The `gw` CLI outputs colored text with ANSI escape codes that VS Code doesn't render.
 
 ## Testing
 
 - Unit tests use vitest with `.test.ts` suffix
 - Test parsers directly (no VS Code API mocking needed)
-- Parser tests cover edge cases in git output and markdown formats
+- Parser tests cover edge cases in git output formats
 
 ## Gotchas
 

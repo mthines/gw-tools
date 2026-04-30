@@ -34,9 +34,6 @@ Tags follow the pattern `vscode-gw-v{version}` (e.g., `vscode-gw-v0.2.0`).
 
 ## How It Works
 
-The extension reads data from two sources:
+The extension reads data from one source:
 
 1. **Git worktree list** (`git worktree list --porcelain`) - for the worktree explorer
-2. **`.gw/` directory** - for agent task visualization, parsing the markdown artifacts (task.md, plan.md, walkthrough.md) created by the autonomous workflow agent
-
-The artifact files follow the format defined in the [autonomous-workflow skill](../../skills/autonomous-workflow/SKILL.md).

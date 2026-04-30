@@ -1,18 +1,12 @@
 /**
  * GW Worktrees - VS Code Extension
  *
- * Provides sidebar views for:
- * - Git worktree management (list, open, create, remove)
- * - Agent task visualization (task.md, plan.md progress tracking)
- * - Auto-opens walkthrough.md when agent completes work
+ * Provides a sidebar view for Git worktree management (list, open, create, remove).
  */
 
 import * as vscode from 'vscode';
 import * as path from 'path';
-import * as fs from 'fs';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
-import { AgentTasksProvider, AgentBranchItem } from './providers/agent-tasks-provider';
-import { ArtifactWatcher } from './watchers/artifact-watcher';
 import { WorktreeWatcher } from './watchers/worktree-watcher';
 import {
   removeWorktree,
@@ -33,21 +27,30 @@ import {
   setLogger,
 } from './parsers/git-worktree';
 
-/**
- * Open a markdown file, respecting the preview setting.
- *
- * By default, plan.md and walkthrough.md open in preview (read-mostly artifacts),
- * while task.md opens in the text editor so users can edit checkboxes directly.
- * Set `forceEditor` to bypass the preview setting for a specific call.
- */
-async function openMarkdownFile(filePath: string): Promise<void> {
-  const usePreview = vscode.workspace.getConfiguration('gw').get<boolean>('openMarkdownInPreview', true);
-  const uri = vscode.Uri.file(filePath);
+const AGENT_TASKS_PROMPT_KEY = 'vscode-gw.agentTasksMigrationPromptShown';
 
-  if (usePreview) {
-    await vscode.commands.executeCommand('markdown.showPreview', uri);
-  } else {
-    await vscode.commands.executeCommand('vscode.open', uri);
+async function showMigrationPromptOnce(context: vscode.ExtensionContext): Promise<void> {
+  if (context.globalState.get<boolean>(AGENT_TASKS_PROMPT_KEY)) return;
+
+  const choice = await vscode.window.showInformationMessage(
+    'Agent Tasks moved to a new extension. Install "Agent Tasks" from the Marketplace to continue using it.',
+    'Install',
+    "Don't show again"
+  );
+
+  if (choice === 'Install') {
+    try {
+      await vscode.commands.executeCommand('workbench.extensions.installExtension', 'mthines.agent-tasks');
+    } catch {
+      // Fallback: open Marketplace listing externally if direct install fails
+      // (e.g., extension not yet published)
+      await vscode.env.openExternal(
+        vscode.Uri.parse('https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks')
+      );
+    }
+  }
+  if (choice) {
+    await context.globalState.update(AGENT_TASKS_PROMPT_KEY, true);
   }
 }
 
@@ -86,8 +89,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Initialize providers
   const worktreeProvider = new WorktreeProvider();
-  const agentTasksProvider = new AgentTasksProvider();
-  const artifactWatcher = new ArtifactWatcher();
   const worktreeWatcher = new WorktreeWatcher();
 
   // Register tree views
@@ -117,24 +118,16 @@ export function activate(context: vscode.ExtensionContext): void {
     })
   );
 
-  const agentTasksView = vscode.window.createTreeView('gwAgentTasks', {
-    treeDataProvider: agentTasksProvider,
-    showCollapseAll: true,
-  });
-
   log('gw extension activated');
-
-  // Wire up artifact watcher to refresh agent tasks
-  artifactWatcher.onArtifactChanged((artifact) => {
-    log(`Artifact changed: ${artifact}`);
-    agentTasksProvider.refresh();
-  });
 
   // Wire up worktree watcher to refresh worktrees view
   worktreeWatcher.onWorktreeChanged(() => {
     log('Worktree change detected, refreshing');
     worktreeProvider.refresh();
   });
+
+  // Show one-time migration prompt for users who had Agent Tasks in vscode-gw
+  void showMigrationPromptOnce(context);
 
   // Shared reference for the active switch worktree quick pick (used by shift+enter keybinding)
   let activeSwitchQuickPick: vscode.QuickPick<vscode.QuickPickItem & { worktreePath?: string }> | undefined;
@@ -143,10 +136,6 @@ export function activate(context: vscode.ExtensionContext): void {
   const commands = [
     vscode.commands.registerCommand('gw.refreshWorktrees', () => {
       worktreeProvider.refresh();
-    }),
-
-    vscode.commands.registerCommand('gw.refreshAgentTasks', () => {
-      agentTasksProvider.refresh();
     }),
 
     vscode.commands.registerCommand('gw.switchWorktree', async () => {
@@ -393,10 +382,6 @@ export function activate(context: vscode.ExtensionContext): void {
 
     vscode.commands.registerCommand('gw.focusWorktrees', () => {
       vscode.commands.executeCommand('gwWorktreeExplorer.focus');
-    }),
-
-    vscode.commands.registerCommand('gw.focusAgentTasks', () => {
-      vscode.commands.executeCommand('gwAgentTasks.focus');
     }),
 
     vscode.commands.registerCommand('gw.openWorktree', async (item?: WorktreeItem) => {
@@ -752,51 +737,6 @@ export function activate(context: vscode.ExtensionContext): void {
       }
     }),
 
-    vscode.commands.registerCommand('gw.openMarkdown', async (filePath: string) => {
-      if (filePath && fs.existsSync(filePath)) {
-        await openMarkdownFile(filePath);
-      }
-    }),
-
-    vscode.commands.registerCommand('gw.openPlan', async (item?: AgentBranchItem) => {
-      if (!item?.gwDir) {
-        vscode.window.showWarningMessage('Please select an agent task branch first.');
-        return;
-      }
-      const planPath = path.join(item.gwDir, 'plan.md');
-      if (fs.existsSync(planPath)) {
-        await openMarkdownFile(planPath);
-      } else {
-        vscode.window.showWarningMessage(`No plan.md found for ${item.branchName}`);
-      }
-    }),
-
-    vscode.commands.registerCommand('gw.openTask', async (item?: AgentBranchItem) => {
-      if (!item?.gwDir) {
-        vscode.window.showWarningMessage('Please select an agent task branch first.');
-        return;
-      }
-      const taskPath = path.join(item.gwDir, 'task.md');
-      if (fs.existsSync(taskPath)) {
-        await openMarkdownFile(taskPath);
-      } else {
-        vscode.window.showWarningMessage(`No task.md found for ${item.branchName}`);
-      }
-    }),
-
-    vscode.commands.registerCommand('gw.openWalkthrough', async (item?: AgentBranchItem) => {
-      if (!item?.gwDir) {
-        vscode.window.showWarningMessage('Please select an agent task branch first.');
-        return;
-      }
-      const wtPath = path.join(item.gwDir, 'walkthrough.md');
-      if (fs.existsSync(wtPath)) {
-        await openMarkdownFile(wtPath);
-      } else {
-        vscode.window.showWarningMessage(`No walkthrough.md found for ${item.branchName}`);
-      }
-    }),
-
     vscode.commands.registerCommand('gw.clean', async () => {
       log('Command: clean');
       const dryRunRaw = await cleanWorktrees(workspacePath, { dryRun: true });
@@ -827,76 +767,6 @@ export function activate(context: vscode.ExtensionContext): void {
         const msg = err instanceof Error ? err.message : String(err);
         vscode.window.showErrorMessage(`Failed to clean worktrees: ${stripAnsi(msg)}`);
       }
-    }),
-
-    vscode.commands.registerCommand('gw.sortAgentTasks', async () => {
-      const config = vscode.workspace.getConfiguration('gw');
-      const currentSortBy = config.get<string>('agentTasksSortBy', 'date');
-      const currentSortOrder = config.get<string>('agentTasksSortOrder', 'desc');
-
-      interface SortOption {
-        label: string;
-        description: string;
-        sortBy: 'date' | 'name' | 'status';
-        sortOrder: 'asc' | 'desc';
-      }
-
-      const options: SortOption[] = [
-        {
-          label: '$(calendar) Date (newest first)',
-          description: 'Most recently modified at top',
-          sortBy: 'date',
-          sortOrder: 'desc',
-        },
-        {
-          label: '$(calendar) Date (oldest first)',
-          description: 'Oldest modified at top',
-          sortBy: 'date',
-          sortOrder: 'asc',
-        },
-        {
-          label: '$(case-sensitive) Name (A-Z)',
-          description: 'Alphabetical ascending',
-          sortBy: 'name',
-          sortOrder: 'asc',
-        },
-        {
-          label: '$(case-sensitive) Name (Z-A)',
-          description: 'Alphabetical descending',
-          sortBy: 'name',
-          sortOrder: 'desc',
-        },
-        {
-          label: '$(pulse) Status (in-progress first)',
-          description: 'Active tasks at top',
-          sortBy: 'status',
-          sortOrder: 'desc',
-        },
-        {
-          label: '$(pass-filled) Status (completed first)',
-          description: 'Completed tasks at top',
-          sortBy: 'status',
-          sortOrder: 'asc',
-        },
-      ];
-
-      // Mark current selection
-      const currentKey = `${currentSortBy}-${currentSortOrder}`;
-      const picks = options.map((opt) => ({
-        ...opt,
-        picked: `${opt.sortBy}-${opt.sortOrder}` === currentKey,
-      }));
-
-      const selected = await vscode.window.showQuickPick(picks, {
-        placeHolder: 'Select sort order for Agent Tasks',
-        title: 'Sort Agent Tasks',
-      });
-
-      if (!selected) return;
-
-      await config.update('agentTasksSortBy', selected.sortBy, vscode.ConfigurationTarget.Workspace);
-      await config.update('agentTasksSortOrder', selected.sortOrder, vscode.ConfigurationTarget.Workspace);
-      agentTasksProvider.refresh();
     }),
 
     vscode.commands.registerCommand('gw.sync', async (item?: WorktreeItem) => {
@@ -1104,18 +974,10 @@ export function activate(context: vscode.ExtensionContext): void {
   // Refresh worktrees when workspace changes
   const workspaceWatcher = vscode.workspace.onDidChangeWorkspaceFolders(() => {
     worktreeProvider.refresh();
-    agentTasksProvider.refresh();
   });
 
   // Push all disposables
-  context.subscriptions.push(
-    worktreeView,
-    agentTasksView,
-    artifactWatcher,
-    worktreeWatcher,
-    workspaceWatcher,
-    ...commands
-  );
+  context.subscriptions.push(worktreeView, worktreeWatcher, workspaceWatcher, ...commands);
 }
 
 export function deactivate(): void {
