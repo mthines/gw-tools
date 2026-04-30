@@ -26,7 +26,7 @@ When adding, changing, or removing features in the gw CLI tool, always update th
 2. **Skills documentation:**
    - `skills/gw-config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
-   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features (@autonomous-workflow)
+   - The `autonomous-workflow` skill now lives in [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) — update there for any workflow / phase / companion changes
 
 3. **Example files** (in `skills/*/references/`):
    - Update relevant examples that reference the changed feature
@@ -104,7 +104,7 @@ The `.gw/config.json` file uses a versioned migration system for schema changes.
 
 When the user requests autonomous feature development or end-to-end implementation:
 
-1. **Use the @autonomous-workflow skill** — It provides complete procedures for autonomous execution
+1. **Use the `autonomous-workflow` skill** — It provides complete procedures for autonomous execution. Source: [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow).
 2. **Phase 0 is MANDATORY** — Always ask clarifying questions and validate understanding first
 3. **plan.md is the single source of truth** — Must be comprehensive enough for a new session to execute alone
 4. **Companion skills generate artifacts** — Use `Skill("create-plan")` after worktree setup and `Skill("create-walkthrough")` at PR delivery
@@ -113,13 +113,20 @@ When the user requests autonomous feature development or end-to-end implementati
 7. **Iterate until correct** — No artificial limits (Ralph Wiggum pattern)
 8. **Stop and ask** when encountering fundamental blockers or ambiguities
 
-### Auto-Trigger Setup
+### Install
 
-To automatically route independent tasks to the autonomous workflow agent:
+Install the skill, companions, and the planner / executor agents from [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow):
 
 ```bash
-ln -sf .agents/skills/autonomous-workflow/templates/routing-rule.template.md \
-   .claude/rules/autonomous-workflow-routing.md
+npx skills add https://github.com/mthines/agent-skills \
+  --skill autonomous-workflow create-plan create-walkthrough confidence \
+          code-quality holistic-analysis tdd ux update-claude \
+          review-changes create-pr ci-auto-fix \
+  --agent claude-code \
+  --yes
+bash .claude/skills/autonomous-workflow/install.sh
 ```
 
-See `skills/autonomous-workflow/README.md` for global vs project-level install options.
+The `install.sh` script in the skill bundle links the planner / executor agent definitions and the auto-routing rule into `.claude/`. Run with `--global` for personal install.
+
+See [`mthines/agent-skills` → autonomous-workflow](https://github.com/mthines/agent-skills/tree/main/skills/autonomous-workflow) for the full skill docs.
