@@ -978,10 +978,7 @@ Deno.test('init command - re-running init creates .gw/.gitignore when missing', 
       // Pre-create a config without .gitignore (simulates pre-existing config)
       const configDir = join(repo.path, '.gw');
       await Deno.mkdir(configDir, { recursive: true });
-      await Deno.writeTextFile(
-        join(configDir, 'config.json'),
-        JSON.stringify({ defaultBranch: 'main' }, null, 2)
-      );
+      await Deno.writeTextFile(join(configDir, 'config.json'), JSON.stringify({ defaultBranch: 'main' }, null, 2));
 
       const gitignorePath = join(configDir, '.gitignore');
       await assertRejects(() => Deno.stat(gitignorePath), Deno.errors.NotFound);
