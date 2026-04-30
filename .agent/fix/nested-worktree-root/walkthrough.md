@@ -27,8 +27,8 @@ const gitRoot = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
 ```
 
 After the refactor that made `.gw/config.json` committable and placed it inside
-worktrees (commit `37edcf9`), this derivation now returns the *worktree
-directory* (`repo.git/main`) as `gitRoot` instead of the *bare repo root*
+worktrees (commit `37edcf9`), this derivation now returns the _worktree
+directory_ (`repo.git/main`) as `gitRoot` instead of the _bare repo root_
 (`repo.git`). All subsequent `resolveWorktreePath(gitRoot, ...)` calls used
 this wrong root.
 
@@ -46,6 +46,7 @@ const gitRoot = await findGitRoot(worktreeDir);
 ```
 
 `findGitRoot` was already imported. It correctly handles:
+
 - **Bare repo worktrees:** reads the `.git` file, parses `gitdir:` path, walks
   up to the bare repo root.
 - **Regular repos:** returns the directory containing `.git/`.
@@ -67,6 +68,7 @@ loadConfig - new worktree path is a sibling of the bare-repo root, not nested ..
 ```
 
 Error showed exactly the bug:
+
 ```
 Actual:   .../repo.git/main      (worktree dir — wrong)
 Expected: .../repo.git           (bare repo root — correct)
@@ -94,19 +96,19 @@ No structural refactoring needed. The change is minimal and self-contained.
 
 ## Acceptance criteria coverage
 
-| AC | Test | Status |
-|----|------|--------|
-| AC-1 (checkout sibling path) | `loadConfig - new worktree path is a sibling...` | PASS |
-| AC-2 (add alias) | `gw add` aliases `gw checkout` via same `executeCheckout` — transitively covered | PASS |
-| AC-3 (non-regression regular repo) | All 24 pre-existing config tests — regular git repos only | PASS |
-| AC-4 (pre-existing tests pass) | 311/311 | PASS |
-| AC-5 (lint + typecheck) | `nx run gw-tool:lint`, `nx run gw-tool:check` | PASS |
+| AC                                 | Test                                                                             | Status |
+| ---------------------------------- | -------------------------------------------------------------------------------- | ------ |
+| AC-1 (checkout sibling path)       | `loadConfig - new worktree path is a sibling...`                                 | PASS   |
+| AC-2 (add alias)                   | `gw add` aliases `gw checkout` via same `executeCheckout` — transitively covered | PASS   |
+| AC-3 (non-regression regular repo) | All 24 pre-existing config tests — regular git repos only                        | PASS   |
+| AC-4 (pre-existing tests pass)     | 311/311                                                                          | PASS   |
+| AC-5 (lint + typecheck)            | `nx run gw-tool:lint`, `nx run gw-tool:check`                                    | PASS   |
 
 ---
 
 ## Files changed
 
-| File | Change |
-|------|--------|
-| `packages/gw-tool/src/lib/config.ts` | Fix `gitRoot` derivation (+4 lines, renamed variable) |
-| `packages/gw-tool/src/lib/config.test.ts` | 2 new regression tests + helper function |
+| File                                      | Change                                                |
+| ----------------------------------------- | ----------------------------------------------------- |
+| `packages/gw-tool/src/lib/config.ts`      | Fix `gitRoot` derivation (+4 lines, renamed variable) |
+| `packages/gw-tool/src/lib/config.test.ts` | 2 new regression tests + helper function              |

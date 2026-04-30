@@ -10,7 +10,7 @@
 ## Problem Statement
 
 Running `gw add <branch>` (or `gw checkout <branch>`) from inside a worktree
-directory (e.g. `/repo.git/main`) creates a *nested* worktree at
+directory (e.g. `/repo.git/main`) creates a _nested_ worktree at
 `/repo.git/main/feat/branch` instead of a sibling worktree at
 `/repo.git/feat/branch`.
 
@@ -24,9 +24,9 @@ const gitRoot = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
 ```
 
 After the recent refactor (`37edcf9`) that made `.gw/config.json` committable
-and placed it *inside worktrees* rather than at the bare-repo root, this
-derivation now returns the *worktree directory* (e.g. `/repo.git/main`) instead
-of the *repository root* (e.g. `/repo.git`). All subsequent `resolveWorktreePath`
+and placed it _inside worktrees_ rather than at the bare-repo root, this
+derivation now returns the _worktree directory_ (e.g. `/repo.git/main`) instead
+of the _repository root_ (e.g. `/repo.git`). All subsequent `resolveWorktreePath`
 calls use this wrong root, placing new worktrees as children of the current
 worktree rather than siblings.
 
@@ -59,9 +59,9 @@ parent of all worktrees.
 
 ## Files to Change
 
-| File | Change |
-|------|--------|
-| `packages/gw-tool/src/lib/config.ts` | Fix `gitRoot` derivation to use `findGitRoot(configDir)` |
+| File                                      | Change                                                                                    |
+| ----------------------------------------- | ----------------------------------------------------------------------------------------- |
+| `packages/gw-tool/src/lib/config.ts`      | Fix `gitRoot` derivation to use `findGitRoot(configDir)`                                  |
 | `packages/gw-tool/src/lib/config.test.ts` | Add failing tests (RED) that reproduce the nested-worktree bug, then turn GREEN after fix |
 
 ---
@@ -113,6 +113,7 @@ Verify all existing tests still pass.
 ### Phase 4 — Testing
 
 Run `nx run gw-tool:test` and confirm:
+
 - New tests turn GREEN
 - All pre-existing tests still pass
 
