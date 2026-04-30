@@ -4,7 +4,7 @@
  */
 
 import { join, resolve } from '@std/path';
-import { saveConfigTemplate } from '../lib/config.ts';
+import { ensureSchemaInConfig, saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
@@ -830,6 +830,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     try {
       await Deno.mkdir(targetDir, { recursive: true });
       await Deno.copyFile(sourceConfig, targetConfig);
+      await ensureSchemaInConfig(targetConfig);
       output.success('Config copied to worktree (now committable)');
       console.log(`  From: ${output.path(sourceConfig)}`);
       console.log(`  To:   ${output.path(targetConfig)}`);
@@ -843,6 +844,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   }
 
   if (initialized && !parsed.interactive) {
+    await ensureSchemaInConfig(join(configDir!, '.gw', 'config.json'));
     output.info('gw is already initialized in this repository');
     console.log(`  Config: ${output.path(join(configDir!, '.gw/config.json'))}`);
     console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);

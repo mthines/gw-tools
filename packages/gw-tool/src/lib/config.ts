@@ -443,3 +443,36 @@ export async function saveConfigTemplate(dir: string, config: Config): Promise<v
   const content = generateConfigTemplate(config);
   await Deno.writeTextFile(configPath, content);
 }
+
+/**
+ * Ensure the config file at the given path has a $schema property.
+ * Inserts it right after the opening brace if missing, preserving
+ * existing JSONC formatting and comments. No-op if already present
+ * or the file doesn't exist.
+ * @param configPath Absolute path to the .gw/config.json file
+ */
+export async function ensureSchemaInConfig(configPath: string): Promise<void> {
+  let content: string;
+  try {
+    content = await Deno.readTextFile(configPath);
+  } catch (error) {
+    if (error instanceof Deno.errors.NotFound) {
+      return;
+    }
+    throw error;
+  }
+
+  if (content.includes('"$schema"')) {
+    return;
+  }
+
+  const braceIndex = content.indexOf('{');
+  if (braceIndex === -1) {
+    return;
+  }
+
+  const before = content.slice(0, braceIndex + 1);
+  const after = content.slice(braceIndex + 1);
+  const schemaLine = `\n  "$schema": ${JSON.stringify(CONFIG_SCHEMA_URL)},`;
+  await Deno.writeTextFile(configPath, before + schemaLine + after);
+}

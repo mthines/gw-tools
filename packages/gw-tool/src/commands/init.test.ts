@@ -915,6 +915,95 @@ Deno.test('init command - existing repo mode when already initialized', async ()
   }
 });
 
+Deno.test('init command - fresh init writes $schema property', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeInit([]);
+
+      const configContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
+      assertEquals(
+        configContent.includes('"$schema"'),
+        true,
+        'Fresh init must include $schema for IDE autocompletion'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('init command - re-running init adds $schema to existing config that lacks it', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Pre-create a config without $schema (simulates pre-existing config from before this feature)
+      const configDir = join(repo.path, '.gw');
+      await Deno.mkdir(configDir, { recursive: true });
+      const configPath = join(configDir, 'config.json');
+      await Deno.writeTextFile(
+        configPath,
+        JSON.stringify({ defaultBranch: 'main', cleanThreshold: 7 }, null, 2)
+      );
+
+      // Sanity: confirm setup
+      const before = await Deno.readTextFile(configPath);
+      assertEquals(before.includes('"$schema"'), false);
+
+      // Re-run init — should add $schema
+      await executeInit([]);
+
+      const after = await Deno.readTextFile(configPath);
+      assertEquals(after.includes('"$schema"'), true, 'Re-running init must add $schema if missing');
+      // Existing fields preserved
+      const parsed = JSON.parse(after) as Record<string, unknown>;
+      assertEquals(parsed.defaultBranch, 'main');
+      assertEquals(parsed.cleanThreshold, 7);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('init command - re-running init is idempotent when $schema is already present', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // First init — writes config with $schema
+      await executeInit([]);
+
+      const configPath = join(repo.path, '.gw', 'config.json');
+      const before = await Deno.readTextFile(configPath);
+      const beforeSchemaCount = (before.match(/"\$schema"/g) || []).length;
+
+      // Re-run init — must not duplicate $schema
+      await executeInit([]);
+
+      const after = await Deno.readTextFile(configPath);
+      const afterSchemaCount = (after.match(/"\$schema"/g) || []).length;
+      assertEquals(afterSchemaCount, beforeSchemaCount, 'Re-running init must not duplicate $schema');
+      assertEquals(beforeSchemaCount, 1, 'Config should have exactly one $schema entry');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('init command - interactive mode prompts for URL when not in git repo', async () => {
   const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-no-git-' }));
   try {
