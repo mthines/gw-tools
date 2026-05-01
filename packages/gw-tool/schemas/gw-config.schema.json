@@ -13,12 +13,7 @@
       "type": "integer",
       "minimum": 0,
       "description": "Config schema version for migrations. Managed automatically by gw — do not edit manually.",
-      "default": 1
-    },
-    "root": {
-      "type": "string",
-      "description": "Absolute path to the git repository root directory (the parent directory containing all worktrees). Auto-detected by gw init.",
-      "examples": ["/Users/you/projects/myapp.git", "/home/dev/repos/project.git"]
+      "default": 2
     },
     "defaultBranch": {
       "type": "string",
@@ -92,13 +87,7 @@
       "enum": ["merge", "rebase"],
       "description": "Default strategy for 'gw update' when syncing worktrees with the latest changes from the default branch. Can be overridden per-command with --merge or --rebase flags.",
       "default": "merge"
-    },
-    "lastAutoCleanTime": {
-      "type": "integer",
-      "minimum": 0,
-      "description": "Unix timestamp in milliseconds of the last auto-cleanup run. Managed automatically by gw — do not edit manually."
     }
   },
-  "required": ["root"],
   "additionalProperties": false
 }
