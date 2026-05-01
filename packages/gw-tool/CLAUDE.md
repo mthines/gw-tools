@@ -43,6 +43,9 @@ src/
     ├── config.ts        # Config loading with migrations
     ├── config-migrations.ts  # Schema migration system
     └── output.ts        # Colored output formatting
+
+schemas/
+└── gw-config.schema.json # JSON Schema for .gw/config.json (IDE validation)
 ```
 
 ## Key Patterns
@@ -60,6 +63,7 @@ When changing `.gw/config.json` schema, add a migration in `config-migrations.ts
 1. Increment `CURRENT_CONFIG_VERSION`
 2. Add migration to `MIGRATIONS` array
 3. Update types in `types.ts`
+4. Update `schemas/gw-config.schema.json` to match the new `Config` shape (properties, defaults, `configVersion` default). The schema is `additionalProperties: false`, so any drift causes IDE validation errors.
 
 Never add backwards-compatibility code in commands - migrations handle it.
 
@@ -70,6 +74,7 @@ When adding/changing features, update:
 1. `packages/gw-tool/README.md` - User-facing docs
 2. Help text in command file's `show<Name>Help()` function
 3. Root `CLAUDE.md` if it affects the overall project
+4. `packages/gw-tool/schemas/gw-config.schema.json` - if any change touches the `Config` shape
 
 ## References
 

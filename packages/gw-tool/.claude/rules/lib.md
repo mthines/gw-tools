@@ -23,12 +23,14 @@ All interfaces go in `types.ts` with JSDoc comments:
 ```typescript
 /**
  * Per-repository configuration stored at .gw/config.json
+ *
+ * Safe to commit. Machine-specific state is never written here.
  */
 export interface Config {
-  /** Config schema version for migrations */
+  /** Config schema version for migrations (managed automatically) */
   configVersion?: number;
-  /** Absolute path to the git repository root */
-  root?: string;
+  /** Default source worktree name */
+  defaultBranch?: string;
   /** Files to automatically copy when creating worktrees */
   autoCopyFiles?: string[];
   /** Command hooks configuration */
@@ -58,6 +60,14 @@ export const MIGRATIONS: Migration[] = [
   },
 ];
 ```
+
+When you touch the `Config` interface or add a migration, you MUST also
+update `packages/gw-tool/schemas/gw-config.schema.json` so the JSON Schema
+matches the post-migration shape. The schema uses `additionalProperties:
+false` and is referenced via `$schema` in committed configs — any drift
+shows up as IDE validation errors. Bump the `configVersion` `default`
+in the schema to the new `CURRENT_CONFIG_VERSION` and remove any
+properties that the migration deletes.
 
 ## Output Module Usage
 

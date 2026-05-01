@@ -35,6 +35,9 @@ When adding, changing, or removing features in the gw CLI tool, always update th
 4. **Help text:**
    - Update CLI help text in `packages/gw-tool/src/lib/cli.ts`
 
+5. **JSON Schema:**
+   - `packages/gw-tool/schemas/gw-config.schema.json` - Must stay in sync with the `Config` interface in `packages/gw-tool/src/lib/types.ts` and any v2+ migrations. Any added/removed/renamed config field MUST be reflected here, including default values, descriptions, and `additionalProperties: false`.
+
 ## Config Migration System
 
 The `.gw/config.json` file uses a versioned migration system for schema changes. When the config structure changes, add a migration instead of backwards compatibility code.
@@ -72,7 +75,9 @@ The `.gw/config.json` file uses a versioned migration system for schema changes.
 
 3. **Update types** in `packages/gw-tool/src/lib/types.ts` to reflect the new schema
 
-4. **Remove old field handling** from commands - migrations handle backwards compat
+4. **Update the JSON schema** at `packages/gw-tool/schemas/gw-config.schema.json` to match the new `Config` shape — add/remove properties, update descriptions, defaults, and the `configVersion` default. The schema is `additionalProperties: false`, so any drift will surface as IDE validation errors in committed configs.
+
+5. **Remove old field handling** from commands - migrations handle backwards compat
 
 ### Migration Guidelines
 
