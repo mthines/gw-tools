@@ -27,6 +27,7 @@ Singleton NDJSON emitter. Three exports:
 - `emitProgress(event)` — writes `JSON.stringify({version:1,...event})\n` to stderr via `Deno.stderr.writeSync`. No-op when disabled.
 
 Key design choices baked in:
+
 - `Deno.stderr.writeSync` is used (not async) to avoid interleaving with hook output. Payloads are well under 512 bytes (atomic on POSIX).
 - `version: 1` on every event. Consumers can filter with `jq 'select(.version == 1)'`.
 - `durationMs` is **absent** on start events (sparse, not `null`) — DX review finding.
@@ -68,13 +69,13 @@ All existing callers pass 5 arguments; the 6th defaults to `undefined` (backward
 
 Stage events wired in execution order:
 
-| Stage | Start | End | Error |
-|---|---|---|---|
-| `create-worktree` | Before `git worktree add` | After success | Before `Deno.exit(code)` on git failure |
-| `copy-files` | Before `copyFiles()` | After success | (no exit here, existing warning path unchanged) |
-| `copy-staged-files` | Before staged copy | After success | (errors exit via existing path, no additional event needed) |
-| `pre-checkout-hooks` | Via `executeHooks(..., 'pre-checkout-hooks')` | | |
-| `post-checkout-hooks` | Via `executeHooks(..., 'post-checkout-hooks')` | | |
+| Stage                 | Start                                          | End           | Error                                                       |
+| --------------------- | ---------------------------------------------- | ------------- | ----------------------------------------------------------- |
+| `create-worktree`     | Before `git worktree add`                      | After success | Before `Deno.exit(code)` on git failure                     |
+| `copy-files`          | Before `copyFiles()`                           | After success | (no exit here, existing warning path unchanged)             |
+| `copy-staged-files`   | Before staged copy                             | After success | (errors exit via existing path, no additional event needed) |
+| `pre-checkout-hooks`  | Via `executeHooks(..., 'pre-checkout-hooks')`  |               |                                                             |
+| `post-checkout-hooks` | Via `executeHooks(..., 'post-checkout-hooks')` |               |                                                             |
 
 Also added a **Tooling** section to `showCheckoutHelp` referencing `gw --help` for full schema.
 
@@ -90,15 +91,15 @@ New exports:
 - `parseProgressEvent(line)` — parses a single stderr line. Returns typed event if line starts with `{` and parses as version-1 JSON; returns `undefined` otherwise. Non-JSON lines (hook output, ANSI text) fall through cleanly.
 - `progressEventToLabel(event)` — maps a `start` event to a VS Code notification subtitle. Returns `undefined` for `end`/`error` events (handled separately). Label table:
 
-  | Stage + hook | Label |
-  |---|---|
-  | `pre-checkout-hooks` (no hook) | `"Running pre-checkout hooks..."` |
-  | `pre-checkout-hooks` hook N/M | `"Running pre-checkout hook N/M — {cmd}"` (cmd truncated at 40 chars + …) |
-  | `create-worktree` | `"Creating worktree"` |
-  | `copy-files` | `"Copying config files"` |
-  | `copy-staged-files` | `"Moving staged files to new worktree"` |
-  | `post-checkout-hooks` (no hook) | `"Running post-checkout hooks..."` |
-  | `post-checkout-hooks` hook N/M | `"Running post-checkout hook N/M — {cmd}"` (cmd truncated at 40 chars + …) |
+  | Stage + hook                    | Label                                                                      |
+  | ------------------------------- | -------------------------------------------------------------------------- |
+  | `pre-checkout-hooks` (no hook)  | `"Running pre-checkout hooks..."`                                          |
+  | `pre-checkout-hooks` hook N/M   | `"Running pre-checkout hook N/M — {cmd}"` (cmd truncated at 40 chars + …)  |
+  | `create-worktree`               | `"Creating worktree"`                                                      |
+  | `copy-files`                    | `"Copying config files"`                                                   |
+  | `copy-staged-files`             | `"Moving staged files to new worktree"`                                    |
+  | `post-checkout-hooks` (no hook) | `"Running post-checkout hooks..."`                                         |
+  | `post-checkout-hooks` hook N/M  | `"Running post-checkout hook N/M — {cmd}"` (cmd truncated at 40 chars + …) |
 
 - `HookFailureError` — extends `Error`. Has `isPreCheckout: boolean` and `worktreePath: string | undefined`. Thrown by the spawn-based functions when a hook error progress event is detected before process exit.
 
@@ -112,11 +113,11 @@ Both functions share a private `runCheckoutWithProgress` helper to avoid duplica
 
 Three call sites switched to the progress-aware variants:
 
-| Line (approx) | Before | After |
-|---|---|---|
-| ~329 | `await createWorktree(workspacePath, branchName)` | `await createWorktreeWithProgress(..., msg => progress.report({ message: msg }))` |
-| ~685 | same | same |
-| ~740 | `await createWorktreeFromStaged(workspacePath, branchName)` | `await createWorktreeFromStagedWithProgress(...)` |
+| Line (approx) | Before                                                      | After                                                                             |
+| ------------- | ----------------------------------------------------------- | --------------------------------------------------------------------------------- |
+| ~329          | `await createWorktree(workspacePath, branchName)`           | `await createWorktreeWithProgress(..., msg => progress.report({ message: msg }))` |
+| ~685          | same                                                        | same                                                                              |
+| ~740          | `await createWorktreeFromStaged(workspacePath, branchName)` | `await createWorktreeFromStagedWithProgress(...)`                                 |
 
 All three catch blocks now handle `HookFailureError` via a new `handleHookFailure` helper:
 
@@ -131,11 +132,11 @@ Lines 282 (checkoutPr), 812/893 (updateWorktree), 797/963 (syncWorktree) are unc
 
 ## Tests
 
-| File | New tests | Total |
-|---|---|---|
-| `packages/gw-tool/src/lib/progress.test.ts` | 9 (new file) | 9 |
-| `packages/gw-tool/src/commands/checkout.test.ts` | 5 | 333 (gw-tool total) |
-| `packages/vscode-gw/src/parsers/git-worktree.test.ts` | 17 | 44 (vscode-gw total) |
+| File                                                  | New tests    | Total                |
+| ----------------------------------------------------- | ------------ | -------------------- |
+| `packages/gw-tool/src/lib/progress.test.ts`           | 9 (new file) | 9                    |
+| `packages/gw-tool/src/commands/checkout.test.ts`      | 5            | 333 (gw-tool total)  |
+| `packages/vscode-gw/src/parsers/git-worktree.test.ts` | 17           | 44 (vscode-gw total) |
 
 All 377 tests pass. All lint/check targets pass (0 errors).
 
@@ -143,23 +144,23 @@ All 377 tests pass. All lint/check targets pass (0 errors).
 
 ## Acceptance criteria status
 
-| # | Criterion | Status |
-|---|---|---|
-| 1 | `gw checkout --progress=json` writes create-worktree start/end events to stderr | PASS — tested in checkout.test.ts |
-| 2 | Per-hook events include `hook`, `of`, `command` | PASS — tested in checkout.test.ts + progress.test.ts |
-| 3 | `durationMs` present on end, absent on start | PASS — tested in both test files |
-| 4 | `version: 1` on every event | PASS — invariant enforced in emitProgress |
-| 5 | `status:"error"` emitted before exit on git failure | PASS — checkout.ts emits before `Deno.exit(code)` |
-| 6 | Without --progress=json, output byte-for-byte identical | PASS — `isProgressEnabled()` guards all emit calls |
-| 7 | VS Code notification subtitle updates per stage | PASS — extension.ts wired to progress-aware variants |
-| 8 | Post-checkout hook failure shows `showWarningMessage` + buttons | PASS — handleHookFailure in extension.ts |
-| 9 | Pre-checkout hook failure shows `showErrorMessage` | PASS — handleHookFailure in extension.ts |
-| 10 | `gw --help` has Tooling section with `--progress=json` + jq example | PASS — cli.ts showGlobalHelp |
-| 11 | `gw checkout --help` has Tooling section | PASS — checkout.ts showCheckoutHelp |
-| 12 | `nx run gw-tool:check` passes | PASS |
-| 13 | `nx run gw-tool:test` passes | PASS (333 tests) |
-| 14 | `nx run vscode-gw:test` passes | PASS (44 tests) |
-| 15 | `nx run gw-tool:lint` and `nx run vscode-gw:lint` pass | PASS (0 errors) |
+| #   | Criterion                                                                       | Status                                               |
+| --- | ------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| 1   | `gw checkout --progress=json` writes create-worktree start/end events to stderr | PASS — tested in checkout.test.ts                    |
+| 2   | Per-hook events include `hook`, `of`, `command`                                 | PASS — tested in checkout.test.ts + progress.test.ts |
+| 3   | `durationMs` present on end, absent on start                                    | PASS — tested in both test files                     |
+| 4   | `version: 1` on every event                                                     | PASS — invariant enforced in emitProgress            |
+| 5   | `status:"error"` emitted before exit on git failure                             | PASS — checkout.ts emits before `Deno.exit(code)`    |
+| 6   | Without --progress=json, output byte-for-byte identical                         | PASS — `isProgressEnabled()` guards all emit calls   |
+| 7   | VS Code notification subtitle updates per stage                                 | PASS — extension.ts wired to progress-aware variants |
+| 8   | Post-checkout hook failure shows `showWarningMessage` + buttons                 | PASS — handleHookFailure in extension.ts             |
+| 9   | Pre-checkout hook failure shows `showErrorMessage`                              | PASS — handleHookFailure in extension.ts             |
+| 10  | `gw --help` has Tooling section with `--progress=json` + jq example             | PASS — cli.ts showGlobalHelp                         |
+| 11  | `gw checkout --help` has Tooling section                                        | PASS — checkout.ts showCheckoutHelp                  |
+| 12  | `nx run gw-tool:check` passes                                                   | PASS                                                 |
+| 13  | `nx run gw-tool:test` passes                                                    | PASS (333 tests)                                     |
+| 14  | `nx run vscode-gw:test` passes                                                  | PASS (44 tests)                                      |
+| 15  | `nx run gw-tool:lint` and `nx run vscode-gw:lint` pass                          | PASS (0 errors)                                      |
 
 ---
 

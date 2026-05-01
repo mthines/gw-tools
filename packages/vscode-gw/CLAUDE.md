@@ -60,11 +60,13 @@ All commands, views, settings, and keybindings are defined in `package.json`:
 The `createWorktreeWithProgress` and `createWorktreeFromStagedWithProgress` functions in `parsers/git-worktree.ts` use `cp.spawn` + `--progress=json` to stream NDJSON progress events from the gw CLI. These are the progress-aware replacements for `createWorktree` and `createWorktreeFromStaged`.
 
 Key helpers:
+
 - `parseProgressEvent(line)` — parses a single stderr line; returns a typed `GwProgressEvent` or `undefined`
 - `progressEventToLabel(event)` — maps a start event to a VS Code notification subtitle string
 - `HookFailureError` — thrown by the spawn-based functions when a hook error event is detected
 
 Hook failure handling in `extension.ts`:
+
 - Pre-checkout hook failure: `showErrorMessage` (worktree NOT created, fatal)
 - Post-checkout hook failure: `showWarningMessage` with "Show Output" / "Open Worktree" buttons (worktree WAS created, non-fatal)
 

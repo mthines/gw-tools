@@ -362,12 +362,12 @@ gw init --root /path/to/your/repo.git
   "hooks": {
     "checkout": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": ["pnpm install", "echo 'Setup complete!'"]
-    }
+      "post": ["pnpm install", "echo 'Setup complete!'"],
+    },
   },
   "cleanThreshold": 7,
   "autoClean": true,
-  "updateStrategy": "merge"
+  "updateStrategy": "merge",
 }
 ```
 
@@ -395,7 +395,7 @@ Create `.gw/config.local.json` to override any config value for your machine onl
 ```jsonc
 // .gw/config.local.json — personal overrides, not committed
 {
-  "autoCopyFiles": [".env", ".env.local", "my-personal-config.json"]
+  "autoCopyFiles": [".env", ".env.local", "my-personal-config.json"],
 }
 ```
 
@@ -647,23 +647,23 @@ Every event is a JSON object followed by a newline (`\n`). Schema version is alw
 
 ```typescript
 interface ProgressEvent {
-  version: 1;                                    // always 1
+  version: 1; // always 1
   stage: ProgressStage;
-  status: "start" | "end" | "error";
-  hook?: number;      // 1-based index (hook stages only)
-  of?: number;        // total hook count (hook stages only)
-  command?: string;   // expanded hook command (hook stages only)
+  status: 'start' | 'end' | 'error';
+  hook?: number; // 1-based index (hook stages only)
+  of?: number; // total hook count (hook stages only)
+  command?: string; // expanded hook command (hook stages only)
   durationMs?: number; // elapsed ms (end events only — absent on start)
-  message?: string;   // error detail (error events only)
-  exitCode?: number;  // process exit code (error events only)
+  message?: string; // error detail (error events only)
+  exitCode?: number; // process exit code (error events only)
 }
 
 type ProgressStage =
-  | "pre-checkout-hooks"
-  | "create-worktree"
-  | "copy-files"
-  | "copy-staged-files"
-  | "post-checkout-hooks";
+  | 'pre-checkout-hooks'
+  | 'create-worktree'
+  | 'copy-files'
+  | 'copy-staged-files'
+  | 'post-checkout-hooks';
 ```
 
 Note: `durationMs` is **absent** on `start` events (sparse JSON, not `null`). This keeps jq consumers clean.
@@ -1871,11 +1871,11 @@ For commands with custom logic, follow the pattern used by existing commands:
    // src/commands/list.ts
    export async function executeList(args: string[]): Promise<void> {
      // Check for help flag
-     if (args.includes("--help") || args.includes("-h")) {
+     if (args.includes('--help') || args.includes('-h')) {
        console.log(`Usage: gw list
-
+   
    List all git worktrees in the current repository.
-
+   
    Options:
      -h, --help    Show this help message
    `);
@@ -1890,7 +1890,7 @@ For commands with custom logic, follow the pattern used by existing commands:
 2. **Import and register** the command in `src/main.ts`:
 
    ```typescript
-   import { executeList } from "./commands/list.ts";
+   import { executeList } from './commands/list.ts';
 
    const COMMANDS = {
      add: executeAdd,
@@ -1923,19 +1923,19 @@ For simple pass-through commands that wrap git worktree operations, use the `git
 
    ```typescript
    // src/commands/list.ts
-   import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
+   import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 
    export async function executeList(args: string[]): Promise<void> {
-     if (args.includes("--help") || args.includes("-h")) {
-       showProxyHelp("list", "list", "List all worktrees in the repository", [
-         "gw list",
-         "gw list --porcelain",
-         "gw list -v",
+     if (args.includes('--help') || args.includes('-h')) {
+       showProxyHelp('list', 'list', 'List all worktrees in the repository', [
+         'gw list',
+         'gw list --porcelain',
+         'gw list -v',
        ]);
        Deno.exit(0);
      }
 
-     await executeGitWorktree("list", args);
+     await executeGitWorktree('list', args);
    }
    ```
 

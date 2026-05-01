@@ -3,8 +3,8 @@
  * Lists all worktrees in the repository
  */
 
-import { runAutoClean } from '../lib/auto-clean.ts';
-import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
+import { runAutoClean } from "../lib/auto-clean.ts";
+import { executeGitWorktree, showProxyHelp } from "../lib/git-proxy.ts";
 
 /**
  * Execute the list command
@@ -13,17 +13,17 @@ import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
  */
 export async function executeList(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes('--help') || args.includes('-h')) {
-    showProxyHelp('list', 'list', 'List all worktrees in the repository', [
-      'gw list',
-      'gw list --porcelain',
-      'gw list -v',
-      'gw ls  # Short alias',
+  if (args.includes("--help") || args.includes("-h")) {
+    showProxyHelp("list", "list", "List all worktrees in the repository", [
+      "gw list",
+      "gw list --porcelain",
+      "gw list -v",
+      "gw ls  # Short alias",
     ]);
     Deno.exit(0);
   }
 
-  await executeGitWorktree('list', args);
+  await executeGitWorktree("list", args);
 
   // Auto-cleanup stale worktrees silently in background
   runAutoClean();

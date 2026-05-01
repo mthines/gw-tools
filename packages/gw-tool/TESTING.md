@@ -63,13 +63,13 @@ src/
 Creates isolated temporary git repositories for testing:
 
 ```typescript
-import { GitTestRepo } from '../test-utils/git-test-repo.ts';
+import { GitTestRepo } from "../test-utils/git-test-repo.ts";
 
 const repo = new GitTestRepo();
 await repo.init(); // Initialize git repo
-await repo.createFile('.env', 'SECRET=123'); // Create files
-await repo.createCommit('Add .env'); // Commit files
-await repo.createWorktree('feat', 'feat'); // Create worktree
+await repo.createFile(".env", "SECRET=123"); // Create files
+await repo.createCommit("Add .env"); // Commit files
+await repo.createWorktree("feat", "feat"); // Create worktree
 await repo.cleanup(); // Cleanup
 ```
 
@@ -81,19 +81,23 @@ import {
   assertDirExists,
   assertFileExists,
   assertWorktreeExists,
-} from '../test-utils/assertions.ts';
+} from "../test-utils/assertions.ts";
 
-await assertFileExists('/path/to/file');
-await assertWorktreeExists(repo.path, 'worktree-name');
-await assertBranchExists(repo.path, 'branch-name');
+await assertFileExists("/path/to/file");
+await assertWorktreeExists(repo.path, "worktree-name");
+await assertBranchExists(repo.path, "branch-name");
 ```
 
 #### Config Fixtures
 
 ```typescript
-import { createConfigWithAutoCopy, createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
+import {
+  createConfigWithAutoCopy,
+  createMinimalConfig,
+  writeTestConfig,
+} from "../test-utils/fixtures.ts";
 
-const config = createConfigWithAutoCopy(repo.path, ['.env']);
+const config = createConfigWithAutoCopy(repo.path, [".env"]);
 await writeTestConfig(repo.path, config);
 ```
 
@@ -102,11 +106,11 @@ await writeTestConfig(repo.path, config);
 For testing commands that call `Deno.exit()`:
 
 ```typescript
-import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { withMockedExit } from "../test-utils/mock-exit.ts";
 
-const { exitCode } = await withMockedExit(() => executeCommand(['args']));
+const { exitCode } = await withMockedExit(() => executeCommand(["args"]));
 
-assertEquals(exitCode, 1, 'Should exit with error code');
+assertEquals(exitCode, 1, "Should exit with error code");
 ```
 
 ## Writing Tests
@@ -114,24 +118,24 @@ assertEquals(exitCode, 1, 'Should exit with error code');
 ### Test Template
 
 ```typescript
-import { assertEquals } from '@std/assert';
-import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { TempCwd } from '../test-utils/temp-env.ts';
-import { executeCommand } from './command.ts';
+import { assertEquals } from "@std/assert";
+import { GitTestRepo } from "../test-utils/git-test-repo.ts";
+import { TempCwd } from "../test-utils/temp-env.ts";
+import { executeCommand } from "./command.ts";
 
-Deno.test('command - does something', async () => {
+Deno.test("command - does something", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Setup test data
-    await repo.createFile('test.txt', 'content');
+    await repo.createFile("test.txt", "content");
 
     // Change to repo directory
     const cwd = new TempCwd(repo.path);
     try {
       // Execute command
-      await executeCommand(['args']);
+      await executeCommand(["args"]);
 
       // Assert results
       assertEquals(result, expected);
@@ -149,18 +153,20 @@ Deno.test('command - does something', async () => {
 Commands that call `Deno.exit()` need special handling:
 
 ```typescript
-import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { withMockedExit } from "../test-utils/mock-exit.ts";
 
-Deno.test('command - exits with error on failure', async () => {
+Deno.test("command - exits with error on failure", async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      const { exitCode } = await withMockedExit(() => executeCommand(['invalid-args']));
+      const { exitCode } = await withMockedExit(() =>
+        executeCommand(["invalid-args"])
+      );
 
-      assertEquals(exitCode, 1, 'Should exit with error code');
+      assertEquals(exitCode, 1, "Should exit with error code");
     } finally {
       cwd.restore();
     }
@@ -194,8 +200,8 @@ Prefer real git operations over mocks:
 
 ```typescript
 // ✅ Good - uses real git
-await repo.createWorktree('feat-branch');
-await assertWorktreeExists(repo.path, 'feat-branch');
+await repo.createWorktree("feat-branch");
+await assertWorktreeExists(repo.path, "feat-branch");
 
 // ❌ Avoid - brittle mocking
 mockGit.worktree.add.returns({ success: true });
@@ -221,13 +227,15 @@ Don't just test happy paths:
 
 ```typescript
 // Test successful case
-Deno.test('command - succeeds with valid args', async () => {
+Deno.test("command - succeeds with valid args", async () => {
   // ...
 });
 
 // Test error case
-Deno.test('command - fails with invalid args', async () => {
-  const { exitCode } = await withMockedExit(() => executeCommand(['--invalid']));
+Deno.test("command - fails with invalid args", async () => {
+  const { exitCode } = await withMockedExit(() =>
+    executeCommand(["--invalid"])
+  );
   assertEquals(exitCode, 1);
 });
 ```
@@ -292,7 +300,7 @@ Following Test-Driven Development:
 1. **Red**: Write a failing test
 
    ```typescript
-   Deno.test('new feature - should work', async () => {
+   Deno.test("new feature - should work", async () => {
      await executeNewFeature(); // Doesn't exist yet
      assertEquals(result, expected);
    });

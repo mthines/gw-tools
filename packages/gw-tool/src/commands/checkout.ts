@@ -3,9 +3,9 @@
  * Creates a new worktree and optionally copies files
  */
 
-import { runAutoClean } from "../lib/auto-clean.ts";
-import { loadConfig } from "../lib/config.ts";
-import { copyFiles } from "../lib/file-ops.ts";
+import { runAutoClean } from '../lib/auto-clean.ts';
+import { loadConfig } from '../lib/config.ts';
+import { copyFiles } from '../lib/file-ops.ts';
 import {
   copyStagedFiles,
   fetchAndGetStartPoint,
@@ -14,19 +14,19 @@ import {
   hasUncommittedChanges,
   listWorktrees,
   removeWorktree,
-} from "../lib/git-utils.ts";
-import { executeHooks, type HookVariables } from "../lib/hooks.ts";
-import { emitProgress } from "../lib/progress.ts";
-import { resolveWorktreePath } from "../lib/path-resolver.ts";
-import { signalNavigation } from "../lib/shell-navigation.ts";
-import * as output from "../lib/output.ts";
+} from '../lib/git-utils.ts';
+import { executeHooks, type HookVariables } from '../lib/hooks.ts';
+import { emitProgress } from '../lib/progress.ts';
+import { resolveWorktreePath } from '../lib/path-resolver.ts';
+import { signalNavigation } from '../lib/shell-navigation.ts';
+import * as output from '../lib/output.ts';
 
 /**
  * Clean up a worktree after an error during --from-staged processing
  * @param worktreePath Path to the worktree to remove
  */
 async function cleanupWorktreeOnError(worktreePath: string): Promise<void> {
-  console.log(output.dim("Removing worktree due to error..."));
+  console.log(output.dim('Removing worktree due to error...'));
   try {
     await removeWorktree(worktreePath, true);
   } catch {
@@ -38,10 +38,10 @@ async function cleanupWorktreeOnError(worktreePath: string): Promise<void> {
  * Check if a branch exists locally
  */
 async function branchExistsLocally(branchName: string): Promise<boolean> {
-  const cmd = new Deno.Command("git", {
-    args: ["rev-parse", "--verify", branchName],
-    stdout: "null",
-    stderr: "null",
+  const cmd = new Deno.Command('git', {
+    args: ['rev-parse', '--verify', branchName],
+    stdout: 'null',
+    stderr: 'null',
   });
   const result = await cmd.output();
   return result.code === 0;
@@ -55,10 +55,10 @@ async function branchExists(branchName: string): Promise<boolean> {
   if (await branchExistsLocally(branchName)) return true;
 
   // Check remote branch
-  const remoteCheck = new Deno.Command("git", {
-    args: ["rev-parse", "--verify", `origin/${branchName}`],
-    stdout: "null",
-    stderr: "null",
+  const remoteCheck = new Deno.Command('git', {
+    args: ['rev-parse', '--verify', `origin/${branchName}`],
+    stdout: 'null',
+    stderr: 'null',
   });
   const remoteResult = await remoteCheck.output();
   return remoteResult.code === 0;
@@ -68,14 +68,12 @@ async function branchExists(branchName: string): Promise<boolean> {
  * Check if creating a branch would conflict with existing Git refs
  * Git doesn't allow both "refs/heads/foo" and "refs/heads/foo/bar"
  */
-async function hasRefConflict(
-  branchName: string,
-): Promise<{ hasConflict: boolean; conflictingBranch?: string }> {
+async function hasRefConflict(branchName: string): Promise<{ hasConflict: boolean; conflictingBranch?: string }> {
   // List all branches to check for conflicts
-  const cmd = new Deno.Command("git", {
-    args: ["for-each-ref", "--format=%(refname:short)", "refs/heads/"],
-    stdout: "piped",
-    stderr: "piped",
+  const cmd = new Deno.Command('git', {
+    args: ['for-each-ref', '--format=%(refname:short)', 'refs/heads/'],
+    stdout: 'piped',
+    stderr: 'piped',
   });
 
   const { code, stdout } = await cmd.output();
@@ -86,19 +84,19 @@ async function hasRefConflict(
   const cmdOutput = new TextDecoder().decode(stdout);
   const branches = cmdOutput
     .trim()
-    .split("\n")
+    .split('\n')
     .filter((b) => b.length > 0);
 
   // Check if any existing branch would conflict with the new branch name
   for (const branch of branches) {
     // Conflict if existing branch is a "subdirectory" of our branch
     // e.g., creating "test" when "test/foo" exists
-    if (branch.startsWith(branchName + "/")) {
+    if (branch.startsWith(branchName + '/')) {
       return { hasConflict: true, conflictingBranch: branch };
     }
     // Conflict if our branch is a "subdirectory" of an existing branch
     // e.g., creating "test/foo" when "test" exists
-    if (branchName.startsWith(branch + "/")) {
+    if (branchName.startsWith(branch + '/')) {
       return { hasConflict: true, conflictingBranch: branch };
     }
   }
@@ -110,7 +108,7 @@ async function hasRefConflict(
  * Check if -b or -B flag is present in git args
  */
 function hasBranchFlag(gitArgs: string[]): boolean {
-  return gitArgs.includes("-b") || gitArgs.includes("-B");
+  return gitArgs.includes('-b') || gitArgs.includes('-B');
 }
 
 /**
@@ -120,45 +118,31 @@ function showRefConflictError(
   branchName: string,
   conflictingBranch: string | undefined,
   worktreeName: string,
-  hasExplicitFlag: boolean,
+  hasExplicitFlag: boolean
 ): never {
-  console.log("");
+  console.log('');
   output.error(
-    `Cannot create branch ${
-      output.bold(branchName)
-    } because it conflicts with existing branch ${
-      output.bold(
-        conflictingBranch || "",
-      )
-    }`,
+    `Cannot create branch ${output.bold(branchName)} because it conflicts with existing branch ${output.bold(
+      conflictingBranch || ''
+    )}`
   );
-  console.log("");
+  console.log('');
   console.log(
-    `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${
-      output.dim(
-        `refs/heads/${conflictingBranch}`,
-      )
-    }`,
+    `Git doesn't allow both ${output.dim(`refs/heads/${branchName}`)} and ${output.dim(
+      `refs/heads/${conflictingBranch}`
+    )}`
   );
-  console.log("");
-  console.log("Options:");
+  console.log('');
+  console.log('Options:');
 
   const suggestion = hasExplicitFlag
     ? `gw checkout ${worktreeName} -b ${branchName}-new`
     : `gw checkout ${worktreeName}-new`;
 
   console.log(`  1. Use a different name: ${output.bold(suggestion)}`);
-  console.log(
-    `  2. Delete the conflicting branch: ${
-      output.bold(`git branch -d ${conflictingBranch}`)
-    }`,
-  );
-  console.log(
-    `  3. Use the existing branch: ${
-      output.bold(`gw checkout ${conflictingBranch}`)
-    }`,
-  );
-  console.log("");
+  console.log(`  2. Delete the conflicting branch: ${output.bold(`git branch -d ${conflictingBranch}`)}`);
+  console.log(`  3. Use the existing branch: ${output.bold(`gw checkout ${conflictingBranch}`)}`);
+  console.log('');
   Deno.exit(1);
 }
 
@@ -185,23 +169,23 @@ function parseCheckoutArgs(args: string[]): {
   };
 
   // Check for help flag
-  if (args.includes("--help") || args.includes("-h")) {
+  if (args.includes('--help') || args.includes('-h')) {
     result.help = true;
     return result;
   }
 
   // Check for no-navigate flag
-  if (args.includes("--no-cd")) {
+  if (args.includes('--no-cd')) {
     result.noNavigate = true;
     // Remove it from args so it doesn't interfere with other parsing
-    args = args.filter((a) => a !== "--no-cd");
+    args = args.filter((a) => a !== '--no-cd');
   }
 
   // Check for --from-staged flag
-  if (args.includes("--from-staged")) {
+  if (args.includes('--from-staged')) {
     result.fromStaged = true;
     // Remove it from args so it doesn't interfere with other parsing
-    args = args.filter((a) => a !== "--from-staged");
+    args = args.filter((a) => a !== '--from-staged');
   }
 
   // First positional arg is the worktree name (required)
@@ -213,20 +197,20 @@ function parseCheckoutArgs(args: string[]): {
     const arg = args[i];
 
     // Handle --from flag
-    if (arg === "--from") {
+    if (arg === '--from') {
       if (i + 1 < args.length) {
         result.fromBranch = args[++i];
       }
       continue;
     }
 
-    if (arg.startsWith("--from=")) {
-      result.fromBranch = arg.substring("--from=".length);
+    if (arg.startsWith('--from=')) {
+      result.fromBranch = arg.substring('--from='.length);
       continue;
     }
 
     // Git worktree flags that take a value
-    if (arg === "-b" || arg === "-B" || arg === "--track") {
+    if (arg === '-b' || arg === '-B' || arg === '--track') {
       result.gitArgs.push(arg);
       if (i + 1 < args.length) {
         result.gitArgs.push(args[++i]);
@@ -236,27 +220,27 @@ function parseCheckoutArgs(args: string[]): {
 
     // Git worktree boolean flags
     if (
-      arg.startsWith("-") &&
-      (arg === "--detach" ||
-        arg === "--force" ||
-        arg === "-f" ||
-        arg === "--quiet" ||
-        arg === "-q" ||
-        arg === "--guess-remote")
+      arg.startsWith('-') &&
+      (arg === '--detach' ||
+        arg === '--force' ||
+        arg === '-f' ||
+        arg === '--quiet' ||
+        arg === '-q' ||
+        arg === '--guess-remote')
     ) {
       result.gitArgs.push(arg);
       continue;
     }
 
     // If we haven't found the worktree name yet and it doesn't start with -, it's the worktree name
-    if (!foundWorktreeName && !arg.startsWith("-")) {
+    if (!foundWorktreeName && !arg.startsWith('-')) {
       result.worktreeName = arg;
       foundWorktreeName = true;
       continue;
     }
 
     // After worktree name, non-flag args are files to copy
-    if (foundWorktreeName && !arg.startsWith("-")) {
+    if (foundWorktreeName && !arg.startsWith('-')) {
       result.files.push(arg);
     }
   }
@@ -412,7 +396,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
   // Validate arguments
   if (!parsed.worktreeName) {
-    output.error("Branch name is required");
+    output.error('Branch name is required');
     showCheckoutHelp();
     Deno.exit(1);
   }
@@ -426,10 +410,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Determine the branch name (from -b/-B flag or worktree name)
   let branchName = parsed.worktreeName;
   for (let i = 0; i < parsed.gitArgs.length; i++) {
-    if (
-      (parsed.gitArgs[i] === "-b" || parsed.gitArgs[i] === "-B") &&
-      i + 1 < parsed.gitArgs.length
-    ) {
+    if ((parsed.gitArgs[i] === '-b' || parsed.gitArgs[i] === '-B') && i + 1 < parsed.gitArgs.length) {
       branchName = parsed.gitArgs[i + 1];
       break;
     }
@@ -443,13 +424,11 @@ export async function executeCheckout(args: string[]): Promise<void> {
     if (worktreeWithBranch) {
       // Branch is already checked out - navigate there directly
       // (can't checkout the same branch in two worktrees)
-      console.log("");
-      output.info(
-        `Branch ${output.bold(branchName)} is already checked out in:`,
-      );
+      console.log('');
+      output.info(`Branch ${output.bold(branchName)} is already checked out in:`);
       console.log(`  ${output.path(worktreeWithBranch.path)}`);
-      console.log("");
-      console.log("Navigating there...");
+      console.log('');
+      console.log('Navigating there...');
 
       await signalNavigation(worktreeWithBranch.path);
       Deno.exit(0);
@@ -465,38 +444,28 @@ export async function executeCheckout(args: string[]): Promise<void> {
     if (worktreeAtPath1b && worktreeAtPath1b.branch !== branchName) {
       // Safety: check for uncommitted changes before switching
       if (await hasUncommittedChanges(worktreePath)) {
-        console.log("");
+        console.log('');
         output.error(
-          `Worktree at ${
-            output.path(worktreePath)
-          } has uncommitted changes on branch ${
-            output.bold(
-              worktreeAtPath1b.branch,
-            )
-          }`,
+          `Worktree at ${output.path(worktreePath)} has uncommitted changes on branch ${output.bold(
+            worktreeAtPath1b.branch
+          )}`
         );
-        console.log(
-          `Cannot switch to ${
-            output.bold(branchName)
-          } — commit or stash your changes first.`,
-        );
-        console.log("");
+        console.log(`Cannot switch to ${output.bold(branchName)} — commit or stash your changes first.`);
+        console.log('');
         Deno.exit(1);
       }
 
-      console.log("");
+      console.log('');
       output.info(
-        `Worktree at ${output.path(worktreePath)} is on branch ${
-          output.bold(
-            worktreeAtPath1b.branch,
-          )
-        }, switching to ${output.bold(branchName)}...`,
+        `Worktree at ${output.path(worktreePath)} is on branch ${output.bold(
+          worktreeAtPath1b.branch
+        )}, switching to ${output.bold(branchName)}...`
       );
 
-      const switchCmd = new Deno.Command("git", {
-        args: ["-C", worktreePath, "checkout", branchName],
-        stdout: "inherit",
-        stderr: "inherit",
+      const switchCmd = new Deno.Command('git', {
+        args: ['-C', worktreePath, 'checkout', branchName],
+        stdout: 'inherit',
+        stderr: 'inherit',
       });
       const { code: switchCode } = await switchCmd.output();
 
@@ -517,11 +486,11 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Navigate automatically
   const worktreeAtPath = worktrees.find((wt) => wt.path === worktreePath);
   if (worktreeAtPath) {
-    console.log("");
+    console.log('');
     output.info(`Worktree already exists at:`);
     console.log(`  ${output.path(worktreePath)}`);
-    console.log("");
-    console.log("Navigating there...");
+    console.log('');
+    console.log('Navigating there...');
 
     await signalNavigation(worktreePath);
     Deno.exit(0);
@@ -532,33 +501,17 @@ export async function executeCheckout(args: string[]): Promise<void> {
     const stat = await Deno.stat(worktreePath);
     if (stat.isDirectory || stat.isFile) {
       // Path exists but isn't a valid worktree - error out to avoid accidental deletion
-      console.log("");
-      output.error(
-        `Path ${
-          output.bold(worktreePath)
-        } already exists but is not a git worktree.`,
-      );
-      console.log("");
-      console.log("This could be:");
-      console.log(
-        "  - A leftover directory from an interrupted worktree creation",
-      );
-      console.log(
-        "  - An unrelated directory that happens to have the same name",
-      );
-      console.log("");
-      console.log("To resolve this, you can either:");
-      console.log(
-        `  1. Remove the directory manually: ${
-          output.bold(`rm -rf "${worktreePath}"`)
-        }`,
-      );
-      console.log(
-        `  2. Use a different worktree name: ${
-          output.bold(`gw checkout ${parsed.worktreeName}-new`)
-        }`,
-      );
-      console.log("");
+      console.log('');
+      output.error(`Path ${output.bold(worktreePath)} already exists but is not a git worktree.`);
+      console.log('');
+      console.log('This could be:');
+      console.log('  - A leftover directory from an interrupted worktree creation');
+      console.log('  - An unrelated directory that happens to have the same name');
+      console.log('');
+      console.log('To resolve this, you can either:');
+      console.log(`  1. Remove the directory manually: ${output.bold(`rm -rf "${worktreePath}"`)}`);
+      console.log(`  2. Use a different worktree name: ${output.bold(`gw checkout ${parsed.worktreeName}-new`)}`);
+      console.log('');
       Deno.exit(1);
     }
   } catch (error) {
@@ -584,13 +537,13 @@ export async function executeCheckout(args: string[]): Promise<void> {
       hooksConfig.pre,
       gitRoot,
       hookVariables,
-      "pre-checkout",
+      'pre-checkout',
       true, // abort on failure
-      "pre-checkout-hooks",
+      'pre-checkout-hooks'
     );
 
     if (!allSuccessful) {
-      output.error("Pre-checkout hook failed. Aborting worktree creation.");
+      output.error('Pre-checkout hook failed. Aborting worktree creation.');
       Deno.exit(1);
     }
   }
@@ -604,8 +557,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   const explicitCreate = hasBranchFlag(gitArgs);
   const localExists = await branchExistsLocally(branchName);
   const remoteOnlyExists = !localExists && (await branchExists(branchName));
-  const willCreateBranch = explicitCreate ||
-    (!localExists && !remoteOnlyExists);
+  const willCreateBranch = explicitCreate || (!localExists && !remoteOnlyExists);
 
   if (localExists && !explicitCreate) {
     // Local branch exists - just check it out directly
@@ -615,157 +567,101 @@ export async function executeCheckout(args: string[]): Promise<void> {
   } else if (remoteOnlyExists && !explicitCreate) {
     // Branch exists on remote but not locally (e.g. after gw remove deleted the local branch)
     // Create a local branch from the remote ref with tracking
-    console.log(
-      `Branch ${
-        output.bold(parsed.worktreeName)
-      } exists on remote but not locally, creating from remote...`,
-    );
+    console.log(`Branch ${output.bold(parsed.worktreeName)} exists on remote but not locally, creating from remote...`);
 
     startPoint = `origin/${parsed.worktreeName}`;
-    gitArgs.unshift("-b", parsed.worktreeName);
+    gitArgs.unshift('-b', parsed.worktreeName);
     needsTrackingSetup = true;
 
     console.log(`Creating from ${output.bold(startPoint)}`);
-    console.log("");
+    console.log('');
   } else if (willCreateBranch) {
     // Check for ref conflicts (single check for both paths)
     const { hasConflict, conflictingBranch } = await hasRefConflict(branchName);
     if (hasConflict) {
-      showRefConflictError(
-        branchName,
-        conflictingBranch,
-        parsed.worktreeName,
-        explicitCreate,
-      );
+      showRefConflictError(branchName, conflictingBranch, parsed.worktreeName, explicitCreate);
     }
 
     // If auto-creating (no explicit -b flag), fetch and prepare
     if (!explicitCreate) {
       // Auto-create branch from --from or defaultBranch
-      const sourceBranch = parsed.fromBranch || config.defaultBranch || "main";
+      const sourceBranch = parsed.fromBranch || config.defaultBranch || 'main';
 
       // Validate source branch exists if --from was specified
       if (parsed.fromBranch) {
         const sourceBranchExists = await branchExists(sourceBranch);
         if (!sourceBranchExists) {
-          console.log("");
-          output.error(
-            `Source branch ${
-              output.bold(sourceBranch)
-            } does not exist locally or remotely`,
-          );
-          console.log("");
-          console.log("Options:");
+          console.log('');
+          output.error(`Source branch ${output.bold(sourceBranch)} does not exist locally or remotely`);
+          console.log('');
+          console.log('Options:');
           console.log(
-            `  1. Use a different source: ${
-              output.bold(
-                `gw checkout ${parsed.worktreeName} --from <existing-branch>`,
-              )
-            }`,
+            `  1. Use a different source: ${output.bold(`gw checkout ${parsed.worktreeName} --from <existing-branch>`)}`
           );
-          console.log(
-            `  2. Use default branch: ${
-              output.bold(`gw checkout ${parsed.worktreeName}`)
-            }`,
-          );
-          console.log("");
+          console.log(`  2. Use default branch: ${output.bold(`gw checkout ${parsed.worktreeName}`)}`);
+          console.log('');
           Deno.exit(1);
         }
       }
 
       console.log(
-        `Branch ${
-          output.bold(parsed.worktreeName)
-        } doesn't exist, creating from ${output.bold(sourceBranch)}...`,
+        `Branch ${output.bold(parsed.worktreeName)} doesn't exist, creating from ${output.bold(sourceBranch)}...`
       );
-      console.log(
-        output.dim(
-          "Fetching latest from remote to ensure fresh start point...",
-        ),
-      );
+      console.log(output.dim('Fetching latest from remote to ensure fresh start point...'));
 
       try {
-        const { startPoint: fetchedStartPoint, fetchSucceeded, message } =
-          await fetchAndGetStartPoint(sourceBranch);
+        const { startPoint: fetchedStartPoint, fetchSucceeded, message } = await fetchAndGetStartPoint(sourceBranch);
 
         startPoint = fetchedStartPoint;
-        gitArgs.unshift("-b", parsed.worktreeName);
+        gitArgs.unshift('-b', parsed.worktreeName);
         needsTrackingSetup = true; // New branch needs tracking setup
 
         if (fetchSucceeded) {
-          console.log(output.dim("✓ Fetched successfully from remote"));
+          console.log(output.dim('✓ Fetched successfully from remote'));
           if (message) {
             // There's a message even though fetch succeeded (e.g., using remote ref)
             console.log(output.dim(message));
           }
-          console.log(
-            `Creating from ${output.bold(startPoint)} (latest from remote)`,
-          );
-          console.log("");
+          console.log(`Creating from ${output.bold(startPoint)} (latest from remote)`);
+          console.log('');
         } else {
           // Check if failure is due to no remote (acceptable) or fetch failure (problematic)
-          const noRemoteConfigured = message && message.includes("No remote");
+          const noRemoteConfigured = message && message.includes('No remote');
 
           // When --from is explicitly specified and remote exists but fetch failed
           if (parsed.fromBranch && !noRemoteConfigured) {
-            console.log("");
-            output.error(message || "Could not fetch from remote");
-            console.log("");
-            console.log(
-              `Cannot create branch from ${
-                output.bold(sourceBranch)
-              } because the remote fetch failed.`,
-            );
-            console.log("This would use a potentially outdated local branch.");
-            console.log("");
-            console.log("Possible causes:");
-            console.log("  • Network connectivity issues");
-            console.log(
-              `  • Branch ${output.bold(sourceBranch)} doesn't exist on remote`,
-            );
-            console.log("  • Authentication issues");
-            console.log("");
-            console.log("Options:");
+            console.log('');
+            output.error(message || 'Could not fetch from remote');
+            console.log('');
+            console.log(`Cannot create branch from ${output.bold(sourceBranch)} because the remote fetch failed.`);
+            console.log('This would use a potentially outdated local branch.');
+            console.log('');
+            console.log('Possible causes:');
+            console.log('  • Network connectivity issues');
+            console.log(`  • Branch ${output.bold(sourceBranch)} doesn't exist on remote`);
+            console.log('  • Authentication issues');
+            console.log('');
+            console.log('Options:');
             console.log(`  1. Check your network connection and try again`);
+            console.log(`  2. Verify the branch exists: ${output.bold(`git ls-remote origin ${sourceBranch}`)}`);
             console.log(
-              `  2. Verify the branch exists: ${
-                output.bold(`git ls-remote origin ${sourceBranch}`)
-              }`,
+              `  3. Use a different source branch: ${output.bold(`gw checkout ${parsed.worktreeName} --from <branch>`)}`
             );
             console.log(
-              `  3. Use a different source branch: ${
-                output.bold(
-                  `gw checkout ${parsed.worktreeName} --from <branch>`,
-                )
-              }`,
+              `  4. Create without --from to use default branch: ${output.bold(`gw checkout ${parsed.worktreeName}`)}`
             );
-            console.log(
-              `  4. Create without --from to use default branch: ${
-                output.bold(`gw checkout ${parsed.worktreeName}`)
-              }`,
-            );
-            console.log("");
+            console.log('');
             Deno.exit(1);
           }
 
           // For default branch (no --from specified) or no remote configured, warn but allow local fallback
-          console.log("");
-          output.warning(message || "Could not fetch from remote");
-          console.log("");
-          console.log(
-            output.dim(
-              "Falling back to local branch. The start point may not be up-to-date with remote.",
-            ),
-          );
-          console.log(
-            output.dim(
-              "This is acceptable for offline development or when remote is unavailable.",
-            ),
-          );
-          console.log("");
-          console.log(
-            `Creating from ${output.bold(startPoint)} (local branch)`,
-          );
+          console.log('');
+          output.warning(message || 'Could not fetch from remote');
+          console.log('');
+          console.log(output.dim('Falling back to local branch. The start point may not be up-to-date with remote.'));
+          console.log(output.dim('This is acceptable for offline development or when remote is unavailable.'));
+          console.log('');
+          console.log(`Creating from ${output.bold(startPoint)} (local branch)`);
         }
       } catch (error) {
         const errorMsg = error instanceof Error ? error.message : String(error);
@@ -777,43 +673,36 @@ export async function executeCheckout(args: string[]): Promise<void> {
 
   // Build git worktree add command
   // Format: git worktree add [-b <new-branch>] <path> [<commit-ish>]
-  const gitCmd = [
-    "git",
-    "worktree",
-    "add",
-    ...gitArgs,
-    worktreePath,
-    ...(startPoint ? [startPoint] : []),
-  ];
+  const gitCmd = ['git', 'worktree', 'add', ...gitArgs, worktreePath, ...(startPoint ? [startPoint] : [])];
 
   // Execute git worktree add
   console.log(`Creating worktree: ${output.bold(parsed.worktreeName)}\n`);
 
-  emitProgress({ stage: "create-worktree", status: "start" });
+  emitProgress({ stage: 'create-worktree', status: 'start' });
   const createWorktreeStartMs = Date.now();
 
   const gitProcess = new Deno.Command(gitCmd[0], {
     args: gitCmd.slice(1),
-    stdout: "inherit",
-    stderr: "inherit",
+    stdout: 'inherit',
+    stderr: 'inherit',
   });
 
   const { code } = await gitProcess.output();
 
   if (code !== 0) {
     emitProgress({
-      stage: "create-worktree",
-      status: "error",
+      stage: 'create-worktree',
+      status: 'error',
       message: `git worktree add failed with exit code ${code}`,
       exitCode: code,
     });
-    output.error("Failed to create worktree");
+    output.error('Failed to create worktree');
     Deno.exit(code);
   }
 
   emitProgress({
-    stage: "create-worktree",
-    status: "end",
+    stage: 'create-worktree',
+    status: 'end',
     durationMs: Date.now() - createWorktreeStartMs,
   });
 
@@ -822,28 +711,16 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // - For remote-only branches: explicitly set tracking (git doesn't always do it reliably)
   // - For new branches: set tracking to origin/<new-branch-name> so push works without -u
   if (needsTrackingSetup && startPoint) {
-    const configRemoteCmd = new Deno.Command("git", {
-      args: [
-        "-C",
-        worktreePath,
-        "config",
-        `branch.${branchName}.remote`,
-        "origin",
-      ],
-      stdout: "null",
-      stderr: "null",
+    const configRemoteCmd = new Deno.Command('git', {
+      args: ['-C', worktreePath, 'config', `branch.${branchName}.remote`, 'origin'],
+      stdout: 'null',
+      stderr: 'null',
     });
 
-    const configMergeCmd = new Deno.Command("git", {
-      args: [
-        "-C",
-        worktreePath,
-        "config",
-        `branch.${branchName}.merge`,
-        `refs/heads/${branchName}`,
-      ],
-      stdout: "null",
-      stderr: "null",
+    const configMergeCmd = new Deno.Command('git', {
+      args: ['-C', worktreePath, 'config', `branch.${branchName}.merge`, `refs/heads/${branchName}`],
+      stdout: 'null',
+      stderr: 'null',
     });
 
     await configRemoteCmd.output();
@@ -865,10 +742,10 @@ export async function executeCheckout(args: string[]): Promise<void> {
   if (filesToCopy.length > 0) {
     console.log(`Copying files to new worktree...`);
 
-    emitProgress({ stage: "copy-files", status: "start" });
+    emitProgress({ stage: 'copy-files', status: 'start' });
     const copyFilesStartMs = Date.now();
 
-    const sourceWorktree = config.defaultBranch || "main";
+    const sourceWorktree = config.defaultBranch || 'main';
     let sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
 
     // If the resolved source path doesn't exist, use git root (main worktree is at repo root)
@@ -879,12 +756,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
     }
 
     try {
-      const results = await copyFiles(
-        sourcePath,
-        worktreePath,
-        filesToCopy,
-        false,
-      );
+      const results = await copyFiles(sourcePath, worktreePath, filesToCopy, false);
 
       // Display results
       console.log();
@@ -897,25 +769,19 @@ export async function executeCheckout(args: string[]): Promise<void> {
       }
 
       const successCount = results.filter((r) => r.success).length;
-      const fileWord = successCount === 1 ? "file" : "files";
+      const fileWord = successCount === 1 ? 'file' : 'files';
       console.log();
-      console.log(
-        `  Copied ${
-          output.bold(`${successCount}/${results.length}`)
-        } ${fileWord}`,
-      );
+      console.log(`  Copied ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
 
       emitProgress({
-        stage: "copy-files",
-        status: "end",
+        stage: 'copy-files',
+        status: 'end',
         durationMs: Date.now() - copyFilesStartMs,
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.warning(`Failed to copy files - ${message}`);
-      console.log(
-        "Worktree was created successfully, but file copying failed.\n",
-      );
+      console.log('Worktree was created successfully, but file copying failed.\n');
     }
   }
 
@@ -923,13 +789,13 @@ export async function executeCheckout(args: string[]): Promise<void> {
   if (parsed.fromStaged) {
     console.log(`\nCopying staged files to new worktree...`);
 
-    emitProgress({ stage: "copy-staged-files", status: "start" });
+    emitProgress({ stage: 'copy-staged-files', status: 'start' });
     const copyStagedStartMs = Date.now();
 
     // Get current worktree path (where staged files are)
     const sourceWorktreePath = await getCurrentWorktreePath();
     if (!sourceWorktreePath) {
-      output.error("Could not determine current worktree path");
+      output.error('Could not determine current worktree path');
       await cleanupWorktreeOnError(worktreePath);
       Deno.exit(1);
     }
@@ -937,9 +803,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
     // Check if there are staged files
     const stagedFiles = await getStagedFiles(sourceWorktreePath);
     if (stagedFiles.length === 0) {
-      output.error(
-        'No staged files found. Stage files with "git add" before using --from-staged.',
-      );
+      output.error('No staged files found. Stage files with "git add" before using --from-staged.');
       await cleanupWorktreeOnError(worktreePath);
       Deno.exit(1);
     }
@@ -947,17 +811,13 @@ export async function executeCheckout(args: string[]): Promise<void> {
     try {
       // If specific files were provided, use those as filter; otherwise copy all staged
       const filterFiles = parsed.files.length > 0 ? parsed.files : undefined;
-      const results = await copyStagedFiles(
-        sourceWorktreePath,
-        worktreePath,
-        filterFiles,
-      );
+      const results = await copyStagedFiles(sourceWorktreePath, worktreePath, filterFiles);
 
       // Display results
       console.log();
       for (const result of results) {
         if (result.success) {
-          if (result.message.includes("Skipped")) {
+          if (result.message.includes('Skipped')) {
             console.log(`  ${output.warningSymbol()} ${result.message}`);
           } else {
             console.log(`  ${output.checkmark()} ${result.message}`);
@@ -968,9 +828,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
       }
 
       // Check if any files failed to copy
-      const failedFiles = results.filter((r) =>
-        !r.success && !r.message.includes("Skipped")
-      );
+      const failedFiles = results.filter((r) => !r.success && !r.message.includes('Skipped'));
       if (failedFiles.length > 0) {
         console.log();
         output.error(`Failed to copy ${failedFiles.length} staged file(s)`);
@@ -978,23 +836,19 @@ export async function executeCheckout(args: string[]): Promise<void> {
         Deno.exit(1);
       }
 
-      const successCount = results.filter((r) =>
-        r.success && !r.message.includes("Skipped")
-      ).length;
-      const skippedCount = results.filter((r) =>
-        r.message.includes("Skipped")
-      ).length;
-      const fileWord = successCount === 1 ? "file" : "files";
+      const successCount = results.filter((r) => r.success && !r.message.includes('Skipped')).length;
+      const skippedCount = results.filter((r) => r.message.includes('Skipped')).length;
+      const fileWord = successCount === 1 ? 'file' : 'files';
       console.log();
       console.log(
         `  Copied ${output.bold(`${successCount}`)} staged ${fileWord}${
-          skippedCount > 0 ? ` (${skippedCount} skipped)` : ""
-        }`,
+          skippedCount > 0 ? ` (${skippedCount} skipped)` : ''
+        }`
       );
 
       emitProgress({
-        stage: "copy-staged-files",
-        status: "end",
+        stage: 'copy-staged-files',
+        status: 'end',
         durationMs: Date.now() - copyStagedStartMs,
       });
     } catch (error) {
@@ -1011,19 +865,17 @@ export async function executeCheckout(args: string[]): Promise<void> {
       hooksConfig.post,
       worktreePath, // Run post-checkout hooks in the new worktree directory
       hookVariables,
-      "post-checkout",
+      'post-checkout',
       false, // don't abort on failure, just warn
-      "post-checkout-hooks",
+      'post-checkout-hooks'
     );
 
     if (!allSuccessful) {
-      output.warning("One or more post-checkout hooks failed");
+      output.warning('One or more post-checkout hooks failed');
     }
   }
 
-  output.success(
-    `Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`,
-  );
+  output.success(`Worktree ${output.bold(`"${parsed.worktreeName}"`)} created successfully`);
 
   // Navigate to new worktree unless --no-cd flag is set
   if (!parsed.noNavigate) {

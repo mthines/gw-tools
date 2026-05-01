@@ -18,7 +18,10 @@
     "root": {
       "type": "string",
       "description": "Absolute path to the git repository root directory (the parent directory containing all worktrees). Auto-detected by gw init.",
-      "examples": ["/Users/you/projects/myapp.git", "/home/dev/repos/project.git"]
+      "examples": [
+        "/Users/you/projects/myapp.git",
+        "/home/dev/repos/project.git"
+      ]
     },
     "defaultBranch": {
       "type": "string",
@@ -66,7 +69,10 @@
               },
               "examples": [
                 ["cd {worktreePath} && npm install"],
-                ["cd {worktreePath} && pnpm install", "cd {worktreePath} && pnpm build"]
+                [
+                  "cd {worktreePath} && pnpm install",
+                  "cd {worktreePath} && pnpm build"
+                ]
               ]
             }
           },

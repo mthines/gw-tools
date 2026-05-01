@@ -3,8 +3,8 @@
  * Reads the current .gw/config.json and generates an equivalent gw init command
  */
 
-import { loadConfig } from '../lib/config.ts';
-import * as output from '../lib/output.ts';
+import { loadConfig } from "../lib/config.ts";
+import * as output from "../lib/output.ts";
 
 /**
  * Show help for the show-init command
@@ -52,13 +52,13 @@ function escapeShellArg(arg: string): string {
 async function getRemoteUrl(gitRoot?: string): Promise<string | null> {
   try {
     const args = gitRoot
-      ? ['-C', gitRoot, 'config', '--get', 'remote.origin.url']
-      : ['config', '--get', 'remote.origin.url'];
+      ? ["-C", gitRoot, "config", "--get", "remote.origin.url"]
+      : ["config", "--get", "remote.origin.url"];
 
-    const cmd = new Deno.Command('git', {
+    const cmd = new Deno.Command("git", {
       args,
-      stdout: 'piped',
-      stderr: 'piped',
+      stdout: "piped",
+      stderr: "piped",
     });
 
     const { code, stdout } = await cmd.output();
@@ -88,12 +88,12 @@ function generateInitCommand(
     };
     cleanThreshold?: number;
     autoClean?: boolean;
-    updateStrategy?: 'merge' | 'rebase';
+    updateStrategy?: "merge" | "rebase";
   },
   gitRoot: string,
-  remoteUrl?: string | null
+  remoteUrl?: string | null,
 ): string {
-  const parts: string[] = ['gw init'];
+  const parts: string[] = ["gw init"];
 
   // Add remote URL if available (takes precedence over --root)
   if (remoteUrl) {
@@ -104,13 +104,13 @@ function generateInitCommand(
   }
 
   // Add default branch if not "main"
-  if (config.defaultBranch && config.defaultBranch !== 'main') {
+  if (config.defaultBranch && config.defaultBranch !== "main") {
     parts.push(`--default-source ${escapeShellArg(config.defaultBranch)}`);
   }
 
   // Add auto-copy files
   if (config.autoCopyFiles && config.autoCopyFiles.length > 0) {
-    const filesArg = config.autoCopyFiles.join(',');
+    const filesArg = config.autoCopyFiles.join(",");
     parts.push(`--auto-copy-files ${escapeShellArg(filesArg)}`);
   }
 
@@ -135,15 +135,15 @@ function generateInitCommand(
 
   // Add auto-clean if enabled
   if (config.autoClean) {
-    parts.push('--auto-clean');
+    parts.push("--auto-clean");
   }
 
   // Add update strategy if not default (merge)
-  if (config.updateStrategy && config.updateStrategy !== 'merge') {
+  if (config.updateStrategy && config.updateStrategy !== "merge") {
     parts.push(`--update-strategy ${config.updateStrategy}`);
   }
 
-  return parts.join(' ');
+  return parts.join(" ");
 }
 
 /**
@@ -153,7 +153,7 @@ function generateInitCommand(
  */
 export async function executeShowInit(args: string[]): Promise<void> {
   // Check for help
-  if (args.includes('--help') || args.includes('-h')) {
+  if (args.includes("--help") || args.includes("-h")) {
     showShowInitHelp();
     Deno.exit(0);
   }

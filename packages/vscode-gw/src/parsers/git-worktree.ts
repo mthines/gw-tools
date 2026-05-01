@@ -406,12 +406,7 @@ export async function getCleanableWorktrees(cwd: string): Promise<CleanCheckResu
  */
 export interface GwProgressEvent {
   version: 1;
-  stage:
-    | 'pre-checkout-hooks'
-    | 'create-worktree'
-    | 'copy-files'
-    | 'copy-staged-files'
-    | 'post-checkout-hooks';
+  stage: 'pre-checkout-hooks' | 'create-worktree' | 'copy-files' | 'copy-staged-files' | 'post-checkout-hooks';
   status: 'start' | 'end' | 'error';
   /** 1-based hook index (hook stages only) */
   hook?: number;
@@ -536,7 +531,10 @@ function runCheckoutWithProgress(
     rl.on('line', (line: string) => {
       const event = parseProgressEvent(line);
       if (event) {
-        if (event.status === 'error' && (event.stage === 'pre-checkout-hooks' || event.stage === 'post-checkout-hooks')) {
+        if (
+          event.status === 'error' &&
+          (event.stage === 'pre-checkout-hooks' || event.stage === 'post-checkout-hooks')
+        ) {
           lastHookErrorEvent = event;
         }
         const label = progressEventToLabel(event);

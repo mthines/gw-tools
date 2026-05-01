@@ -312,7 +312,8 @@ describe('parseProgressEvent', () => {
   });
 
   it('parses a hook event with hook, of, command fields', () => {
-    const line = '{"version":1,"stage":"post-checkout-hooks","status":"start","hook":1,"of":1,"command":"pnpm install"}';
+    const line =
+      '{"version":1,"stage":"post-checkout-hooks","status":"start","hook":1,"of":1,"command":"pnpm install"}';
     const event = parseProgressEvent(line);
     expect(event?.hook).toBe(1);
     expect(event?.of).toBe(1);
@@ -348,9 +349,7 @@ describe('progressEventToLabel', () => {
   });
 
   it('maps create-worktree start to "Creating worktree"', () => {
-    expect(progressEventToLabel({ version: 1, stage: 'create-worktree', status: 'start' })).toBe(
-      'Creating worktree'
-    );
+    expect(progressEventToLabel({ version: 1, stage: 'create-worktree', status: 'start' })).toBe('Creating worktree');
   });
 
   it('maps copy-files start to "Copying config files"', () => {

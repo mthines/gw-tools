@@ -43,7 +43,7 @@ export interface Config {
   /** Enable automatic cleanup of stale worktrees (optional, default: false) */
   autoClean?: boolean;
   /** Default update strategy for the update command (optional, default: "merge") */
-  updateStrategy?: "merge" | "rebase";
+  updateStrategy?: 'merge' | 'rebase';
 }
 
 /**

@@ -90,9 +90,7 @@ async function openNewWorktree(worktreePath: string | undefined, message: string
 async function handleHookFailure(err: HookFailureError, cwd: string, branchName: string): Promise<void> {
   if (err.isPreCheckout) {
     // Worktree was NOT created — fatal error
-    vscode.window.showErrorMessage(
-      `Worktree creation cancelled: pre-checkout hook failed. ${stripAnsi(err.message)}`
-    );
+    vscode.window.showErrorMessage(`Worktree creation cancelled: pre-checkout hook failed. ${stripAnsi(err.message)}`);
     return;
   }
 
@@ -364,9 +362,7 @@ export function activate(context: vscode.ExtensionContext): void {
               cancellable: false,
             },
             async (progress) => {
-              await createWorktreeWithProgress(workspacePath, branchName, (msg) =>
-                progress.report({ message: msg })
-              );
+              await createWorktreeWithProgress(workspacePath, branchName, (msg) => progress.report({ message: msg }));
             }
           );
           worktreeProvider.refresh();
@@ -722,9 +718,7 @@ export function activate(context: vscode.ExtensionContext): void {
             cancellable: false,
           },
           async (progress) => {
-            await createWorktreeWithProgress(workspacePath, branchName, (msg) =>
-              progress.report({ message: msg })
-            );
+            await createWorktreeWithProgress(workspacePath, branchName, (msg) => progress.report({ message: msg }));
           }
         );
         worktreeProvider.refresh();

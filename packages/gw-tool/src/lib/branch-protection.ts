@@ -14,7 +14,10 @@
  * @param defaultBranch The configured default branch name
  * @returns true if the branch is protected, false otherwise
  */
-export function isProtectedBranch(branch: string | undefined, defaultBranch: string): boolean {
+export function isProtectedBranch(
+  branch: string | undefined,
+  defaultBranch: string,
+): boolean {
   if (!branch) {
     return false;
   }
@@ -25,7 +28,7 @@ export function isProtectedBranch(branch: string | undefined, defaultBranch: str
   }
 
   // Protect gw_root special branch
-  if (branch === 'gw_root') {
+  if (branch === "gw_root") {
     return true;
   }
 

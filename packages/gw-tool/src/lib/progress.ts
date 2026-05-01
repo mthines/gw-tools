@@ -11,11 +11,11 @@
  * Designed to be reusable for gw pr, gw update, gw sync in future PRs.
  */
 export type ProgressStage =
-  | "pre-checkout-hooks"
-  | "create-worktree"
-  | "copy-files"
-  | "copy-staged-files"
-  | "post-checkout-hooks";
+  | 'pre-checkout-hooks'
+  | 'create-worktree'
+  | 'copy-files'
+  | 'copy-staged-files'
+  | 'post-checkout-hooks';
 
 /**
  * Schema version 1 progress event.
@@ -29,7 +29,7 @@ export type ProgressStage =
 export interface ProgressEvent {
   version: 1;
   stage: ProgressStage;
-  status: "start" | "end" | "error";
+  status: 'start' | 'end' | 'error';
   /** 1-based hook index (hook stages only) */
   hook?: number;
   /** Total hook count (hook stages only) */
@@ -44,7 +44,7 @@ export interface ProgressEvent {
   exitCode?: number;
 }
 
-let progressMode: "json" | undefined;
+let progressMode: 'json' | undefined;
 
 /**
  * Initialize the progress emitter.
@@ -53,14 +53,14 @@ let progressMode: "json" | undefined;
  * @param mode Pass "json" to enable NDJSON emission; undefined/any other value disables it.
  */
 export function initProgress(mode: string | undefined): void {
-  progressMode = mode === "json" ? "json" : undefined;
+  progressMode = mode === 'json' ? 'json' : undefined;
 }
 
 /**
  * Returns true when --progress=json has been activated.
  */
 export function isProgressEnabled(): boolean {
-  return progressMode === "json";
+  return progressMode === 'json';
 }
 
 /**
@@ -69,10 +69,8 @@ export function isProgressEnabled(): boolean {
  *
  * @param event Event payload (version field is added automatically)
  */
-export function emitProgress(event: Omit<ProgressEvent, "version">): void {
+export function emitProgress(event: Omit<ProgressEvent, 'version'>): void {
   if (!isProgressEnabled()) return;
   const payload: ProgressEvent = { version: 1, ...event };
-  Deno.stderr.writeSync(
-    new TextEncoder().encode(JSON.stringify(payload) + "\n"),
-  );
+  Deno.stderr.writeSync(new TextEncoder().encode(JSON.stringify(payload) + '\n'));
 }

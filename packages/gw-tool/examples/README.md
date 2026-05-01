@@ -76,7 +76,12 @@ Example:
 
 ```json
 {
-  "autoCopyFiles": [".env", ".env.local", "config/database.yml", "public/uploads/"]
+  "autoCopyFiles": [
+    ".env",
+    ".env.local",
+    "config/database.yml",
+    "public/uploads/"
+  ]
 }
 ```
 
@@ -99,7 +104,10 @@ Example:
   "hooks": {
     "add": {
       "pre": ["echo 'Creating worktree: {worktree}'"],
-      "post": ["cd {worktreePath} && pnpm install", "echo 'Worktree {worktree} is ready!'"]
+      "post": [
+        "cd {worktreePath} && pnpm install",
+        "echo 'Worktree {worktree} is ready!'"
+      ]
     }
   }
 }
