@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees directly from the VS Code sidebar",
-  "version": "0.71.0",
+  "version": "0.72.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
