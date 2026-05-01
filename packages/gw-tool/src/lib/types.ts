@@ -86,6 +86,12 @@ export interface GlobalArgs {
   help: boolean;
   /** Whether version was requested */
   version: boolean;
+  /**
+   * Progress output mode, parsed from --progress=<value>.
+   * Currently only "json" is supported (emits NDJSON to stderr).
+   * Undefined when the flag is absent.
+   */
+  progressMode?: string;
 }
 
 /**

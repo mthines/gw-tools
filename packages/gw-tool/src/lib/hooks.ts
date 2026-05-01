@@ -3,6 +3,7 @@
  */
 
 import * as output from './output.ts';
+import { emitProgress, type ProgressStage } from './progress.ts';
 
 /**
  * Variables available for substitution in hook commands
@@ -92,6 +93,8 @@ export async function executeHook(command: string, cwd: string, variables: HookV
  * @param variables Variables for substitution
  * @param hookType Type of hook (for logging purposes, e.g., "pre-add", "post-add")
  * @param abortOnFailure Whether to stop executing remaining hooks if one fails
+ * @param progressStage When provided, emits per-hook start/end/error NDJSON events
+ *   to stderr for tooling consumers. Undefined = no progress events (backward-compatible).
  * @returns Array of hook results
  */
 export async function executeHooks(
@@ -99,7 +102,8 @@ export async function executeHooks(
   cwd: string,
   variables: HookVariables,
   hookType: string,
-  abortOnFailure: boolean = true
+  abortOnFailure: boolean = true,
+  progressStage?: Extract<ProgressStage, 'pre-checkout-hooks' | 'post-checkout-hooks'>
 ): Promise<{ results: HookResult[]; allSuccessful: boolean }> {
   if (hooks.length === 0) {
     return { results: [], allSuccessful: true };
@@ -109,20 +113,62 @@ export async function executeHooks(
 
   const results: HookResult[] = [];
   let allSuccessful = true;
+  const total = hooks.length;
 
-  for (const hook of hooks) {
+  for (let i = 0; i < hooks.length; i++) {
+    const hook = hooks[i];
+    const hookIndex = i + 1;
+
+    // Pre-expand the command so it can appear in the progress event before execution.
+    // substituteVariables is defined in this same module.
+    const expandedCommand = substituteVariables(hook, variables);
+
+    const startMs = Date.now();
+
+    if (progressStage) {
+      emitProgress({
+        stage: progressStage,
+        status: 'start',
+        hook: hookIndex,
+        of: total,
+        command: expandedCommand,
+      });
+    }
+
     const result = await executeHook(hook, cwd, variables);
+    const durationMs = Date.now() - startMs;
     results.push(result);
 
     if (!result.success) {
       allSuccessful = false;
       console.log(`  ${output.errorSymbol()} Hook failed with exit code ${result.exitCode}`);
 
+      if (progressStage) {
+        emitProgress({
+          stage: progressStage,
+          status: 'error',
+          hook: hookIndex,
+          of: total,
+          message: `Hook failed with exit code ${result.exitCode}`,
+          exitCode: result.exitCode,
+        });
+      }
+
       if (abortOnFailure) {
         break;
       }
     } else {
       console.log(`  ${output.checkmark()} Hook completed successfully`);
+
+      if (progressStage) {
+        emitProgress({
+          stage: progressStage,
+          status: 'end',
+          hook: hookIndex,
+          of: total,
+          durationMs,
+        });
+      }
     }
   }
 

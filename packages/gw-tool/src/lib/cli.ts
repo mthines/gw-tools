@@ -7,11 +7,26 @@ import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
 import { VERSION } from './version.ts';
 
 /**
- * Parse global CLI arguments to extract command and help flag
+ * Parse global CLI arguments to extract command, help flag, and global flags
+ * such as --progress=json.
+ *
+ * --progress=json is stripped from the returned `args` so command handlers
+ * never see it and cannot misparse it as a positional argument.
  */
 export function parseGlobalArgs(args: string[]): GlobalArgs {
+  // Extract --progress=<value> before command parsing so it doesn't leak
+  // into the remaining args passed to command handlers.
+  let progressMode: string | undefined;
+  const filteredArgs = args.filter((arg) => {
+    if (arg.startsWith('--progress=')) {
+      progressMode = arg.slice('--progress='.length);
+      return false;
+    }
+    return true;
+  });
+
   // Simple manual parsing for command extraction
-  const [firstArg, ...restArgs] = args;
+  const [firstArg, ...restArgs] = filteredArgs;
 
   // Check for global version flag
   if (firstArg === '--version' || firstArg === '-v') {
@@ -20,6 +35,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
       args: restArgs,
       help: false,
       version: true,
+      progressMode,
     };
   }
 
@@ -30,6 +46,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
       args: restArgs,
       help: true,
       version: false,
+      progressMode,
     };
   }
 
@@ -38,6 +55,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
     args: restArgs,
     help: false,
     version: false,
+    progressMode,
   };
 }
 
@@ -98,6 +116,12 @@ Git Worktree Proxy Commands:
 Options:
   -h, --help       Show this help message
   -v, --version    Show version information
+
+Tooling:
+  --progress=json    Emit NDJSON progress events to stderr.
+                     Intended for tooling integrations (VS Code, CI).
+                     Schema: {"version":1,"stage":...,"status":"start"|"end"|"error"}
+                     Example: gw checkout feat/foo --progress=json 2>&1 1>/dev/null | jq .
 
 Examples:
   gw checkout feat/new-feature

@@ -33,6 +33,12 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Staged Files](#staged-files)
       - [Auto-Copy Configuration](#auto-copy-configuration)
       - [Hooks](#hooks)
+    - [Machine-Readable Progress](#machine-readable-progress)
+      - [Flag](#flag)
+      - [Schema](#schema)
+      - [Examples](#examples-progress)
+      - [Inspect with jq](#inspect-with-jq)
+      - [VS Code Extension](#vs-code-extension-progress)
     - [cd](#cd)
       - [Arguments](#arguments-1)
       - [Examples](#examples-1)
@@ -617,6 +623,89 @@ gw checkout feat/new-feature
 # 2. Copies .env file
 # 3. Runs pnpm install in the new worktree
 ```
+
+### Machine-Readable Progress
+
+When running `gw checkout` from a tooling integration (VS Code, CI scripts), you can stream structured progress events to stderr by passing `--progress=json`. Stdout is unaffected (remains clean for piping).
+
+#### Flag
+
+```
+--progress=json    Emit NDJSON progress events to stderr.
+                   Intended for tooling integrations (VS Code, CI).
+```
+
+This is a **global flag** — it can be placed anywhere in the command:
+
+```bash
+gw checkout feat/my-branch --progress=json
+```
+
+#### Schema
+
+Every event is a JSON object followed by a newline (`\n`). Schema version is always `1`.
+
+```typescript
+interface ProgressEvent {
+  version: 1; // always 1
+  stage: ProgressStage;
+  status: 'start' | 'end' | 'error';
+  hook?: number; // 1-based index (hook stages only)
+  of?: number; // total hook count (hook stages only)
+  command?: string; // expanded hook command (hook stages only)
+  durationMs?: number; // elapsed ms (end events only — absent on start)
+  message?: string; // error detail (error events only)
+  exitCode?: number; // process exit code (error events only)
+}
+
+type ProgressStage =
+  | 'pre-checkout-hooks'
+  | 'create-worktree'
+  | 'copy-files'
+  | 'copy-staged-files'
+  | 'post-checkout-hooks';
+```
+
+Note: `durationMs` is **absent** on `start` events (sparse JSON, not `null`). This keeps jq consumers clean.
+
+#### Examples
+
+```jsonc
+// Stage boundaries:
+{"version":1,"stage":"create-worktree","status":"start"}
+{"version":1,"stage":"create-worktree","status":"end","durationMs":1842}
+
+// Per-hook events:
+{"version":1,"stage":"post-checkout-hooks","status":"start","hook":1,"of":1,"command":"pnpm install"}
+{"version":1,"stage":"post-checkout-hooks","status":"end","hook":1,"of":1,"durationMs":47210}
+
+// Error events (emitted before non-zero exit):
+{"version":1,"stage":"create-worktree","status":"error","message":"git worktree add failed with exit code 128","exitCode":128}
+{"version":1,"stage":"post-checkout-hooks","status":"error","hook":1,"of":1,"message":"Hook failed with exit code 1","exitCode":1}
+```
+
+#### Inspect with jq
+
+```bash
+# Print all events (redirect stderr to stdout, suppress stdout)
+gw checkout feat/my-branch --progress=json 2>&1 1>/dev/null | jq .
+
+# Watch only stage names
+gw checkout feat/my-branch --progress=json 2>&1 1>/dev/null | jq -r '"\(.status) \(.stage)"'
+
+# Filter for errors
+gw checkout feat/my-branch --progress=json 2>&1 1>/dev/null | jq 'select(.status == "error")'
+```
+
+#### VS Code Extension
+
+The VS Code extension (`vscode-gw`) uses `--progress=json` automatically to update the progress notification subtitle during `gw checkout`. You will see labels like:
+
+- `Creating worktree` — while git runs
+- `Running post-checkout hook 1/1 — pnpm install` — while hooks execute
+- `Copying config files` — while auto-copy files are copied
+
+---
 
 ### cd
 

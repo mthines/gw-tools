@@ -16,6 +16,7 @@ import {
   removeWorktree,
 } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
+import { emitProgress } from '../lib/progress.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
@@ -316,6 +317,11 @@ Examples:
   # Extract specific staged files to a new worktree
   gw checkout feat/extracted-work --from-staged src/new-feature.ts tests/
 
+Tooling:
+  --progress=json         Stream structured NDJSON progress events to stderr.
+                          Intended for tooling integrations (VS Code, CI).
+                          See gw --help for schema and jq example.
+
 Aliases:
   gw co                   Short alias for checkout
   gw add                  Backwards-compatible alias
@@ -532,7 +538,8 @@ export async function executeCheckout(args: string[]): Promise<void> {
       gitRoot,
       hookVariables,
       'pre-checkout',
-      true // abort on failure
+      true, // abort on failure
+      'pre-checkout-hooks'
     );
 
     if (!allSuccessful) {
@@ -671,6 +678,9 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Execute git worktree add
   console.log(`Creating worktree: ${output.bold(parsed.worktreeName)}\n`);
 
+  emitProgress({ stage: 'create-worktree', status: 'start' });
+  const createWorktreeStartMs = Date.now();
+
   const gitProcess = new Deno.Command(gitCmd[0], {
     args: gitCmd.slice(1),
     stdout: 'inherit',
@@ -680,9 +690,21 @@ export async function executeCheckout(args: string[]): Promise<void> {
   const { code } = await gitProcess.output();
 
   if (code !== 0) {
+    emitProgress({
+      stage: 'create-worktree',
+      status: 'error',
+      message: `git worktree add failed with exit code ${code}`,
+      exitCode: code,
+    });
     output.error('Failed to create worktree');
     Deno.exit(code);
   }
+
+  emitProgress({
+    stage: 'create-worktree',
+    status: 'end',
+    durationMs: Date.now() - createWorktreeStartMs,
+  });
 
   // Set up correct upstream tracking for new branches AND remote-only branches
   // - For local branches: keep existing tracking (don't overwrite)
@@ -720,6 +742,9 @@ export async function executeCheckout(args: string[]): Promise<void> {
   if (filesToCopy.length > 0) {
     console.log(`Copying files to new worktree...`);
 
+    emitProgress({ stage: 'copy-files', status: 'start' });
+    const copyFilesStartMs = Date.now();
+
     const sourceWorktree = config.defaultBranch || 'main';
     let sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
 
@@ -747,6 +772,12 @@ export async function executeCheckout(args: string[]): Promise<void> {
       const fileWord = successCount === 1 ? 'file' : 'files';
       console.log();
       console.log(`  Copied ${output.bold(`${successCount}/${results.length}`)} ${fileWord}`);
+
+      emitProgress({
+        stage: 'copy-files',
+        status: 'end',
+        durationMs: Date.now() - copyFilesStartMs,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.warning(`Failed to copy files - ${message}`);
@@ -757,6 +788,9 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Copy staged files if --from-staged flag is set
   if (parsed.fromStaged) {
     console.log(`\nCopying staged files to new worktree...`);
+
+    emitProgress({ stage: 'copy-staged-files', status: 'start' });
+    const copyStagedStartMs = Date.now();
 
     // Get current worktree path (where staged files are)
     const sourceWorktreePath = await getCurrentWorktreePath();
@@ -811,6 +845,12 @@ export async function executeCheckout(args: string[]): Promise<void> {
           skippedCount > 0 ? ` (${skippedCount} skipped)` : ''
         }`
       );
+
+      emitProgress({
+        stage: 'copy-staged-files',
+        status: 'end',
+        durationMs: Date.now() - copyStagedStartMs,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       output.error(`Failed to copy staged files - ${message}`);
@@ -826,7 +866,8 @@ export async function executeCheckout(args: string[]): Promise<void> {
       worktreePath, // Run post-checkout hooks in the new worktree directory
       hookVariables,
       'post-checkout',
-      false // don't abort on failure, just warn
+      false, // don't abort on failure, just warn
+      'post-checkout-hooks'
     );
 
     if (!allSuccessful) {

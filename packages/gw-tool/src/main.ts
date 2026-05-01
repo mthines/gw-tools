@@ -5,6 +5,7 @@
  */
 
 import { parseGlobalArgs, showGlobalHelp, showLogo, showVersion } from './lib/cli.ts';
+import { initProgress } from './lib/progress.ts';
 import { executeCd } from './commands/cd.ts';
 import { executeCheckout } from './commands/checkout.ts';
 import { executeCopy } from './commands/sync.ts';
@@ -54,8 +55,13 @@ const COMMANDS = {
 
 if (import.meta.main) {
   try {
-    // Parse global arguments to extract command
-    const { command, args, help, version } = parseGlobalArgs(Deno.args);
+    // Parse global arguments to extract command and global flags.
+    // --progress=json is stripped from args here so command handlers never see it.
+    const { command, args, help, version, progressMode } = parseGlobalArgs(Deno.args);
+
+    // Initialize progress emitter before dispatching any command.
+    // This is a no-op when progressMode is undefined (flag absent).
+    initProgress(progressMode);
 
     // Show version if requested
     if (version) {

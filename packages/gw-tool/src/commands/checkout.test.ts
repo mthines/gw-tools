@@ -2,15 +2,44 @@
  * Tests for checkout.ts command
  */
 
-import { assertEquals } from '@std/assert';
+import { assertEquals, assertMatch } from '@std/assert';
 import { join } from '@std/path';
 import { executeCheckout } from './checkout.ts';
 import { _drainAutoClean } from '../lib/auto-clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
-import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
+import { createConfigWithHooks, createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
+import { initProgress } from '../lib/progress.ts';
+
+// ── Helpers for progress event capture ───────────────────────────────────────
+
+/**
+ * Temporarily intercept Deno.stderr.writeSync and collect all written bytes.
+ * Returns a restore function and a getter for the collected output.
+ */
+function captureProgressOutput(): {
+  getOutput: () => string;
+  restore: () => void;
+} {
+  let captured = '';
+  const originalWriteSync = Deno.stderr.writeSync.bind(Deno.stderr);
+
+  // @ts-ignore - intentional patch for testing
+  Deno.stderr.writeSync = (data: Uint8Array): number => {
+    captured += new TextDecoder().decode(data);
+    return data.length;
+  };
+
+  return {
+    getOutput: () => captured,
+    restore: () => {
+      // @ts-ignore - restoring original
+      Deno.stderr.writeSync = originalWriteSync;
+    },
+  };
+}
 
 Deno.test('checkout command - shows help with --help', async () => {
   const { exitCode } = await withMockedExit(async () => {
@@ -681,6 +710,205 @@ Deno.test('checkout command - errors when worktree at path has uncommitted chang
     } finally {
       cwd.restore();
     }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+// ── --progress=json tests ─────────────────────────────────────────────────────
+
+Deno.test('checkout command - --progress=json emits create-worktree start and end events on stderr', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('feat/progress-test');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    const capture = captureProgressOutput();
+    initProgress('json');
+    try {
+      await withMockedExit(async () => {
+        // --progress=json is stripped in main.ts before executeCheckout is called.
+        // In tests we call initProgress directly and pass the branch name only.
+        await executeCheckout(['feat/progress-test']);
+      });
+      await _drainAutoClean();
+    } finally {
+      capture.restore();
+      initProgress(undefined); // Reset to not affect other tests
+      cwd.restore();
+    }
+
+    const lines = capture
+      .getOutput()
+      .trim()
+      .split('\n')
+      .filter((l) => l.startsWith('{'));
+    const events = lines.map((l) => JSON.parse(l));
+
+    const startEvent = events.find((e) => e.stage === 'create-worktree' && e.status === 'start');
+    const endEvent = events.find((e) => e.stage === 'create-worktree' && e.status === 'end');
+
+    assertEquals(startEvent !== undefined, true, 'should emit create-worktree start event');
+    assertEquals(endEvent !== undefined, true, 'should emit create-worktree end event');
+    assertEquals(startEvent?.version, 1);
+    assertEquals(endEvent?.version, 1);
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --progress=json start event has no durationMs', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('feat/progress-sparse');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    const capture = captureProgressOutput();
+    initProgress('json');
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat/progress-sparse']);
+      });
+      await _drainAutoClean();
+    } finally {
+      capture.restore();
+      initProgress(undefined);
+      cwd.restore();
+    }
+
+    const lines = capture
+      .getOutput()
+      .trim()
+      .split('\n')
+      .filter((l) => l.startsWith('{'));
+    const events = lines.map((l) => JSON.parse(l));
+    const startEvent = events.find((e) => e.stage === 'create-worktree' && e.status === 'start');
+
+    assertEquals(startEvent !== undefined, true, 'start event must exist');
+    assertEquals('durationMs' in (startEvent ?? {}), false, 'start event must not have durationMs');
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --progress=json end event has durationMs', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('feat/progress-duration');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    const capture = captureProgressOutput();
+    initProgress('json');
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat/progress-duration']);
+      });
+      await _drainAutoClean();
+    } finally {
+      capture.restore();
+      initProgress(undefined);
+      cwd.restore();
+    }
+
+    const lines = capture
+      .getOutput()
+      .trim()
+      .split('\n')
+      .filter((l) => l.startsWith('{'));
+    const events = lines.map((l) => JSON.parse(l));
+    const endEvent = events.find((e) => e.stage === 'create-worktree' && e.status === 'end');
+
+    assertEquals(endEvent !== undefined, true, 'end event must exist');
+    assertEquals(typeof endEvent?.durationMs, 'number', 'end event must have numeric durationMs');
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - without --progress=json no JSON appears on stderr', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('feat/no-progress');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    const capture = captureProgressOutput();
+    // Explicitly NOT calling initProgress('json')
+    initProgress(undefined);
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat/no-progress']);
+      });
+      await _drainAutoClean();
+    } finally {
+      capture.restore();
+      cwd.restore();
+    }
+
+    const jsonLines = capture
+      .getOutput()
+      .trim()
+      .split('\n')
+      .filter((l) => l.startsWith('{'));
+    assertEquals(jsonLines.length, 0, 'no JSON events should appear on stderr without --progress=json');
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --progress=json hook events include hook, of, command fields', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Configure a post-checkout hook that echoes a message
+    const config = createConfigWithHooks(repo.path, undefined, ['echo "hook ran"']);
+    await writeTestConfig(repo.path, config);
+
+    await repo.createBranch('feat/progress-hooks');
+
+    const cwd = new TempCwd(repo.path);
+    const capture = captureProgressOutput();
+    initProgress('json');
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat/progress-hooks']);
+      });
+      await _drainAutoClean();
+    } finally {
+      capture.restore();
+      initProgress(undefined);
+      cwd.restore();
+    }
+
+    const lines = capture
+      .getOutput()
+      .trim()
+      .split('\n')
+      .filter((l) => l.startsWith('{'));
+    const events = lines.map((l) => JSON.parse(l));
+    const hookStartEvent = events.find((e) => e.stage === 'post-checkout-hooks' && e.status === 'start');
+
+    assertEquals(hookStartEvent !== undefined, true, 'hook start event must exist');
+    assertEquals(hookStartEvent?.hook, 1, 'hook index should be 1-based');
+    assertEquals(hookStartEvent?.of, 1, 'of should equal total hook count');
+    assertEquals(typeof hookStartEvent?.command, 'string', 'command field must be a string');
+    assertMatch(hookStartEvent?.command as string, /echo/, 'command should contain echo');
   } finally {
     await repo.cleanup();
   }
