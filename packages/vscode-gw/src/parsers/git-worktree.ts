@@ -3,6 +3,7 @@
  */
 
 import * as cp from 'child_process';
+import * as readline from 'readline';
 
 /** Optional logger callback for command execution */
 let logFn: ((message: string) => void) | undefined;
@@ -395,4 +396,233 @@ export async function getCleanableWorktrees(cwd: string): Promise<CleanCheckResu
     }
     return { cleanable: [], skipped: [] };
   }
+}
+
+// ── Structured progress (--progress=json) ────────────────────────────────────
+
+/**
+ * A single NDJSON progress event emitted by `gw checkout --progress=json`.
+ * Schema version 1.
+ */
+export interface GwProgressEvent {
+  version: 1;
+  stage:
+    | 'pre-checkout-hooks'
+    | 'create-worktree'
+    | 'copy-files'
+    | 'copy-staged-files'
+    | 'post-checkout-hooks';
+  status: 'start' | 'end' | 'error';
+  /** 1-based hook index (hook stages only) */
+  hook?: number;
+  /** Total hook count (hook stages only) */
+  of?: number;
+  /** Expanded hook command (hook stages only) */
+  command?: string;
+  /** Elapsed ms (end events only) */
+  durationMs?: number;
+  /** Error detail (error events only) */
+  message?: string;
+  /** Exit code (error events only) */
+  exitCode?: number;
+}
+
+/**
+ * Parse a single line of stderr from `gw checkout --progress=json`.
+ * Returns a typed event when the line is valid JSON with version 1,
+ * or `undefined` for non-JSON lines (human-readable output, hook output, etc.).
+ *
+ * @param line A single line of stderr text (no trailing newline expected)
+ */
+export function parseProgressEvent(line: string): GwProgressEvent | undefined {
+  if (!line.startsWith('{')) return undefined;
+  try {
+    const parsed = JSON.parse(line) as Record<string, unknown>;
+    if (parsed['version'] !== 1) return undefined;
+    return parsed as unknown as GwProgressEvent;
+  } catch {
+    return undefined;
+  }
+}
+
+/** Maximum character length of hook command shown in progress labels */
+const MAX_COMMAND_LENGTH = 40;
+
+/**
+ * Map a parsed progress event to a human-readable VS Code notification subtitle.
+ * Returns `undefined` for events that should not update the notification
+ * (e.g., end events, error events — handled separately in extension.ts).
+ *
+ * @param event A parsed GwProgressEvent
+ */
+export function progressEventToLabel(event: GwProgressEvent): string | undefined {
+  if (event.status !== 'start') return undefined;
+
+  const truncate = (cmd: string): string =>
+    cmd.length > MAX_COMMAND_LENGTH ? cmd.slice(0, MAX_COMMAND_LENGTH) + '\u2026' : cmd;
+
+  switch (event.stage) {
+    case 'pre-checkout-hooks':
+      if (event.hook !== undefined && event.of !== undefined && event.command !== undefined) {
+        return `Running pre-checkout hook ${event.hook}/${event.of} \u2014 ${truncate(event.command)}`;
+      }
+      return 'Running pre-checkout hooks...';
+
+    case 'create-worktree':
+      return 'Creating worktree';
+
+    case 'copy-files':
+      return 'Copying config files';
+
+    case 'copy-staged-files':
+      return 'Moving staged files to new worktree';
+
+    case 'post-checkout-hooks':
+      if (event.hook !== undefined && event.of !== undefined && event.command !== undefined) {
+        return `Running post-checkout hook ${event.hook}/${event.of} \u2014 ${truncate(event.command)}`;
+      }
+      return 'Running post-checkout hooks...';
+
+    default:
+      return undefined;
+  }
+}
+
+/**
+ * Represents a hook failure that occurred during `gw checkout --progress=json`.
+ * Thrown by the progress-aware variants so the caller can distinguish:
+ * - Pre-checkout failures: worktree was NOT created (fatal).
+ * - Post-checkout failures: worktree WAS created but hook failed (non-fatal).
+ */
+export class HookFailureError extends Error {
+  constructor(
+    /** Whether the failing hook ran before worktree creation */
+    public readonly isPreCheckout: boolean,
+    /** The resolved worktree path (for post-checkout only, to enable "Open Worktree" button) */
+    public readonly worktreePath: string | undefined,
+    message: string
+  ) {
+    super(message);
+    this.name = 'HookFailureError';
+  }
+}
+
+/**
+ * Internal helper: run a progress-aware `gw checkout` command.
+ * Parses stderr line-by-line; calls onProgress for each stage label.
+ * Throws HookFailureError when a hook error event is detected,
+ * or a plain Error for all other non-zero exits.
+ */
+function runCheckoutWithProgress(
+  args: string[],
+  cwd: string,
+  onProgress: (message: string) => void,
+  logPrefix: string
+): Promise<string> {
+  logFn?.(`> gw ${args.join(' ')}`);
+  return new Promise((resolve, reject) => {
+    const child = cp.spawn('gw', args, { cwd });
+
+    let stdout = '';
+    let stderrBuffer = '';
+    let lastHookErrorEvent: GwProgressEvent | undefined;
+
+    child.stdout.on('data', (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    // Parse stderr line-by-line; only attempt JSON.parse on lines that start with '{'.
+    const rl = readline.createInterface({ input: child.stderr, crlfDelay: Infinity });
+    rl.on('line', (line: string) => {
+      const event = parseProgressEvent(line);
+      if (event) {
+        if (event.status === 'error' && (event.stage === 'pre-checkout-hooks' || event.stage === 'post-checkout-hooks')) {
+          lastHookErrorEvent = event;
+        }
+        const label = progressEventToLabel(event);
+        if (label) onProgress(label);
+      } else {
+        // Non-JSON stderr line — forward to logger (strips ANSI for readability)
+        const stripped = stripAnsi(line);
+        if (stripped) {
+          logFn?.(`  ${stripped}`);
+          stderrBuffer += stripped + '\n';
+        }
+      }
+    });
+
+    child.on('close', (code: number | null) => {
+      if (code === 0) {
+        resolve(stdout.trim());
+        return;
+      }
+
+      // Hook error detected via structured event — surface as HookFailureError
+      if (lastHookErrorEvent) {
+        const isPreCheckout = lastHookErrorEvent.stage === 'pre-checkout-hooks';
+        reject(
+          new HookFailureError(
+            isPreCheckout,
+            undefined, // worktreePath resolved by extension.ts after getWorktreePath
+            lastHookErrorEvent.message ?? `Hook failed with exit code ${lastHookErrorEvent.exitCode ?? code}`
+          )
+        );
+        return;
+      }
+
+      const errMsg = stderrBuffer.trim() || `${logPrefix} exited with code ${code}`;
+      logFn?.(`  [ERROR] ${errMsg}`);
+      reject(new Error(errMsg));
+    });
+
+    child.on('error', (err: Error) => {
+      logFn?.(`  [ERROR] ${err.message}`);
+      reject(err);
+    });
+  });
+}
+
+/**
+ * Create a new worktree via `gw checkout --progress=json`, calling `onProgress`
+ * for each stage. This is the progress-aware replacement for `createWorktree`.
+ *
+ * Non-JSON stderr lines (human output, hook stdout) are forwarded to the logger.
+ * Throws HookFailureError on hook failures so the caller can show the
+ * appropriate notification type.
+ *
+ * @param cwd Workspace path passed to gw as cwd
+ * @param branchName Branch / worktree name to create
+ * @param onProgress Callback invoked with a human-readable stage label on each progress event
+ * @returns Resolves with stdout output; rejects on non-zero exit
+ */
+export function createWorktreeWithProgress(
+  cwd: string,
+  branchName: string,
+  onProgress: (message: string) => void
+): Promise<string> {
+  return runCheckoutWithProgress(['checkout', branchName, '--progress=json'], cwd, onProgress, 'gw checkout');
+}
+
+/**
+ * Create a new worktree from staged files via `gw checkout --from-staged --progress=json`,
+ * calling `onProgress` for each stage. Progress-aware replacement for `createWorktreeFromStaged`.
+ *
+ * Throws HookFailureError on hook failures.
+ *
+ * @param cwd Workspace path passed to gw as cwd
+ * @param branchName Branch / worktree name to create
+ * @param onProgress Callback invoked with a human-readable stage label on each progress event
+ * @returns Resolves with stdout output; rejects on non-zero exit
+ */
+export function createWorktreeFromStagedWithProgress(
+  cwd: string,
+  branchName: string,
+  onProgress: (message: string) => void
+): Promise<string> {
+  return runCheckoutWithProgress(
+    ['checkout', branchName, '--from-staged', '--progress=json'],
+    cwd,
+    onProgress,
+    'gw checkout --from-staged'
+  );
 }

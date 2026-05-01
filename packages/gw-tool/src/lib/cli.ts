@@ -2,34 +2,51 @@
  * CLI argument parsing and help text
  */
 
-import { parseArgs as denoParseArgs } from '@std/cli/parse-args';
-import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
-import { VERSION } from './version.ts';
+import { parseArgs as denoParseArgs } from "@std/cli/parse-args";
+import type { CopyOptions, GlobalArgs, UpdateOptions } from "./types.ts";
+import { VERSION } from "./version.ts";
 
 /**
- * Parse global CLI arguments to extract command and help flag
+ * Parse global CLI arguments to extract command, help flag, and global flags
+ * such as --progress=json.
+ *
+ * --progress=json is stripped from the returned `args` so command handlers
+ * never see it and cannot misparse it as a positional argument.
  */
 export function parseGlobalArgs(args: string[]): GlobalArgs {
+  // Extract --progress=<value> before command parsing so it doesn't leak
+  // into the remaining args passed to command handlers.
+  let progressMode: string | undefined;
+  const filteredArgs = args.filter((arg) => {
+    if (arg.startsWith("--progress=")) {
+      progressMode = arg.slice("--progress=".length);
+      return false;
+    }
+    return true;
+  });
+
   // Simple manual parsing for command extraction
-  const [firstArg, ...restArgs] = args;
+  const [firstArg, ...restArgs] = filteredArgs;
 
   // Check for global version flag
-  if (firstArg === '--version' || firstArg === '-v') {
+  if (firstArg === "--version" || firstArg === "-v") {
     return {
       command: undefined,
       args: restArgs,
       help: false,
       version: true,
+      progressMode,
     };
   }
 
   // Check for global help flag
-  if (firstArg === '--help' || firstArg === '-h' || !firstArg) {
+  if (firstArg === "--help" || firstArg === "-h" || !firstArg) {
     return {
       command: firstArg ? undefined : undefined,
       args: restArgs,
       help: true,
       version: false,
+      progressMode,
     };
   }
 
@@ -38,6 +55,7 @@ export function parseGlobalArgs(args: string[]): GlobalArgs {
     args: restArgs,
     help: false,
     version: false,
+    progressMode,
   };
 }
 
@@ -99,6 +117,12 @@ Options:
   -h, --help       Show this help message
   -v, --version    Show version information
 
+Tooling:
+  --progress=json    Emit NDJSON progress events to stderr.
+                     Intended for tooling integrations (VS Code, CI).
+                     Schema: {"version":1,"stage":...,"status":"start"|"end"|"error"}
+                     Example: gw checkout feat/foo --progress=json 2>&1 1>/dev/null | jq .
+
 Examples:
   gw checkout feat/new-feature
   gw co feat-branch -b my-branch
@@ -120,13 +144,13 @@ For command-specific help:
  */
 export function parseCopyArgs(args: string[]): CopyOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ['help', 'dry-run'],
-    string: ['from'],
+    boolean: ["help", "dry-run"],
+    string: ["from"],
     alias: {
-      h: 'help',
-      n: 'dry-run',
+      h: "help",
+      n: "dry-run",
     },
-    '--': true,
+    "--": true,
   });
 
   const positionalArgs = parsed._ as string[];
@@ -137,7 +161,7 @@ export function parseCopyArgs(args: string[]): CopyOptions {
     from: parsed.from as string | undefined,
     target: target as string | undefined,
     files: files as string[],
-    dryRun: parsed['dry-run'] as boolean | undefined,
+    dryRun: parsed["dry-run"] as boolean | undefined,
   };
 }
 
@@ -218,24 +242,24 @@ Configuration:
  */
 export function parseUpdateArgs(args: string[]): UpdateOptions {
   const parsed = denoParseArgs(args, {
-    boolean: ['help', 'force', 'dry-run', 'merge', 'rebase'],
-    string: ['from', 'remote'],
+    boolean: ["help", "force", "dry-run", "merge", "rebase"],
+    string: ["from", "remote"],
     alias: {
-      h: 'help',
-      f: 'force',
-      n: 'dry-run',
-      m: 'merge',
-      r: 'rebase',
+      h: "help",
+      f: "force",
+      n: "dry-run",
+      m: "merge",
+      r: "rebase",
     },
-    '--': true,
+    "--": true,
   });
 
   return {
     help: parsed.help as boolean,
     force: parsed.force as boolean,
-    dryRun: parsed['dry-run'] as boolean,
+    dryRun: parsed["dry-run"] as boolean,
     branch: parsed.from as string | undefined,
-    remote: (parsed.remote as string) || 'origin',
+    remote: (parsed.remote as string) || "origin",
     merge: parsed.merge as boolean | undefined,
     rebase: parsed.rebase as boolean | undefined,
   };

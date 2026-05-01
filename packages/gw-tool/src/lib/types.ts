@@ -43,7 +43,7 @@ export interface Config {
   /** Enable automatic cleanup of stale worktrees (optional, default: false) */
   autoClean?: boolean;
   /** Default update strategy for the update command (optional, default: "merge") */
-  updateStrategy?: 'merge' | 'rebase';
+  updateStrategy?: "merge" | "rebase";
 }
 
 /**
@@ -86,6 +86,12 @@ export interface GlobalArgs {
   help: boolean;
   /** Whether version was requested */
   version: boolean;
+  /**
+   * Progress output mode, parsed from --progress=<value>.
+   * Currently only "json" is supported (emits NDJSON to stderr).
+   * Undefined when the flag is absent.
+   */
+  progressMode?: string;
 }
 
 /**

@@ -10,8 +10,9 @@ import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { WorktreeWatcher } from './watchers/worktree-watcher';
 import {
   removeWorktree,
-  createWorktree,
-  createWorktreeFromStaged,
+  createWorktreeWithProgress,
+  createWorktreeFromStagedWithProgress,
+  HookFailureError,
   checkoutPr,
   cleanWorktrees,
   syncWorktree,
@@ -72,6 +73,43 @@ async function openNewWorktree(worktreePath: string | undefined, message: string
       const uri = vscode.Uri.file(worktreePath);
       vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
     }
+  }
+}
+
+/**
+ * Show the appropriate notification when a hook failure is detected.
+ *
+ * - Pre-checkout hook failure: worktree was NOT created → showErrorMessage (fatal).
+ * - Post-checkout hook failure: worktree WAS created → showWarningMessage with
+ *   "Show Output" and "Open Worktree" buttons (non-fatal).
+ *
+ * @param err The HookFailureError thrown by the progress-aware checkout functions
+ * @param cwd Workspace path (for resolving the worktree path)
+ * @param branchName Branch name (for resolving the worktree path on post-checkout failures)
+ */
+async function handleHookFailure(err: HookFailureError, cwd: string, branchName: string): Promise<void> {
+  if (err.isPreCheckout) {
+    // Worktree was NOT created — fatal error
+    vscode.window.showErrorMessage(
+      `Worktree creation cancelled: pre-checkout hook failed. ${stripAnsi(err.message)}`
+    );
+    return;
+  }
+
+  // Post-checkout: worktree WAS created — non-fatal warning with action buttons
+  const worktreePath = err.worktreePath ?? (await getWorktreePath(cwd, branchName));
+
+  const action = await vscode.window.showWarningMessage(
+    `Worktree "${branchName}" created, but a post-checkout hook failed. ${stripAnsi(err.message)}`,
+    'Show Output',
+    'Open Worktree'
+  );
+
+  if (action === 'Open Worktree' && worktreePath) {
+    const uri = vscode.Uri.file(worktreePath);
+    vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+  } else if (action === 'Show Output') {
+    vscode.commands.executeCommand('gw.showOutput');
   }
 }
 
@@ -325,8 +363,10 @@ export function activate(context: vscode.ExtensionContext): void {
               title: `Creating worktree: ${branchName}`,
               cancellable: false,
             },
-            async () => {
-              await createWorktree(workspacePath, branchName);
+            async (progress) => {
+              await createWorktreeWithProgress(workspacePath, branchName, (msg) =>
+                progress.report({ message: msg })
+              );
             }
           );
           worktreeProvider.refresh();
@@ -334,8 +374,12 @@ export function activate(context: vscode.ExtensionContext): void {
           const newWorktreePath = await getWorktreePath(workspacePath, branchName);
           await openNewWorktree(newWorktreePath, `Created worktree: ${branchName}`);
         } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+          if (err instanceof HookFailureError) {
+            await handleHookFailure(err, workspacePath, branchName);
+          } else {
+            const msg = err instanceof Error ? err.message : String(err);
+            vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+          }
         }
       });
 
@@ -677,8 +721,10 @@ export function activate(context: vscode.ExtensionContext): void {
             title: `Creating worktree: ${branchName}`,
             cancellable: false,
           },
-          async () => {
-            await createWorktree(workspacePath, branchName);
+          async (progress) => {
+            await createWorktreeWithProgress(workspacePath, branchName, (msg) =>
+              progress.report({ message: msg })
+            );
           }
         );
         worktreeProvider.refresh();
@@ -687,8 +733,12 @@ export function activate(context: vscode.ExtensionContext): void {
         const worktreePath = await getWorktreePath(workspacePath, branchName);
         await openNewWorktree(worktreePath, `Created worktree: ${branchName}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+        if (err instanceof HookFailureError) {
+          await handleHookFailure(err, workspacePath, branchName);
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
+        }
       }
     }),
 
@@ -722,8 +772,10 @@ export function activate(context: vscode.ExtensionContext): void {
             title: `Creating worktree from staged files: ${branchName}`,
             cancellable: false,
           },
-          async () => {
-            await createWorktreeFromStaged(workspacePath, branchName);
+          async (progress) => {
+            await createWorktreeFromStagedWithProgress(workspacePath, branchName, (msg) =>
+              progress.report({ message: msg })
+            );
           }
         );
         worktreeProvider.refresh();
@@ -732,8 +784,12 @@ export function activate(context: vscode.ExtensionContext): void {
         const worktreePath = await getWorktreePath(workspacePath, branchName);
         await openNewWorktree(worktreePath, `Created worktree with staged files: ${branchName}`);
       } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err);
-        vscode.window.showErrorMessage(`Failed to create worktree from staged: ${stripAnsi(msg)}`);
+        if (err instanceof HookFailureError) {
+          await handleHookFailure(err, workspacePath, branchName);
+        } else {
+          const msg = err instanceof Error ? err.message : String(err);
+          vscode.window.showErrorMessage(`Failed to create worktree from staged: ${stripAnsi(msg)}`);
+        }
       }
     }),
 

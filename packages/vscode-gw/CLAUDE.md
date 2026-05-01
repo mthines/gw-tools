@@ -55,6 +55,21 @@ All commands, views, settings, and keybindings are defined in `package.json`:
 - Fall back to QuickPick when no item provided
 - **Always use `stripAnsi()` on CLI output** before displaying in notifications, dialogs, or error messages. The `gw` CLI outputs colored text with ANSI escape codes that VS Code doesn't render.
 
+## Structured Progress (--progress=json)
+
+The `createWorktreeWithProgress` and `createWorktreeFromStagedWithProgress` functions in `parsers/git-worktree.ts` use `cp.spawn` + `--progress=json` to stream NDJSON progress events from the gw CLI. These are the progress-aware replacements for `createWorktree` and `createWorktreeFromStaged`.
+
+Key helpers:
+- `parseProgressEvent(line)` — parses a single stderr line; returns a typed `GwProgressEvent` or `undefined`
+- `progressEventToLabel(event)` — maps a start event to a VS Code notification subtitle string
+- `HookFailureError` — thrown by the spawn-based functions when a hook error event is detected
+
+Hook failure handling in `extension.ts`:
+- Pre-checkout hook failure: `showErrorMessage` (worktree NOT created, fatal)
+- Post-checkout hook failure: `showWarningMessage` with "Show Output" / "Open Worktree" buttons (worktree WAS created, non-fatal)
+
+Only `start` events update `progress.report({ message })`. `end` and `error` events are handled separately.
+
 ## Testing
 
 - Unit tests use vitest with `.test.ts` suffix

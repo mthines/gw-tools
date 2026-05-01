@@ -2,7 +2,8 @@
  * Hook execution utilities for running pre/post command hooks
  */
 
-import * as output from './output.ts';
+import * as output from "./output.ts";
+import { emitProgress, type ProgressStage } from "./progress.ts";
 
 /**
  * Variables available for substitution in hook commands
@@ -43,7 +44,10 @@ export interface HookResult {
  * @param variables The variables to substitute
  * @returns The command with variables substituted
  */
-export function substituteVariables(command: string, variables: HookVariables): string {
+export function substituteVariables(
+  command: string,
+  variables: HookVariables,
+): string {
   return command
     .replace(/\{worktree\}/g, variables.worktree)
     .replace(/\{worktreePath\}/g, variables.worktreePath)
@@ -59,20 +63,26 @@ export function substituteVariables(command: string, variables: HookVariables): 
  * @param variables Variables for substitution
  * @returns The result of the hook execution
  */
-export async function executeHook(command: string, cwd: string, variables: HookVariables): Promise<HookResult> {
+export async function executeHook(
+  command: string,
+  cwd: string,
+  variables: HookVariables,
+): Promise<HookResult> {
   const expandedCommand = substituteVariables(command, variables);
 
-  console.log(`  ${output.dim('$')} ${output.dim(expandedCommand)}`);
+  console.log(`  ${output.dim("$")} ${output.dim(expandedCommand)}`);
 
   // Determine shell based on platform
-  const shell = Deno.build.os === 'windows' ? 'cmd' : 'sh';
-  const shellArgs = Deno.build.os === 'windows' ? ['/c', expandedCommand] : ['-c', expandedCommand];
+  const shell = Deno.build.os === "windows" ? "cmd" : "sh";
+  const shellArgs = Deno.build.os === "windows"
+    ? ["/c", expandedCommand]
+    : ["-c", expandedCommand];
 
   const process = new Deno.Command(shell, {
     args: shellArgs,
     cwd,
-    stdout: 'inherit',
-    stderr: 'inherit',
+    stdout: "inherit",
+    stderr: "inherit",
   });
 
   const { code } = await process.output();
@@ -92,6 +102,8 @@ export async function executeHook(command: string, cwd: string, variables: HookV
  * @param variables Variables for substitution
  * @param hookType Type of hook (for logging purposes, e.g., "pre-add", "post-add")
  * @param abortOnFailure Whether to stop executing remaining hooks if one fails
+ * @param progressStage When provided, emits per-hook start/end/error NDJSON events
+ *   to stderr for tooling consumers. Undefined = no progress events (backward-compatible).
  * @returns Array of hook results
  */
 export async function executeHooks(
@@ -99,7 +111,11 @@ export async function executeHooks(
   cwd: string,
   variables: HookVariables,
   hookType: string,
-  abortOnFailure: boolean = true
+  abortOnFailure: boolean = true,
+  progressStage?: Extract<
+    ProgressStage,
+    "pre-checkout-hooks" | "post-checkout-hooks"
+  >,
 ): Promise<{ results: HookResult[]; allSuccessful: boolean }> {
   if (hooks.length === 0) {
     return { results: [], allSuccessful: true };
@@ -109,20 +125,64 @@ export async function executeHooks(
 
   const results: HookResult[] = [];
   let allSuccessful = true;
+  const total = hooks.length;
 
-  for (const hook of hooks) {
+  for (let i = 0; i < hooks.length; i++) {
+    const hook = hooks[i];
+    const hookIndex = i + 1;
+
+    // Pre-expand the command so it can appear in the progress event before execution.
+    // substituteVariables is defined in this same module.
+    const expandedCommand = substituteVariables(hook, variables);
+
+    const startMs = Date.now();
+
+    if (progressStage) {
+      emitProgress({
+        stage: progressStage,
+        status: "start",
+        hook: hookIndex,
+        of: total,
+        command: expandedCommand,
+      });
+    }
+
     const result = await executeHook(hook, cwd, variables);
+    const durationMs = Date.now() - startMs;
     results.push(result);
 
     if (!result.success) {
       allSuccessful = false;
-      console.log(`  ${output.errorSymbol()} Hook failed with exit code ${result.exitCode}`);
+      console.log(
+        `  ${output.errorSymbol()} Hook failed with exit code ${result.exitCode}`,
+      );
+
+      if (progressStage) {
+        emitProgress({
+          stage: progressStage,
+          status: "error",
+          hook: hookIndex,
+          of: total,
+          message: `Hook failed with exit code ${result.exitCode}`,
+          exitCode: result.exitCode,
+        });
+      }
 
       if (abortOnFailure) {
         break;
       }
     } else {
       console.log(`  ${output.checkmark()} Hook completed successfully`);
+
+      if (progressStage) {
+        emitProgress({
+          stage: progressStage,
+          status: "end",
+          hook: hookIndex,
+          of: total,
+          durationMs,
+        });
+      }
     }
   }
 
