@@ -358,7 +358,7 @@ export function activate(context: vscode.ExtensionContext): void {
           await vscode.window.withProgress(
             {
               location: vscode.ProgressLocation.Notification,
-              title: `Creating worktree: ${branchName}`,
+              title: `Worktree: ${branchName}`,
               cancellable: false,
             },
             async (progress) => {
@@ -763,7 +763,7 @@ export function activate(context: vscode.ExtensionContext): void {
         await vscode.window.withProgress(
           {
             location: vscode.ProgressLocation.Notification,
-            title: `Creating worktree from staged files: ${branchName}`,
+            title: `Worktree from staged: ${branchName}`,
             cancellable: false,
           },
           async (progress) => {

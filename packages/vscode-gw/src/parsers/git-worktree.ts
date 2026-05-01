@@ -440,28 +440,26 @@ export function parseProgressEvent(line: string): GwProgressEvent | undefined {
   }
 }
 
-/** Maximum character length of hook command shown in progress labels */
-const MAX_COMMAND_LENGTH = 40;
-
 /**
  * Map a parsed progress event to a human-readable VS Code notification subtitle.
  * Returns `undefined` for events that should not update the notification
  * (e.g., end events, error events — handled separately in extension.ts).
+ *
+ * Subtitles are intentionally short — VS Code prepends the notification title
+ * and a `:` separator, so verbose subtitles read as cluttered "title: subtitle"
+ * runs. The full hook command is available in the gw output channel.
  *
  * @param event A parsed GwProgressEvent
  */
 export function progressEventToLabel(event: GwProgressEvent): string | undefined {
   if (event.status !== 'start') return undefined;
 
-  const truncate = (cmd: string): string =>
-    cmd.length > MAX_COMMAND_LENGTH ? cmd.slice(0, MAX_COMMAND_LENGTH) + '\u2026' : cmd;
-
   switch (event.stage) {
     case 'pre-checkout-hooks':
-      if (event.hook !== undefined && event.of !== undefined && event.command !== undefined) {
-        return `Running pre-checkout hook ${event.hook}/${event.of} \u2014 ${truncate(event.command)}`;
+      if (event.hook !== undefined && event.of !== undefined) {
+        return `Running pre-checkout hook ${event.hook}/${event.of}`;
       }
-      return 'Running pre-checkout hooks...';
+      return 'Running pre-checkout hooks';
 
     case 'create-worktree':
       return 'Creating worktree';
@@ -470,13 +468,13 @@ export function progressEventToLabel(event: GwProgressEvent): string | undefined
       return 'Copying config files';
 
     case 'copy-staged-files':
-      return 'Moving staged files to new worktree';
+      return 'Copying staged files';
 
     case 'post-checkout-hooks':
-      if (event.hook !== undefined && event.of !== undefined && event.command !== undefined) {
-        return `Running post-checkout hook ${event.hook}/${event.of} \u2014 ${truncate(event.command)}`;
+      if (event.hook !== undefined && event.of !== undefined) {
+        return `Running post-checkout hook ${event.hook}/${event.of}`;
       }
-      return 'Running post-checkout hooks...';
+      return 'Running post-checkout hooks';
 
     default:
       return undefined;
