@@ -2,26 +2,26 @@
  * Tests for pr.ts command
  */
 
-import { assertEquals } from "@std/assert";
-import { executePr } from "./pr.ts";
-import { withMockedExit } from "../test-utils/mock-exit.ts";
-import { assertShellNavigationWorks } from "../test-utils/assert-shell-nav.ts";
+import { assertEquals } from '@std/assert';
+import { executePr } from './pr.ts';
+import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 // =============================================================================
 // Help flag tests
 // =============================================================================
 
-Deno.test("pr command - shows help with --help", async () => {
+Deno.test('pr command - shows help with --help', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["--help"]);
+    await executePr(['--help']);
   });
 
   assertEquals(exitCode, 0);
 });
 
-Deno.test("pr command - shows help with -h", async () => {
+Deno.test('pr command - shows help with -h', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["-h"]);
+    await executePr(['-h']);
   });
 
   assertEquals(exitCode, 0);
@@ -31,7 +31,7 @@ Deno.test("pr command - shows help with -h", async () => {
 // Argument validation tests
 // =============================================================================
 
-Deno.test("pr command - errors when no args provided", async () => {
+Deno.test('pr command - errors when no args provided', async () => {
   const { exitCode } = await withMockedExit(async () => {
     await executePr([]);
   });
@@ -39,34 +39,34 @@ Deno.test("pr command - errors when no args provided", async () => {
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - errors on invalid PR identifier (text)", async () => {
+Deno.test('pr command - errors on invalid PR identifier (text)', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["invalid-text"]);
+    await executePr(['invalid-text']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - errors on invalid PR identifier (negative number)", async () => {
+Deno.test('pr command - errors on invalid PR identifier (negative number)', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["-5"]);
+    await executePr(['-5']);
   });
 
   // -5 is treated as a flag, so it's as if no args provided
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - errors on invalid PR identifier (zero)", async () => {
+Deno.test('pr command - errors on invalid PR identifier (zero)', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["0"]);
+    await executePr(['0']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - errors on invalid URL format", async () => {
+Deno.test('pr command - errors on invalid URL format', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["https://gitlab.com/user/repo/merge_requests/42"]);
+    await executePr(['https://gitlab.com/user/repo/merge_requests/42']);
   });
 
   assertEquals(exitCode, 1);
@@ -87,13 +87,13 @@ Deno.test("pr command - errors on invalid URL format", async () => {
 // parsePrArgs tests (via integration - checking flag handling)
 // =============================================================================
 
-Deno.test("pr command - accepts --name flag with value", async () => {
+Deno.test('pr command - accepts --name flag with value', async () => {
   // This should fail at gh CLI check (exit 1) but not at parsing
   const { exitCode } = await withMockedExit(
     async () => {
-      await executePr(["42", "--name", "custom-name"]);
+      await executePr(['42', '--name', 'custom-name']);
     },
-    { captureOutput: true },
+    { captureOutput: true }
   );
 
   // Should fail because gh is either not installed or not in test context
@@ -101,25 +101,25 @@ Deno.test("pr command - accepts --name flag with value", async () => {
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts --name=value flag", async () => {
+Deno.test('pr command - accepts --name=value flag', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["42", "--name=custom-name"]);
+    await executePr(['42', '--name=custom-name']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts --no-cd flag", async () => {
+Deno.test('pr command - accepts --no-cd flag', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["42", "--no-cd"]);
+    await executePr(['42', '--no-cd']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts combined flags", async () => {
+Deno.test('pr command - accepts combined flags', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["42", "--name", "test", "--no-cd"]);
+    await executePr(['42', '--name', 'test', '--no-cd']);
   });
 
   assertEquals(exitCode, 1);
@@ -129,42 +129,42 @@ Deno.test("pr command - accepts combined flags", async () => {
 // URL parsing tests (checking valid URLs are accepted)
 // =============================================================================
 
-Deno.test("pr command - accepts HTTPS GitHub URL", async () => {
+Deno.test('pr command - accepts HTTPS GitHub URL', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["https://github.com/user/repo/pull/123"]);
+    await executePr(['https://github.com/user/repo/pull/123']);
   });
 
   // Should get past parsing to gh CLI check
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts HTTP GitHub URL", async () => {
+Deno.test('pr command - accepts HTTP GitHub URL', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["http://github.com/user/repo/pull/456"]);
+    await executePr(['http://github.com/user/repo/pull/456']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts GitHub URL without protocol", async () => {
+Deno.test('pr command - accepts GitHub URL without protocol', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["github.com/user/repo/pull/789"]);
+    await executePr(['github.com/user/repo/pull/789']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts simple PR number", async () => {
+Deno.test('pr command - accepts simple PR number', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["42"]);
+    await executePr(['42']);
   });
 
   assertEquals(exitCode, 1);
 });
 
-Deno.test("pr command - accepts large PR number", async () => {
+Deno.test('pr command - accepts large PR number', async () => {
   const { exitCode } = await withMockedExit(async () => {
-    await executePr(["99999"]);
+    await executePr(['99999']);
   });
 
   assertEquals(exitCode, 1);
@@ -174,6 +174,6 @@ Deno.test("pr command - accepts large PR number", async () => {
 // Shell integration navigation tests
 // =============================================================================
 
-Deno.test("pr - shell integration navigates after command", async () => {
-  await assertShellNavigationWorks("pr");
+Deno.test('pr - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('pr');
 });

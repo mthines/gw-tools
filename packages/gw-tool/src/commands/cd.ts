@@ -3,9 +3,9 @@
  * Outputs the path to a worktree for use with cd command
  */
 
-import * as output from "../lib/output.ts";
-import { hasUncommittedChanges, listWorktrees } from "../lib/git-utils.ts";
-import { isShellIntegrationInstalled } from "../lib/shell-integration.ts";
+import * as output from '../lib/output.ts';
+import { hasUncommittedChanges, listWorktrees } from '../lib/git-utils.ts';
+import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
 
 const encoder = new TextEncoder();
 
@@ -17,7 +17,7 @@ async function stderrPrompt(message: string): Promise<string> {
   await Deno.stderr.write(encoder.encode(message));
   const buf = new Uint8Array(256);
   const n = await Deno.stdin.read(buf);
-  if (n === null) return "";
+  if (n === null) return '';
   return new TextDecoder().decode(buf.subarray(0, n)).trim();
 }
 
@@ -28,7 +28,7 @@ async function stderrPrompt(message: string): Promise<string> {
  */
 export async function executeCd(args: string[]): Promise<void> {
   // Check for help flag
-  if (args.includes("--help") || args.includes("-h")) {
+  if (args.includes('--help') || args.includes('-h')) {
     showCdHelp();
     Deno.exit(0);
   }
@@ -36,9 +36,9 @@ export async function executeCd(args: string[]): Promise<void> {
   // Get worktree pattern from arguments
   const pattern = args[0];
   if (!pattern) {
-    output.error("Error: Worktree name or pattern required");
-    console.error("\nUsage: gw cd <worktree>");
-    console.error("Then: cd $(gw cd <worktree>)");
+    output.error('Error: Worktree name or pattern required');
+    console.error('\nUsage: gw cd <worktree>');
+    console.error('Then: cd $(gw cd <worktree>)');
     Deno.exit(1);
   }
 
@@ -47,11 +47,7 @@ export async function executeCd(args: string[]): Promise<void> {
   try {
     worktrees = await listWorktrees();
   } catch (err) {
-    output.error(
-      `Failed to get worktree list: ${
-        err instanceof Error ? err.message : String(err)
-      }`,
-    );
+    output.error(`Failed to get worktree list: ${err instanceof Error ? err.message : String(err)}`);
     Deno.exit(1);
   }
 
@@ -71,9 +67,7 @@ export async function executeCd(args: string[]): Promise<void> {
   // If multiple matches, check for a single exact branch match
   let resolved = matches;
   if (matches.length > 1) {
-    const exactMatches = matches.filter((wt) =>
-      wt.branch.toLowerCase() === pattern.toLowerCase()
-    );
+    const exactMatches = matches.filter((wt) => wt.branch.toLowerCase() === pattern.toLowerCase());
     if (exactMatches.length === 1) {
       resolved = exactMatches;
     }
@@ -83,20 +77,16 @@ export async function executeCd(args: string[]): Promise<void> {
     output.error(`Multiple worktrees match "${pattern}":`);
     const hasDetached = resolved.some((wt) => !wt.branch);
     resolved.forEach((wt) => {
-      const label = wt.branch
-        ? wt.branch
-        : `${wt.path.split("/").pop() || wt.path} (detached)`;
+      const label = wt.branch ? wt.branch : `${wt.path.split('/').pop() || wt.path} (detached)`;
       console.error(`  ${label} -> ${wt.path}`);
     });
     if (hasDetached) {
       const detached = resolved.filter((wt) => !wt.branch);
       for (const wt of detached) {
-        console.error(
-          `\nhint: Remove detached worktree with: gw remove ${wt.path}`,
-        );
+        console.error(`\nhint: Remove detached worktree with: gw remove ${wt.path}`);
       }
     }
-    console.error("\nPlease be more specific.");
+    console.error('\nPlease be more specific.');
     Deno.exit(1);
   }
 
@@ -111,48 +101,37 @@ export async function executeCd(args: string[]): Promise<void> {
     target.branch.toLowerCase() !== pattern.toLowerCase()
   ) {
     // Check if pattern is actually a local branch name
-    const branchCheckCmd = new Deno.Command("git", {
-      args: ["rev-parse", "--verify", pattern],
-      stdout: "null",
-      stderr: "null",
+    const branchCheckCmd = new Deno.Command('git', {
+      args: ['rev-parse', '--verify', pattern],
+      stdout: 'null',
+      stderr: 'null',
     });
     const branchCheckResult = await branchCheckCmd.output();
 
     if (branchCheckResult.code === 0) {
       // Pattern is a valid branch but the worktree has a different
       // one checked out — ask whether to switch
-      console.error("");
+      console.error('');
       console.error(
         `Worktree at ${output.path(target.path)} is on ` +
           `branch ${output.bold(target.branch)}, ` +
-          `not ${output.bold(pattern)}.`,
+          `not ${output.bold(pattern)}.`
       );
 
       const answer = await stderrPrompt(`Switch to ${pattern}? [Y/n]: `);
 
-      if (
-        answer === "" || answer.toLowerCase() === "y" ||
-        answer.toLowerCase() === "yes"
-      ) {
+      if (answer === '' || answer.toLowerCase() === 'y' || answer.toLowerCase() === 'yes') {
         // Safety: refuse if there are uncommitted changes
         if (await hasUncommittedChanges(target.path)) {
-          output.error(
-            `Worktree has uncommitted changes on branch ${
-              output.bold(target.branch)
-            }`,
-          );
-          console.error(
-            `Commit or stash your changes before switching to ${
-              output.bold(pattern)
-            }.`,
-          );
+          output.error(`Worktree has uncommitted changes on branch ${output.bold(target.branch)}`);
+          console.error(`Commit or stash your changes before switching to ${output.bold(pattern)}.`);
           Deno.exit(1);
         }
 
-        const switchCmd = new Deno.Command("git", {
-          args: ["-C", target.path, "checkout", pattern],
-          stdout: "inherit",
-          stderr: "inherit",
+        const switchCmd = new Deno.Command('git', {
+          args: ['-C', target.path, 'checkout', pattern],
+          stdout: 'inherit',
+          stderr: 'inherit',
         });
         const { code: switchCode } = await switchCmd.output();
 
@@ -174,23 +153,23 @@ export async function executeCd(args: string[]): Promise<void> {
   if (Deno.stdout.isTerminal()) {
     const hasShellIntegration = await isShellIntegrationInstalled();
     if (!hasShellIntegration) {
-      const shell = Deno.env.get("SHELL") || "";
-      const shellName = shell.split("/").pop() || "";
+      const shell = Deno.env.get('SHELL') || '';
+      const shellName = shell.split('/').pop() || '';
 
-      let configFile = "~/.zshrc";
+      let configFile = '~/.zshrc';
       let evalLine = 'eval "$(gw install-shell)"';
 
-      if (shellName === "bash") {
-        configFile = "~/.bashrc";
-      } else if (shellName === "fish") {
-        configFile = "~/.config/fish/config.fish";
-        evalLine = "gw install-shell | source";
+      if (shellName === 'bash') {
+        configFile = '~/.bashrc';
+      } else if (shellName === 'fish') {
+        configFile = '~/.config/fish/config.fish';
+        evalLine = 'gw install-shell | source';
       }
 
-      console.error("");
-      console.error("💡 Tip: Add shell integration for automatic navigation:");
+      console.error('');
+      console.error('💡 Tip: Add shell integration for automatic navigation:');
       console.error(`   echo '${evalLine}' >> ${configFile}`);
-      console.error("   Then restart your shell or source the config file.");
+      console.error('   Then restart your shell or source the config file.');
     }
   }
 }

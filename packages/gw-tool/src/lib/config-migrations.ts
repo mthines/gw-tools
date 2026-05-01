@@ -29,7 +29,7 @@
  * ```
  */
 
-import type { Config } from "./types.ts";
+import type { Config } from './types.ts';
 
 /**
  * Current config version - increment when adding migrations
@@ -55,7 +55,7 @@ export interface Migration {
 export const MIGRATIONS: Migration[] = [
   {
     version: 1,
-    description: "Rename hooks.add to hooks.checkout (command rename)",
+    description: 'Rename hooks.add to hooks.checkout (command rename)',
     migrate: (config) => {
       // Migration: hooks.add -> hooks.checkout
       const hooks = config.hooks as Record<string, unknown> | undefined;
@@ -69,7 +69,7 @@ export const MIGRATIONS: Migration[] = [
   },
   {
     version: 2,
-    description: "Remove machine-specific fields to make config committable",
+    description: 'Remove machine-specific fields to make config committable',
     migrate: (config) => {
       delete config.root;
       delete config.lastAutoCleanTime;
@@ -97,9 +97,7 @@ export interface MigrationResult {
  * @param rawConfig - The raw config object loaded from file
  * @returns Migration result with the migrated config and info about what changed
  */
-export function runMigrations(
-  rawConfig: Record<string, unknown>,
-): MigrationResult {
+export function runMigrations(rawConfig: Record<string, unknown>): MigrationResult {
   const currentVersion = (rawConfig.configVersion as number) ?? 0;
   const appliedMigrations: string[] = [];
 

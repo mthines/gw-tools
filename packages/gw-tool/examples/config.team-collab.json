@@ -13,13 +13,7 @@
   "defaultBranch": "main",
   "cleanThreshold": 7,
 
-  "autoCopyFiles": [
-    ".env",
-    ".env.local",
-    ".vscode/",
-    "config/",
-    "docs/development.md"
-  ],
+  "autoCopyFiles": [".env", ".env.local", ".vscode/", "config/", "docs/development.md"],
 
   "hooks": {
     "add": {

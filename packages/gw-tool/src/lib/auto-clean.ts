@@ -4,8 +4,8 @@
  * with cooldown — never blocks or prompts the user.
  */
 
-import { isProtectedBranch } from "./branch-protection.ts";
-import { loadConfig } from "./config.ts";
+import { isProtectedBranch } from './branch-protection.ts';
+import { loadConfig } from './config.ts';
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
@@ -13,8 +13,8 @@ import {
   listWorktrees,
   removeWorktree,
   type WorktreeInfo,
-} from "./git-utils.ts";
-import * as output from "./output.ts";
+} from './git-utils.ts';
+import * as output from './output.ts';
 
 /**
  * Worktree with cleanability metadata
@@ -42,10 +42,7 @@ export interface AutoCleanResult {
  * @param defaultBranch Branch name that should never be
  *   cleaned (e.g., "main")
  */
-async function getCleanableWorktrees(
-  threshold: number,
-  defaultBranch: string,
-): Promise<CleanableWorktree[]> {
+async function getCleanableWorktrees(threshold: number, defaultBranch: string): Promise<CleanableWorktree[]> {
   const worktrees = await listWorktrees();
 
   // Filter out bare repository
@@ -103,13 +100,10 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
 
     // Get threshold (default 7 days) and defaultBranch
     const threshold = config.cleanThreshold ?? 7;
-    const defaultBranch = config.defaultBranch ?? "main";
+    const defaultBranch = config.defaultBranch ?? 'main';
 
     // Find cleanable worktrees (excludes defaultBranch)
-    const cleanableWorktrees = await getCleanableWorktrees(
-      threshold,
-      defaultBranch,
-    );
+    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
 
     if (cleanableWorktrees.length === 0) {
       return { removed: [] };
@@ -156,17 +150,9 @@ export function runAutoClean(): void {
     .then((result) => {
       if (result.removed.length > 0) {
         const count = result.removed.length;
-        const worktreeWord = count === 1 ? "worktree" : "worktrees";
-        const names = result.removed.map((name) => output.path(name)).join(
-          ", ",
-        );
-        console.error(
-          `\n${
-            output.dim(
-              `[gw] Auto-cleaned ${count} stale ${worktreeWord}: ${names}`,
-            )
-          }`,
-        );
+        const worktreeWord = count === 1 ? 'worktree' : 'worktrees';
+        const names = result.removed.map((name) => output.path(name)).join(', ');
+        console.error(`\n${output.dim(`[gw] Auto-cleaned ${count} stale ${worktreeWord}: ${names}`)}`);
       }
     })
     .catch(() => {});

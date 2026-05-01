@@ -2,18 +2,18 @@
  * Tests for init.ts command
  */
 
-import { assertEquals, assertRejects } from "@std/assert";
-import { join } from "@std/path";
-import { executeInit } from "./init.ts";
-import { GitTestRepo } from "../test-utils/git-test-repo.ts";
-import { TempCwd } from "../test-utils/temp-env.ts";
-import { readTestConfig } from "../test-utils/fixtures.ts";
-import { assertDirExists, assertFileExists } from "../test-utils/assertions.ts";
-import { withMockedExit } from "../test-utils/mock-exit.ts";
-import { withMockedPrompt } from "../test-utils/mock-prompt.ts";
-import { assertShellNavigationWorks } from "../test-utils/assert-shell-nav.ts";
+import { assertEquals, assertRejects } from '@std/assert';
+import { join } from '@std/path';
+import { executeInit } from './init.ts';
+import { GitTestRepo } from '../test-utils/git-test-repo.ts';
+import { TempCwd } from '../test-utils/temp-env.ts';
+import { readTestConfig } from '../test-utils/fixtures.ts';
+import { assertDirExists, assertFileExists } from '../test-utils/assertions.ts';
+import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
+import { assertShellNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
-Deno.test("init command - creates config with auto-detected root", async () => {
+Deno.test('init command - creates config with auto-detected root', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -23,12 +23,12 @@ Deno.test("init command - creates config with auto-detected root", async () => {
       await executeInit([]);
 
       // Verify config was created
-      await assertFileExists(join(repo.path, ".gw", "config.json"));
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
 
       // Verify config content
       const config = await readTestConfig(repo.path);
       assertEquals((config as Record<string, unknown>).root, undefined);
-      assertEquals(config.defaultBranch, "main");
+      assertEquals(config.defaultBranch, 'main');
       assertEquals(config.cleanThreshold, 7);
     } finally {
       cwd.restore();
@@ -38,7 +38,7 @@ Deno.test("init command - creates config with auto-detected root", async () => {
   }
 });
 
-Deno.test("init command - creates config with explicit root", async () => {
+Deno.test('init command - creates config with explicit root', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -47,10 +47,10 @@ Deno.test("init command - creates config with explicit root", async () => {
     const tempDir = Deno.makeTempDirSync();
     const cwd = new TempCwd(tempDir);
     try {
-      await executeInit(["--root", repo.path]);
+      await executeInit(['--root', repo.path]);
 
       // Verify config was created in the specified root
-      await assertFileExists(join(repo.path, ".gw", "config.json"));
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
 
       // Verify config content
       const config = await readTestConfig(repo.path);
@@ -64,17 +64,17 @@ Deno.test("init command - creates config with explicit root", async () => {
   }
 });
 
-Deno.test("init command - sets custom default branch", async () => {
+Deno.test('init command - sets custom default branch', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--default-source", "develop"]);
+      await executeInit(['--default-source', 'develop']);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "develop");
+      assertEquals(config.defaultBranch, 'develop');
     } finally {
       cwd.restore();
     }
@@ -83,17 +83,17 @@ Deno.test("init command - sets custom default branch", async () => {
   }
 });
 
-Deno.test("init command - configures auto-copy files", async () => {
+Deno.test('init command - configures auto-copy files', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--auto-copy-files", ".env,secrets/,config.json"]);
+      await executeInit(['--auto-copy-files', '.env,secrets/,config.json']);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.autoCopyFiles, [".env", "secrets/", "config.json"]);
+      assertEquals(config.autoCopyFiles, ['.env', 'secrets/', 'config.json']);
     } finally {
       cwd.restore();
     }
@@ -102,14 +102,14 @@ Deno.test("init command - configures auto-copy files", async () => {
   }
 });
 
-Deno.test("init command - configures pre-add hooks", async () => {
+Deno.test('init command - configures pre-add hooks', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--pre-add", "echo 'Starting...'"]);
+      await executeInit(['--pre-add', "echo 'Starting...'"]);
 
       const config = await readTestConfig(repo.path);
       assertEquals(config.hooks?.checkout?.pre, ["echo 'Starting...'"]);
@@ -121,19 +121,17 @@ Deno.test("init command - configures pre-add hooks", async () => {
   }
 });
 
-Deno.test("init command - configures post-add hooks", async () => {
+Deno.test('init command - configures post-add hooks', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--post-add", "cd {worktreePath} && pnpm install"]);
+      await executeInit(['--post-add', 'cd {worktreePath} && pnpm install']);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.checkout?.post, [
-        "cd {worktreePath} && pnpm install",
-      ]);
+      assertEquals(config.hooks?.checkout?.post, ['cd {worktreePath} && pnpm install']);
     } finally {
       cwd.restore();
     }
@@ -142,7 +140,7 @@ Deno.test("init command - configures post-add hooks", async () => {
   }
 });
 
-Deno.test("init command - configures multiple hooks", async () => {
+Deno.test('init command - configures multiple hooks', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -150,19 +148,16 @@ Deno.test("init command - configures multiple hooks", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       await executeInit([
-        "--pre-add",
+        '--pre-add',
         "echo 'Pre-hook 1'",
-        "--pre-add",
+        '--pre-add',
         "echo 'Pre-hook 2'",
-        "--post-add",
+        '--post-add',
         "echo 'Post-hook 1'",
       ]);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.checkout?.pre, [
-        "echo 'Pre-hook 1'",
-        "echo 'Pre-hook 2'",
-      ]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
       assertEquals(config.hooks?.checkout?.post, ["echo 'Post-hook 1'"]);
     } finally {
       cwd.restore();
@@ -172,14 +167,14 @@ Deno.test("init command - configures multiple hooks", async () => {
   }
 });
 
-Deno.test("init command - configures clean threshold", async () => {
+Deno.test('init command - configures clean threshold', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--clean-threshold", "14"]);
+      await executeInit(['--clean-threshold', '14']);
 
       const config = await readTestConfig(repo.path);
       assertEquals(config.cleanThreshold, 14);
@@ -191,14 +186,14 @@ Deno.test("init command - configures clean threshold", async () => {
   }
 });
 
-Deno.test("init command - enables auto-clean", async () => {
+Deno.test('init command - enables auto-clean', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     const cwd = new TempCwd(repo.path);
     try {
-      await executeInit(["--auto-clean"]);
+      await executeInit(['--auto-clean']);
 
       const config = await readTestConfig(repo.path);
       assertEquals(config.autoClean, true);
@@ -210,7 +205,7 @@ Deno.test("init command - enables auto-clean", async () => {
   }
 });
 
-Deno.test("init command - configures all options together", async () => {
+Deno.test('init command - configures all options together', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -218,22 +213,22 @@ Deno.test("init command - configures all options together", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       await executeInit([
-        "--default-source",
-        "develop",
-        "--auto-copy-files",
-        ".env,secrets/",
-        "--pre-add",
+        '--default-source',
+        'develop',
+        '--auto-copy-files',
+        '.env,secrets/',
+        '--pre-add',
         "echo 'Pre'",
-        "--post-add",
+        '--post-add',
         "echo 'Post'",
-        "--clean-threshold",
-        "21",
-        "--auto-clean",
+        '--clean-threshold',
+        '21',
+        '--auto-clean',
       ]);
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "develop");
-      assertEquals(config.autoCopyFiles, [".env", "secrets/"]);
+      assertEquals(config.defaultBranch, 'develop');
+      assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
       assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre'"]);
       assertEquals(config.hooks?.checkout?.post, ["echo 'Post'"]);
       assertEquals(config.cleanThreshold, 21);
@@ -246,7 +241,7 @@ Deno.test("init command - configures all options together", async () => {
   }
 });
 
-Deno.test("init command - fails with invalid clean threshold", async () => {
+Deno.test('init command - fails with invalid clean threshold', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -254,9 +249,9 @@ Deno.test("init command - fails with invalid clean threshold", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       await assertRejects(
-        () => executeInit(["--clean-threshold", "invalid"]),
+        () => executeInit(['--clean-threshold', 'invalid']),
         Error,
-        "--clean-threshold must be a non-negative number",
+        '--clean-threshold must be a non-negative number'
       );
     } finally {
       cwd.restore();
@@ -266,15 +261,15 @@ Deno.test("init command - fails with invalid clean threshold", async () => {
   }
 });
 
-Deno.test("init command - fails when not in a git repo and no root specified", async () => {
-  const tempDir = Deno.makeTempDirSync({ prefix: "gw-test-notgit-" });
+Deno.test('init command - fails when not in a git repo and no root specified', async () => {
+  const tempDir = Deno.makeTempDirSync({ prefix: 'gw-test-notgit-' });
   try {
     const cwd = new TempCwd(tempDir);
     try {
       const { exitCode } = await withMockedExit(() => executeInit([]));
 
       // Should have exited with error code
-      assertEquals(exitCode, 1, "Should exit with code 1 when not in git repo");
+      assertEquals(exitCode, 1, 'Should exit with code 1 when not in git repo');
     } finally {
       cwd.restore();
     }
@@ -288,16 +283,10 @@ Deno.test("init command - fails when specified root doesn't exist", async () => 
   try {
     const cwd = new TempCwd(tempDir);
     try {
-      const { exitCode } = await withMockedExit(() =>
-        executeInit(["--root", "/nonexistent/path"])
-      );
+      const { exitCode } = await withMockedExit(() => executeInit(['--root', '/nonexistent/path']));
 
       // Should have exited with error code
-      assertEquals(
-        exitCode,
-        1,
-        "Should exit with code 1 for non-existent root",
-      );
+      assertEquals(exitCode, 1, 'Should exit with code 1 for non-existent root');
     } finally {
       cwd.restore();
     }
@@ -308,7 +297,7 @@ Deno.test("init command - fails when specified root doesn't exist", async () => 
 
 // Interactive mode tests
 
-Deno.test("init command - interactive mode with all defaults", async () => {
+Deno.test('init command - interactive mode with all defaults', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -317,20 +306,20 @@ Deno.test("init command - interactive mode with all defaults", async () => {
     try {
       // Press Enter for all prompts to accept defaults
       const responses = [
-        "", // default branch (accept default "main")
-        "n", // want auto-copy files
-        "n", // want pre-add hooks
-        "n", // want post-add hooks
-        "", // clean threshold (accept default 7)
-        "n", // enable auto-clean
-        "", // update strategy (accept default "merge")
+        '', // default branch (accept default "main")
+        'n', // want auto-copy files
+        'n', // want pre-add hooks
+        'n', // want post-add hooks
+        '', // clean threshold (accept default 7)
+        'n', // enable auto-clean
+        '', // update strategy (accept default "merge")
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       // Verify config was created with defaults
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "main");
+      assertEquals(config.defaultBranch, 'main');
       assertEquals(config.autoCopyFiles, undefined);
       assertEquals(config.hooks, undefined);
       assertEquals(config.cleanThreshold, 7);
@@ -343,7 +332,7 @@ Deno.test("init command - interactive mode with all defaults", async () => {
   }
 });
 
-Deno.test("init command - interactive mode with custom values", async () => {
+Deno.test('init command - interactive mode with custom values', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -351,28 +340,28 @@ Deno.test("init command - interactive mode with custom values", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "develop", // default branch
-        "y", // want auto-copy files
-        ".env,.env.local,secrets/", // auto-copy files list
-        "n", // want pre-add hooks
-        "y", // want post-add hooks
-        "pnpm install", // post-add hook 1
-        "", // post-add hook 2 (blank to finish)
-        "14", // clean threshold
-        "y", // enable auto-clean
-        "rebase", // update strategy
+        'develop', // default branch
+        'y', // want auto-copy files
+        '.env,.env.local,secrets/', // auto-copy files list
+        'n', // want pre-add hooks
+        'y', // want post-add hooks
+        'pnpm install', // post-add hook 1
+        '', // post-add hook 2 (blank to finish)
+        '14', // clean threshold
+        'y', // enable auto-clean
+        'rebase', // update strategy
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "develop");
-      assertEquals(config.autoCopyFiles, [".env", ".env.local", "secrets/"]);
+      assertEquals(config.defaultBranch, 'develop');
+      assertEquals(config.autoCopyFiles, ['.env', '.env.local', 'secrets/']);
       assertEquals(config.hooks?.checkout?.pre, undefined);
-      assertEquals(config.hooks?.checkout?.post, ["pnpm install"]);
+      assertEquals(config.hooks?.checkout?.post, ['pnpm install']);
       assertEquals(config.cleanThreshold, 14);
       assertEquals(config.autoClean, true);
-      assertEquals(config.updateStrategy, "rebase");
+      assertEquals(config.updateStrategy, 'rebase');
     } finally {
       cwd.restore();
     }
@@ -381,7 +370,7 @@ Deno.test("init command - interactive mode with custom values", async () => {
   }
 });
 
-Deno.test("init command - interactive mode with multiple hooks", async () => {
+Deno.test('init command - interactive mode with multiple hooks', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -389,32 +378,26 @@ Deno.test("init command - interactive mode with multiple hooks", async () => {
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "", // default branch (default)
-        "n", // want auto-copy files
-        "y", // want pre-add hooks
+        '', // default branch (default)
+        'n', // want auto-copy files
+        'y', // want pre-add hooks
         "echo 'Pre-hook 1'", // pre-add hook 1
         "echo 'Pre-hook 2'", // pre-add hook 2
-        "", // blank to finish pre-add hooks
-        "y", // want post-add hooks
-        "cd {worktreePath} && pnpm install", // post-add hook 1
+        '', // blank to finish pre-add hooks
+        'y', // want post-add hooks
+        'cd {worktreePath} && pnpm install', // post-add hook 1
         "echo 'Done!'", // post-add hook 2
-        "", // blank to finish post-add hooks
-        "", // clean threshold (default)
-        "n", // enable auto-clean
-        "", // update strategy (default)
+        '', // blank to finish post-add hooks
+        '', // clean threshold (default)
+        'n', // enable auto-clean
+        '', // update strategy (default)
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.hooks?.checkout?.pre, [
-        "echo 'Pre-hook 1'",
-        "echo 'Pre-hook 2'",
-      ]);
-      assertEquals(config.hooks?.checkout?.post, [
-        "cd {worktreePath} && pnpm install",
-        "echo 'Done!'",
-      ]);
+      assertEquals(config.hooks?.checkout?.pre, ["echo 'Pre-hook 1'", "echo 'Pre-hook 2'"]);
+      assertEquals(config.hooks?.checkout?.post, ['cd {worktreePath} && pnpm install', "echo 'Done!'"]);
     } finally {
       cwd.restore();
     }
@@ -423,7 +406,7 @@ Deno.test("init command - interactive mode with multiple hooks", async () => {
   }
 });
 
-Deno.test("init command - interactive mode with CLI flags takes precedence", async () => {
+Deno.test('init command - interactive mode with CLI flags takes precedence', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -432,38 +415,39 @@ Deno.test("init command - interactive mode with CLI flags takes precedence", asy
     try {
       // Try to set different values interactively, but CLI flags should win
       const responses = [
-        "develop", // default branch (should be ignored, CLI has "staging")
-        "y", // want auto-copy files
-        ".env.test", // auto-copy files (should be ignored, CLI has ".env")
-        "n", // want pre-add hooks
-        "n", // want post-add hooks
-        "21", // clean threshold (should be ignored, CLI has "10")
-        "y", // enable auto-clean (should be ignored, no CLI flag)
-        "rebase", // update strategy (should be ignored, CLI has "merge")
+        'develop', // default branch (should be ignored, CLI has "staging")
+        'y', // want auto-copy files
+        '.env.test', // auto-copy files (should be ignored, CLI has ".env")
+        'n', // want pre-add hooks
+        'n', // want post-add hooks
+        '21', // clean threshold (should be ignored, CLI has "10")
+        'y', // enable auto-clean (should be ignored, no CLI flag)
+        'rebase', // update strategy (should be ignored, CLI has "merge")
       ];
 
       await withMockedPrompt(responses, () =>
         executeInit([
-          "--interactive",
-          "--default-source",
-          "staging",
-          "--auto-copy-files",
-          ".env",
-          "--clean-threshold",
-          "10",
-          "--update-strategy",
-          "merge",
-        ]));
+          '--interactive',
+          '--default-source',
+          'staging',
+          '--auto-copy-files',
+          '.env',
+          '--clean-threshold',
+          '10',
+          '--update-strategy',
+          'merge',
+        ])
+      );
 
       const config = await readTestConfig(repo.path);
       // CLI flags should take precedence
-      assertEquals(config.defaultBranch, "staging");
-      assertEquals(config.autoCopyFiles, [".env"]);
+      assertEquals(config.defaultBranch, 'staging');
+      assertEquals(config.autoCopyFiles, ['.env']);
       assertEquals(config.cleanThreshold, 10);
       // autoClean not set via CLI, so interactive value should be used
       assertEquals(config.autoClean, true);
       // updateStrategy set via CLI, should take precedence
-      assertEquals(config.updateStrategy, "merge");
+      assertEquals(config.updateStrategy, 'merge');
     } finally {
       cwd.restore();
     }
@@ -472,7 +456,7 @@ Deno.test("init command - interactive mode with CLI flags takes precedence", asy
   }
 });
 
-Deno.test("init command - interactive mode with invalid clean threshold", async () => {
+Deno.test('init command - interactive mode with invalid clean threshold', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -480,16 +464,16 @@ Deno.test("init command - interactive mode with invalid clean threshold", async 
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "", // default branch (default)
-        "n", // want auto-copy files
-        "n", // want pre-add hooks
-        "n", // want post-add hooks
-        "invalid", // clean threshold (invalid, should use default)
-        "n", // enable auto-clean
-        "", // update strategy (default)
+        '', // default branch (default)
+        'n', // want auto-copy files
+        'n', // want pre-add hooks
+        'n', // want post-add hooks
+        'invalid', // clean threshold (invalid, should use default)
+        'n', // enable auto-clean
+        '', // update strategy (default)
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
       // Should fall back to default value of 7
@@ -510,23 +494,23 @@ Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", asy
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "", // default branch (default)
-        "yes", // want auto-copy files (using "yes")
-        ".env", // auto-copy files
-        "n", // want pre-add hooks
-        "y", // want post-add hooks (using "y")
-        "pnpm install", // post-add hook
-        "", // blank to finish
-        "", // clean threshold (default)
-        "yes", // enable auto-clean (using "yes")
-        "", // update strategy (default)
+        '', // default branch (default)
+        'yes', // want auto-copy files (using "yes")
+        '.env', // auto-copy files
+        'n', // want pre-add hooks
+        'y', // want post-add hooks (using "y")
+        'pnpm install', // post-add hook
+        '', // blank to finish
+        '', // clean threshold (default)
+        'yes', // enable auto-clean (using "yes")
+        '', // update strategy (default)
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.autoCopyFiles, [".env"]);
-      assertEquals(config.hooks?.checkout?.post, ["pnpm install"]);
+      assertEquals(config.autoCopyFiles, ['.env']);
+      assertEquals(config.hooks?.checkout?.post, ['pnpm install']);
       assertEquals(config.autoClean, true);
     } finally {
       cwd.restore();
@@ -536,7 +520,7 @@ Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", asy
   }
 });
 
-Deno.test("init command - interactive mode declining all optional features", async () => {
+Deno.test('init command - interactive mode declining all optional features', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -544,19 +528,19 @@ Deno.test("init command - interactive mode declining all optional features", asy
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "main", // default branch
-        "n", // want auto-copy files
-        "n", // want pre-add hooks
-        "n", // want post-add hooks
-        "7", // clean threshold
-        "n", // enable auto-clean
-        "", // update strategy (default)
+        'main', // default branch
+        'n', // want auto-copy files
+        'n', // want pre-add hooks
+        'n', // want post-add hooks
+        '7', // clean threshold
+        'n', // enable auto-clean
+        '', // update strategy (default)
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "main");
+      assertEquals(config.defaultBranch, 'main');
       assertEquals(config.autoCopyFiles, undefined);
       assertEquals(config.hooks, undefined);
       assertEquals(config.cleanThreshold, 7);
@@ -569,7 +553,7 @@ Deno.test("init command - interactive mode declining all optional features", asy
   }
 });
 
-Deno.test("init command - interactive mode with whitespace in responses", async () => {
+Deno.test('init command - interactive mode with whitespace in responses', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -577,23 +561,23 @@ Deno.test("init command - interactive mode with whitespace in responses", async 
     const cwd = new TempCwd(repo.path);
     try {
       const responses = [
-        "  staging  ", // default branch with whitespace (should be trimmed)
-        "y", // want auto-copy files
-        " .env , .env.local ", // auto-copy files with spaces (should be trimmed)
-        "n", // want pre-add hooks
-        "n", // want post-add hooks
-        " 10 ", // clean threshold with whitespace (should be parsed)
-        "n", // enable auto-clean
-        " merge ", // update strategy with whitespace (should be trimmed)
+        '  staging  ', // default branch with whitespace (should be trimmed)
+        'y', // want auto-copy files
+        ' .env , .env.local ', // auto-copy files with spaces (should be trimmed)
+        'n', // want pre-add hooks
+        'n', // want post-add hooks
+        ' 10 ', // clean threshold with whitespace (should be parsed)
+        'n', // enable auto-clean
+        ' merge ', // update strategy with whitespace (should be trimmed)
       ];
 
-      await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+      await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
       const config = await readTestConfig(repo.path);
-      assertEquals(config.defaultBranch, "staging");
-      assertEquals(config.autoCopyFiles, [".env", ".env.local"]);
+      assertEquals(config.defaultBranch, 'staging');
+      assertEquals(config.autoCopyFiles, ['.env', '.env.local']);
       assertEquals(config.cleanThreshold, 10);
-      assertEquals(config.updateStrategy, "merge");
+      assertEquals(config.updateStrategy, 'merge');
     } finally {
       cwd.restore();
     }
@@ -603,45 +587,41 @@ Deno.test("init command - interactive mode with whitespace in responses", async 
 });
 // Clone mode tests
 
-Deno.test("init command - clone mode with file URL", async () => {
+Deno.test('init command - clone mode with file URL', async () => {
   // Create a test repository to clone from
   const sourceRepo = new GitTestRepo();
   try {
     await sourceRepo.init();
-    await sourceRepo.createFile("README.md", "# Test Repo");
+    await sourceRepo.createFile('README.md', '# Test Repo');
 
     // Create temp directory for clone target
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
     const cwd = new TempCwd(targetDir);
     try {
       // Clone using file:// URL (simulates SSH/HTTPS in test environment)
       const cloneUrl = `file://${sourceRepo.path}`;
 
       // Calculate expected directory name from source repo path
-      const sourceDirName = sourceRepo.path.split("/").pop();
+      const sourceDirName = sourceRepo.path.split('/').pop();
       const expectedRepoName = `${sourceDirName}.git`;
 
       // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(["n"], async () => {
+      await withMockedPrompt(['n'], async () => {
         await executeInit([cloneUrl]);
       });
 
       // Verify the repository was cloned
       const clonedRepoPath = join(targetDir, expectedRepoName);
-      await assertDirExists(join(clonedRepoPath, ".git"));
+      await assertDirExists(join(clonedRepoPath, '.git'));
 
       // Verify default worktree was created (inside the repository directory)
-      await assertDirExists(join(clonedRepoPath, "main"));
+      await assertDirExists(join(clonedRepoPath, 'main'));
 
       // Verify config was moved into worktree (committable)
-      await assertFileExists(
-        join(clonedRepoPath, "main", ".gw", "config.json"),
-      );
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
       // Verify config content
-      const config = await readTestConfig(join(clonedRepoPath, "main"));
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
       assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
@@ -652,35 +632,31 @@ Deno.test("init command - clone mode with file URL", async () => {
   }
 });
 
-Deno.test("init command - clone mode with custom directory", async () => {
+Deno.test('init command - clone mode with custom directory', async () => {
   const sourceRepo = new GitTestRepo();
   try {
     await sourceRepo.init();
-    await sourceRepo.createFile("README.md", "# Test Repo");
+    await sourceRepo.createFile('README.md', '# Test Repo');
 
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepo.path}`;
 
       // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(["n"], async () => {
-        await executeInit([cloneUrl, "custom-name"]);
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'custom-name']);
       });
 
       // Verify cloned to custom directory
-      const clonedRepoPath = join(targetDir, "custom-name");
-      await assertDirExists(join(clonedRepoPath, ".git"));
+      const clonedRepoPath = join(targetDir, 'custom-name');
+      await assertDirExists(join(clonedRepoPath, '.git'));
 
       // Verify config was moved into worktree (committable)
-      await assertFileExists(
-        join(clonedRepoPath, "main", ".gw", "config.json"),
-      );
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
       // Verify config content
-      const config = await readTestConfig(join(clonedRepoPath, "main"));
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
       assertEquals((config as Record<string, unknown>).root, undefined);
     } finally {
       cwd.restore();
@@ -691,41 +667,39 @@ Deno.test("init command - clone mode with custom directory", async () => {
   }
 });
 
-Deno.test("init command - clone mode with configuration options", async () => {
+Deno.test('init command - clone mode with configuration options', async () => {
   const sourceRepo = new GitTestRepo();
   try {
     await sourceRepo.init();
-    await sourceRepo.createFile("README.md", "# Test Repo");
+    await sourceRepo.createFile('README.md', '# Test Repo');
 
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepo.path}`;
 
       // Calculate expected directory name from source repo path
-      const sourceDirName = sourceRepo.path.split("/").pop();
+      const sourceDirName = sourceRepo.path.split('/').pop();
       const expectedRepoName = `${sourceDirName}.git`;
 
       // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(["n"], async () => {
+      await withMockedPrompt(['n'], async () => {
         await executeInit([
           cloneUrl,
-          "--auto-copy-files",
-          ".env,secrets/",
-          "--post-add",
+          '--auto-copy-files',
+          '.env,secrets/',
+          '--post-add',
           'echo "installed"',
-          "--clean-threshold",
-          "14",
+          '--clean-threshold',
+          '14',
         ]);
       });
 
       const clonedRepoPath = join(targetDir, expectedRepoName);
       // Config is moved into worktree (committable)
-      const config = await readTestConfig(join(clonedRepoPath, "main"));
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
 
-      assertEquals(config.autoCopyFiles, [".env", "secrets/"]);
+      assertEquals(config.autoCopyFiles, ['.env', 'secrets/']);
       assertEquals(config.hooks?.checkout?.post, ['echo "installed"']);
       assertEquals(config.cleanThreshold, 14);
     } finally {
@@ -737,18 +711,16 @@ Deno.test("init command - clone mode with configuration options", async () => {
   }
 });
 
-Deno.test("init command - clone mode fails when directory exists", async () => {
+Deno.test('init command - clone mode fails when directory exists', async () => {
   const sourceRepo = new GitTestRepo();
   try {
     await sourceRepo.init();
 
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-' }));
     const cwd = new TempCwd(targetDir);
     try {
       // Calculate expected directory name from source repo path
-      const sourceDirName = sourceRepo.path.split("/").pop();
+      const sourceDirName = sourceRepo.path.split('/').pop();
       const expectedRepoName = `${sourceDirName}.git`;
 
       // Create a directory with the target name
@@ -759,11 +731,7 @@ Deno.test("init command - clone mode fails when directory exists", async () => {
       const { exitCode } = await withMockedExit(() => executeInit([cloneUrl]));
 
       // Should exit with error code
-      assertEquals(
-        exitCode,
-        1,
-        "Should exit with code 1 when directory exists",
-      );
+      assertEquals(exitCode, 1, 'Should exit with code 1 when directory exists');
     } finally {
       cwd.restore();
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
@@ -782,16 +750,14 @@ async function createEmptyBareRepo(): Promise<{
   tempDir: string;
   cleanup: () => Promise<void>;
 }> {
-  const tempDir = Deno.realPathSync(
-    Deno.makeTempDirSync({ prefix: "gw-test-empty-source-" }),
-  );
-  const sourceRepoPath = join(tempDir, "empty-repo");
+  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-empty-source-' }));
+  const sourceRepoPath = join(tempDir, 'empty-repo');
   await Deno.mkdir(sourceRepoPath);
-  const initCmd = new Deno.Command("git", {
-    args: ["init", "--bare"],
+  const initCmd = new Deno.Command('git', {
+    args: ['init', '--bare'],
     cwd: sourceRepoPath,
-    stdout: "piped",
-    stderr: "piped",
+    stdout: 'piped',
+    stderr: 'piped',
   });
   await initCmd.output();
   return {
@@ -801,52 +767,42 @@ async function createEmptyBareRepo(): Promise<{
   };
 }
 
-Deno.test("init command - clone mode with empty repository", async () => {
+Deno.test('init command - clone mode with empty repository', async () => {
   const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-empty-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(["n"], async () => {
-        await executeInit([cloneUrl, "my-empty-repo"]);
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'my-empty-repo']);
       });
 
-      const clonedRepoPath = join(targetDir, "my-empty-repo");
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
 
       // Verify the repository was cloned
-      await assertDirExists(join(clonedRepoPath, ".git"));
+      await assertDirExists(join(clonedRepoPath, '.git'));
 
       // Verify default worktree was created
-      await assertDirExists(join(clonedRepoPath, "main"));
+      await assertDirExists(join(clonedRepoPath, 'main'));
 
       // Verify config was moved into worktree (committable)
-      await assertFileExists(
-        join(clonedRepoPath, "main", ".gw", "config.json"),
-      );
+      await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
       // Verify config content
-      const config = await readTestConfig(join(clonedRepoPath, "main"));
+      const config = await readTestConfig(join(clonedRepoPath, 'main'));
       assertEquals((config as Record<string, unknown>).root, undefined);
 
       // Verify that the main branch exists in the worktree
-      const branchCmd = new Deno.Command("git", {
-        args: [
-          "-C",
-          join(clonedRepoPath, "main"),
-          "rev-parse",
-          "--abbrev-ref",
-          "HEAD",
-        ],
-        stdout: "piped",
-        stderr: "piped",
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', join(clonedRepoPath, 'main'), 'rev-parse', '--abbrev-ref', 'HEAD'],
+        stdout: 'piped',
+        stderr: 'piped',
       });
       const { stdout } = await branchCmd.output();
       const branch = new TextDecoder().decode(stdout).trim();
-      assertEquals(branch, "main");
+      assertEquals(branch, 'main');
     } finally {
       cwd.restore();
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
@@ -856,35 +812,33 @@ Deno.test("init command - clone mode with empty repository", async () => {
   }
 });
 
-Deno.test("init command - clone mode with empty repository creates initial commit on gw_root", async () => {
+Deno.test('init command - clone mode with empty repository creates initial commit on gw_root', async () => {
   const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-empty-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(["n"], async () => {
-        await executeInit([cloneUrl, "my-empty-repo"]);
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'my-empty-repo']);
       });
 
-      const clonedRepoPath = join(targetDir, "my-empty-repo");
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
 
       // Verify gw_root has an initial commit
-      const logCmd = new Deno.Command("git", {
-        args: ["-C", clonedRepoPath, "log", "gw_root", "--oneline", "-1"],
-        stdout: "piped",
-        stderr: "piped",
+      const logCmd = new Deno.Command('git', {
+        args: ['-C', clonedRepoPath, 'log', 'gw_root', '--oneline', '-1'],
+        stdout: 'piped',
+        stderr: 'piped',
       });
       const { stdout, code } = await logCmd.output();
       assertEquals(code, 0);
       const logLine = new TextDecoder().decode(stdout).trim();
       assertEquals(
-        logLine.includes("Initial commit (gw)"),
+        logLine.includes('Initial commit (gw)'),
         true,
-        `Expected gw_root to have 'Initial commit (gw)' but got: ${logLine}`,
+        `Expected gw_root to have 'Initial commit (gw)' but got: ${logLine}`
       );
     } finally {
       cwd.restore();
@@ -895,49 +849,36 @@ Deno.test("init command - clone mode with empty repository creates initial commi
   }
 });
 
-Deno.test("init command - clone mode with empty repository and custom default branch", async () => {
+Deno.test('init command - clone mode with empty repository and custom default branch', async () => {
   const { sourceRepoPath, cleanup } = await createEmptyBareRepo();
   try {
-    const targetDir = Deno.realPathSync(
-      Deno.makeTempDirSync({ prefix: "gw-test-clone-empty-" }),
-    );
+    const targetDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-clone-empty-' }));
     const cwd = new TempCwd(targetDir);
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(["n"], async () => {
-        await executeInit([
-          cloneUrl,
-          "my-empty-repo",
-          "--default-source",
-          "develop",
-        ]);
+      await withMockedPrompt(['n'], async () => {
+        await executeInit([cloneUrl, 'my-empty-repo', '--default-source', 'develop']);
       });
 
-      const clonedRepoPath = join(targetDir, "my-empty-repo");
+      const clonedRepoPath = join(targetDir, 'my-empty-repo');
 
       // Verify worktree was created with custom branch name
-      await assertDirExists(join(clonedRepoPath, "develop"));
+      await assertDirExists(join(clonedRepoPath, 'develop'));
 
       // Verify config was moved into worktree (committable)
-      const config = await readTestConfig(join(clonedRepoPath, "develop"));
-      assertEquals(config.defaultBranch, "develop");
+      const config = await readTestConfig(join(clonedRepoPath, 'develop'));
+      assertEquals(config.defaultBranch, 'develop');
 
       // Verify the branch in the worktree
-      const branchCmd = new Deno.Command("git", {
-        args: [
-          "-C",
-          join(clonedRepoPath, "develop"),
-          "rev-parse",
-          "--abbrev-ref",
-          "HEAD",
-        ],
-        stdout: "piped",
-        stderr: "piped",
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', join(clonedRepoPath, 'develop'), 'rev-parse', '--abbrev-ref', 'HEAD'],
+        stdout: 'piped',
+        stderr: 'piped',
       });
       const { stdout } = await branchCmd.output();
       const branch = new TextDecoder().decode(stdout).trim();
-      assertEquals(branch, "develop");
+      assertEquals(branch, 'develop');
     } finally {
       cwd.restore();
       await Deno.remove(targetDir, { recursive: true }).catch(() => {});
@@ -947,7 +888,7 @@ Deno.test("init command - clone mode with empty repository and custom default br
   }
 });
 
-Deno.test("init command - existing repo mode when already initialized", async () => {
+Deno.test('init command - existing repo mode when already initialized', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -958,7 +899,7 @@ Deno.test("init command - existing repo mode when already initialized", async ()
       await executeInit([]);
 
       // Verify config exists
-      await assertFileExists(join(repo.path, ".gw", "config.json"));
+      await assertFileExists(join(repo.path, '.gw', 'config.json'));
 
       // Try to initialize again (should skip with message)
       await executeInit([]);
@@ -974,7 +915,7 @@ Deno.test("init command - existing repo mode when already initialized", async ()
   }
 });
 
-Deno.test("init command - fresh init writes $schema property", async () => {
+Deno.test('init command - fresh init writes $schema property', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -983,14 +924,8 @@ Deno.test("init command - fresh init writes $schema property", async () => {
     try {
       await executeInit([]);
 
-      const configContent = await Deno.readTextFile(
-        join(repo.path, ".gw", "config.json"),
-      );
-      assertEquals(
-        configContent.includes('"$schema"'),
-        true,
-        "Fresh init must include $schema for IDE autocompletion",
-      );
+      const configContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
+      assertEquals(configContent.includes('"$schema"'), true, 'Fresh init must include $schema for IDE autocompletion');
     } finally {
       cwd.restore();
     }
@@ -999,7 +934,7 @@ Deno.test("init command - fresh init writes $schema property", async () => {
   }
 });
 
-Deno.test("init command - re-running init adds $schema to existing config that lacks it", async () => {
+Deno.test('init command - re-running init adds $schema to existing config that lacks it', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -1007,13 +942,10 @@ Deno.test("init command - re-running init adds $schema to existing config that l
     const cwd = new TempCwd(repo.path);
     try {
       // Pre-create a config without $schema (simulates pre-existing config from before this feature)
-      const configDir = join(repo.path, ".gw");
+      const configDir = join(repo.path, '.gw');
       await Deno.mkdir(configDir, { recursive: true });
-      const configPath = join(configDir, "config.json");
-      await Deno.writeTextFile(
-        configPath,
-        JSON.stringify({ defaultBranch: "main", cleanThreshold: 7 }, null, 2),
-      );
+      const configPath = join(configDir, 'config.json');
+      await Deno.writeTextFile(configPath, JSON.stringify({ defaultBranch: 'main', cleanThreshold: 7 }, null, 2));
 
       // Sanity: confirm setup
       const before = await Deno.readTextFile(configPath);
@@ -1023,14 +955,10 @@ Deno.test("init command - re-running init adds $schema to existing config that l
       await executeInit([]);
 
       const after = await Deno.readTextFile(configPath);
-      assertEquals(
-        after.includes('"$schema"'),
-        true,
-        "Re-running init must add $schema if missing",
-      );
+      assertEquals(after.includes('"$schema"'), true, 'Re-running init must add $schema if missing');
       // Existing fields preserved
       const parsed = JSON.parse(after) as Record<string, unknown>;
-      assertEquals(parsed.defaultBranch, "main");
+      assertEquals(parsed.defaultBranch, 'main');
       assertEquals(parsed.cleanThreshold, 7);
     } finally {
       cwd.restore();
@@ -1040,7 +968,7 @@ Deno.test("init command - re-running init adds $schema to existing config that l
   }
 });
 
-Deno.test("init command - re-running init creates .gw/.gitignore when missing", async () => {
+Deno.test('init command - re-running init creates .gw/.gitignore when missing', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -1048,21 +976,18 @@ Deno.test("init command - re-running init creates .gw/.gitignore when missing", 
     const cwd = new TempCwd(repo.path);
     try {
       // Pre-create a config without .gitignore (simulates pre-existing config)
-      const configDir = join(repo.path, ".gw");
+      const configDir = join(repo.path, '.gw');
       await Deno.mkdir(configDir, { recursive: true });
-      await Deno.writeTextFile(
-        join(configDir, "config.json"),
-        JSON.stringify({ defaultBranch: "main" }, null, 2),
-      );
+      await Deno.writeTextFile(join(configDir, 'config.json'), JSON.stringify({ defaultBranch: 'main' }, null, 2));
 
-      const gitignorePath = join(configDir, ".gitignore");
+      const gitignorePath = join(configDir, '.gitignore');
       await assertRejects(() => Deno.stat(gitignorePath), Deno.errors.NotFound);
 
       await executeInit([]);
 
       const gitignore = await Deno.readTextFile(gitignorePath);
-      assertEquals(gitignore.includes("config.local.json"), true);
-      assertEquals(gitignore.includes("state.json"), true);
+      assertEquals(gitignore.includes('config.local.json'), true);
+      assertEquals(gitignore.includes('state.json'), true);
     } finally {
       cwd.restore();
     }
@@ -1071,7 +996,7 @@ Deno.test("init command - re-running init creates .gw/.gitignore when missing", 
   }
 });
 
-Deno.test("init command - re-running init is idempotent when $schema is already present", async () => {
+Deno.test('init command - re-running init is idempotent when $schema is already present', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -1081,7 +1006,7 @@ Deno.test("init command - re-running init is idempotent when $schema is already 
       // First init — writes config with $schema
       await executeInit([]);
 
-      const configPath = join(repo.path, ".gw", "config.json");
+      const configPath = join(repo.path, '.gw', 'config.json');
       const before = await Deno.readTextFile(configPath);
       const beforeSchemaCount = (before.match(/"\$schema"/g) || []).length;
 
@@ -1090,16 +1015,8 @@ Deno.test("init command - re-running init is idempotent when $schema is already 
 
       const after = await Deno.readTextFile(configPath);
       const afterSchemaCount = (after.match(/"\$schema"/g) || []).length;
-      assertEquals(
-        afterSchemaCount,
-        beforeSchemaCount,
-        "Re-running init must not duplicate $schema",
-      );
-      assertEquals(
-        beforeSchemaCount,
-        1,
-        "Config should have exactly one $schema entry",
-      );
+      assertEquals(afterSchemaCount, beforeSchemaCount, 'Re-running init must not duplicate $schema');
+      assertEquals(beforeSchemaCount, 1, 'Config should have exactly one $schema entry');
     } finally {
       cwd.restore();
     }
@@ -1108,10 +1025,8 @@ Deno.test("init command - re-running init is idempotent when $schema is already 
   }
 });
 
-Deno.test("init command - interactive mode prompts for URL when not in git repo", async () => {
-  const tempDir = Deno.realPathSync(
-    Deno.makeTempDirSync({ prefix: "gw-test-no-git-" }),
-  );
+Deno.test('init command - interactive mode prompts for URL when not in git repo', async () => {
+  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-no-git-' }));
   try {
     const cwd = new TempCwd(tempDir);
     try {
@@ -1119,40 +1034,38 @@ Deno.test("init command - interactive mode prompts for URL when not in git repo"
       const sourceRepo = new GitTestRepo();
       try {
         await sourceRepo.init();
-        await sourceRepo.createFile("README.md", "# Test");
+        await sourceRepo.createFile('README.md', '# Test');
 
         // Mock prompt to provide URL
         const cloneUrl = `file://${sourceRepo.path}`;
 
         // Calculate expected directory name from source repo path
-        const sourceDirName = sourceRepo.path.split("/").pop();
+        const sourceDirName = sourceRepo.path.split('/').pop();
         const expectedRepoName = `${sourceDirName}.git`;
 
         const responses = [
           cloneUrl, // Repository URL prompt
-          "", // default branch (accept default "main")
-          "n", // want auto-copy files
-          "n", // want pre-add hooks
-          "n", // want post-add hooks
-          "", // clean threshold (accept default 7)
-          "n", // enable auto-clean
-          "", // update strategy (accept default "merge")
-          "n", // shell integration install prompt (decline)
+          '', // default branch (accept default "main")
+          'n', // want auto-copy files
+          'n', // want pre-add hooks
+          'n', // want post-add hooks
+          '', // clean threshold (accept default 7)
+          'n', // enable auto-clean
+          '', // update strategy (accept default "merge")
+          'n', // shell integration install prompt (decline)
         ];
 
-        await withMockedPrompt(responses, () => executeInit(["--interactive"]));
+        await withMockedPrompt(responses, () => executeInit(['--interactive']));
 
         // Verify repository was cloned (with .git suffix)
         const clonedRepoPath = join(tempDir, expectedRepoName);
-        await assertDirExists(join(clonedRepoPath, ".git"));
+        await assertDirExists(join(clonedRepoPath, '.git'));
 
         // Verify config was moved into worktree (committable)
-        await assertFileExists(
-          join(clonedRepoPath, "main", ".gw", "config.json"),
-        );
+        await assertFileExists(join(clonedRepoPath, 'main', '.gw', 'config.json'));
 
         // Verify config
-        const config = await readTestConfig(join(clonedRepoPath, "main"));
+        const config = await readTestConfig(join(clonedRepoPath, 'main'));
         assertEquals((config as Record<string, unknown>).root, undefined);
       } finally {
         await sourceRepo.cleanup();
@@ -1165,24 +1078,22 @@ Deno.test("init command - interactive mode prompts for URL when not in git repo"
   }
 });
 
-Deno.test("init command - interactive mode exits when URL prompt is skipped", async () => {
-  const tempDir = Deno.realPathSync(
-    Deno.makeTempDirSync({ prefix: "gw-test-no-git-" }),
-  );
+Deno.test('init command - interactive mode exits when URL prompt is skipped', async () => {
+  const tempDir = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-test-no-git-' }));
   try {
     const cwd = new TempCwd(tempDir);
     try {
       // Mock prompt to skip URL (press Enter with empty input)
       const responses = [
-        "", // Empty URL (skip)
+        '', // Empty URL (skip)
       ];
 
       const { exitCode } = await withMockedExit(() =>
-        withMockedPrompt(responses, () => executeInit(["--interactive"]))
+        withMockedPrompt(responses, () => executeInit(['--interactive']))
       );
 
       // Should exit with error code
-      assertEquals(exitCode, 1, "Should exit with code 1 when URL is skipped");
+      assertEquals(exitCode, 1, 'Should exit with code 1 when URL is skipped');
     } finally {
       cwd.restore();
     }
@@ -1195,6 +1106,6 @@ Deno.test("init command - interactive mode exits when URL prompt is skipped", as
 // Shell integration navigation tests
 // =============================================================================
 
-Deno.test("init - shell integration navigates after command", async () => {
-  await assertShellNavigationWorks("init");
+Deno.test('init - shell integration navigates after command', async () => {
+  await assertShellNavigationWorks('init');
 });

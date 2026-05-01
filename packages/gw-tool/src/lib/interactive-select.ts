@@ -3,7 +3,7 @@
  * Zero dependencies - uses Deno raw terminal APIs and ANSI escape codes
  */
 
-import * as output from "./output.ts";
+import * as output from './output.ts';
 
 // ── Types ───────────────────────────────────────────────────
 
@@ -53,7 +53,7 @@ export interface MultiSelectResult {
 
 // ── Internal row types for the flattened render list ────────
 
-type RowType = "section-header" | "item" | "separator";
+type RowType = 'section-header' | 'item' | 'separator';
 
 interface Row {
   type: RowType;
@@ -67,7 +67,7 @@ interface Row {
 
 // ── ANSI escape sequences ──────────────────────────────────
 
-const ESC = "\x1b";
+const ESC = '\x1b';
 const HIDE_CURSOR = `${ESC}[?25l`;
 const SHOW_CURSOR = `${ESC}[?25h`;
 const CLEAR_LINE = `${ESC}[2K`;
@@ -113,16 +113,16 @@ function parseKey(buf: Uint8Array, n: number): string {
   if (n === 1) {
     switch (buf[0]) {
       case KEY_CTRL_C:
-        return "ctrl-c";
+        return 'ctrl-c';
       case KEY_ESC:
-        return "escape";
+        return 'escape';
       case KEY_ENTER:
-        return "enter";
+        return 'enter';
       case KEY_SPACE:
-        return "space";
+        return 'space';
       default: {
         const ch = String.fromCharCode(buf[0]);
-        if (ch === "a" || ch === "A") return "a";
+        if (ch === 'a' || ch === 'A') return 'a';
         return ch;
       }
     }
@@ -131,16 +131,16 @@ function parseKey(buf: Uint8Array, n: number): string {
   if (n >= 3 && buf[0] === KEY_ESC && buf[1] === 0x5b) {
     switch (buf[2]) {
       case 0x41:
-        return "up";
+        return 'up';
       case 0x42:
-        return "down";
+        return 'down';
       case 0x43:
-        return "right";
+        return 'right';
       case 0x44:
-        return "left";
+        return 'left';
     }
   }
-  return "unknown";
+  return 'unknown';
 }
 
 // ── Core logic ─────────────────────────────────────────────
@@ -150,20 +150,20 @@ function buildRows(sections: SelectSection[]): Row[] {
   for (let si = 0; si < sections.length; si++) {
     if (si > 0) {
       rows.push({
-        type: "separator",
+        type: 'separator',
         sectionIndex: si,
         focusable: false,
       });
     }
     rows.push({
-      type: "section-header",
+      type: 'section-header',
       sectionIndex: si,
       focusable: true,
     });
     for (let ii = 0; ii < sections[si].items.length; ii++) {
       const item = sections[si].items[ii];
       rows.push({
-        type: "item",
+        type: 'item',
         sectionIndex: si,
         itemIndex: ii,
         focusable: !item.disabled,
@@ -173,11 +173,7 @@ function buildRows(sections: SelectSection[]): Row[] {
   return rows;
 }
 
-function findNextFocusable(
-  rows: Row[],
-  current: number,
-  direction: 1 | -1,
-): number {
+function findNextFocusable(rows: Row[], current: number, direction: 1 | -1): number {
   let idx = current + direction;
   while (idx >= 0 && idx < rows.length) {
     if (rows[idx].focusable) return idx;
@@ -193,21 +189,19 @@ function findFirstFocusable(rows: Row[]): number {
   return 0;
 }
 
-function getSectionSelectionState(
-  section: SelectSection,
-): "all" | "some" | "none" {
+function getSectionSelectionState(section: SelectSection): 'all' | 'some' | 'none' {
   const selectable = section.items.filter((i) => !i.disabled);
-  if (selectable.length === 0) return "none";
+  if (selectable.length === 0) return 'none';
   const selectedCount = selectable.filter((i) => i.selected).length;
-  if (selectedCount === selectable.length) return "all";
-  if (selectedCount > 0) return "some";
-  return "none";
+  if (selectedCount === selectable.length) return 'all';
+  if (selectedCount > 0) return 'some';
+  return 'none';
 }
 
 function toggleSectionAll(section: SelectSection): void {
   const selectable = section.items.filter((i) => !i.disabled);
   const state = getSectionSelectionState(section);
-  const newValue = state !== "all";
+  const newValue = state !== 'all';
   for (const item of selectable) {
     item.selected = newValue;
   }
@@ -251,51 +245,43 @@ function getSelected(sections: SelectSection[]): string[] {
 const HEADER_LINES = 3; // header, warning, blank
 const FOOTER_LINES = 2; // blank, controls
 
-function renderRowLine(
-  row: Row,
-  isCursor: boolean,
-  sections: SelectSection[],
-): string {
+function renderRowLine(row: Row, isCursor: boolean, sections: SelectSection[]): string {
   const section = sections[row.sectionIndex];
 
-  if (row.type === "separator") {
-    return "";
+  if (row.type === 'separator') {
+    return '';
   }
 
-  if (row.type === "section-header") {
+  if (row.type === 'section-header') {
     const state = getSectionSelectionState(section);
     let checkbox: string;
-    if (state === "all") {
+    if (state === 'all') {
       checkbox = output.checkmark();
-    } else if (state === "some") {
+    } else if (state === 'some') {
       checkbox = output.warningSymbol();
     } else {
-      checkbox = " ";
+      checkbox = ' ';
     }
     const selectable = section.items.filter((i) => !i.disabled);
     const selectedInSection = selectable.filter((i) => i.selected).length;
     const title = output.bold(section.title);
     const count = output.dim(` (${selectedInSection}/${selectable.length})`);
-    return isCursor
-      ? `${output.bold(">")} [${checkbox}] ${title}${count}`
-      : `  [${checkbox}] ${title}${count}`;
+    return isCursor ? `${output.bold('>')} [${checkbox}] ${title}${count}` : `  [${checkbox}] ${title}${count}`;
   }
 
   // Item row
   const item = section.items[row.itemIndex!];
 
   if (item.disabled) {
-    const reason = item.disabledReason ? ` (${item.disabledReason})` : "";
+    const reason = item.disabledReason ? ` (${item.disabledReason})` : '';
     return `      ${output.dim(item.label)}${output.dim(reason)}`;
   }
 
-  const checkbox = item.selected ? `[${output.checkmark()}]` : "[ ]";
-  const protectedBadge = item.protected
-    ? ` ${output.warningSymbol()} ${output.dim("(protected)")}`
-    : "";
-  const hint = item.hint ? ` ${output.dim(item.hint)}` : "";
+  const checkbox = item.selected ? `[${output.checkmark()}]` : '[ ]';
+  const protectedBadge = item.protected ? ` ${output.warningSymbol()} ${output.dim('(protected)')}` : '';
+  const hint = item.hint ? ` ${output.dim(item.hint)}` : '';
   return isCursor
-    ? `  ${output.bold(">")} ${checkbox} ${item.label}${protectedBadge}${hint}`
+    ? `  ${output.bold('>')} ${checkbox} ${item.label}${protectedBadge}${hint}`
     : `    ${checkbox} ${item.label}${protectedBadge}${hint}`;
 }
 
@@ -305,7 +291,7 @@ function render(
   rows: Row[],
   cursor: number,
   viewportOffset: number,
-  termRows: number,
+  termRows: number
 ): number {
   const encoder = new TextEncoder();
   const sel = countSelected(options.sections);
@@ -323,23 +309,18 @@ function render(
     viewportOffset = cursor - viewportHeight + 1;
   }
   // Clamp viewport offset
-  viewportOffset = Math.max(
-    0,
-    Math.min(viewportOffset, rows.length - viewportHeight),
-  );
+  viewportOffset = Math.max(0, Math.min(viewportOffset, rows.length - viewportHeight));
   if (viewportOffset < 0) viewportOffset = 0;
 
   // Build all output lines
   const lines: string[] = [];
 
   // Header
-  lines.push(
-    `${output.bold(options.message)} ${output.dim(`(${sel}/${tot} selected)`)}`,
-  );
+  lines.push(`${output.bold(options.message)} ${output.dim(`(${sel}/${tot} selected)`)}`);
   if (options.warningBanner) {
     lines.push(`${output.warningSymbol()} ${options.warningBanner}`);
   }
-  lines.push("");
+  lines.push('');
 
   // Scrollable rows (viewport slice)
   const visibleEnd = Math.min(viewportOffset + viewportHeight, rows.length);
@@ -359,17 +340,13 @@ function render(
   }
 
   // Footer
-  lines.push("");
-  lines.push(
-    output.dim(
-      "  \u2191\u2193 navigate  \u2423 toggle  a select all  \u23CE confirm  ^C cancel",
-    ),
-  );
+  lines.push('');
+  lines.push(output.dim('  \u2191\u2193 navigate  \u2423 toggle  a select all  \u23CE confirm  ^C cancel'));
 
   // Render: move cursor home and overwrite
   io.write(encoder.encode(CURSOR_HOME));
-  const rendered = lines.map((l) => `${COL0}${CLEAR_LINE}${l}`).join("\n");
-  io.write(encoder.encode(rendered + "\n"));
+  const rendered = lines.map((l) => `${COL0}${CLEAR_LINE}${l}`).join('\n');
+  io.write(encoder.encode(rendered + '\n'));
 
   // Clear any leftover lines below the current render
   const totalWritten = lines.length;
@@ -394,18 +371,12 @@ function render(
  * @param io Optional terminal I/O for testing
  * @returns Selected values and cancellation status
  */
-export async function multiSelect(
-  options: MultiSelectOptions,
-  io?: TerminalIO,
-): Promise<MultiSelectResult> {
+export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO): Promise<MultiSelectResult> {
   const terminal = io ?? defaultTerminalIO();
 
   // Guard: non-TTY environment
   if (!terminal.isTerminal()) {
-    throw new Error(
-      "Interactive mode requires a terminal (TTY). " +
-        "Use non-interactive mode instead.",
-    );
+    throw new Error('Interactive mode requires a terminal (TTY). ' + 'Use non-interactive mode instead.');
   }
 
   const rows = buildRows(options.sections);
@@ -425,14 +396,7 @@ export async function multiSelect(
 
   try {
     // Initial render
-    viewportOffset = render(
-      terminal,
-      options,
-      rows,
-      cursor,
-      viewportOffset,
-      termRows,
-    );
+    viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
 
     // Input loop
     const buf = new Uint8Array(16);
@@ -443,21 +407,20 @@ export async function multiSelect(
       const key = parseKey(buf, n);
 
       switch (key) {
-        case "up":
+        case 'up':
           cursor = findNextFocusable(rows, cursor, -1);
           break;
 
-        case "down":
+        case 'down':
           cursor = findNextFocusable(rows, cursor, 1);
           break;
 
-        case "space": {
+        case 'space': {
           const row = rows[cursor];
-          if (row.type === "section-header") {
+          if (row.type === 'section-header') {
             toggleSectionAll(options.sections[row.sectionIndex]);
-          } else if (row.type === "item" && row.itemIndex !== undefined) {
-            const item =
-              options.sections[row.sectionIndex].items[row.itemIndex];
+          } else if (row.type === 'item' && row.itemIndex !== undefined) {
+            const item = options.sections[row.sectionIndex].items[row.itemIndex];
             if (!item.disabled) {
               item.selected = !item.selected;
             }
@@ -465,28 +428,21 @@ export async function multiSelect(
           break;
         }
 
-        case "a": {
+        case 'a': {
           const row = rows[cursor];
           toggleSectionAll(options.sections[row.sectionIndex]);
           break;
         }
 
-        case "enter":
+        case 'enter':
           return { selected: getSelected(options.sections), cancelled: false };
 
-        case "ctrl-c":
-        case "escape":
+        case 'ctrl-c':
+        case 'escape':
           return { selected: [], cancelled: true };
       }
 
-      viewportOffset = render(
-        terminal,
-        options,
-        rows,
-        cursor,
-        viewportOffset,
-        termRows,
-      );
+      viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
     }
   } finally {
     // Always restore terminal state

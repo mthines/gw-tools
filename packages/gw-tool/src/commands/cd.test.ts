@@ -2,14 +2,14 @@
  * Tests for cd.ts command
  */
 
-import { assertEquals, assertStringIncludes } from "@std/assert";
-import { join } from "@std/path";
-import { executeCd } from "./cd.ts";
-import { GitTestRepo } from "../test-utils/git-test-repo.ts";
-import { TempCwd } from "../test-utils/temp-env.ts";
-import { withMockedExit } from "../test-utils/mock-exit.ts";
+import { assertEquals, assertStringIncludes } from '@std/assert';
+import { join } from '@std/path';
+import { executeCd } from './cd.ts';
+import { GitTestRepo } from '../test-utils/git-test-repo.ts';
+import { TempCwd } from '../test-utils/temp-env.ts';
+import { withMockedExit } from '../test-utils/mock-exit.ts';
 
-Deno.test("cd command - errors when no pattern given", async () => {
+Deno.test('cd command - errors when no pattern given', async () => {
   const { exitCode } = await withMockedExit(async () => {
     await executeCd([]);
   });
@@ -17,21 +17,21 @@ Deno.test("cd command - errors when no pattern given", async () => {
   assertEquals(exitCode, 1);
 });
 
-Deno.test("cd command - exact branch match preferred over multi-match", async () => {
+Deno.test('cd command - exact branch match preferred over multi-match', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
     // main worktree is already on branch 'main' at repo.path
     // Create another worktree with branch 'maintenance'
-    await repo.createWorktree("maintenance-wt", "maintenance");
+    await repo.createWorktree('maintenance-wt', 'maintenance');
 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stdout } = await withMockedExit(
         async () => {
-          await executeCd(["main"]);
+          await executeCd(['main']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       // Should resolve to the exact branch match (main), not error
@@ -45,23 +45,23 @@ Deno.test("cd command - exact branch match preferred over multi-match", async ()
   }
 });
 
-Deno.test("cd command - non exact multi-match still errors", async () => {
+Deno.test('cd command - non exact multi-match still errors', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
-    await repo.createWorktree("maintenance-wt", "maintenance");
+    await repo.createWorktree('maintenance-wt', 'maintenance');
 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stderr } = await withMockedExit(
         async () => {
-          await executeCd(["mai"]);
+          await executeCd(['mai']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, 1);
-      assertStringIncludes(stderr ?? "", "Multiple worktrees match");
+      assertStringIncludes(stderr ?? '', 'Multiple worktrees match');
     } finally {
       cwd.restore();
     }
@@ -70,20 +70,20 @@ Deno.test("cd command - non exact multi-match still errors", async () => {
   }
 });
 
-Deno.test("cd command - single partial match works", async () => {
+Deno.test('cd command - single partial match works', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
-    await repo.createWorktree("feature-abc", "feature-abc");
-    const featurePath = join(repo.path, "feature-abc");
+    await repo.createWorktree('feature-abc', 'feature-abc');
+    const featurePath = join(repo.path, 'feature-abc');
 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stdout } = await withMockedExit(
         async () => {
-          await executeCd(["feat"]);
+          await executeCd(['feat']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, undefined);
@@ -96,23 +96,23 @@ Deno.test("cd command - single partial match works", async () => {
   }
 });
 
-Deno.test("cd command - errors when no match found", async () => {
+Deno.test('cd command - errors when no match found', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
-    await repo.createWorktree("feature-abc", "feature-abc");
+    await repo.createWorktree('feature-abc', 'feature-abc');
 
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stderr } = await withMockedExit(
         async () => {
-          await executeCd(["xyz"]);
+          await executeCd(['xyz']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, 1);
-      assertStringIncludes(stderr ?? "", "No worktree found matching: xyz");
+      assertStringIncludes(stderr ?? '', 'No worktree found matching: xyz');
     } finally {
       cwd.restore();
     }
@@ -139,7 +139,7 @@ function mockTerminalIO(stdinResponse: string): () => void {
   // @ts-ignore - Intentionally replacing for testing
   Deno.stdout.isTerminal = () => true;
 
-  const encoded = new TextEncoder().encode(stdinResponse + "\n");
+  const encoded = new TextEncoder().encode(stdinResponse + '\n');
   let consumed = false;
   // @ts-ignore - Intentionally replacing for testing
   Deno.stdin.read = (buf: Uint8Array): Promise<number | null> => {
@@ -159,53 +159,47 @@ function mockTerminalIO(stdinResponse: string): () => void {
   };
 }
 
-Deno.test("cd command - prompts to switch branch when worktree has different branch (accept)", async () => {
+Deno.test('cd command - prompts to switch branch when worktree has different branch (accept)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
     // Create worktree "feature-x" on branch "feature-x"
-    await repo.createWorktree("feature-x", "feature-x");
-    const featurePath = join(repo.path, "feature-x");
+    await repo.createWorktree('feature-x', 'feature-x');
+    const featurePath = join(repo.path, 'feature-x');
 
     // Switch the worktree to a different branch
-    await repo.createBranch("feature-y");
-    await repo.runCommand("git", ["-C", featurePath, "checkout", "feature-y"]);
+    await repo.createBranch('feature-y');
+    await repo.runCommand('git', ['-C', featurePath, 'checkout', 'feature-y']);
 
     // Verify it's on feature-y now
-    const branchCmd = new Deno.Command("git", {
-      args: ["-C", featurePath, "branch", "--show-current"],
-      stdout: "piped",
+    const branchCmd = new Deno.Command('git', {
+      args: ['-C', featurePath, 'branch', '--show-current'],
+      stdout: 'piped',
     });
     const branchResult = await branchCmd.output();
-    assertEquals(
-      new TextDecoder().decode(branchResult.stdout).trim(),
-      "feature-y",
-    );
+    assertEquals(new TextDecoder().decode(branchResult.stdout).trim(), 'feature-y');
 
-    const restoreIO = mockTerminalIO("");
+    const restoreIO = mockTerminalIO('');
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stdout } = await withMockedExit(
         async () => {
-          await executeCd(["feature-x"]);
+          await executeCd(['feature-x']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode === undefined || exitCode === 0, true);
       assertEquals(stdout?.includes(featurePath), true);
 
       // Verify branch was switched to feature-x
-      const afterCmd = new Deno.Command("git", {
-        args: ["-C", featurePath, "branch", "--show-current"],
-        stdout: "piped",
+      const afterCmd = new Deno.Command('git', {
+        args: ['-C', featurePath, 'branch', '--show-current'],
+        stdout: 'piped',
       });
       const afterResult = await afterCmd.output();
-      assertEquals(
-        new TextDecoder().decode(afterResult.stdout).trim(),
-        "feature-x",
-      );
+      assertEquals(new TextDecoder().decode(afterResult.stdout).trim(), 'feature-x');
     } finally {
       cwd.restore();
       restoreIO();
@@ -215,26 +209,26 @@ Deno.test("cd command - prompts to switch branch when worktree has different bra
   }
 });
 
-Deno.test("cd command - prompts to switch branch when worktree has different branch (decline)", async () => {
+Deno.test('cd command - prompts to switch branch when worktree has different branch (decline)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    await repo.createWorktree("feature-x", "feature-x");
-    const featurePath = join(repo.path, "feature-x");
+    await repo.createWorktree('feature-x', 'feature-x');
+    const featurePath = join(repo.path, 'feature-x');
 
     // Switch the worktree to a different branch
-    await repo.createBranch("feature-y");
-    await repo.runCommand("git", ["-C", featurePath, "checkout", "feature-y"]);
+    await repo.createBranch('feature-y');
+    await repo.runCommand('git', ['-C', featurePath, 'checkout', 'feature-y']);
 
-    const restoreIO = mockTerminalIO("n");
+    const restoreIO = mockTerminalIO('n');
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stdout } = await withMockedExit(
         async () => {
-          await executeCd(["feature-x"]);
+          await executeCd(['feature-x']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       // Should still output the path (navigate without switching)
@@ -242,15 +236,12 @@ Deno.test("cd command - prompts to switch branch when worktree has different bra
       assertEquals(stdout?.includes(featurePath), true);
 
       // Verify branch was NOT switched — still on feature-y
-      const branchCmd = new Deno.Command("git", {
-        args: ["-C", featurePath, "branch", "--show-current"],
-        stdout: "piped",
+      const branchCmd = new Deno.Command('git', {
+        args: ['-C', featurePath, 'branch', '--show-current'],
+        stdout: 'piped',
       });
       const branchResult = await branchCmd.output();
-      assertEquals(
-        new TextDecoder().decode(branchResult.stdout).trim(),
-        "feature-y",
-      );
+      assertEquals(new TextDecoder().decode(branchResult.stdout).trim(), 'feature-y');
     } finally {
       cwd.restore();
       restoreIO();
@@ -260,22 +251,22 @@ Deno.test("cd command - prompts to switch branch when worktree has different bra
   }
 });
 
-Deno.test("cd command - no prompt when pattern is not a valid branch", async () => {
+Deno.test('cd command - no prompt when pattern is not a valid branch', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
 
-    await repo.createWorktree("feature-abc", "feature-abc");
-    const featurePath = join(repo.path, "feature-abc");
+    await repo.createWorktree('feature-abc', 'feature-abc');
+    const featurePath = join(repo.path, 'feature-abc');
 
-    const restoreIO = mockTerminalIO("");
+    const restoreIO = mockTerminalIO('');
     const cwd = new TempCwd(repo.path);
     try {
       const { exitCode, stdout } = await withMockedExit(
         async () => {
-          await executeCd(["feat"]);
+          await executeCd(['feat']);
         },
-        { captureOutput: true },
+        { captureOutput: true }
       );
 
       assertEquals(exitCode, undefined);

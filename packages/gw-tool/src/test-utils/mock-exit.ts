@@ -8,7 +8,7 @@
 export class MockExitError extends Error {
   constructor(public exitCode: number) {
     super(`Deno.exit(${exitCode}) was called`);
-    this.name = "MockExitError";
+    this.name = 'MockExitError';
   }
 }
 
@@ -44,14 +44,12 @@ export interface MockedExitOptions {
  */
 export async function withMockedExit<T>(
   fn: () => Promise<T>,
-  options?: MockedExitOptions,
-): Promise<
-  { result?: T; exitCode?: number; stdout?: string; stderr?: string }
-> {
+  options?: MockedExitOptions
+): Promise<{ result?: T; exitCode?: number; stdout?: string; stderr?: string }> {
   const restore = mockExit();
 
-  let stdout = "";
-  let stderr = "";
+  let stdout = '';
+  let stderr = '';
   let originalStdoutWrite: typeof Deno.stdout.write | undefined;
   let originalStderrWrite: typeof Deno.stderr.write | undefined;
   let originalConsoleLog: typeof console.log | undefined;
@@ -77,13 +75,13 @@ export async function withMockedExit<T>(
     // Capture console.log
     originalConsoleLog = console.log;
     console.log = (...args: unknown[]) => {
-      stdout += args.map((a) => String(a)).join(" ") + "\n";
+      stdout += args.map((a) => String(a)).join(' ') + '\n';
     };
 
     // Capture console.error
     originalConsoleError = console.error;
     console.error = (...args: unknown[]) => {
-      stderr += args.map((a) => String(a)).join(" ") + "\n";
+      stderr += args.map((a) => String(a)).join(' ') + '\n';
     };
   }
 
