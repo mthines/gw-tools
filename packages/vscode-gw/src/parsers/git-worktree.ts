@@ -441,6 +441,71 @@ export function parseProgressEvent(line: string): GwProgressEvent | undefined {
 }
 
 /**
+ * Format a progress event as a single log line for the gw output channel.
+ * Includes stage, hook index, command, duration — i.e. the detail that the
+ * notification subtitle intentionally omits to stay scannable.
+ *
+ * Returns `undefined` for events that shouldn't be logged.
+ *
+ * Line shapes:
+ *   →  Creating worktree
+ *   ✓  Creating worktree (120ms)
+ *   →  post-checkout hook 1/1 — $ pnpm install
+ *   ✓  post-checkout hook 1/1 (2.3s)
+ *   ✗  post-checkout hook 1/1 — exit 1: pnpm install failed
+ */
+export function formatProgressEventForLog(event: GwProgressEvent): string | undefined {
+  const stageLabel = stageDisplayName(event);
+  if (!stageLabel) return undefined;
+
+  if (event.status === 'start') {
+    if (event.command) {
+      return `\u2192 ${stageLabel} \u2014 $ ${event.command}`;
+    }
+    return `\u2192 ${stageLabel}`;
+  }
+
+  if (event.status === 'end') {
+    const duration = event.durationMs !== undefined ? ` (${formatDuration(event.durationMs)})` : '';
+    return `\u2713 ${stageLabel}${duration}`;
+  }
+
+  if (event.status === 'error') {
+    const exit = event.exitCode !== undefined ? ` \u2014 exit ${event.exitCode}` : '';
+    const msg = event.message ? `: ${event.message}` : '';
+    return `\u2717 ${stageLabel}${exit}${msg}`;
+  }
+
+  return undefined;
+}
+
+function stageDisplayName(event: GwProgressEvent): string | undefined {
+  switch (event.stage) {
+    case 'pre-checkout-hooks':
+      return event.hook !== undefined && event.of !== undefined
+        ? `pre-checkout hook ${event.hook}/${event.of}`
+        : 'pre-checkout hooks';
+    case 'create-worktree':
+      return 'Creating worktree';
+    case 'copy-files':
+      return 'Copying config files';
+    case 'copy-staged-files':
+      return 'Copying staged files';
+    case 'post-checkout-hooks':
+      return event.hook !== undefined && event.of !== undefined
+        ? `post-checkout hook ${event.hook}/${event.of}`
+        : 'post-checkout hooks';
+    default:
+      return undefined;
+  }
+}
+
+function formatDuration(ms: number): string {
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(1)}s`;
+}
+
+/**
  * Map a parsed progress event to a human-readable VS Code notification subtitle.
  * Returns `undefined` for events that should not update the notification
  * (e.g., end events, error events — handled separately in extension.ts).
@@ -520,8 +585,14 @@ function runCheckoutWithProgress(
     let stderrBuffer = '';
     let lastHookErrorEvent: GwProgressEvent | undefined;
 
-    child.stdout.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString();
+    // Stream stdout to the log line-by-line so the human-readable narration
+    // from gw (e.g. "Branch X doesn't exist, creating from main") appears in
+    // the gw output channel.
+    const stdoutRl = readline.createInterface({ input: child.stdout, crlfDelay: Infinity });
+    stdoutRl.on('line', (line: string) => {
+      stdout += line + '\n';
+      const stripped = stripAnsi(line);
+      if (stripped) logFn?.(`  ${stripped}`);
     });
 
     // Parse stderr line-by-line; only attempt JSON.parse on lines that start with '{'.
@@ -535,6 +606,12 @@ function runCheckoutWithProgress(
         ) {
           lastHookErrorEvent = event;
         }
+        // Log structured stage detail (timestamped via logFn) so the user
+        // can review stage timings and full hook commands in the gw output
+        // channel — the notification subtitle intentionally omits this.
+        const logLine = formatProgressEventForLog(event);
+        if (logLine) logFn?.(logLine);
+
         const label = progressEventToLabel(event);
         if (label) onProgress(label);
       } else {
@@ -548,6 +625,9 @@ function runCheckoutWithProgress(
     });
 
     child.on('close', (code: number | null) => {
+      stdoutRl.close();
+      rl.close();
+
       if (code === 0) {
         resolve(stdout.trim());
         return;

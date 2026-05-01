@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { parseWorktreeListOutput, stripRemotePrefix, parseProgressEvent, progressEventToLabel } from './git-worktree';
+import {
+  parseWorktreeListOutput,
+  stripRemotePrefix,
+  parseProgressEvent,
+  progressEventToLabel,
+  formatProgressEventForLog,
+} from './git-worktree';
 
 describe('parseWorktreeListOutput', () => {
   describe('basic parsing', () => {
@@ -409,5 +415,80 @@ describe('progressEventToLabel', () => {
       command: longCmd,
     });
     expect(label).toBe('Running post-checkout hook 1/1');
+  });
+});
+
+// ── formatProgressEventForLog ────────────────────────────────────────────────
+
+describe('formatProgressEventForLog', () => {
+  it('formats create-worktree start as "→ Creating worktree"', () => {
+    const line = formatProgressEventForLog({ version: 1, stage: 'create-worktree', status: 'start' });
+    expect(line).toBe('\u2192 Creating worktree');
+  });
+
+  it('formats create-worktree end with millisecond duration', () => {
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'create-worktree',
+      status: 'end',
+      durationMs: 120,
+    });
+    expect(line).toBe('\u2713 Creating worktree (120ms)');
+  });
+
+  it('formats end events with second-precision duration when ≥ 1000ms', () => {
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'post-checkout-hooks',
+      status: 'end',
+      hook: 1,
+      of: 1,
+      durationMs: 2350,
+    });
+    expect(line).toBe('\u2713 post-checkout hook 1/1 (2.4s)');
+  });
+
+  it('includes the full hook command on hook start (no truncation)', () => {
+    const longCmd = 'cd components/ui && pnpm install --frozen-lockfile && cd packages/api && pnpm install';
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'post-checkout-hooks',
+      status: 'start',
+      hook: 2,
+      of: 3,
+      command: longCmd,
+    });
+    expect(line).toBe(`\u2192 post-checkout hook 2/3 \u2014 $ ${longCmd}`);
+  });
+
+  it('formats hook error with exit code and message', () => {
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'post-checkout-hooks',
+      status: 'error',
+      hook: 1,
+      of: 1,
+      exitCode: 1,
+      message: 'pnpm install failed',
+    });
+    expect(line).toBe('\u2717 post-checkout hook 1/1 \u2014 exit 1: pnpm install failed');
+  });
+
+  it('omits exit and message portions when not present on error events', () => {
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'create-worktree',
+      status: 'error',
+    });
+    expect(line).toBe('\u2717 Creating worktree');
+  });
+
+  it('returns undefined for unknown stages', () => {
+    const line = formatProgressEventForLog({
+      version: 1,
+      stage: 'mystery-stage' as never,
+      status: 'start',
+    });
+    expect(line).toBeUndefined();
   });
 });

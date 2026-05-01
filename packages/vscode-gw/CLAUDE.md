@@ -62,7 +62,8 @@ The `createWorktreeWithProgress` and `createWorktreeFromStagedWithProgress` func
 Key helpers:
 
 - `parseProgressEvent(line)` — parses a single stderr line; returns a typed `GwProgressEvent` or `undefined`
-- `progressEventToLabel(event)` — maps a start event to a VS Code notification subtitle string
+- `progressEventToLabel(event)` — maps a **start** event to a short VS Code notification subtitle (no command, no duration — kept scannable)
+- `formatProgressEventForLog(event)` — maps any **start/end/error** event to a detail line for the gw output channel (includes full hook command and duration). The notification stays terse; the output channel carries the detail.
 - `HookFailureError` — thrown by the spawn-based functions when a hook error event is detected
 
 Hook failure handling in `extension.ts`:
