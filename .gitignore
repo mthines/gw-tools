@@ -8,10 +8,6 @@ out-tsc
 # dependencies
 node_modules
 
-tasks
-
-.gw
-
 # Envs
 .env
 .env*
@@ -59,4 +55,3 @@ vitest.config.*.timestamp*
 
 .claude/settings.local.json
 .claude/skills/
-.gw/
