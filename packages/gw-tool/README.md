@@ -438,8 +438,12 @@ When creating a new worktree without specifying an existing branch, `gw checkout
 
 3. **New branches**: If the branch doesn't exist anywhere, it's created from the source branch (defaultBranch or `--from` branch) after fetching the latest from remote.
 
+**Remote Probe (catching teammates' pushes):**
+When the requested branch isn't local, `gw checkout` queries the remote (`git ls-remote origin refs/heads/<branch>`) before deciding it's a brand-new branch. This catches branches a teammate just pushed that you haven't fetched yet — without it, `gw` would silently create a new branch with the same name from the default branch and you'd diverge. The probe uses a 3-second timeout and is silent on miss. Use `--no-fetch` to skip it (offline mode). The probe is also skipped automatically when you pass `-b`/`-B` or `--from`, since those signal you want a brand-new branch.
+
 **Network Behavior:**
 
+- **Branch not local**: Probes remote with `git ls-remote` (3s timeout, skipped with `--no-fetch`)
 - **New branches without `--from`**: Fetches defaultBranch from remote, falls back to local if fetch fails (offline support)
 - **New branches with `--from`**: Requires successful remote fetch, exits on failure (ensures fresh code)
 - **Local branches**: Used directly without network access
@@ -471,6 +475,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 #### Options
 
 - `--no-cd`: Don't navigate to the new worktree after creation
+- `--no-fetch`: Skip the remote probe (offline mode); don't query origin for branches that aren't yet local
 - `--from <branch>`: Create new branch from specified branch instead of `defaultBranch`
 - `--from-staged`: Copy staged files from current worktree to new worktree (see [Staged Files](#staged-files))
 
@@ -1717,8 +1722,8 @@ nx run gw-tool:check
 # Lint
 nx run gw-tool:lint
 
-# Format code
-nx run gw-tool:fmt
+# Format code (Prettier; do NOT use `deno fmt`)
+nx format:write
 
 # Compile to binary (current platform only)
 nx run gw-tool:compile

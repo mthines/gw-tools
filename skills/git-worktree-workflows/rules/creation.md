@@ -40,6 +40,9 @@ gw checkout feature-extracted --from-staged
 # Create without auto-navigation
 gw add feature-auth --no-cd
 
+# Skip the remote probe (offline mode)
+gw checkout feature-auth --no-fetch
+
 # Force creation
 gw add feature-test --force
 ```
@@ -65,12 +68,14 @@ gw init
 
 ## Remote Fetch Behavior
 
-| Scenario                   | Behavior                                                              |
-| -------------------------- | --------------------------------------------------------------------- |
-| New branch (no `--from`)   | Fetches latest default branch, falls back to local on network failure |
-| New branch (with `--from`) | Requires successful fetch, exits on failure                           |
-| Local branch exists        | Uses local directly, no fetch                                         |
-| Remote-only branch         | Fetches and creates local tracking branch (e.g., after `gw remove`)   |
+| Scenario                   | Behavior                                                                           |
+| -------------------------- | ---------------------------------------------------------------------------------- |
+| Branch not local           | Probes remote with `git ls-remote` (3s timeout) so teammates' pushes aren't missed |
+| New branch (no `--from`)   | Fetches latest default branch, falls back to local on network failure              |
+| New branch (with `--from`) | Requires successful fetch, exits on failure                                        |
+| Local branch exists        | Uses local directly, no fetch                                                      |
+| Remote-only branch         | Fetches and creates local tracking branch (e.g., after `gw remove`)                |
+| `--no-fetch`               | Skips the remote probe (offline mode); local refs only                             |
 
 ### GOOD Pattern
 

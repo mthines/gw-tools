@@ -27,7 +27,7 @@ This guide documents how to develop, test, and contribute to the `gw-tool` packa
 - [ ] Feature implementation complete
 - [ ] `deno check src/main.ts` passes
 - [ ] `deno lint` passes
-- [ ] `deno fmt` applied
+- [ ] `nx format:write` applied (Prettier — do NOT run `deno fmt`)
 - [ ] README.md updated with user documentation
 - [ ] .claude/README.md updated with developer documentation
 - [ ] In-code help text updated
@@ -48,8 +48,8 @@ nx run gw-tool:check
 # Lint
 nx run gw-tool:lint
 
-# Format code
-nx run gw-tool:fmt
+# Format code (Prettier — repo-wide; do NOT use `deno fmt`)
+nx format:write
 
 # Run tests
 nx run gw-tool:test
@@ -415,17 +415,19 @@ console.log(`  ${output.checkmark()} Copied file`); // Green checkmark
 console.log(`  ${output.warningSymbol()} Skipped`); // Yellow warning
 ```
 
-### Formatting Rules (from deno.json)
+### Formatting Rules (from `.prettierrc`)
 
 | Rule            | Value               |
 | --------------- | ------------------- |
 | Indentation     | 2 spaces (no tabs)  |
-| Line width      | 80 characters       |
+| Line width      | 120 characters      |
 | Semicolons      | Required            |
-| Quotes          | Double quotes (`"`) |
-| Trailing commas | Yes (Deno default)  |
+| Quotes          | Single quotes (`'`) |
+| Trailing commas | `es5`               |
 
-Run `nx run gw-tool:fmt` to auto-format code.
+Run `nx format:write` to auto-format code (Prettier-based).
+**Do NOT use `deno fmt`** — it uses different rules (double quotes, 80-col)
+and will fight Prettier across the codebase.
 
 ### Help Text Format
 

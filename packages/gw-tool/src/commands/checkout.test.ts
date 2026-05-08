@@ -913,3 +913,139 @@ Deno.test('checkout command - --progress=json hook events include hook, of, comm
     await repo.cleanup();
   }
 });
+
+Deno.test(
+  'checkout command - probes remote and creates tracking branch when teammate pushed but we have not fetched',
+  async () => {
+    const remoteRepo = new GitTestRepo();
+    const teammateRepo = new GitTestRepo();
+    const localRepo = new GitTestRepo();
+    try {
+      await remoteRepo.initBare();
+
+      // Teammate pushes feature-not-fetched to origin
+      await teammateRepo.init();
+      await teammateRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], teammateRepo.path);
+      await teammateRepo.runCommand('git', ['push', '-u', 'origin', 'main'], teammateRepo.path);
+      await teammateRepo.createBranch('feature-not-fetched');
+      await teammateRepo.runCommand('git', ['push', '-u', 'origin', 'feature-not-fetched'], teammateRepo.path);
+
+      // Our local repo: knows about origin/main but not origin/feature-not-fetched
+      await localRepo.init();
+      await localRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], localRepo.path);
+      await localRepo.runCommand('git', ['fetch', 'origin', 'main'], localRepo.path);
+
+      const config = createMinimalConfig(localRepo.path);
+      await writeTestConfig(localRepo.path, config);
+
+      const cwd = new TempCwd(localRepo.path);
+      try {
+        await executeCheckout(['feature-not-fetched']);
+        await _drainAutoClean();
+
+        // Worktree was created
+        const listResult = await new Deno.Command('git', {
+          args: ['-C', localRepo.path, 'worktree', 'list'],
+          stdout: 'piped',
+        }).output();
+        const worktreeList = new TextDecoder().decode(listResult.stdout);
+        assertEquals(
+          worktreeList.includes('feature-not-fetched'),
+          true,
+          'worktree for feature-not-fetched should exist'
+        );
+
+        // The branch was created from the remote ref (i.e. shares origin/feature-not-fetched HEAD),
+        // not from main — so the local branch HEAD must equal origin's HEAD for that branch.
+        const worktreePath = join(localRepo.path, 'feature-not-fetched');
+        const localHead = new TextDecoder()
+          .decode(
+            (
+              await new Deno.Command('git', {
+                args: ['-C', worktreePath, 'rev-parse', 'HEAD'],
+                stdout: 'piped',
+              }).output()
+            ).stdout
+          )
+          .trim();
+        const remoteHead = new TextDecoder()
+          .decode(
+            (
+              await new Deno.Command('git', {
+                args: ['-C', localRepo.path, 'rev-parse', 'origin/feature-not-fetched'],
+                stdout: 'piped',
+              }).output()
+            ).stdout
+          )
+          .trim();
+        assertEquals(localHead, remoteHead, 'new branch should start at origin/feature-not-fetched, not main');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await remoteRepo.cleanup();
+      await teammateRepo.cleanup();
+      await localRepo.cleanup();
+    }
+  }
+);
+
+Deno.test('checkout command - --no-fetch skips remote probe and creates new branch from main', async () => {
+  const remoteRepo = new GitTestRepo();
+  const teammateRepo = new GitTestRepo();
+  const localRepo = new GitTestRepo();
+  try {
+    await remoteRepo.initBare();
+
+    // Teammate pushes a branch we will deliberately NOT pick up
+    await teammateRepo.init();
+    await teammateRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], teammateRepo.path);
+    await teammateRepo.runCommand('git', ['push', '-u', 'origin', 'main'], teammateRepo.path);
+    await teammateRepo.createBranch('offline-feature');
+    await teammateRepo.createFile('teammate.txt', 'teammate work');
+    await teammateRepo.runCommand('git', ['add', '-A'], teammateRepo.path);
+    await teammateRepo.runCommand('git', ['commit', '-m', 'teammate commit'], teammateRepo.path);
+    await teammateRepo.runCommand('git', ['push', '-u', 'origin', 'offline-feature'], teammateRepo.path);
+
+    // Local repo only knows about origin/main
+    await localRepo.init();
+    await localRepo.runCommand('git', ['remote', 'add', 'origin', remoteRepo.path], localRepo.path);
+    await localRepo.runCommand('git', ['fetch', 'origin', 'main'], localRepo.path);
+
+    const config = createMinimalConfig(localRepo.path);
+    await writeTestConfig(localRepo.path, config);
+
+    const cwd = new TempCwd(localRepo.path);
+    try {
+      await executeCheckout(['offline-feature', '--no-fetch']);
+      await _drainAutoClean();
+
+      // Worktree exists
+      const listResult = await new Deno.Command('git', {
+        args: ['-C', localRepo.path, 'worktree', 'list'],
+        stdout: 'piped',
+      }).output();
+      assertMatch(new TextDecoder().decode(listResult.stdout), /offline-feature/);
+
+      // The teammate's file must NOT be present — branch was created locally, not from remote
+      const worktreePath = join(localRepo.path, 'offline-feature');
+      let teammateFileExists = true;
+      try {
+        await Deno.stat(join(worktreePath, 'teammate.txt'));
+      } catch {
+        teammateFileExists = false;
+      }
+      assertEquals(
+        teammateFileExists,
+        false,
+        '--no-fetch should skip the probe and create from main, not origin/offline-feature'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await remoteRepo.cleanup();
+    await teammateRepo.cleanup();
+    await localRepo.cleanup();
+  }
+});
