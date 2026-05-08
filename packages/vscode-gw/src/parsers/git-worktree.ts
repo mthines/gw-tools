@@ -3,6 +3,8 @@
  */
 
 import * as cp from 'child_process';
+import * as fs from 'fs';
+import * as path from 'path';
 import * as readline from 'readline';
 
 /** Optional logger callback for command execution */
@@ -281,6 +283,51 @@ export async function getWorktreePath(cwd: string, branchName: string): Promise<
   const worktrees = await listWorktrees(cwd);
   const worktree = worktrees.find((w) => w.branch === branchName);
   return worktree?.path;
+}
+
+/**
+ * Resolve a worktree's git admin directory.
+ * - For the main / standalone repo, `<worktreePath>/.git` is a directory.
+ * - For a linked worktree, `<worktreePath>/.git` is a file containing
+ *   `gitdir: <admin-dir>` (absolute or relative to the worktree path).
+ *
+ * Returns the resolved admin dir, or `undefined` if it can't be determined.
+ */
+export async function resolveWorktreeGitDir(worktreePath: string): Promise<string | undefined> {
+  const gitPath = path.join(worktreePath, '.git');
+  try {
+    const stat = await fs.promises.stat(gitPath);
+    if (stat.isDirectory()) return gitPath;
+    const content = await fs.promises.readFile(gitPath, 'utf-8');
+    const match = content.match(/^\s*gitdir:\s*(.+?)\s*$/m);
+    if (!match) return undefined;
+    const adminPath = match[1];
+    return path.isAbsolute(adminPath) ? adminPath : path.resolve(worktreePath, adminPath);
+  } catch {
+    return undefined;
+  }
+}
+
+/**
+ * Return a freshness timestamp (epoch ms) for a worktree, used to sort
+ * "recently created or active" worktrees to the top of pickers.
+ *
+ * Uses `<adminDir>/logs/HEAD` mtime — appended on every `git commit`,
+ * `git checkout`, and `git merge` inside that worktree, making it a
+ * reliable "last activity" signal for both newly-created and
+ * actively-committed-to worktrees.
+ *
+ * Falls back to 0 when the file can't be stat'd, so callers sort safely.
+ */
+export async function getWorktreeActivityMtime(worktreePath: string): Promise<number> {
+  const adminDir = await resolveWorktreeGitDir(worktreePath);
+  if (!adminDir) return 0;
+  try {
+    const logsHead = await fs.promises.stat(path.join(adminDir, 'logs', 'HEAD'));
+    return logsHead.mtimeMs;
+  } catch {
+    return 0;
+  }
 }
 
 /**

@@ -1,10 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { afterEach, beforeEach, describe, it, expect } from 'vitest';
 import {
   parseWorktreeListOutput,
   stripRemotePrefix,
   parseProgressEvent,
   progressEventToLabel,
   formatProgressEventForLog,
+  resolveWorktreeGitDir,
+  getWorktreeActivityMtime,
 } from './git-worktree';
 
 describe('parseWorktreeListOutput', () => {
@@ -490,5 +495,108 @@ describe('formatProgressEventForLog', () => {
       status: 'start',
     });
     expect(line).toBeUndefined();
+  });
+});
+
+describe('resolveWorktreeGitDir', () => {
+  let tmpRoot: string;
+
+  beforeEach(() => {
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gw-resolve-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  it('returns the .git directory for the main / standalone repo', async () => {
+    const wt = path.join(tmpRoot, 'main');
+    fs.mkdirSync(path.join(wt, '.git'), { recursive: true });
+    expect(await resolveWorktreeGitDir(wt)).toBe(path.join(wt, '.git'));
+  });
+
+  it('resolves an absolute admin dir from a linked worktree .git file', async () => {
+    const wt = path.join(tmpRoot, 'feature');
+    const adminDir = path.join(tmpRoot, 'admin', 'feature');
+    fs.mkdirSync(wt, { recursive: true });
+    fs.mkdirSync(adminDir, { recursive: true });
+    fs.writeFileSync(path.join(wt, '.git'), `gitdir: ${adminDir}\n`);
+    expect(await resolveWorktreeGitDir(wt)).toBe(adminDir);
+  });
+
+  it('resolves a relative admin dir from a linked worktree .git file', async () => {
+    const wt = path.join(tmpRoot, 'feature');
+    const adminDir = path.join(tmpRoot, 'admin', 'feature');
+    fs.mkdirSync(wt, { recursive: true });
+    fs.mkdirSync(adminDir, { recursive: true });
+    const rel = path.relative(wt, adminDir);
+    fs.writeFileSync(path.join(wt, '.git'), `gitdir: ${rel}\n`);
+    expect(await resolveWorktreeGitDir(wt)).toBe(adminDir);
+  });
+
+  it('returns undefined when .git is missing', async () => {
+    const wt = path.join(tmpRoot, 'missing');
+    fs.mkdirSync(wt, { recursive: true });
+    expect(await resolveWorktreeGitDir(wt)).toBeUndefined();
+  });
+
+  it('returns undefined when the .git file has no gitdir line', async () => {
+    const wt = path.join(tmpRoot, 'broken');
+    fs.mkdirSync(wt, { recursive: true });
+    fs.writeFileSync(path.join(wt, '.git'), 'something else\n');
+    expect(await resolveWorktreeGitDir(wt)).toBeUndefined();
+  });
+});
+
+describe('getWorktreeActivityMtime', () => {
+  let tmpRoot: string;
+
+  beforeEach(() => {
+    tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'gw-mtime-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("ranks a fresher logs/HEAD above an older worktree's logs/HEAD", async () => {
+    const oldWt = path.join(tmpRoot, 'old');
+    const newWt = path.join(tmpRoot, 'new');
+    fs.mkdirSync(path.join(oldWt, '.git', 'logs'), { recursive: true });
+    fs.mkdirSync(path.join(newWt, '.git', 'logs'), { recursive: true });
+    fs.writeFileSync(path.join(oldWt, '.git', 'logs', 'HEAD'), '0000 1111 Author 0 +0000\tinit\n');
+    // Backdate the older worktree's logs/HEAD by an hour
+    const past = new Date(Date.now() - 60 * 60 * 1000);
+    fs.utimesSync(path.join(oldWt, '.git', 'logs', 'HEAD'), past, past);
+    fs.writeFileSync(path.join(newWt, '.git', 'logs', 'HEAD'), '0000 2222 Author 0 +0000\tinit\n');
+
+    const oldMtime = await getWorktreeActivityMtime(oldWt);
+    const newMtime = await getWorktreeActivityMtime(newWt);
+    expect(newMtime).toBeGreaterThan(oldMtime);
+  });
+
+  it('reads logs/HEAD from a linked worktree admin dir', async () => {
+    const wt = path.join(tmpRoot, 'linked');
+    const adminDir = path.join(tmpRoot, 'admin', 'linked');
+    fs.mkdirSync(wt, { recursive: true });
+    fs.mkdirSync(path.join(adminDir, 'logs'), { recursive: true });
+    fs.writeFileSync(path.join(wt, '.git'), `gitdir: ${adminDir}\n`);
+    fs.writeFileSync(path.join(adminDir, 'logs', 'HEAD'), '0000 1234 Author 0 +0000\tinit\n');
+
+    const mtime = await getWorktreeActivityMtime(wt);
+    expect(mtime).toBeGreaterThan(0);
+  });
+
+  it('returns 0 when the worktree has no resolvable git dir', async () => {
+    const wt = path.join(tmpRoot, 'missing');
+    fs.mkdirSync(wt, { recursive: true });
+    expect(await getWorktreeActivityMtime(wt)).toBe(0);
+  });
+
+  it('returns 0 when logs/HEAD does not exist (e.g. brand-new empty repo)', async () => {
+    // .git dir exists but logs/HEAD has not been written yet
+    const wt = path.join(tmpRoot, 'no-logs');
+    fs.mkdirSync(path.join(wt, '.git'), { recursive: true });
+    expect(await getWorktreeActivityMtime(wt)).toBe(0);
   });
 });

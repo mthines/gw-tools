@@ -6,7 +6,13 @@ import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
-import { copyStagedFiles, getBranchLastCommitDate, getStagedFileContent, getStagedFiles } from './git-utils.ts';
+import {
+  copyStagedFiles,
+  getBranchLastCommitDate,
+  getStagedFileContent,
+  getStagedFiles,
+  probeAndFetchRemoteBranch,
+} from './git-utils.ts';
 
 // =============================================================================
 // getBranchLastCommitDate tests
@@ -444,5 +450,97 @@ Deno.test('copyStagedFiles - uses staged content not working tree', async () => 
   } finally {
     await sourceRepo.cleanup();
     await targetRepo.cleanup();
+  }
+});
+
+// =============================================================================
+// probeAndFetchRemoteBranch tests
+// =============================================================================
+
+Deno.test('probeAndFetchRemoteBranch - returns false when no remote is configured', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const cwd = new TempCwd(repo.path);
+    try {
+      const result = await probeAndFetchRemoteBranch('feature-x');
+      assertEquals(result, false);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('probeAndFetchRemoteBranch - returns false when branch is not on remote', async () => {
+  const remote = new GitTestRepo();
+  const local = new GitTestRepo();
+  try {
+    await remote.initBare();
+    await local.init();
+    await local.runCommand('git', ['remote', 'add', 'origin', remote.path], local.path);
+    await local.runCommand('git', ['push', '-u', 'origin', 'main'], local.path);
+
+    const cwd = new TempCwd(local.path);
+    try {
+      const result = await probeAndFetchRemoteBranch('does-not-exist-on-remote');
+      assertEquals(result, false);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await remote.cleanup();
+    await local.cleanup();
+  }
+});
+
+Deno.test('probeAndFetchRemoteBranch - finds remote branch and materialises origin/<branch>', async () => {
+  const remote = new GitTestRepo();
+  const teammate = new GitTestRepo();
+  const local = new GitTestRepo();
+  try {
+    // Bare "remote" repo
+    await remote.initBare();
+
+    // Teammate's clone — pushes feature-pushed-by-teammate to origin
+    await teammate.init();
+    await teammate.runCommand('git', ['remote', 'add', 'origin', remote.path], teammate.path);
+    await teammate.runCommand('git', ['push', '-u', 'origin', 'main'], teammate.path);
+    await teammate.createBranch('feature-pushed-by-teammate');
+    await teammate.runCommand('git', ['push', '-u', 'origin', 'feature-pushed-by-teammate'], teammate.path);
+
+    // Our local repo — clone-equivalent: shares main but has not yet fetched the new branch
+    await local.init();
+    await local.runCommand('git', ['remote', 'add', 'origin', remote.path], local.path);
+    await local.runCommand('git', ['fetch', 'origin', 'main'], local.path);
+
+    const cwd = new TempCwd(local.path);
+    try {
+      // Confirm origin/feature-pushed-by-teammate doesn't yet resolve locally
+      const before = await new Deno.Command('git', {
+        args: ['-C', local.path, 'rev-parse', '--verify', 'origin/feature-pushed-by-teammate'],
+        stdout: 'null',
+        stderr: 'null',
+      }).output();
+      assertEquals(before.code !== 0, true, 'origin/<branch> should not resolve before probe');
+
+      const result = await probeAndFetchRemoteBranch('feature-pushed-by-teammate');
+      assertEquals(result, true, 'probe should report a hit');
+
+      // After the probe, origin/feature-pushed-by-teammate must resolve
+      const after = await new Deno.Command('git', {
+        args: ['-C', local.path, 'rev-parse', '--verify', 'origin/feature-pushed-by-teammate'],
+        stdout: 'null',
+        stderr: 'null',
+      }).output();
+      assertEquals(after.code, 0, 'origin/<branch> should resolve after probe fetch');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await remote.cleanup();
+    await teammate.cleanup();
+    await local.cleanup();
   }
 });

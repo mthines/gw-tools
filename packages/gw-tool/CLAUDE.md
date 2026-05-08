@@ -12,7 +12,7 @@ nx run gw-tool:run -- <args>     # Run once
 # Quality
 nx run gw-tool:check             # Type check (deno check)
 nx run gw-tool:lint              # Lint
-nx run gw-tool:fmt               # Format
+nx format:write                  # Format (Prettier — repo-wide; do NOT use `deno fmt`)
 nx run gw-tool:test              # Run tests
 
 # Build

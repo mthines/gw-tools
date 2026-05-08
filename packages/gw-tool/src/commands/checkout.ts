@@ -13,6 +13,7 @@ import {
   getStagedFiles,
   hasUncommittedChanges,
   listWorktrees,
+  probeAndFetchRemoteBranch,
   removeWorktree,
 } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
@@ -155,6 +156,7 @@ function parseCheckoutArgs(args: string[]): {
   files: string[];
   gitArgs: string[];
   noNavigate: boolean;
+  noFetch: boolean;
   fromBranch?: string;
   fromStaged: boolean;
 } {
@@ -164,6 +166,7 @@ function parseCheckoutArgs(args: string[]): {
     files: [] as string[],
     gitArgs: [] as string[],
     noNavigate: false,
+    noFetch: false,
     fromBranch: undefined as string | undefined,
     fromStaged: false,
   };
@@ -179,6 +182,12 @@ function parseCheckoutArgs(args: string[]): {
     result.noNavigate = true;
     // Remove it from args so it doesn't interfere with other parsing
     args = args.filter((a) => a !== '--no-cd');
+  }
+
+  // Check for --no-fetch flag (skips the remote probe for offline use)
+  if (args.includes('--no-fetch')) {
+    result.noFetch = true;
+    args = args.filter((a) => a !== '--no-fetch');
   }
 
   // Check for --from-staged flag
@@ -278,7 +287,10 @@ Arguments:
 
 Options:
   --no-cd                 Don't navigate to the new worktree after creation
+  --no-fetch              Skip the remote probe (offline mode); don't query
+                          origin for branches that aren't yet local
   --from <branch>         Create new branch from specified branch instead of defaultBranch
+                          (skips the remote probe; a same-named remote branch, if any, is ignored)
   --from-staged           Copy staged files from current worktree to new worktree
                           Use this to extract work-in-progress to a new branch
 
@@ -332,9 +344,17 @@ Configuration:
   gw init --auto-copy-files .env,secrets/
 
 Network Behavior:
-  When creating a new branch, gw checkout fetches the latest version from the remote
-  to ensure your branch starts from fresh code. This prevents conflicts and
-  ensures you're working with up-to-date code.
+  When the requested branch doesn't exist locally, gw checkout probes the
+  remote (origin) to see if it exists there. This catches branches a
+  teammate pushed that you haven't fetched yet — without it, gw would
+  create a brand-new branch with the same name from the default branch.
+
+  The probe uses 'git ls-remote' with a 3-second timeout and exits silently
+  on miss. Use --no-fetch to skip the probe entirely (offline mode).
+
+  When creating a new branch, gw checkout fetches the latest version of
+  the source branch from the remote to ensure your branch starts from
+  fresh code.
 
   Without --from flag:
     - Fetches from remote (e.g., origin/main)
@@ -556,6 +576,18 @@ export async function executeCheckout(args: string[]): Promise<void> {
   // Determine branch state: local, remote-only, or new
   const explicitCreate = hasBranchFlag(gitArgs);
   const localExists = await branchExistsLocally(branchName);
+
+  // If the branch isn't local, probe the remote so we catch branches a
+  // teammate pushed but we haven't fetched yet. Skip when the user already
+  // signaled a brand-new branch:
+  // - -b/-B is an explicit "create new branch" flag
+  // - --from means "create from this base regardless of what exists remotely";
+  //   probing would silently graft the remote branch on top and contradict --from
+  // - --no-fetch is the offline opt-out
+  if (!localExists && !explicitCreate && !parsed.fromBranch && !parsed.noFetch) {
+    await probeAndFetchRemoteBranch(branchName);
+  }
+
   const remoteOnlyExists = !localExists && (await branchExists(branchName));
   const willCreateBranch = explicitCreate || (!localExists && !remoteOnlyExists);
 

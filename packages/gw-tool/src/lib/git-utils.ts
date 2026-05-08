@@ -341,6 +341,82 @@ export async function fetchAndGetStartPoint(
 }
 
 /**
+ * Probe whether a branch exists on the remote and, if so, fetch it so
+ * `<remote>/<branch>` is resolvable locally. Used by `gw checkout` to catch
+ * branches that exist on the remote but haven't been fetched yet (e.g. a
+ * teammate just pushed).
+ *
+ * The probe uses `git ls-remote --exit-code` with a short timeout so
+ * offline runs don't hang. Silent on miss; returns true on hit.
+ *
+ * Returns true if the branch was found on the remote AND the fetch
+ * succeeded (so `<remote>/<branchName>` now resolves). Returns false in
+ * every other case (not found, no remote configured, network failure,
+ * timeout, fetch failed).
+ */
+export async function probeAndFetchRemoteBranch(
+  branchName: string,
+  remoteName = 'origin',
+  timeoutMs = 3000
+): Promise<boolean> {
+  // Bail out fast if no remote is configured
+  const remoteCheckCmd = new Deno.Command('git', {
+    args: ['remote', 'get-url', remoteName],
+    stdout: 'null',
+    stderr: 'null',
+  });
+  const remoteCheckResult = await remoteCheckCmd.output();
+  if (remoteCheckResult.code !== 0) {
+    return false;
+  }
+
+  // Probe with ls-remote --exit-code: exit 0 = found, exit 2 = not found,
+  // anything else = error/timeout. Wrap in a timeout so offline hangs are bounded.
+  const probeCmd = new Deno.Command('git', {
+    args: ['ls-remote', '--exit-code', remoteName, `refs/heads/${branchName}`],
+    stdout: 'null',
+    stderr: 'null',
+  });
+
+  const child = probeCmd.spawn();
+  let timedOut = false;
+  const timer = setTimeout(() => {
+    timedOut = true;
+    try {
+      // SIGTERM is enough for `git ls-remote` in practice. If a heavily-loaded
+      // machine ever ignores it long enough to outlast `await child.status`,
+      // add a SIGKILL fallback after a ~200 ms grace period.
+      child.kill('SIGTERM');
+    } catch {
+      // process already exited
+    }
+  }, timeoutMs);
+
+  let probeCode = -1;
+  try {
+    probeCode = (await child.status).code;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timer);
+  }
+
+  if (timedOut || probeCode !== 0) {
+    return false;
+  }
+
+  // Branch exists on remote — materialise the remote-tracking ref so
+  // `origin/<branch>` resolves for the subsequent worktree creation.
+  const fetchCmd = new Deno.Command('git', {
+    args: ['fetch', remoteName, `refs/heads/${branchName}:refs/remotes/${remoteName}/${branchName}`],
+    stdout: 'null',
+    stderr: 'null',
+  });
+  const { code: fetchCode } = await fetchCmd.output();
+  return fetchCode === 0;
+}
+
+/**
  * Get the current worktree path
  * @returns Absolute path to the current worktree, or empty string if not in a worktree
  */

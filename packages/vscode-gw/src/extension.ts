@@ -25,6 +25,7 @@ import {
   hasUncommittedChanges,
   hasStagedFiles,
   getWorktreePath,
+  getWorktreeActivityMtime,
   setLogger,
 } from './parsers/git-worktree';
 
@@ -196,18 +197,24 @@ export function activate(context: vscode.ExtensionContext): void {
         tooltip: 'Open in Same Window',
       };
 
-      const worktreeItems: SwitchQuickPickItem[] = worktrees
-        .filter((w) => !w.bare)
-        .map((w) => {
-          const isCurrent = w.path === currentPath;
-          return {
-            label: `${isCurrent ? '$(check) ' : '$(folder-opened) '}${w.branch}`,
-            description: isCurrent ? 'current' : path.basename(w.path),
-            detail: w.path,
-            worktreePath: w.path,
-            buttons: isCurrent ? [] : [openInSameWindowButton],
-          };
-        });
+      // Sort worktrees by recent activity (HEAD mtime) so freshly-created
+      // and recently-active worktrees appear at the top of the picker.
+      const visibleWorktrees = worktrees.filter((w) => !w.bare);
+      const worktreesWithMtime = await Promise.all(
+        visibleWorktrees.map(async (w) => ({ worktree: w, mtime: await getWorktreeActivityMtime(w.path) }))
+      );
+      const sortedWorktrees = worktreesWithMtime.sort((a, b) => b.mtime - a.mtime).map((entry) => entry.worktree);
+
+      const worktreeItems: SwitchQuickPickItem[] = sortedWorktrees.map((w) => {
+        const isCurrent = w.path === currentPath;
+        return {
+          label: `${isCurrent ? '$(check) ' : '$(folder-opened) '}${w.branch}`,
+          description: isCurrent ? 'current' : path.basename(w.path),
+          detail: w.path,
+          worktreePath: w.path,
+          buttons: isCurrent ? [] : [openInSameWindowButton],
+        };
+      });
 
       // Prepare branch items (exclude branches that already have worktrees)
       const worktreeBranches = new Set(worktrees.map((w) => w.branch));
