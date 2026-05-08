@@ -290,6 +290,7 @@ Options:
   --no-fetch              Skip the remote probe (offline mode); don't query
                           origin for branches that aren't yet local
   --from <branch>         Create new branch from specified branch instead of defaultBranch
+                          (skips the remote probe; a same-named remote branch, if any, is ignored)
   --from-staged           Copy staged files from current worktree to new worktree
                           Use this to extract work-in-progress to a new branch
 
@@ -577,8 +578,12 @@ export async function executeCheckout(args: string[]): Promise<void> {
   const localExists = await branchExistsLocally(branchName);
 
   // If the branch isn't local, probe the remote so we catch branches a
-  // teammate pushed but we haven't fetched yet. Skip when the user signaled
-  // a brand-new branch (-b/-B/--from) or asked for offline mode (--no-fetch).
+  // teammate pushed but we haven't fetched yet. Skip when the user already
+  // signaled a brand-new branch:
+  // - -b/-B is an explicit "create new branch" flag
+  // - --from means "create from this base regardless of what exists remotely";
+  //   probing would silently graft the remote branch on top and contradict --from
+  // - --no-fetch is the offline opt-out
   if (!localExists && !explicitCreate && !parsed.fromBranch && !parsed.noFetch) {
     await probeAndFetchRemoteBranch(branchName);
   }

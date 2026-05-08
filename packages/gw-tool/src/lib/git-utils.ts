@@ -383,13 +383,16 @@ export async function probeAndFetchRemoteBranch(
   const timer = setTimeout(() => {
     timedOut = true;
     try {
+      // SIGTERM is enough for `git ls-remote` in practice. If a heavily-loaded
+      // machine ever ignores it long enough to outlast `await child.status`,
+      // add a SIGKILL fallback after a ~200 ms grace period.
       child.kill('SIGTERM');
     } catch {
       // process already exited
     }
   }, timeoutMs);
 
-  let probeCode: number;
+  let probeCode = -1;
   try {
     probeCode = (await child.status).code;
   } catch {
