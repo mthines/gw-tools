@@ -12,12 +12,14 @@ tags:
 
 ## Overview
 
-The `gw add` command creates worktrees with automatic file copying, remote fetch handling, and navigation.
-Always use `gw add` instead of raw `git worktree add` to get auto-copy and shell integration.
+The `gw checkout` command creates worktrees with automatic file copying, remote fetch handling, and navigation.
+(`gw add` and `gw co` are aliases for backwards compatibility — prefer `gw checkout` in new usage.)
+Always use `gw checkout` instead of raw `git worktree add` to get auto-copy, hooks, shell integration, and the remote probe.
 
 ## Core Principles
 
-- **Always use `gw add`**: Gets auto-copy files, shell navigation, and smart fetch behavior.
+- **Always use `gw checkout`**: Gets auto-copy files, hooks, shell navigation, and smart remote fetch. `gw add` is a backwards-compat alias.
+- **Remote probe on new branches**: `gw checkout` queries `git ls-remote` (3s timeout) when the branch isn't local, catching teammates' recent pushes before silently creating a divergent branch. Skip with `--no-fetch` (offline mode).
 - **New branches fetch from remote**: Ensures fresh start point.
 - **Local branches used directly**: No network required for existing local branches.
 - **Use `--from` for explicit source**: Creates child branches from parent features.
@@ -25,26 +27,28 @@ Always use `gw add` instead of raw `git worktree add` to get auto-copy and shell
 ## Basic Commands
 
 ```bash
-# Create worktree for existing branch
-gw add feature-auth
+# Create worktree for existing or new branch (primary command)
+gw checkout feature-auth
+gw co feature-auth       # alias
+gw add feature-auth      # backwards-compat alias
 
-# Create worktree with new branch
-gw add feature-payments -b feature-payments
+# Create worktree with explicit new branch name
+gw checkout feature-payments -b feature-payments
 
 # Create from different source branch
-gw add feature-auth-social --from feature-auth
+gw checkout feature-auth-social --from feature-auth
 
 # Create from staged files (extract WIP to new branch)
 gw checkout feature-extracted --from-staged
 
 # Create without auto-navigation
-gw add feature-auth --no-cd
+gw checkout feature-auth --no-cd
 
 # Skip the remote probe (offline mode)
 gw checkout feature-auth --no-fetch
 
 # Force creation
-gw add feature-test --force
+gw checkout feature-test --force
 ```
 
 ## Initialize New Repository
@@ -81,21 +85,27 @@ gw init
 
 ```bash
 # Create from parent feature (requires fresh fetch)
-gw add feature-auth-oauth --from feature-auth
+gw checkout feature-auth-oauth --from feature-auth
 
 # Simple feature from default branch
-gw add feature-dashboard
+gw checkout feature-dashboard
+
+# Offline / CI environment — skip the remote probe
+gw checkout feature-dashboard --no-fetch
 ```
 
 ### BAD Pattern
 
 ```bash
-# Don't use raw git worktree add - misses auto-copy
+# Don't use raw git worktree add - misses auto-copy, hooks, remote probe
 git worktree add ../feature-x feature-x
 
 # Don't manually copy files - use auto-copy config
-gw add feature-x
-cp ../.env .env  # Unnecessary if configured
+gw checkout feature-x
+cp ../.env .env  # Unnecessary if configured in autoCopyFiles
+
+# Don't use gw add in new code - it's an alias; use gw checkout
+gw add feature-x  # Works but prefer: gw checkout feature-x
 ```
 
 ## Extracting Staged Files (--from-staged)
@@ -179,7 +189,7 @@ gw sync --from staging feature-auth .env
 gw cd feature-x
 
 # Or create with different name
-gw add feature-x-v2 -b feature-x-v2
+gw checkout feature-x-v2 -b feature-x-v2
 ```
 
 ### Recreating a Removed Worktree
