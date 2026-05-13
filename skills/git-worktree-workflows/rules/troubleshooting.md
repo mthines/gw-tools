@@ -33,7 +33,7 @@ gw cd feature-auth
 
 # Or remove and recreate
 gw remove feature-auth
-gw add feature-auth
+gw checkout feature-auth
 ```
 
 ## "Branch already checked out"
@@ -41,7 +41,7 @@ gw add feature-auth
 **Symptom**:
 
 ```bash
-fatal: 'feature-x' is already checked out at '/projects/myapp.git/other-worktree'
+fatal: 'feature-x' is already checked out at '/projects/repo.git/other-worktree'
 ```
 
 **Fix**:
@@ -50,11 +50,14 @@ fatal: 'feature-x' is already checked out at '/projects/myapp.git/other-worktree
 # Navigate to existing worktree
 gw cd feature-x
 
+# Or use gw checkout — it detects the branch is checked out and navigates there
+gw checkout feature-x
+
 # Or create with different name
-gw add feature-x-v2 -b feature-x-v2
+gw checkout feature-x-v2 -b feature-x-v2
 
 # Or use --force (creates copy)
-gw add feature-x-copy -b feature-x-copy --force
+gw checkout feature-x-copy -b feature-x-copy --force
 ```
 
 ## Git Ref Conflicts (Branch Name Hierarchy)
@@ -71,11 +74,11 @@ Cannot create branch test because it conflicts with existing branch test/foo
 
 ```bash
 # Use different name
-gw add test-new -b test-new
+gw checkout test-new -b test-new
 
 # Or delete conflicting branch
 git branch -d test/foo
-gw add test
+gw checkout test
 ```
 
 **Prevention**: Use consistent naming. Good: `feature/auth`, `feature/checkout`. Bad: mixing `feature` and `feature/new`.
@@ -111,7 +114,7 @@ gw repair
 
 # If that fails, remove and recreate
 gw remove feature-x --force
-gw add feature-x -b feature-x origin/feature-x
+gw checkout feature-x   # gw detects the branch on remote and recreates the tracking branch
 ```
 
 ## Permission Denied
@@ -126,10 +129,10 @@ fatal: could not create work tree dir 'feature-y': Permission denied
 
 ```bash
 # Check parent directory permissions
-ls -la /projects/myapp.git/
+ls -la /projects/repo.git/
 
 # Fix permissions
-chmod 755 /projects/myapp.git/
+chmod 755 /projects/repo.git/
 ```
 
 ## Corrupted Git Index
@@ -193,7 +196,7 @@ parse error near '()'
 
 ```bash
 # Remove partial directory
-rm -rf /projects/myapp.git/failed-worktree
+rm -rf /projects/repo.git/failed-worktree
 
 # Clean up Git references
 gw prune
@@ -212,12 +215,15 @@ gw list
 # Check network
 ping github.com
 
-# Without --from: Falls back to local (warning)
-gw add feature-x
+# Without --from: Falls back to local (warning shown)
+gw checkout feature-x
 
-# With --from: Must fix network or use different approach
-gw add feature-x --from develop  # Requires network
-gw add feature-x                 # Falls back to local
+# With --from: Must fix network or remove --from
+gw checkout feature-x --from develop  # Requires network
+gw checkout feature-x                 # Falls back to local
+
+# Offline mode: skip the remote probe entirely (no timeout)
+gw checkout feature-x --no-fetch
 ```
 
 ## References
