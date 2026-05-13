@@ -63,7 +63,7 @@ After installing this skill, try asking your AI agent:
 ## 🔗 Related Skills
 
 - [gw-config-management](../gw-config-management/) - Configure auto-copy behavior for your project type
-- [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
+- [autonomous-workflow](https://github.com/mthines/agent-skills#autonomous-workflow) - Autonomous feature development workflow (lives in `mthines/agent-skills`)
 
 ## 💬 Example Use Cases
 

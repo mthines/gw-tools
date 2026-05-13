@@ -206,7 +206,7 @@ Now that you understand the basics:
 
 1. **Configure auto-copy** - Set up automatic file copying with the [gw-config-management skill](../../gw-config-management/)
 2. **Learn parallel development** - See [Parallel Development Example](./parallel-development.md)
-3. **Explore autonomous workflows** - Check out the [autonomous-workflow skill](../../autonomous-workflow/)
+3. **Explore autonomous workflows** - Check out the [autonomous-workflow skill](https://github.com/mthines/agent-skills#autonomous-workflow) (lives in `mthines/agent-skills`)
 
 ---
 

@@ -234,14 +234,14 @@ PORT=3002
 
 **Problem:** Both features modify the same database
 
-**Solution:** Use separate databases or Docker containers (see [autonomous-workflow references](../../autonomous-workflow/references/))
+**Solution:** Use separate databases or Docker containers
 
 ---
 
 ## Next Steps
 
 - Learn about [Testing Multiple Versions](./testing-multiple-versions.md)
-- Explore [Autonomous Workflow](../../autonomous-workflow/)
+- Explore the [Autonomous Workflow](https://github.com/mthines/agent-skills#autonomous-workflow) skill (lives in `mthines/agent-skills`)
 - Set up [Configuration Management](../../gw-config-management/)
 
 ---

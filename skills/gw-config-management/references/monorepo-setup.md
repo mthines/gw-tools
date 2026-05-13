@@ -298,7 +298,7 @@ pnpm add react@19
 ## Next Steps
 
 - See [Troubleshooting Guide](./troubleshooting-config.md) for more issues
-- Check [autonomous-workflow skill](../../autonomous-workflow/) for autonomous feature development
+- Check the [autonomous-workflow skill](https://github.com/mthines/agent-skills#autonomous-workflow) (lives in `mthines/agent-skills`) for autonomous feature development
 
 ---
 

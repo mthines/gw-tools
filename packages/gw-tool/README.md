@@ -196,8 +196,6 @@ The `install.sh` script links the planner + executor agent definitions and the a
 - Run tests and iterate until passing
 - Create draft PRs with full context
 
-📦 **Building custom agents?** See [@gw-tools/autonomous-workflow-agent](https://www.npmjs.com/package/@gw-tools/autonomous-workflow-agent) for SDK integration.
-
 📊 **Visualize progress in VS Code:** Install the [Agent Tasks extension](https://marketplace.visualstudio.com/items?itemName=mthines.agent-tasks) to see `plan.md`, `task.md`, and `walkthrough.md` artifacts live in the sidebar.
 
 ## Initial Setup: Secrets in the Default Branch

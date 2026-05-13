@@ -104,7 +104,7 @@ gw init --auto-copy-files .env,secrets/ \
 ## Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Learn worktree basics first
-- [autonomous-workflow](../autonomous-workflow/) - Autonomous feature development workflow
+- [autonomous-workflow](https://github.com/mthines/agent-skills#autonomous-workflow) - Autonomous feature development workflow (lives in `mthines/agent-skills`)
 
 ## Common Configuration Patterns
 

@@ -20,7 +20,6 @@
     "customConditions": ["@gw-tools/source"],
     "paths": {
       "gw-tool": ["packages/gw-tool/src/index.ts"],
-      "@gw-tools/autonomous-workflow-agent": ["packages/autonomous-workflow-agent/src/index.ts"],
       "gw-worktrees": ["packages/vscode-gw/src/extension.ts"]
     }
   }

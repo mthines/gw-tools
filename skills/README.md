@@ -6,7 +6,7 @@
 
 Skills are reusable capabilities for AI agents that provide procedural knowledge about specific tools and workflows. The `gw`-specific skills help you master Git worktrees and the `gw` CLI.
 
-> **Looking for the autonomous workflow?** It now lives in the dedicated [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) repo, alongside its companions (`confidence`, `create-plan`, `create-walkthrough`, `tdd`, `ux`, `code-quality`, `holistic-analysis`, etc.). The skill no longer requires the `gw` CLI — it falls back to native `git worktree` if `gw` isn't installed. See the [autonomous-workflow section](https://github.com/mthines/agent-skills#autonomous-workflow) for install instructions.
+> **Looking for the autonomous workflow?** It lives in the dedicated [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) repo, alongside its companions (`confidence`, `create-plan`, `create-walkthrough`, `tdd`, `ux`, `code-quality`, `holistic-analysis`, etc.). The skill no longer requires the `gw` CLI — it falls back to native `git worktree` if `gw` isn't installed. See the [autonomous-workflow section](https://github.com/mthines/agent-skills#autonomous-workflow) for install instructions.
 
 ### Installation (gw-specific skills)
 
@@ -53,7 +53,7 @@ Configure and optimize gw-tools for different project types and team needs.
 
 ## Skills That Moved to `mthines/agent-skills`
 
-These previously lived here and are still available, but the canonical source is now [`mthines/agent-skills`](https://github.com/mthines/agent-skills):
+These previously lived here and have been removed from this repo. They now live exclusively in [`mthines/agent-skills`](https://github.com/mthines/agent-skills):
 
 | Skill                                                                                                         | What it does                                           |
 | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------ |
@@ -100,7 +100,6 @@ Once installed, your AI agent will have access to the skill knowledge. Simply as
 
 - "Help me set up a worktree workflow for parallel feature development"
 - "Configure gw for a Next.js project with Vercel"
-- "Implement dark mode toggle autonomously"
 
 ---
 

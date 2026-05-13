@@ -272,7 +272,7 @@ While worktrees are great for local testing, use CI/CD (GitHub Actions, etc.) fo
 
 ## Next Steps
 
-- Explore [Autonomous Workflow](../../autonomous-workflow/) for end-to-end feature development
+- Explore the [Autonomous Workflow](https://github.com/mthines/agent-skills#autonomous-workflow) skill (lives in `mthines/agent-skills`) for end-to-end feature development
 - Set up [Configuration Management](../../gw-config-management/) for environment-specific configs
 
 ---

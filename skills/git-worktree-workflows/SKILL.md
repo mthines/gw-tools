@@ -169,7 +169,7 @@ Hook variables: `{worktree}`, `{worktreePath}`, `{gitRoot}`, `{branch}`.
 ## Related Skills
 
 - [gw-config-management](../gw-config-management/) - Configure auto-copy files and hooks
-- [autonomous-workflow](../autonomous-workflow/) - Autonomous development in isolated worktrees
+- [autonomous-workflow](https://github.com/mthines/agent-skills#autonomous-workflow) - Autonomous development in isolated worktrees (lives in `mthines/agent-skills`)
 
 ## Resources
 

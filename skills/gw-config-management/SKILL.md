@@ -181,7 +181,7 @@ Migration skeleton:
 ## Related Skills
 
 - [git-worktree-workflows](../git-worktree-workflows/) - Using worktrees effectively (gw checkout, gw cd, gw clean, etc.)
-- [autonomous-workflow](../autonomous-workflow/) - Autonomous development in isolated worktrees
+- [autonomous-workflow](https://github.com/mthines/agent-skills#autonomous-workflow) - Autonomous development in isolated worktrees (lives in `mthines/agent-skills`)
 
 ## Resources
 

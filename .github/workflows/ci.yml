@@ -11,10 +11,6 @@ on:
         description: 'Force gw-tool release'
         type: boolean
         default: false
-      force_agent:
-        description: 'Force agent release'
-        type: boolean
-        default: false
       dry_run:
         description: 'Dry run (no publishing)'
         type: boolean
@@ -33,7 +29,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       gw_changed: ${{ steps.detect.outputs.gw_changed }}
-      agent_changed: ${{ steps.detect.outputs.agent_changed }}
       is_beta: ${{ steps.detect.outputs.is_beta }}
       pr_number: ${{ steps.detect.outputs.pr_number }}
       base_ref: ${{ steps.detect.outputs.base_ref }}
@@ -59,7 +54,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           FORCE_GW: ${{ inputs.force_gw }}
-          FORCE_AGENT: ${{ inputs.force_agent }}
         run: |
           # Determine context
           IS_BETA="false"
@@ -119,11 +113,10 @@ jobs:
 
           # Skip release commits (only on push events — manual triggers with force flags must proceed)
           COMMIT_MSG=$(git log -1 --pretty=%s)
-          if [[ "$COMMIT_MSG" =~ ^chore\((gw|autonomous-workflow-agent)\):\ release ]]; then
+          if [[ "$COMMIT_MSG" =~ ^chore\(gw\):\ release ]]; then
             if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
               echo "::notice::Skipping — this is a release commit"
               echo "gw_changed=false" >> $GITHUB_OUTPUT
-              echo "agent_changed=false" >> $GITHUB_OUTPUT
               echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
               echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
               echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
@@ -151,21 +144,8 @@ jobs:
             echo "::notice::gw-tool: no changes"
           fi
 
-          # Check for agent changes
-          AGENT_CHANGED="false"
-          if [ "$FORCE_AGENT" = "true" ]; then
-            AGENT_CHANGED="true"
-            echo "::notice::autonomous-workflow-agent: force release enabled"
-          elif echo "$AFFECTED" | grep -q "autonomous-workflow-agent"; then
-            AGENT_CHANGED="true"
-            echo "::notice::autonomous-workflow-agent: changes detected"
-          else
-            echo "::notice::autonomous-workflow-agent: no changes"
-          fi
-
           # Output results
           echo "gw_changed=$GW_CHANGED" >> $GITHUB_OUTPUT
-          echo "agent_changed=$AGENT_CHANGED" >> $GITHUB_OUTPUT
           echo "is_beta=$IS_BETA" >> $GITHUB_OUTPUT
           echo "pr_number=$PR_NUMBER" >> $GITHUB_OUTPUT
           echo "base_ref=$BASE_REF" >> $GITHUB_OUTPUT
@@ -206,31 +186,6 @@ jobs:
 
       - name: Test gw-tool
         run: npx nx run gw-tool:test:ci
-
-  test-agent:
-    needs: detect-changes
-    if: needs.detect-changes.outputs.agent_changed == 'true'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build agent package
-        run: npx nx build autonomous-workflow-agent
-
-      - name: Test agent package
-        run: npx nx test autonomous-workflow-agent
-
-      - name: Lint agent package
-        run: npx nx lint autonomous-workflow-agent
 
   # =============================================================================
   # Step 3: Version jobs (calculate version, create tag)
@@ -385,135 +340,6 @@ jobs:
 
           echo "created=true" >> $GITHUB_OUTPUT
 
-  version-agent:
-    # Waits for gw release to complete to avoid git push race conditions
-    needs: [detect-changes, test-agent, release-gw]
-    # Package is DEPRECATED — only releases when explicitly forced via workflow_dispatch.
-    # Auto-release on push to main is disabled. The skill now lives in
-    # https://github.com/mthines/agent-skills and the npm package is no longer
-    # actively maintained. Use force_agent=true to publish a final patch if
-    # absolutely needed (e.g. critical security fix).
-    if: |
-      always() &&
-      (needs.test-agent.result == 'success' || needs.test-agent.result == 'skipped') &&
-      (needs.release-gw.result == 'success' || needs.release-gw.result == 'skipped') &&
-      needs.detect-changes.outputs.agent_changed == 'true' &&
-      !inputs.dry_run &&
-      github.ref == 'refs/heads/main' &&
-      github.event_name == 'workflow_dispatch' && inputs.force_agent
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-    outputs:
-      version: ${{ steps.version.outputs.version }}
-      tag: ${{ steps.version.outputs.tag }}
-      created: ${{ steps.tag.outputs.created }}
-    steps:
-      # Checkout latest main to include any commits from gw release
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: main
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - name: Fetch latest main and tags
-        run: |
-          git fetch origin main --tags --force
-          git reset --hard origin/main
-          echo "::notice::Checked out main at $(git rev-parse --short HEAD)"
-
-      - name: Calculate version
-        id: version
-        env:
-          BASE_REF: ${{ needs.detect-changes.outputs.base_ref }}
-          FORCE_AGENT: ${{ inputs.force_agent }}
-        run: |
-          # Get commits for version determination
-          LAST_AGENT_TAG=$(git tag -l "autonomous-workflow-agent-v*" --sort=-version:refname | head -n 1 || echo "")
-
-          if [ -n "$LAST_AGENT_TAG" ]; then
-            COMMITS=$(git log "$LAST_AGENT_TAG"..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
-          else
-            COMMITS=$(git log HEAD~10..HEAD --pretty=format:"%s" --no-merges -- packages/autonomous-workflow-agent/)
-          fi
-
-          # Determine bump type
-          BUMP_TYPE="patch"
-          if echo "$COMMITS" | grep -qE "^(BREAKING CHANGE:|.*!:)"; then
-            BUMP_TYPE="major"
-          elif echo "$COMMITS" | grep -q "^feat"; then
-            BUMP_TYPE="minor"
-          fi
-
-          # Get current version from latest tag (authoritative) or package.json (fallback)
-          if [ -n "$LAST_AGENT_TAG" ]; then
-            CURRENT=$(echo "$LAST_AGENT_TAG" | sed 's/^autonomous-workflow-agent-v//')
-            echo "::notice::Version source: tag $LAST_AGENT_TAG"
-          else
-            CURRENT=$(cat packages/autonomous-workflow-agent/package.json | grep '"version"' | head -1 | sed 's/.*"version": "\([^"]*\)".*/\1/')
-            echo "::notice::Version source: package.json ($CURRENT) — no tags found"
-          fi
-          IFS='.' read -ra V <<< "$CURRENT"
-
-          case "$BUMP_TYPE" in
-            major) V[0]=$((V[0] + 1)); V[1]=0; V[2]=0 ;;
-            minor) V[1]=$((V[1] + 1)); V[2]=0 ;;
-            patch) V[2]=$((V[2] + 1)) ;;
-          esac
-
-          NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
-          NEW_TAG="autonomous-workflow-agent-v$NEW_VERSION"
-
-          # Force mode: ensure tag doesn't already exist by incrementing past collisions
-          if [ "$FORCE_AGENT" = "true" ]; then
-            ATTEMPTS=0
-            while git rev-parse "$NEW_TAG" >/dev/null 2>&1; do
-              ATTEMPTS=$((ATTEMPTS + 1))
-              if [ $ATTEMPTS -ge 100 ]; then
-                echo "::error::Could not find available version after 100 increments"
-                exit 1
-              fi
-              echo "::notice::Tag $NEW_TAG already exists — incrementing"
-              V[2]=$((V[2] + 1))
-              NEW_VERSION="${V[0]}.${V[1]}.${V[2]}"
-              NEW_TAG="autonomous-workflow-agent-v$NEW_VERSION"
-            done
-          fi
-
-          echo "::notice::autonomous-workflow-agent: $CURRENT -> $NEW_VERSION ($BUMP_TYPE)"
-          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          echo "tag=$NEW_TAG" >> $GITHUB_OUTPUT
-
-      - name: Create tag
-        id: tag
-        run: |
-          VERSION="${{ steps.version.outputs.version }}"
-          TAG="${{ steps.version.outputs.tag }}"
-
-          # Check if tag already exists (race condition from parallel/retried runs)
-          if git rev-parse "$TAG" >/dev/null 2>&1; then
-            echo "::warning::Tag $TAG already exists — skipping version-agent"
-            echo "created=false" >> $GITHUB_OUTPUT
-            exit 0
-          fi
-
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-
-          # Update package.json
-          cd packages/autonomous-workflow-agent
-          sed -i "s/\"version\": \"[^\"]*\"/\"version\": \"$VERSION\"/" package.json
-          cd -
-
-          git add packages/autonomous-workflow-agent/package.json
-          git commit -m "chore(autonomous-workflow-agent): release v$VERSION"
-          git tag -a "$TAG" -m "Release autonomous-workflow-agent v$VERSION"
-          git push origin main
-          git push origin "$TAG"
-
-          echo "::notice::Created tag $TAG"
-          echo "created=true" >> $GITHUB_OUTPUT
-
   # =============================================================================
   # Step 4: Release jobs
   # =============================================================================
@@ -617,45 +443,3 @@ jobs:
               issue_number: parseInt(prNumber),
               body: body.split('\n').map(line => line.trim()).join('\n')
             });
-
-  release-agent:
-    needs: [detect-changes, version-agent]
-    if: |
-      always() &&
-      needs.version-agent.outputs.created == 'true'
-    runs-on: ubuntu-latest
-    environment: npm-publish
-    permissions:
-      contents: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-          ref: ${{ needs.version-agent.outputs.tag }}
-          token: ${{ secrets.GH_PAT || secrets.GITHUB_TOKEN }}
-
-      - uses: pnpm/action-setup@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
-
-      - run: pnpm install --frozen-lockfile
-
-      - name: Build package
-        run: npx nx build autonomous-workflow-agent
-
-      - name: Update npm
-        run: npm install -g npm@latest
-
-      - name: Publish to npm
-        working-directory: dist/packages/autonomous-workflow-agent
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          VERSION="${{ needs.version-agent.outputs.version }}"
-          echo "Publishing @gw-tools/autonomous-workflow-agent@$VERSION"
-          npm publish --provenance --access public

@@ -81,16 +81,6 @@ gw install-shell | source
 
 ---
 
-## 🤖 Autonomous Workflow Agent — Deprecated
-
-> **The autonomous workflow has moved.** It now lives in the dedicated [**`mthines/agent-skills`**](https://github.com/mthines/agent-skills#autonomous-workflow) repository, alongside its companion skills and the planner / executor agents.
->
-> The `@gw-tools/autonomous-workflow-agent` npm package and its bundled skill in this repo are deprecated. Please install from the new home going forward.
-
-📖 **New location:** https://github.com/mthines/agent-skills#autonomous-workflow
-
----
-
 ## 🎓 AI Skills
 
 The two `gw`-specific skills shipped from this repo:
@@ -107,7 +97,7 @@ npx skills add https://github.com/mthines/gw-tools \
   --yes
 ```
 
-For the autonomous workflow and other coding-assistant skills (`tdd`, `ux`, `code-quality`, `holistic-analysis`, …), see the dedicated [**`mthines/agent-skills`**](https://github.com/mthines/agent-skills) repository.
+For the autonomous workflow and other coding-assistant skills (`autonomous-workflow`, `create-plan`, `create-walkthrough`, `confidence`, `tdd`, `ux`, `code-quality`, `holistic-analysis`, …), see the dedicated [**`mthines/agent-skills`**](https://github.com/mthines/agent-skills) repository.
 
 ---
 

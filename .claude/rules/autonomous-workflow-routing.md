@@ -1,1 +1,0 @@
-/Users/mthines/.claude/skills/autonomous-workflow/templates/routing-rule.template.md
