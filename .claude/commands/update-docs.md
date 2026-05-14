@@ -43,9 +43,9 @@ Based on the changes, determine which documentation files need updates:
    - Configuration options
 
 2. **Skills Documentation**:
-   - `skills/config-management/SKILL.md` - Configuration-related features
+   - `skills/gw-config-management/SKILL.md` - Configuration-related features
    - `skills/git-worktree-workflows/SKILL.md` - Worktree workflow features
-   - `skills/autonomous-workflow/SKILL.md` - Autonomous workflow features
+   - Autonomous workflow docs live in [`mthines/agent-skills`](https://github.com/mthines/agent-skills#autonomous-workflow) — update there, not here
 
 3. **CLI Help Text**: Update `showXxxHelp()` functions in command files
 
