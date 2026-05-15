@@ -2,7 +2,7 @@
  * Tests for update.ts command
  */
 
-import { assertEquals } from '@std/assert';
+import { assertEquals, assertStringIncludes } from '@std/assert';
 import { join } from '@std/path';
 import { executeUpdate } from './update.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
@@ -560,6 +560,202 @@ Deno.test('update command - allows --from with no remote configured', async () =
       assertEquals(content, 'develop content');
     } finally {
       cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+// ─── --from-pr tests ──────────────────────────────────────────────────────────
+
+Deno.test('update command --from-pr - rejects combined with --from', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(featurePath);
+    try {
+      const { exitCode, stdout, stderr } = await withMockedExit(
+        () => executeUpdate(['--from-pr', '42', '--from', 'develop']),
+        { captureOutput: true }
+      );
+
+      assertEquals(exitCode, 1);
+      const allOutput = (stdout ?? '') + (stderr ?? '');
+      assertStringIncludes(allOutput, '--from-pr');
+      assertStringIncludes(allOutput, '--from');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command --from-pr - rejects invalid identifier', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(featurePath);
+    try {
+      const { exitCode, stdout, stderr } = await withMockedExit(() => executeUpdate(['--from-pr', 'not-a-pr']), {
+        captureOutput: true,
+      });
+
+      assertEquals(exitCode, 1);
+      const allOutput = (stdout ?? '') + (stderr ?? '');
+      assertStringIncludes(allOutput, 'Invalid PR identifier');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command --from-pr - rejects non-GitHub remote', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Add a non-GitHub remote
+    await repo.runCommand('git', ['remote', 'add', 'origin', 'https://gitlab.com/owner/repo.git'], repo.path);
+
+    await repo.createWorktree('feature', 'feature');
+    const featurePath = join(repo.path, 'feature');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(featurePath);
+    try {
+      const { exitCode, stdout, stderr } = await withMockedExit(() => executeUpdate(['--from-pr', '42']), {
+        captureOutput: true,
+      });
+
+      assertEquals(exitCode, 1);
+      const allOutput = (stdout ?? '') + (stderr ?? '');
+      assertStringIncludes(allOutput, '--from-pr requires a GitHub remote');
+      assertStringIncludes(allOutput, 'gitlab.com');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+/**
+ * Set up a bare upstream that serves refs/pull/<n>/head from the local repo's
+ * own history (so merge succeeds without unrelated-histories). Configures the
+ * local repo with a fake github.com remote URL that is redirected to the bare
+ * upstream via git's url.insteadOf rewrite.
+ *
+ * Strategy:
+ * 1. Push the local repo's main branch to the bare upstream.
+ * 2. Create a PR-style branch in the bare upstream's HEAD from that commit.
+ * 3. Add a commit from the local repo to create the "PR head".
+ *
+ * Returns the upstream GitTestRepo instance (caller must clean it up).
+ */
+async function setupLocalPrUpstream(localRepo: GitTestRepo, prNumber: number): Promise<GitTestRepo> {
+  const upstream = new GitTestRepo();
+  await upstream.runCommand('git', ['init', '--bare', upstream.path]);
+
+  // Add the bare upstream as a remote with a fake github.com URL
+  const fakeRemoteUrl = 'https://github.com/owner/repo.git';
+  await localRepo.runCommand('git', ['remote', 'add', 'origin', fakeRemoteUrl], localRepo.path);
+  // Redirect the fake URL to the local bare repo
+  await localRepo.runCommand('git', ['config', `url.${upstream.path}.insteadOf`, fakeRemoteUrl], localRepo.path);
+
+  // Push local main to bare upstream so it has a common history base
+  await localRepo.runCommand('git', ['push', 'origin', 'main'], localRepo.path);
+
+  // Create a temporary "pr-branch" with an extra commit so the PR head is
+  // a descendant of the common base, and push it as refs/pull/<n>/head.
+  await localRepo.runCommand('git', ['checkout', '-b', `_pr-${prNumber}`], localRepo.path);
+  await Deno.writeTextFile(`${localRepo.path}/pr-${prNumber}-file.txt`, `PR ${prNumber} content`);
+  await localRepo.runCommand('git', ['add', '-A'], localRepo.path);
+  await localRepo.runCommand('git', ['commit', '-m', `PR ${prNumber} commit`], localRepo.path);
+  await localRepo.runCommand('git', ['push', 'origin', `HEAD:refs/pull/${prNumber}/head`], localRepo.path);
+  // Return to main
+  await localRepo.runCommand('git', ['checkout', 'main'], localRepo.path);
+
+  return upstream;
+}
+
+Deno.test('update command --from-pr - dry-run shows PR label not raw refspec', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const upstream = await setupLocalPrUpstream(repo, 42);
+    try {
+      await repo.createWorktree('feature', 'feature');
+      const featurePath = join(repo.path, 'feature');
+      const config = createMinimalConfig(repo.path);
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(featurePath);
+      try {
+        const { exitCode, stdout, stderr } = await withMockedExit(
+          () => executeUpdate(['--from-pr', '42', '--dry-run']),
+          { captureOutput: true }
+        );
+
+        assertEquals(exitCode, 0);
+        const allOutput = (stdout ?? '') + (stderr ?? '');
+        // Must show "PR #42" and not expose the raw refspec
+        assertStringIncludes(allOutput, 'PR #42');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await upstream.cleanup();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('update command --from-pr - success message uses PR label', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const upstream = await setupLocalPrUpstream(repo, 1);
+    try {
+      await repo.createWorktree('feature', 'feature');
+      const featurePath = join(repo.path, 'feature');
+      const config = createMinimalConfig(repo.path);
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(featurePath);
+      try {
+        const { exitCode, stdout, stderr } = await withMockedExit(() => executeUpdate(['--from-pr', '1']), {
+          captureOutput: true,
+        });
+
+        // 0 or undefined = success (undefined means Deno.exit was not called)
+        if (exitCode !== undefined) {
+          assertEquals(exitCode, 0);
+        }
+        const allOutput = (stdout ?? '') + (stderr ?? '');
+        assertStringIncludes(allOutput, 'PR #1');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await upstream.cleanup();
     }
   } finally {
     await repo.cleanup();

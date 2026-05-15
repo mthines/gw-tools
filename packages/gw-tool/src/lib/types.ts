@@ -112,6 +112,8 @@ export interface UpdateOptions {
   merge?: boolean;
   /** Force rebase strategy (overrides config) */
   rebase?: boolean;
+  /** PR identifier — PR number or GitHub URL. Mutually exclusive with `branch`. */
+  fromPr?: string;
 }
 
 /**
