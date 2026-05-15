@@ -46,6 +46,7 @@ Deno.test('list command - handles --porcelain flag', async () => {
       // Test that --porcelain flag is passed through
       // If we got here without error, the flag was accepted
       await executeList(['--porcelain']);
+      await _drainAutoClean();
     } finally {
       cwd.restore();
     }

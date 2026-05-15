@@ -832,6 +832,7 @@ When working in a worktree, you cannot easily checkout main to pull the latest c
 #### Options
 
 - `--from <branch>`: Update from specified branch instead of defaultBranch (e.g., `--from develop`)
+- `--from-pr <n|url>`: Update from a pull request by number or GitHub PR URL (mutually exclusive with `--from`)
 - `--remote <name>`: Specify remote name (default: "origin")
 - `-m, --merge`: Force merge strategy (overrides configured strategy)
 - `-r, --rebase`: Force rebase strategy (overrides configured strategy)
@@ -854,8 +855,20 @@ gw update --rebase
 # Update from a specific branch
 gw update --from develop
 
-# Preview what would happen
+# Update from a pull request (by number)
+gw update --from-pr 42
+
+# Update from a pull request (by GitHub URL)
+gw update --from-pr https://github.com/owner/repo/pull/42
+
+# Rebase onto a PR head instead of merging
+gw update --from-pr 42 --rebase
+
+# Preview what would happen without executing
 gw update --dry-run
+
+# Preview merge from a PR without executing
+gw update --from-pr 42 --dry-run
 
 # Force update even with uncommitted changes (not recommended)
 gw update --force
@@ -863,6 +876,39 @@ gw update --force
 # Use a different remote
 gw update --remote upstream
 ```
+
+#### Updating from a Pull Request (`--from-pr`)
+
+The `--from-pr` flag lets you merge or rebase the current branch onto a PR's
+head commit without checking out the PR branch. This is useful when you want
+to test how your feature branch integrates with a colleague's PR that is still
+in review.
+
+```bash
+# Merge PR #42 into the current worktree branch
+gw update --from-pr 42
+
+# Rebase the current branch onto PR #42
+gw update --from-pr 42 --rebase
+
+# Works with full GitHub URLs too (trailing paths and fragments are stripped)
+gw update --from-pr https://github.com/owner/repo/pull/42/files
+```
+
+How it works:
+
+1. Resolves the PR number from the bare number or GitHub URL
+2. Guards against non-GitHub remotes (`--from-pr` requires a GitHub remote)
+3. Force-fetches `refs/pull/<n>/head` into `refs/remotes/<remote>/pr/<n>`
+   (the `+` prefix ensures force-pushed PRs always overwrite stale cached refs)
+4. Proceeds with the normal merge/rebase pipeline using the fetched ref
+5. Optionally enriches the display label with the PR title via `gh` (silent if `gh` is absent or unauthenticated)
+
+Requirements:
+
+- A GitHub remote (the remote URL must contain `github.com`)
+- Network access to fetch the PR ref
+- `gh` CLI is **optional** — only used to show the PR title in output
 
 #### How It Works
 
@@ -881,6 +927,7 @@ gw update --remote upstream
 
 - When using `--from` with an explicit branch, the command requires a successful fetch from the remote to ensure you're updating with the latest code. If the fetch fails (network issues, branch doesn't exist on remote, authentication problems), the command will exit with a detailed error message and suggestions for resolution.
 - When no `--from` is specified (using default branch) or when no remote is configured, the command will warn about fetch failures but allow the update using the local branch.
+- When using `--from-pr`, a successful fetch is always required. The command exits with a clear error message if the fetch fails.
 
 **Update strategy:**
 

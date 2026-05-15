@@ -243,7 +243,7 @@ Configuration:
 export function parseUpdateArgs(args: string[]): UpdateOptions {
   const parsed = denoParseArgs(args, {
     boolean: ['help', 'force', 'dry-run', 'merge', 'rebase'],
-    string: ['from', 'remote'],
+    string: ['from', 'from-pr', 'remote'],
     alias: {
       h: 'help',
       f: 'force',
@@ -262,6 +262,7 @@ export function parseUpdateArgs(args: string[]): UpdateOptions {
     remote: (parsed.remote as string) || 'origin',
     merge: parsed.merge as boolean | undefined,
     rebase: parsed.rebase as boolean | undefined,
+    fromPr: parsed['from-pr'] as string | undefined,
   };
 }
 
@@ -277,6 +278,7 @@ Usage:
 
 Options:
   --from <branch>      Update from specified branch instead of defaultBranch
+  --from-pr <n|url>    Update from a pull request by number or GitHub URL
   --remote <name>      Specify remote name (default: "origin")
   -m, --merge          Force merge strategy (overrides config)
   -r, --rebase         Force rebase strategy (overrides config)
@@ -292,6 +294,13 @@ Description:
   This is useful when working in a worktree and you want to update your branch
   with the latest changes from main without having to switch worktrees or
   checkout the main branch.
+
+  Using --from-pr:
+  - Resolves the PR's head commit via GitHub's refs/pull/<n>/head refspec
+  - Force-fetches so force-pushed PRs always overwrite stale cached refs
+  - Requires a GitHub remote (github.com); non-GitHub remotes produce an error
+  - gh CLI is optional — used only to display the PR title
+  - Cannot be combined with --from
 
   Update strategy:
   - Uses merge by default (creates merge commits if histories have diverged)
@@ -316,8 +325,20 @@ Examples:
   # Update from a specific branch
   gw update --from develop
 
+  # Update from a pull request by number
+  gw update --from-pr 42
+
+  # Update from a pull request by URL
+  gw update --from-pr https://github.com/owner/repo/pull/42
+
+  # Rebase onto a PR head
+  gw update --from-pr 42 --rebase
+
   # Preview what would happen without executing
   gw update --dry-run
+
+  # Preview merge from a PR without executing
+  gw update --from-pr 42 --dry-run
 
   # Force update even with uncommitted changes (not recommended)
   gw update --force

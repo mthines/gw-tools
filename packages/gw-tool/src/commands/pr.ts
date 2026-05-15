@@ -11,6 +11,7 @@ import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
+import { parsePrIdentifier } from '../lib/pr-utils.ts';
 
 /**
  * Information about a pull request from gh CLI
@@ -21,36 +22,6 @@ interface PrInfo {
   headRepository: { name: string };
   headRepositoryOwner: { login: string };
   isCrossRepository: boolean;
-}
-
-/**
- * Parse a PR identifier (number or URL) to extract PR number
- * @param identifier PR number or GitHub URL
- * @returns Object with PR number and optional owner/repo for URL validation
- */
-function parsePrIdentifier(identifier: string): { prNumber: number; owner?: string; repo?: string } | null {
-  // Try parsing as a number first
-  const asNumber = parseInt(identifier, 10);
-  if (!isNaN(asNumber) && asNumber > 0) {
-    return { prNumber: asNumber };
-  }
-
-  // Try parsing as GitHub URL
-  // Patterns:
-  // - https://github.com/owner/repo/pull/123
-  // - github.com/owner/repo/pull/123
-  const urlPattern = /(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/;
-  const match = identifier.match(urlPattern);
-
-  if (match) {
-    const [, owner, repo, prNumberStr] = match;
-    const prNumber = parseInt(prNumberStr, 10);
-    if (!isNaN(prNumber) && prNumber > 0) {
-      return { prNumber, owner, repo };
-    }
-  }
-
-  return null;
 }
 
 /**
