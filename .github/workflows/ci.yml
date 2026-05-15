@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   pull_request:
-    types: [opened, synchronize, reopened, ready_for_review]
+    types: [opened, synchronize, reopened]
   workflow_dispatch:
     inputs:
       force_gw:
@@ -196,7 +196,8 @@ jobs:
     # - Tests passed (or were skipped because no changes)
     # - gw changed OR force release
     # - Not a dry run
-    # - Push to main (stable) OR non-draft PR (beta) OR manual with open PR (beta)
+    # - Push to main (merge) OR manual dispatch on main
+    # Releases never happen from PR events — tests still run on draft and non-draft PRs.
     if: |
       always() &&
       (needs.test-gw.result == 'success' || needs.test-gw.result == 'skipped') &&
@@ -204,8 +205,7 @@ jobs:
       !inputs.dry_run &&
       (
         (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
-        (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
-        (github.event_name == 'workflow_dispatch' && (github.ref == 'refs/heads/main' || needs.detect-changes.outputs.pr_number != ''))
+        (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main')
       )
     runs-on: ubuntu-latest
     permissions:
