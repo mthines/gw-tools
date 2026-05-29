@@ -123,7 +123,7 @@ How It Works:
   4. Navigates to the new worktree
 
 If the PR's branch is already checked out in a worktree, the command
-will offer to navigate to that worktree instead.
+will navigate to that worktree instead.
 `);
 }
 
@@ -333,17 +333,10 @@ export async function executePr(args: string[]): Promise<void> {
     output.info(`Branch ${output.bold(branchName)} is already checked out at:`);
     console.log(`  ${output.path(existingWorktree.path)}`);
     console.log('');
+    console.log('Navigating there...');
 
-    const response = prompt(`Navigate to it? [Y/n]:`);
-
-    if (response === null || response === '' || response.toLowerCase() === 'y' || response.toLowerCase() === 'yes') {
-      await signalNavigation(existingWorktree.path);
-      Deno.exit(0);
-    } else {
-      console.log('');
-      output.info('PR checkout cancelled.');
-      Deno.exit(0);
-    }
+    await signalNavigation(existingWorktree.path);
+    Deno.exit(0);
   }
 
   // Check for leftover directory that isn't a valid worktree
@@ -359,22 +352,10 @@ export async function executePr(args: string[]): Promise<void> {
         output.info(`Worktree ${output.bold(worktreeName)} already exists at:`);
         console.log(`  ${output.path(worktreePath)}`);
         console.log('');
+        console.log('Navigating there...');
 
-        const response = prompt(`Navigate to it? [Y/n]:`);
-
-        if (
-          response === null ||
-          response === '' ||
-          response.toLowerCase() === 'y' ||
-          response.toLowerCase() === 'yes'
-        ) {
-          await signalNavigation(worktreePath);
-          Deno.exit(0);
-        } else {
-          console.log('');
-          output.info('PR checkout cancelled.');
-          Deno.exit(0);
-        }
+        await signalNavigation(worktreePath);
+        Deno.exit(0);
       } else {
         // Path exists but isn't a valid worktree - automatically clean up
         console.log('');
