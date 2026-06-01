@@ -26,6 +26,7 @@ import {
   hasStagedFiles,
   getWorktreePath,
   getWorktreeActivityMtime,
+  extractExistingWorktreePathFromPrOutput,
   setLogger,
 } from './parsers/git-worktree';
 
@@ -57,22 +58,30 @@ async function showMigrationPromptOnce(context: vscode.ExtensionContext): Promis
 }
 
 /**
- * Open a newly created worktree in a new window, either automatically or via notification button
+ * Open a newly created worktree, either automatically or via notification button.
+ *
+ * @param forceNewWindow When true (default), opens in a new window. When false,
+ *   opens in the same window — used by the shift+enter "same window" accept path.
  */
-async function openNewWorktree(worktreePath: string | undefined, message: string): Promise<void> {
+async function openNewWorktree(
+  worktreePath: string | undefined,
+  message: string,
+  forceNewWindow = true
+): Promise<void> {
   if (!worktreePath) return;
 
   const autoOpen = vscode.workspace.getConfiguration('gw').get<boolean>('autoOpenWorktree', true);
 
   if (autoOpen) {
     const uri = vscode.Uri.file(worktreePath);
-    vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+    vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow });
     vscode.window.showInformationMessage(message);
   } else {
-    const action = await vscode.window.showInformationMessage(message, 'Open in New Window');
-    if (action === 'Open in New Window') {
+    const buttonLabel = forceNewWindow ? 'Open in New Window' : 'Open in This Window';
+    const action = await vscode.window.showInformationMessage(message, buttonLabel);
+    if (action === buttonLabel) {
       const uri = vscode.Uri.file(worktreePath);
-      vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+      vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow });
     }
   }
 }
@@ -166,8 +175,10 @@ export function activate(context: vscode.ExtensionContext): void {
   // Show one-time migration prompt for users who had Agent Tasks in vscode-gw
   void showMigrationPromptOnce(context);
 
-  // Shared reference for the active switch worktree quick pick (used by shift+enter keybinding)
-  let activeSwitchQuickPick: vscode.QuickPick<vscode.QuickPickItem & { worktreePath?: string }> | undefined;
+  // Same-window accept callback registered while the switch quick pick is open.
+  // Captures the active item and routes it through the shared selection handler,
+  // so shift+enter behaves consistently across worktree / branch / PR URL items.
+  let activeSwitchAcceptSameWindow: (() => Promise<void>) | undefined;
 
   // Register commands
   const commands = [
@@ -302,10 +313,10 @@ export function activate(context: vscode.ExtensionContext): void {
         ];
       });
 
-      quickPick.onDidAccept(async () => {
-        const selected = quickPick.selectedItems[0];
-        quickPick.hide();
-
+      const handleSwitchSelection = async (
+        selected: SwitchQuickPickItem | undefined,
+        forceNewWindow: boolean
+      ): Promise<void> => {
         if (!selected) return;
 
         // GitHub PR URL — checkout PR via gw pr
@@ -315,14 +326,14 @@ export function activate(context: vscode.ExtensionContext): void {
           log(`Checking out PR: ${selected.prUrl}`);
 
           try {
-            await vscode.window.withProgress(
+            const prOutput = await vscode.window.withProgress(
               {
                 location: vscode.ProgressLocation.Notification,
                 title: `Checking out PR #${prNumber}...`,
                 cancellable: false,
               },
               async () => {
-                await checkoutPr(workspacePath, selected.prUrl!);
+                return await checkoutPr(workspacePath, selected.prUrl!);
               }
             );
             worktreeProvider.refresh();
@@ -333,7 +344,25 @@ export function activate(context: vscode.ExtensionContext): void {
               (wt) => !wt.bare && wt.path !== currentPath && !worktrees.some((old) => old.path === wt.path)
             );
             if (newWorktree) {
-              await openNewWorktree(newWorktree.path, `Checked out PR #${prNumber}`);
+              await openNewWorktree(newWorktree.path, `Checked out PR #${prNumber}`, forceNewWindow);
+              return;
+            }
+
+            // No new worktree — gw pr found an existing one and navigated to it.
+            // Parse its stdout to discover the path and open that worktree the
+            // same way an existing worktree selection does.
+            const existingPath = extractExistingWorktreePathFromPrOutput(prOutput);
+            if (existingPath && existingPath !== currentPath) {
+              log(`Opening existing PR worktree (${forceNewWindow ? 'new' : 'same'} window): ${existingPath}`);
+              const uri = vscode.Uri.file(existingPath);
+              vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow });
+            } else if (!existingPath) {
+              // No new worktree AND no parseable existing-path marker. Either we
+              // are already in the worktree, or `gw pr`'s output wording drifted
+              // — log so the regression surfaces in the gw output channel
+              // instead of silently degrading to a notification.
+              log(`PR worktree resolved but no path parsed from gw pr output (length=${prOutput.length})`);
+              vscode.window.showInformationMessage(`Checked out PR #${prNumber}`);
             } else {
               vscode.window.showInformationMessage(`Checked out PR #${prNumber}`);
             }
@@ -347,9 +376,9 @@ export function activate(context: vscode.ExtensionContext): void {
         // Existing worktree — open it
         if (selected.worktreePath) {
           if (selected.worktreePath !== currentPath) {
-            log(`Opening worktree in new window: ${selected.worktreePath}`);
+            log(`Opening worktree in ${forceNewWindow ? 'new' : 'same'} window: ${selected.worktreePath}`);
             const uri = vscode.Uri.file(selected.worktreePath);
-            vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: true });
+            vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow });
           }
           return;
         }
@@ -375,7 +404,7 @@ export function activate(context: vscode.ExtensionContext): void {
           worktreeProvider.refresh();
 
           const newWorktreePath = await getWorktreePath(workspacePath, branchName);
-          await openNewWorktree(newWorktreePath, `Created worktree: ${branchName}`);
+          await openNewWorktree(newWorktreePath, `Created worktree: ${branchName}`, forceNewWindow);
         } catch (err) {
           if (err instanceof HookFailureError) {
             await handleHookFailure(err, workspacePath, branchName);
@@ -384,7 +413,22 @@ export function activate(context: vscode.ExtensionContext): void {
             vscode.window.showErrorMessage(`Failed to create worktree: ${stripAnsi(msg)}`);
           }
         }
+      };
+
+      quickPick.onDidAccept(async () => {
+        const selected = quickPick.selectedItems[0];
+        quickPick.hide();
+        await handleSwitchSelection(selected, true);
       });
+
+      // Expose a same-window accept callback that captures the currently-highlighted
+      // item (activeItems[0]) when shift+enter is pressed and routes it through the
+      // same selection handler.
+      activeSwitchAcceptSameWindow = async () => {
+        const selected = quickPick.activeItems[0];
+        quickPick.hide();
+        await handleSwitchSelection(selected, false);
+      };
 
       quickPick.onDidTriggerItemButton((e) => {
         if (e.item.worktreePath) {
@@ -395,26 +439,19 @@ export function activate(context: vscode.ExtensionContext): void {
       });
 
       quickPick.onDidHide(() => {
-        activeSwitchQuickPick = undefined;
+        activeSwitchAcceptSameWindow = undefined;
         vscode.commands.executeCommand('setContext', 'gw.switchWorktreeActive', false);
         quickPick.dispose();
       });
 
-      activeSwitchQuickPick = quickPick;
       vscode.commands.executeCommand('setContext', 'gw.switchWorktreeActive', true);
       quickPick.show();
     }),
 
-    vscode.commands.registerCommand('gw.switchWorktreeAcceptSameWindow', () => {
-      if (!activeSwitchQuickPick) return;
-      const selected = activeSwitchQuickPick.activeItems[0];
-      const current = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-      if (selected?.worktreePath && selected.worktreePath !== current) {
-        log(`Opening worktree in same window: ${selected.worktreePath}`);
-        const uri = vscode.Uri.file(selected.worktreePath);
-        vscode.commands.executeCommand('vscode.openFolder', uri, { forceNewWindow: false });
+    vscode.commands.registerCommand('gw.switchWorktreeAcceptSameWindow', async () => {
+      if (activeSwitchAcceptSameWindow) {
+        await activeSwitchAcceptSameWindow();
       }
-      activeSwitchQuickPick.hide();
     }),
 
     vscode.commands.registerCommand('gw.focus', () => {
