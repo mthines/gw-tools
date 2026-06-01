@@ -10,6 +10,7 @@ import {
   formatProgressEventForLog,
   resolveWorktreeGitDir,
   getWorktreeActivityMtime,
+  extractExistingWorktreePathFromPrOutput,
 } from './git-worktree';
 
 describe('parseWorktreeListOutput', () => {
@@ -285,6 +286,48 @@ describe('stripRemotePrefix', () => {
   it('handles a branch name that is only a remote prefix with no branch part', () => {
     // Edge case: "origin/" — strips to empty string
     expect(stripRemotePrefix('origin/')).toBe('');
+  });
+});
+
+describe('extractExistingWorktreePathFromPrOutput', () => {
+  it('extracts the path when the branch is already checked out', () => {
+    const output = [
+      '',
+      'ℹ Branch feat/foo is already checked out at:',
+      '  /Users/me/repos/repo/feat/foo',
+      '',
+      'Navigating there...',
+    ].join('\n');
+    expect(extractExistingWorktreePathFromPrOutput(output)).toBe('/Users/me/repos/repo/feat/foo');
+  });
+
+  it('extracts the path when the worktree path already exists', () => {
+    const output = [
+      '',
+      'ℹ Worktree feat-bar already exists at:',
+      '  /Users/me/repos/repo/feat-bar',
+      '',
+      'Navigating there...',
+    ].join('\n');
+    expect(extractExistingWorktreePathFromPrOutput(output)).toBe('/Users/me/repos/repo/feat-bar');
+  });
+
+  it('strips ANSI escape codes before scanning', () => {
+    // Simulate the colored CLI output: ANSI on the marker line and the path line.
+    const ansiOutput =
+      '\x1B[34mℹ\x1B[39m Branch \x1B[1mfeat/foo\x1B[22m is already checked out at:\n' +
+      '  \x1B[36m/Users/me/repos/repo/feat/foo\x1B[39m\n';
+    expect(extractExistingWorktreePathFromPrOutput(ansiOutput)).toBe('/Users/me/repos/repo/feat/foo');
+  });
+
+  it('returns undefined when no existing-worktree marker is present', () => {
+    const output = 'Fetching PR #42...\nCreating worktree...\nDone.\n';
+    expect(extractExistingWorktreePathFromPrOutput(output)).toBeUndefined();
+  });
+
+  it('returns undefined when the marker has no path on the following line', () => {
+    const output = 'Branch feat/foo is already checked out at:\n';
+    expect(extractExistingWorktreePathFromPrOutput(output)).toBeUndefined();
   });
 });
 

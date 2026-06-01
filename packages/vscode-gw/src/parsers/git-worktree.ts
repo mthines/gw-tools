@@ -348,6 +348,30 @@ export function checkoutPr(cwd: string, prIdentifier: string): Promise<string> {
 }
 
 /**
+ * Parse stdout from `gw pr --no-cd` to find the worktree path when the branch
+ * was already checked out and `gw pr` navigated to it instead of creating a
+ * new worktree.
+ *
+ * The CLI prints one of:
+ *   `Branch <name> is already checked out at:\n  <path>`
+ *   `Worktree <name> already exists at:\n  <path>`
+ *
+ * Returns the indented path on the next line, or `undefined` if no match.
+ */
+export function extractExistingWorktreePathFromPrOutput(output: string): string | undefined {
+  const stripped = stripAnsi(output);
+  const lines = stripped.split('\n');
+  for (let i = 0; i < lines.length - 1; i++) {
+    const line = lines[i];
+    if (line.includes('already checked out at:') || line.includes('already exists at:')) {
+      const candidate = lines[i + 1].trim();
+      if (candidate.length > 0) return candidate;
+    }
+  }
+  return undefined;
+}
+
+/**
  * Sync files to a worktree via gw sync
  */
 export function syncWorktree(cwd: string, target?: string, from?: string): Promise<string> {
