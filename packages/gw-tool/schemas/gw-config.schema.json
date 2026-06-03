@@ -87,6 +87,43 @@
       "enum": ["merge", "rebase"],
       "description": "Default strategy for 'gw update' when syncing worktrees with the latest changes from the default branch. Can be overridden per-command with --merge or --rebase flags.",
       "default": "merge"
+    },
+    "prResolvers": {
+      "type": "array",
+      "description": "Ordered list of resolvers tried by 'gw pr' to translate a user-supplied identifier (PR number, GitHub URL, Linear review URL, etc.) into PR metadata. When omitted, gw uses the default [{ name: 'gh', builtin: 'github' }]. When set, fully replaces the default — include the github builtin explicitly to keep PR-number and github.com URL support. Each resolver receives the identifier on stdin and as $1; writes a JSON object to stdout on exit 0 ({prNumber, branch?, owner?, repo?, isCrossRepository?, remote?}); exit non-zero / empty output passes control to the next resolver.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Human-readable label shown in logs and errors."
+          },
+          "command": {
+            "type": "string",
+            "description": "Shell command. Passed to `sh -c`; the identifier is provided on stdin AND as $1 (never spliced into the command string, so input is shell-safe). Mutually exclusive with 'builtin'."
+          },
+          "builtin": {
+            "type": "string",
+            "enum": ["github"],
+            "description": "Use a built-in resolver. 'github' uses the gh CLI and returns full PR metadata, avoiding a second metadata round-trip. Mutually exclusive with 'command'."
+          },
+          "timeoutMs": {
+            "type": "integer",
+            "minimum": 0,
+            "description": "Per-resolver timeout in milliseconds. Defaults to 20000 (20s)."
+          }
+        },
+        "required": ["name"],
+        "oneOf": [{ "required": ["command"] }, { "required": ["builtin"] }],
+        "additionalProperties": false
+      },
+      "examples": [
+        [{ "name": "gh", "builtin": "github" }],
+        [
+          { "name": "gh", "builtin": "github" },
+          { "name": "linear", "command": "./.gw/resolvers/linear-to-gh.sh" }
+        ]
+      ]
     }
   },
   "additionalProperties": false

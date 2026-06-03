@@ -4,7 +4,7 @@
  */
 
 import { join, resolve } from '@std/path';
-import { ensureConfigDir, ensureSchemaInConfig, saveConfigTemplate } from '../lib/config.ts';
+import { ensureConfigDir, ensureEnvExample, ensureSchemaInConfig, saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
@@ -716,9 +716,17 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       } catch {
         // best effort
       }
+      // Drop a committable .env.example so teammates know which secrets
+      // a prResolver expects (real .env is gitignored).
+      await ensureEnvExample(worktreePath);
       output.success('Configuration created (committable)');
     } catch {
       // If move fails, config stays at bare root — still works
+      try {
+        await ensureEnvExample(fullPath);
+      } catch {
+        // best effort
+      }
       output.success('Configuration created');
     }
 
@@ -831,6 +839,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
       await ensureConfigDir(worktreeRoot);
       await Deno.copyFile(sourceConfig, targetConfig);
       await ensureSchemaInConfig(targetConfig);
+      await ensureEnvExample(worktreeRoot);
       output.success('Config copied to worktree (now committable)');
       console.log(`  From: ${output.path(sourceConfig)}`);
       console.log(`  To:   ${output.path(targetConfig)}`);
@@ -846,6 +855,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   if (initialized && !parsed.interactive) {
     await ensureConfigDir(configDir!);
     await ensureSchemaInConfig(join(configDir!, '.gw', 'config.json'));
+    await ensureEnvExample(configDir!);
     output.info('gw is already initialized in this repository');
     console.log(`  Config: ${output.path(join(configDir!, '.gw/config.json'))}`);
     console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);
@@ -951,6 +961,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   // Save config (committable by default — in worktree root)
   try {
     await saveConfigTemplate(rootPath, config);
+    await ensureEnvExample(rootPath);
     output.success('Configuration created successfully');
     console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
     console.log(`  Repository root: ${output.path(rootPath)}`);

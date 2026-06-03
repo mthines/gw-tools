@@ -21,6 +21,71 @@ export interface HooksConfig {
 }
 
 /**
+ * Built-in resolver names. Maps to handlers in lib/pr-resolvers.ts.
+ */
+export type BuiltinResolverName = 'github';
+
+/**
+ * A single entry in the PR resolver chain for `gw pr`.
+ *
+ * Exactly one of `command` or `builtin` must be provided.
+ *
+ * Resolver contract:
+ *   - stdin: the user-supplied identifier
+ *   - $1:    same identifier (positional, never shell-interpolated)
+ *   - cwd:   git root
+ *   - env:   parent env, with .gw/.env values as defaults
+ *
+ * The resolver writes a JSON object to stdout on exit 0:
+ *   { "prNumber": 42, "branch"?, "owner"?, "repo"?, "isCrossRepository"?, "remote"? }
+ *
+ * Exit non-zero, empty output, or unparseable JSON = "I do not handle this
+ * identifier" — gw moves on to the next resolver.
+ */
+export interface PrResolver {
+  /** Human-readable label shown in logs and errors. */
+  name: string;
+  /**
+   * Shell command. Receives the identifier on stdin AND as $1. The command
+   * string is passed to `sh -c`; input is passed as a separate argv element
+   * so it is never parsed by the shell.
+   */
+  command?: string;
+  /**
+   * Built-in handler name. "github" calls `gh` directly and returns full PR
+   * metadata, avoiding a second `gh pr view` round-trip.
+   */
+  builtin?: BuiltinResolverName;
+  /**
+   * Optional timeout in milliseconds (default 20000). When exceeded, the
+   * resolver process is killed and the chain moves on to the next entry.
+   */
+  timeoutMs?: number;
+}
+
+/**
+ * Structured result returned by a resolver.
+ *
+ * Only `prNumber` is required; the rest are best-effort metadata. If absent,
+ * gw enriches via the github builtin (when `gh` is available) before fetching
+ * the branch.
+ */
+export interface ResolvedPr {
+  /** PR number, positive integer. */
+  prNumber: number;
+  /** Head ref / branch name. */
+  branch?: string;
+  /** Repository owner that hosts the PR head. */
+  owner?: string;
+  /** Repository name that hosts the PR head. */
+  repo?: string;
+  /** True when the PR comes from a fork. */
+  isCrossRepository?: boolean;
+  /** Git remote to fetch from. Defaults to "origin". */
+  remote?: string;
+}
+
+/**
  * Per-repository configuration stored at .gw/config.json
  *
  * This file is safe to commit to your repository. Machine-specific
@@ -44,6 +109,13 @@ export interface Config {
   autoClean?: boolean;
   /** Default update strategy for the update command (optional, default: "merge") */
   updateStrategy?: 'merge' | 'rebase';
+  /**
+   * Ordered list of resolvers tried by `gw pr`. When omitted, gw uses the
+   * default `[{ name: 'gh', builtin: 'github' }]`. When set, fully replaces
+   * the default — include the github builtin explicitly to keep PR-number
+   * and github.com URL support.
+   */
+  prResolvers?: PrResolver[];
 }
 
 /**

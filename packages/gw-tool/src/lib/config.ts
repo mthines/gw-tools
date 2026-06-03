@@ -73,10 +73,21 @@ const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed
 # Local config overrides and runtime state
 config.local.json
 state.json
+
+# Secrets consumed by prResolvers (commit .env.example, never .env)
+.env
+.env.local
 `;
 
+/** Lines that must be present in .gw/.gitignore — appended if missing. */
+const REQUIRED_GITIGNORE_ENTRIES = ['.env', '.env.local'];
+
 /**
- * Ensure the config directory exists and has a .gitignore
+ * Ensure the config directory exists and has a .gitignore that covers
+ * every entry gw relies on. Idempotent: existing .gitignore files are
+ * left as-is unless a required entry is missing, in which case the
+ * missing lines are appended.
+ *
  * @param dir Directory where .gw should be created
  */
 export async function ensureConfigDir(dir: string): Promise<void> {
@@ -90,16 +101,60 @@ export async function ensureConfigDir(dir: string): Promise<void> {
     }
   }
 
-  // Create .gitignore if it doesn't exist — keeps artifacts/state ignored
-  // while allowing config.json to be committed
   const gitignorePath = join(configDir, '.gitignore');
+  let existing: string | null = null;
   try {
-    await Deno.stat(gitignorePath);
+    existing = await Deno.readTextFile(gitignorePath);
   } catch (error) {
-    if (error instanceof Deno.errors.NotFound) {
-      await Deno.writeTextFile(gitignorePath, GW_GITIGNORE_CONTENT);
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
     }
   }
+
+  if (existing === null) {
+    // First-time write — use the full template.
+    await Deno.writeTextFile(gitignorePath, GW_GITIGNORE_CONTENT);
+    return;
+  }
+
+  // Append any required entries that are missing. We match on the trimmed
+  // line so a commented-out `# .env` doesn't satisfy the requirement.
+  const lines = new Set(existing.split(/\r\n|\n|\r/).map((line) => line.trim()));
+  const missing = REQUIRED_GITIGNORE_ENTRIES.filter((entry) => !lines.has(entry));
+  if (missing.length === 0) return;
+
+  const trailing = existing.endsWith('\n') ? '' : '\n';
+  const append = `${trailing}\n# Secrets consumed by prResolvers (commit .env.example, never .env)\n${missing.join('\n')}\n`;
+  await Deno.writeTextFile(gitignorePath, existing + append);
+}
+
+/** Default content for .gw/.env.example — committed, documents required keys. */
+const GW_ENV_EXAMPLE_CONTENT = `# Environment variables consumed by prResolvers (see gw pr --help).
+#
+# Copy this file to .gw/.env (which is gitignored) and fill in real values.
+# Resolver subprocesses inherit the parent shell env first, so anything you
+# already export in your shell rc wins over values defined here.
+#
+# Example for the linear-to-gh sample resolver:
+# LINEAR_API_KEY=lin_api_xxx
+`;
+
+/**
+ * Write `.gw/.env.example` if it does not already exist. Safe to call from
+ * init paths even when the user has an existing config.
+ */
+export async function ensureEnvExample(dir: string): Promise<void> {
+  const configDir = getConfigDir(dir);
+  const examplePath = join(configDir, '.env.example');
+  try {
+    await Deno.stat(examplePath);
+    return;
+  } catch (error) {
+    if (!(error instanceof Deno.errors.NotFound)) {
+      throw error;
+    }
+  }
+  await Deno.writeTextFile(examplePath, GW_ENV_EXAMPLE_CONTENT);
 }
 
 /**

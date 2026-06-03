@@ -49,6 +49,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Examples](#examples-2)
       - [Requirements](#requirements)
       - [How It Works](#how-it-works-1)
+      - [Custom resolvers (`prResolvers`)](#custom-resolvers-prresolvers)
     - [update](#update)
       - [Options](#options-2)
       - [Examples](#examples-3)
@@ -385,6 +386,7 @@ All fields are optional and safe to commit — no machine-specific paths or runt
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (defaults to 7, set via `gw init --clean-threshold`)
 - **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (defaults to "merge", set via `gw init --update-strategy`)
+- **prResolvers**: Ordered list of resolvers `gw pr` consults to translate a user-supplied identifier into PR metadata. When omitted, defaults to `[{ "name": "gh", "builtin": "github" }]`. When set, fully replaces the default — include the github builtin explicitly to keep bare PR numbers and `github.com` URLs working. See [Custom resolvers (`prResolvers`)](#custom-resolvers-prresolvers).
 
 ### Local Overrides (`config.local.json`)
 
@@ -750,10 +752,10 @@ The `cd` command integrates with your shell through an eval-based function (see 
 
 ### pr
 
-Check out a pull request into a new worktree. This command fetches a PR's branch and creates a worktree for it in one step, making it easy to review, test, or contribute to pull requests.
+Check out a pull request into a new worktree. This command resolves an identifier — a PR number, GitHub PR URL, or any input understood by a configured custom resolver (e.g. a Linear review URL) — into PR metadata, fetches the branch, and creates a worktree for it.
 
 ```bash
-gw pr <pr-number|pr-url>
+gw pr <pr-number|pr-url|custom-identifier>
 ```
 
 When you want to review or test a pull request, you typically need to:
@@ -767,7 +769,7 @@ The `gw pr` command does all of this in a single step.
 
 #### Arguments
 
-- `<pr-number|pr-url>`: PR number (e.g., 42) or GitHub PR URL
+- `<pr-number|pr-url|custom-identifier>`: PR number (e.g., 42), GitHub PR URL, or any identifier handled by a configured custom resolver.
 
 #### Options
 
@@ -778,11 +780,14 @@ The `gw pr` command does all of this in a single step.
 #### Examples
 
 ```bash
-# Check out PR #42
+# Check out PR #42 (uses the github builtin resolver)
 gw pr 42
 
 # Check out PR by URL
 gw pr https://github.com/user/repo/pull/42
+
+# Check out a PR via a custom resolver (e.g. Linear)
+gw pr https://linear.app/<workspace>/review/<slug>
 
 # Use custom worktree name
 gw pr 42 --name review-feature
@@ -793,29 +798,80 @@ gw pr 42 --no-cd
 
 #### Requirements
 
-- **GitHub CLI (gh)** must be installed and authenticated
+- **GitHub CLI (gh)** must be installed and authenticated for the default `github` builtin resolver and for metadata enrichment.
 - Install from: https://cli.github.com/
 - After installation, authenticate with: `gh auth login`
 
 #### How It Works
 
-1. **Resolves PR info**: Uses `gh pr view` to get the PR's branch name and fork information
-2. **Validates URL** (if provided): Ensures the PR URL matches the current repository
-3. **Checks for existing worktree**: If the branch is already checked out, offers to navigate there
-4. **Fetches PR branch**: Uses `git fetch origin pull/<number>/head:<branch>` pattern which works for both same-repo and fork PRs
-5. **Creates worktree**: Creates a new worktree with the PR's branch
-6. **Copies files**: Auto-copies files from `autoCopyFiles` config (same as `gw checkout`)
-7. **Runs hooks**: Executes pre-checkout and post-checkout hooks (same as `gw checkout`)
-8. **Navigates**: Automatically navigates to the new worktree
+1. **Runs the resolver chain**: `gw pr` walks `prResolvers` in order. The default chain is `[{ "name": "gh", "builtin": "github" }]`, which uses `gh pr view`. Custom resolvers — see [Custom resolvers](#custom-resolvers-prresolvers) — can handle Linear review URLs, Jira tickets, or anything else.
+2. **Validates URL** (when a github.com URL is supplied): Ensures the PR URL matches the current repository.
+3. **Enriches missing metadata**: If a custom resolver returns only `prNumber`, `gw` calls `gh pr view` to fill in branch/owner/repo (no-op when the builtin already provided everything).
+4. **Checks for existing worktree**: If the branch is already checked out, offers to navigate there.
+5. **Fetches PR branch**: Uses `git fetch <remote> pull/<number>/head:<branch>` pattern which works for both same-repo and fork PRs.
+6. **Creates worktree**: Creates a new worktree with the PR's branch.
+7. **Copies files**: Auto-copies files from `autoCopyFiles` config (same as `gw checkout`).
+8. **Runs hooks**: Executes pre-checkout and post-checkout hooks (same as `gw checkout`).
+9. **Navigates**: Automatically navigates to the new worktree.
 
 **Fork Handling:**
 The command automatically handles PRs from forks by using GitHub's `pull/<number>/head` ref pattern. This fetches the PR branch without needing to add the fork as a remote.
 
 **Error Handling:**
 
-- If `gh` is not installed, shows installation instructions
-- If PR is not found, shows helpful error with authentication hint
-- If PR URL is for a different repository, shows clear error message
+- If no resolver can handle the identifier, lists the resolvers that were tried and points at `gw pr --help`
+- If the default chain is in use but `gh` is not installed, shows installation instructions
+- If the PR URL is for a different repository, shows a clear error message before any network call
+
+#### Custom resolvers (`prResolvers`)
+
+`gw pr` accepts a configurable list of resolvers in `.gw/config.json`. Each resolver translates a user-supplied identifier into PR metadata.
+
+```jsonc
+{
+  "prResolvers": [
+    { "name": "linear", "command": "./.gw/resolvers/linear-to-gh.sh" },
+    { "name": "gh", "builtin": "github" },
+  ],
+}
+```
+
+When `prResolvers` is omitted, `gw` uses the default `[{ "name": "gh", "builtin": "github" }]`. When set, the field **replaces** the default — include the github builtin explicitly if you still want bare PR numbers and `github.com` URLs to work.
+
+**Contract:**
+
+- Input: the identifier is provided on **stdin** AND as **`$1`**. The command string is passed to `sh -c`; the identifier is a separate positional argv, so it is never re-parsed by the shell (URL pasted with `;` characters is safe).
+- Working directory: git root.
+- Environment: parent process env, with `.gw/.env` values as defaults (parent wins).
+- Output: a JSON object on stdout, exit 0.
+
+```json
+{
+  "prNumber": 42,
+  "branch": "feat/foo",
+  "owner": "mthines",
+  "repo": "gw-tools",
+  "isCrossRepository": false,
+  "remote": "origin"
+}
+```
+
+Only `prNumber` is required. Missing metadata is filled in by the `github` builtin (when `gh` is installed). Exit non-zero, print empty stdout, or print unparseable JSON to pass control to the next resolver.
+
+**Per-resolver options:**
+
+- `timeoutMs` — abort the resolver subprocess after the given milliseconds. Default: 20000.
+
+**Secrets via `.gw/.env`:**
+Resolver subprocesses inherit the parent shell environment. `gw` also auto-loads `.gw/.env` (created with `.env` already in `.gw/.gitignore`) so per-repo secrets like `LINEAR_API_KEY` can live there without leaking into the repo. Anything you already export in your shell rc wins over `.gw/.env`.
+
+A sample Linear resolver lives at [`packages/gw-tool/examples/resolvers/linear-to-gh.sh`](./examples/resolvers/linear-to-gh.sh).
+
+**Security note:**
+`prResolvers` entries are shell commands run from a committed config file. The trust model is the same as `hooks` — never run `gw pr` in a repo whose `.gw/config.json` you do not trust.
+
+**Platform note:**
+Custom shell resolvers are POSIX-only. Built-in resolvers (e.g., `github`) work everywhere.
 
 ### update
 

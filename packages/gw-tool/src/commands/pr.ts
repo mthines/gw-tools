@@ -11,47 +11,14 @@ import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import * as output from '../lib/output.ts';
-
-/**
- * Information about a pull request from gh CLI
- */
-interface PrInfo {
-  number: number;
-  headRefName: string;
-  headRepository: { name: string };
-  headRepositoryOwner: { login: string };
-  isCrossRepository: boolean;
-}
-
-/**
- * Parse a PR identifier (number or URL) to extract PR number
- * @param identifier PR number or GitHub URL
- * @returns Object with PR number and optional owner/repo for URL validation
- */
-function parsePrIdentifier(identifier: string): { prNumber: number; owner?: string; repo?: string } | null {
-  // Try parsing as a number first
-  const asNumber = parseInt(identifier, 10);
-  if (!isNaN(asNumber) && asNumber > 0) {
-    return { prNumber: asNumber };
-  }
-
-  // Try parsing as GitHub URL
-  // Patterns:
-  // - https://github.com/owner/repo/pull/123
-  // - github.com/owner/repo/pull/123
-  const urlPattern = /(?:https?:\/\/)?github\.com\/([^/]+)\/([^/]+)\/pull\/(\d+)/;
-  const match = identifier.match(urlPattern);
-
-  if (match) {
-    const [, owner, repo, prNumberStr] = match;
-    const prNumber = parseInt(prNumberStr, 10);
-    if (!isNaN(prNumber) && prNumber > 0) {
-      return { prNumber, owner, repo };
-    }
-  }
-
-  return null;
-}
+import {
+  DEFAULT_PR_RESOLVERS,
+  enrichWithGh,
+  isGhInstalled,
+  parseGithubIdentifier,
+  resolvePrIdentifier,
+} from '../lib/pr-resolvers.ts';
+import type { PrResolver, ResolvedPr } from '../lib/types.ts';
 
 /**
  * Parse PR command arguments
@@ -116,15 +83,18 @@ function parsePrArgs(args: string[]): {
  * Show help for the pr command
  */
 function showPrHelp(): void {
-  console.log(`Usage: gw pr [options] <pr-number|pr-url>
+  console.log(`Usage: gw pr [options] <pr-number|pr-url|custom-identifier>
 
 Check out a pull request into a new worktree.
 
-This command fetches a PR's branch and creates a worktree for it in one step,
-making it easy to review, test, or contribute to pull requests.
+This command resolves an identifier — a PR number, GitHub PR URL, or any
+input understood by a configured custom resolver (e.g. a Linear review URL)
+— into PR metadata, fetches the branch, and creates a worktree for it.
 
 Arguments:
-  <pr-number|pr-url>    PR number (e.g., 42) or GitHub PR URL
+  <pr-number|pr-url|custom-identifier>
+                        PR number (e.g., 42), GitHub PR URL, or an
+                        identifier handled by a custom prResolver.
 
 Options:
   --name <name>         Custom name for the worktree directory
@@ -132,45 +102,33 @@ Options:
   -h, --help            Show this help message
 
 Examples:
-  # Check out PR #42
+  # Check out PR #42 (uses the github builtin resolver)
   gw pr 42
 
   # Check out PR by URL
   gw pr https://github.com/user/repo/pull/42
 
+  # Check out a PR via a custom resolver (e.g. Linear)
+  gw pr https://linear.app/<workspace>/review/<slug>
+
   # Use custom worktree name
   gw pr 42 --name review-feature
 
 Requirements:
-  - GitHub CLI (gh) must be installed and authenticated
+  - GitHub CLI (gh) for the default github builtin resolver
   - Install: https://cli.github.com/
 
-How It Works:
-  1. Resolves PR number/URL to branch information via gh CLI
-  2. Fetches the PR branch (handles forks automatically)
-  3. Creates worktree with auto-copy files and hooks (same as gw add)
-  4. Navigates to the new worktree
+Custom resolvers:
+  Define resolvers in .gw/config.json under "prResolvers" — an ordered list
+  of { name, command|builtin, timeoutMs? }. Each resolver receives the
+  identifier on stdin and as $1, and writes JSON to stdout:
+    { "prNumber": 42, "branch"?, "owner"?, "repo"?, "isCrossRepository"?, "remote"? }
+  Exit non-zero or empty output = "I don't handle this", try next resolver.
+  Secrets live in .gw/.env (auto-loaded, gitignored).
 
 If the PR's branch is already checked out in a worktree, the command
 will offer to navigate to that worktree instead.
 `);
-}
-
-/**
- * Check if gh CLI is installed
- */
-async function isGhInstalled(): Promise<boolean> {
-  try {
-    const cmd = new Deno.Command('gh', {
-      args: ['--version'],
-      stdout: 'null',
-      stderr: 'null',
-    });
-    const { code } = await cmd.output();
-    return code === 0;
-  } catch {
-    return false;
-  }
 }
 
 /**
@@ -195,48 +153,19 @@ async function getCurrentRepo(): Promise<{ owner: string; repo: string } | null>
 }
 
 /**
- * Fetch PR info using gh CLI
- */
-async function fetchPrInfo(prNumber: number): Promise<PrInfo | null> {
-  try {
-    const cmd = new Deno.Command('gh', {
-      args: [
-        'pr',
-        'view',
-        String(prNumber),
-        '--json',
-        'number,headRefName,headRepository,headRepositoryOwner,isCrossRepository',
-      ],
-      stdout: 'piped',
-      stderr: 'piped',
-    });
-    const { code, stdout, stderr } = await cmd.output();
-
-    if (code !== 0) {
-      const errorMsg = new TextDecoder().decode(stderr);
-      if (errorMsg.includes('Could not resolve') || errorMsg.includes('not found')) {
-        return null;
-      }
-      throw new Error(errorMsg);
-    }
-
-    return JSON.parse(new TextDecoder().decode(stdout));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes('not found')) {
-      return null;
-    }
-    throw error;
-  }
-}
-
-/**
  * Fetch PR branch using pull/<number>/head ref pattern
  * This works for both same-repo and fork PRs
  */
-async function fetchPrBranch(prNumber: number, branchName: string): Promise<{ success: boolean; message?: string }> {
-  // Fetch the PR head into a local branch
+async function fetchPrBranch(
+  prNumber: number,
+  branchName: string,
+  remote: string
+): Promise<{
+  success: boolean;
+  message?: string;
+}> {
   const cmd = new Deno.Command('git', {
-    args: ['fetch', 'origin', `pull/${prNumber}/head:${branchName}`],
+    args: ['fetch', remote, `pull/${prNumber}/head:${branchName}`],
     stdout: 'piped',
     stderr: 'piped',
   });
@@ -249,6 +178,68 @@ async function fetchPrBranch(prNumber: number, branchName: string): Promise<{ su
   }
 
   return { success: true };
+}
+
+/**
+ * Resolve the user identifier through the configured chain and enrich
+ * with gh metadata if needed. Handles all error reporting and exits the
+ * process on failure.
+ */
+async function resolveOrExit(
+  identifier: string,
+  resolvers: PrResolver[],
+  gitRoot: string
+): Promise<{ resolved: ResolvedPr; resolverName: string }> {
+  if (resolvers.length === 0) {
+    output.error('No PR resolvers configured');
+    console.log('Set "prResolvers" in .gw/config.json — at minimum [{ "name": "gh", "builtin": "github" }].\n');
+    Deno.exit(1);
+  }
+
+  const winning = await resolvePrIdentifier(identifier, {
+    resolvers,
+    gitRoot,
+  });
+
+  if (!winning) {
+    // Distinguish the common case (only gh in chain, but gh missing) from
+    // "no resolver knew how to handle this".
+    const onlyGithubBuiltin = resolvers.length === 1 && resolvers[0].builtin === 'github';
+    if (onlyGithubBuiltin && !(await isGhInstalled())) {
+      output.error('GitHub CLI (gh) is not installed');
+      console.log('The default github resolver requires the GitHub CLI to fetch PR information.');
+      console.log('');
+      console.log('Install gh from: https://cli.github.com/');
+      console.log('');
+      console.log('After installation, authenticate with:');
+      console.log('  gh auth login');
+      console.log('');
+      console.log('Or configure a custom resolver in .gw/config.json under "prResolvers" — see `gw pr --help`.\n');
+      Deno.exit(1);
+    }
+
+    output.error(`Could not resolve PR identifier: ${identifier}`);
+    console.log('');
+    console.log('Tried resolvers (in order):');
+    for (const r of resolvers) {
+      console.log(`  - ${r.name}${r.builtin ? ` (builtin: ${r.builtin})` : ''}`);
+    }
+    console.log('');
+    console.log('Add or adjust resolvers in .gw/config.json. See `gw pr --help`.\n');
+    Deno.exit(1);
+  }
+
+  const enriched = await enrichWithGh(winning.result);
+
+  if (!enriched.branch) {
+    output.error(`Resolver "${winning.resolver.name}" returned PR #${enriched.prNumber} but no branch name`);
+    console.log('');
+    console.log('Either include `branch` in the resolver output, or install gh so gw can');
+    console.log('fetch the branch name automatically.\n');
+    Deno.exit(1);
+  }
+
+  return { resolved: enriched, resolverName: winning.resolver.name };
 }
 
 /**
@@ -272,75 +263,52 @@ export async function executePr(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  // Parse PR identifier
-  const prIdResult = parsePrIdentifier(parsed.prIdentifier);
-  if (!prIdResult) {
-    output.error(`Invalid PR identifier: ${parsed.prIdentifier}`);
-    console.log('Expected a PR number (e.g., 42) or GitHub PR URL');
-    console.log('Example URL: https://github.com/owner/repo/pull/42\n');
-    Deno.exit(1);
-  }
+  // Load config — needed for resolver chain, hooks, and auto-copy.
+  const { config, gitRoot } = await loadConfig();
+  const resolvers = config.prResolvers ?? DEFAULT_PR_RESOLVERS;
 
-  // Check if gh CLI is installed
-  if (!(await isGhInstalled())) {
-    output.error('GitHub CLI (gh) is not installed');
-    console.log('The gw pr command requires the GitHub CLI to fetch PR information.');
-    console.log('');
-    console.log('Install gh from: https://cli.github.com/');
-    console.log('');
-    console.log('After installation, authenticate with:');
-    console.log('  gh auth login\n');
-    Deno.exit(1);
-  }
-
-  // If URL was provided, validate it matches current repo
-  if (prIdResult.owner && prIdResult.repo) {
+  // Owner/repo mismatch guard runs ONLY for github.com URLs and uses the
+  // pure-string parse — it does not depend on the resolver chain. This
+  // catches the "paste a PR URL from the wrong repo" mistake before we
+  // burn a network round-trip on the wrong PR.
+  const ghParse = parseGithubIdentifier(parsed.prIdentifier);
+  if (ghParse?.owner && ghParse.repo && (await isGhInstalled())) {
     const currentRepo = await getCurrentRepo();
-    if (!currentRepo) {
-      output.error('Could not determine current repository');
-      console.log('Make sure you are in a git repository with a GitHub remote.\n');
-      Deno.exit(1);
-    }
-
-    if (
-      currentRepo.owner.toLowerCase() !== prIdResult.owner.toLowerCase() ||
-      currentRepo.repo.toLowerCase() !== prIdResult.repo.toLowerCase()
-    ) {
-      output.error(`PR URL is for repository '${prIdResult.owner}/${prIdResult.repo}'`);
-      console.log(`But you're currently in '${currentRepo.owner}/${currentRepo.repo}'`);
-      console.log('');
-      console.log('Hint: Use just the PR number if you want to fetch from the current repo:');
-      console.log(`  gw pr ${prIdResult.prNumber}\n`);
-      Deno.exit(1);
+    if (currentRepo) {
+      if (
+        currentRepo.owner.toLowerCase() !== ghParse.owner.toLowerCase() ||
+        currentRepo.repo.toLowerCase() !== ghParse.repo.toLowerCase()
+      ) {
+        output.error(`PR URL is for repository '${ghParse.owner}/${ghParse.repo}'`);
+        console.log(`But you're currently in '${currentRepo.owner}/${currentRepo.repo}'`);
+        console.log('');
+        console.log('Hint: Use just the PR number if you want to fetch from the current repo:');
+        console.log(`  gw pr ${ghParse.prNumber}\n`);
+        Deno.exit(1);
+      }
     }
   }
 
-  const prNumber = prIdResult.prNumber;
-  console.log(`Fetching PR #${prNumber} information...\n`);
+  console.log(`Resolving ${output.dim(parsed.prIdentifier)}...\n`);
 
-  // Fetch PR info
-  const prInfo = await fetchPrInfo(prNumber);
-  if (!prInfo) {
-    output.error(`PR #${prNumber} not found`);
-    console.log('Make sure the PR exists and you have access to it.');
+  const { resolved, resolverName } = await resolveOrExit(parsed.prIdentifier, resolvers, gitRoot);
+  const prNumber = resolved.prNumber;
+  const branchName = resolved.branch!;
+  const remote = resolved.remote ?? 'origin';
+
+  if (resolverName !== 'gh') {
+    console.log(output.dim(`  Resolved via "${resolverName}" → PR #${prNumber}`));
     console.log('');
-    console.log('If this is a private repository, ensure you are authenticated:');
-    console.log('  gh auth login\n');
-    Deno.exit(1);
   }
 
   // Determine the branch/worktree name
-  const branchName = prInfo.headRefName;
   const worktreeName = parsed.name || branchName;
 
   console.log(`PR #${prNumber}: ${output.bold(branchName)}`);
-  if (prInfo.isCrossRepository) {
-    console.log(`  From fork: ${output.dim(`${prInfo.headRepositoryOwner.login}/${prInfo.headRepository.name}`)}`);
+  if (resolved.isCrossRepository && resolved.owner && resolved.repo) {
+    console.log(`  From fork: ${output.dim(`${resolved.owner}/${resolved.repo}`)}`);
   }
   console.log('');
-
-  // Load config
-  const { config, gitRoot } = await loadConfig();
 
   // Resolve worktree path
   const worktreePath = resolveWorktreePath(gitRoot, worktreeName);
@@ -379,11 +347,9 @@ export async function executePr(args: string[]): Promise<void> {
   try {
     const stat = await Deno.stat(worktreePath);
     if (stat.isDirectory || stat.isFile) {
-      // Path exists - check if it's a valid worktree
       const isValidWorktree = worktrees.some((wt) => wt.path === worktreePath);
 
       if (isValidWorktree) {
-        // Worktree already exists but with a different branch
         console.log('');
         output.info(`Worktree ${output.bold(worktreeName)} already exists at:`);
         console.log(`  ${output.path(worktreePath)}`);
@@ -405,7 +371,6 @@ export async function executePr(args: string[]): Promise<void> {
           Deno.exit(0);
         }
       } else {
-        // Path exists but isn't a valid worktree - automatically clean up
         console.log('');
         output.warning(`Path ${output.bold(worktreePath)} already exists but is not a valid worktree.`);
         console.log(`This can happen if a previous worktree creation was interrupted.`);
@@ -417,20 +382,19 @@ export async function executePr(args: string[]): Promise<void> {
       }
     }
   } catch (error) {
-    // Path doesn't exist - this is fine, we'll create it
     if (!(error instanceof Deno.errors.NotFound)) {
       throw error;
     }
   }
 
-  // Execute pre-add hooks (abort on failure)
+  // Execute pre-checkout hooks (abort on failure)
   if (config.hooks?.checkout?.pre && config.hooks.checkout.pre.length > 0) {
     const { allSuccessful } = await executeHooks(
       config.hooks.checkout.pre,
       gitRoot,
       hookVariables,
       'pre-checkout',
-      true // abort on failure
+      true
     );
 
     if (!allSuccessful) {
@@ -441,10 +405,10 @@ export async function executePr(args: string[]): Promise<void> {
 
   // Fetch PR branch
   console.log(`Fetching PR branch...`);
-  console.log(output.dim(`  git fetch origin pull/${prNumber}/head:${branchName}`));
+  console.log(output.dim(`  git fetch ${remote} pull/${prNumber}/head:${branchName}`));
   console.log('');
 
-  const fetchResult = await fetchPrBranch(prNumber, branchName);
+  const fetchResult = await fetchPrBranch(prNumber, branchName, remote);
   if (!fetchResult.success) {
     output.error('Failed to fetch PR branch');
     console.log(fetchResult.message || 'Unknown error');
@@ -473,10 +437,9 @@ export async function executePr(args: string[]): Promise<void> {
     Deno.exit(code);
   }
 
-  // Set up tracking to origin for the PR branch
-  // This allows easy pushing of changes back to the PR
+  // Set up tracking to origin for the PR branch so pushes work transparently.
   const configRemoteCmd = new Deno.Command('git', {
-    args: ['-C', worktreePath, 'config', `branch.${branchName}.remote`, 'origin'],
+    args: ['-C', worktreePath, 'config', `branch.${branchName}.remote`, remote],
     stdout: 'null',
     stderr: 'null',
   });
@@ -497,14 +460,12 @@ export async function executePr(args: string[]): Promise<void> {
     filesToCopy = config.autoCopyFiles;
   }
 
-  // Copy files if any
   if (filesToCopy.length > 0) {
     console.log(`Copying files to new worktree...`);
 
     const sourceWorktree = config.defaultBranch || 'main';
     let sourcePath = resolveWorktreePath(gitRoot, sourceWorktree);
 
-    // If the resolved source path doesn't exist, use git root (main worktree is at repo root)
     try {
       await Deno.stat(sourcePath);
     } catch {
@@ -514,7 +475,6 @@ export async function executePr(args: string[]): Promise<void> {
     try {
       const results = await copyFiles(sourcePath, worktreePath, filesToCopy, false);
 
-      // Display results
       console.log();
       for (const result of results) {
         if (result.success) {
@@ -542,7 +502,7 @@ export async function executePr(args: string[]): Promise<void> {
       worktreePath,
       hookVariables,
       'post-checkout',
-      false // don't abort on failure, just warn
+      false
     );
 
     if (!allSuccessful) {

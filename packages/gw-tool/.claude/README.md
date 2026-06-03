@@ -84,7 +84,11 @@ packages/gw-tool/
 │       ├── path-resolver.ts # Path resolution utilities
 │       ├── output.ts        # Colored output formatting
 │       ├── git-proxy.ts     # Git command proxy utilities
+│       ├── pr-resolvers.ts  # `gw pr` resolver chain (builtins + shell resolvers)
+│       ├── dotenv.ts        # .gw/.env loader for resolver subprocesses
 │       └── version.ts       # Version constant
+├── examples/
+│   └── resolvers/           # Reference prResolver scripts (not auto-installed)
 ├── npm/                     # npm package files
 ├── scripts/                 # Build/release scripts
 ├── deno.json                # Deno configuration
@@ -627,3 +631,48 @@ Hook variables support substitution in commands:
 - `{worktreePath}` - Full absolute path to the worktree
 - `{gitRoot}` - The git repository root path
 - `{branch}` - The branch name
+
+### Running PR Resolvers
+
+`gw pr` translates the user-supplied identifier into PR metadata via an
+ordered resolver chain. The chain lives in `Config.prResolvers`; when
+omitted, `DEFAULT_PR_RESOLVERS` (`[{ name: 'gh', builtin: 'github' }]`) is
+used.
+
+```typescript
+import { DEFAULT_PR_RESOLVERS, enrichWithGh, parseGithubIdentifier, resolvePrIdentifier } from '../lib/pr-resolvers.ts';
+
+const resolvers = config.prResolvers ?? DEFAULT_PR_RESOLVERS;
+
+const winning = await resolvePrIdentifier(identifier, {
+  resolvers,
+  gitRoot,
+});
+
+if (!winning) {
+  // None of the resolvers handled this identifier — surface a helpful error.
+  Deno.exit(1);
+}
+
+// Custom resolvers may return only `prNumber`; gh fills in branch/owner/repo.
+const resolved = await enrichWithGh(winning.result);
+```
+
+Conventions:
+
+- Built-in resolvers (`builtin: 'github'`) call `gh` directly and return
+  full metadata so we avoid a second `gh pr view` round-trip.
+- Shell resolvers are invoked via `sh -c "$cmd" gw-resolver "$input"` so
+  the user identifier never reaches shell parsing — it is always argv `$1`
+  AND stdin.
+- Subprocess `env` is the result of `loadResolverEnv(gitRoot)`: parent env
+  with `.gw/.env` filling in defaults. Parent env wins on conflict.
+- Resolver output is JSON-only — the parser rejects empty stdout,
+  malformed JSON, missing `prNumber`, and non-positive-integer `prNumber`
+  values, which all pass control to the next resolver.
+
+Adding new built-ins:
+
+1. Extend `BuiltinResolverName` in `types.ts`.
+2. Add the handler in `runBuiltin`-style code inside `pr-resolvers.ts`.
+3. Update the `enum` in `schemas/gw-config.schema.json`.
