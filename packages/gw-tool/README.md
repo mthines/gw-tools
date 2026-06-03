@@ -1450,7 +1450,8 @@ The clean command:
 - By default, only removes worktrees with NO uncommitted changes
 - By default, only removes worktrees with NO unpushed commits
 - Always prompts for confirmation before deletion
-- Main/bare repository, default branch, and gw_root worktrees are never removed
+- Bare repository, the configured `defaultBranch`, and `gw_root` are never removed
+- The canonical trunk names `main` and `master` are also always protected — even when one of them is not the currently configured `defaultBranch` (e.g. a repo with `defaultBranch: "master"` still protects a leftover local `main` branch, and vice versa)
 - After removing worktrees, automatically prunes orphan branches (branches with no worktree and no unpushed commits)
 - Use `--force` to bypass safety checks (use with caution)
 

@@ -3,6 +3,7 @@
  */
 
 import { dirname, join } from '@std/path';
+import { isProtectedBranch } from './branch-protection.ts';
 
 /**
  * Worktree information from git worktree list
@@ -688,8 +689,9 @@ export async function findOrphanBranches(worktrees: WorktreeInfo[], defaultBranc
       continue;
     }
 
-    // Skip protected branches
-    if (branch === defaultBranch || branch === 'gw_root') {
+    // Skip protected branches (configured default, gw_root, and canonical
+    // trunk names like main/master — see isProtectedBranch).
+    if (isProtectedBranch(branch, defaultBranch)) {
       continue;
     }
 

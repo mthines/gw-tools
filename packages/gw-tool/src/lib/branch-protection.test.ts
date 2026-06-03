@@ -26,12 +26,15 @@ Deno.test('isProtectedBranch - handles undefined branch', () => {
   assertEquals(isProtectedBranch(undefined, 'main'), false);
 });
 
-Deno.test('isProtectedBranch - default branch is relative to config', () => {
-  // If default is "main", "master" is NOT protected
-  assertEquals(isProtectedBranch('master', 'main'), false);
-
-  // If default is "master", "main" is NOT protected
-  assertEquals(isProtectedBranch('main', 'master'), false);
+Deno.test('isProtectedBranch - canonical trunk names are always protected', () => {
+  // Regression for the bug where `gw clean` deleted a local `main` branch
+  // because the configured defaultBranch was something else (e.g. master).
+  // Git's canonical trunk names (main, master) must be protected regardless
+  // of which one is currently the configured default.
+  assertEquals(isProtectedBranch('main', 'master'), true);
+  assertEquals(isProtectedBranch('master', 'main'), true);
+  assertEquals(isProtectedBranch('main', 'develop'), true);
+  assertEquals(isProtectedBranch('master', 'develop'), true);
 });
 
 Deno.test('isProtectedBranch - case sensitive matching', () => {

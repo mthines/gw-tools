@@ -8,6 +8,7 @@
  */
 
 import { executeGitWorktree } from '../lib/git-proxy.ts';
+import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
   deleteBranch,
@@ -108,7 +109,7 @@ Options:
   -h, --help         Show this help message
 
 Safety Features:
-  - Default branch is protected (from .gw/config.json)
+  - Default branch and canonical trunk names (main, master) are protected
   - Current worktree is protected
   - Bare repository is never removed
   - Branches with unpushed commits are protected
@@ -190,8 +191,7 @@ async function analyzeWorktrees(
 
     // Only check if current when we have a currentPath (i.e., we're in a worktree)
     const isCurrent = options.currentPath && wt.path === options.currentPath;
-    const isDefaultBranch = wt.branch === options.defaultBranch;
-    const isGwRoot = wt.branch === 'gw_root';
+    const isProtected = isProtectedBranch(wt.branch, options.defaultBranch);
     const hasUncommitted = await hasUncommittedChanges(wt.path);
     const hasUnpushed = await hasUnpushedCommits(wt.path);
 
@@ -202,12 +202,9 @@ async function analyzeWorktrees(
     if (isCurrent) {
       canClean = false;
       reason = 'current worktree (cannot remove)';
-    } else if (isDefaultBranch) {
+    } else if (isProtected) {
       canClean = false;
-      reason = 'default branch (protected)';
-    } else if (isGwRoot) {
-      canClean = false;
-      reason = 'gw_root (protected)';
+      reason = 'protected branch (default, gw_root, or canonical trunk name)';
     } else if (hasUncommitted) {
       canClean = false;
       reason = 'has uncommitted changes';

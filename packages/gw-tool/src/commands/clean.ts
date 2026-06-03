@@ -111,7 +111,9 @@ Safety Features:
   - Auto mode only removes worktrees with NO uncommitted changes or unpushed
     commits (unless --force is used)
   - Always prompts for confirmation before deletion
-  - Main/bare repository, default branch, and gw_root are never removed
+  - Bare repository, configured default branch, gw_root, and the canonical
+    trunk names "main" and "master" are never removed (even when one of
+    them is not the configured default)
   - After removing worktrees, automatically prunes orphan branches
     (branches with no worktree and no unpushed commits)
 
@@ -201,25 +203,12 @@ async function executeInteractiveClean(): Promise<void> {
   for (const wt of worktrees) {
     if (wt.bare) continue;
 
-    const isDefault = wt.branch === defaultBranch;
-    const isGwRoot = wt.branch === 'gw_root';
-
-    if (isDefault) {
+    if (isProtectedBranch(wt.branch, defaultBranch)) {
       worktreeItems.push({
         label: wt.branch || wt.path,
         value: `worktree:${wt.path}`,
         disabled: true,
-        disabledReason: 'default branch - cannot remove',
-      });
-      continue;
-    }
-
-    if (isGwRoot) {
-      worktreeItems.push({
-        label: wt.branch || wt.path,
-        value: `worktree:${wt.path}`,
-        disabled: true,
-        disabledReason: 'gw_root - cannot remove',
+        disabledReason: 'protected branch - cannot remove',
       });
       continue;
     }
@@ -247,25 +236,12 @@ async function executeInteractiveClean(): Promise<void> {
     // Skip branches that have an active worktree
     if (worktreeBranches.has(branch)) continue;
 
-    const isDefault = branch === defaultBranch;
-    const isGwRoot = branch === 'gw_root';
-
-    if (isDefault) {
+    if (isProtectedBranch(branch, defaultBranch)) {
       branchItems.push({
         label: branch,
         value: `branch:${branch}`,
         disabled: true,
-        disabledReason: 'default branch - cannot remove',
-      });
-      continue;
-    }
-
-    if (isGwRoot) {
-      branchItems.push({
-        label: branch,
-        value: `branch:${branch}`,
-        disabled: true,
-        disabledReason: 'gw_root - cannot remove',
+        disabledReason: 'protected branch - cannot remove',
       });
       continue;
     }
@@ -289,6 +265,19 @@ async function executeInteractiveClean(): Promise<void> {
       const parts: string[] = [];
       if (date) parts.push(date);
       parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
+
+      // Defense-in-depth: findOrphanBranches already filters protected
+      // branches, but the orphan section is the most destructive code path
+      // (force-deletes via -D), so re-assert protection here.
+      if (isProtectedBranch(o.name, defaultBranch)) {
+        return {
+          label: o.name,
+          value: `orphan:${o.name}`,
+          disabled: true,
+          disabledReason: 'protected branch - cannot remove',
+        };
+      }
+
       return {
         label: o.name,
         value: `orphan:${o.name}`,
