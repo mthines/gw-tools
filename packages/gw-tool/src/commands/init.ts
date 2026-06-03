@@ -979,9 +979,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
       console.log(`  Clean threshold: ${output.bold(config.cleanThreshold.toString())} days`);
     }
     if (config.autoClean) {
-      console.log(
-        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking)')}`
-      );
+      console.log(`  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking)')}`);
     }
     if (config.updateStrategy) {
       console.log(`  Update strategy: ${output.bold(config.updateStrategy)}`);

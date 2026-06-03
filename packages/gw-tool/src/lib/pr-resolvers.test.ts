@@ -217,7 +217,14 @@ Deno.test('resolvePrIdentifier - shell injection in identifier is contained', as
 // early-exit fast paths that require no I/O.
 
 Deno.test('enrichWithGh - returns input unchanged when all fields already present', async () => {
-  const resolved = { prNumber: 42, branch: 'feat/x', owner: 'acme', repo: 'api', isCrossRepository: false, remote: 'upstream' };
+  const resolved = {
+    prNumber: 42,
+    branch: 'feat/x',
+    owner: 'acme',
+    repo: 'api',
+    isCrossRepository: false,
+    remote: 'upstream',
+  };
   // All three key fields are set, so enrichWithGh returns early without calling gh.
   const result = await enrichWithGh(resolved);
   assertEquals(result, resolved);
