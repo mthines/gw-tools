@@ -5,6 +5,7 @@
 
 import { resolve } from '@std/path';
 import { executeGitWorktree } from '../lib/git-proxy.ts';
+import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
   deleteLocalBranch,
@@ -131,15 +132,13 @@ For full git worktree remove documentation:
     if (exactMatch) {
       // Found exact match - check if it's a protected branch
       const defaultBranch = config.defaultBranch || 'main';
-      if (exactMatch.branch === defaultBranch || exactMatch.branch === 'gw_root') {
+      if (isProtectedBranch(exactMatch.branch, defaultBranch)) {
         console.log('');
         output.error(`Cannot remove ${output.bold(exactMatch.branch)} - this is a protected branch.`);
         console.log('');
-        if (exactMatch.branch === defaultBranch) {
-          console.log(`The default branch (${output.bold(defaultBranch)}) cannot be removed.`);
-        } else {
-          console.log(`The ${output.bold('gw_root')} branch is the bare repository root and cannot be removed.`);
-        }
+        console.log(
+          `Protected branches (default branch, gw_root, and canonical trunk names main/master) cannot be removed.`
+        );
         console.log('');
         Deno.exit(1);
       }
@@ -338,10 +337,7 @@ For full git worktree remove documentation:
     const { config } = await loadConfig();
     const defaultBranch = config.defaultBranch || 'main';
 
-    // List of protected branches that should never be deleted
-    const protectedBranches = new Set([defaultBranch, 'main', 'master', 'gw_root']);
-
-    if (protectedBranches.has(worktreeBranch)) {
+    if (isProtectedBranch(worktreeBranch, defaultBranch)) {
       // Don't delete protected branches (silently skip)
     } else {
       // Check if branch is checked out in another worktree

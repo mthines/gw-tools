@@ -203,25 +203,12 @@ async function executeInteractiveClean(): Promise<void> {
   for (const wt of worktrees) {
     if (wt.bare) continue;
 
-    const isDefault = wt.branch === defaultBranch;
-    const isGwRoot = wt.branch === 'gw_root';
-
-    if (isDefault) {
+    if (isProtectedBranch(wt.branch, defaultBranch)) {
       worktreeItems.push({
         label: wt.branch || wt.path,
         value: `worktree:${wt.path}`,
         disabled: true,
-        disabledReason: 'default branch - cannot remove',
-      });
-      continue;
-    }
-
-    if (isGwRoot) {
-      worktreeItems.push({
-        label: wt.branch || wt.path,
-        value: `worktree:${wt.path}`,
-        disabled: true,
-        disabledReason: 'gw_root - cannot remove',
+        disabledReason: 'protected branch - cannot remove',
       });
       continue;
     }
@@ -249,25 +236,12 @@ async function executeInteractiveClean(): Promise<void> {
     // Skip branches that have an active worktree
     if (worktreeBranches.has(branch)) continue;
 
-    const isDefault = branch === defaultBranch;
-    const isGwRoot = branch === 'gw_root';
-
-    if (isDefault) {
+    if (isProtectedBranch(branch, defaultBranch)) {
       branchItems.push({
         label: branch,
         value: `branch:${branch}`,
         disabled: true,
-        disabledReason: 'default branch - cannot remove',
-      });
-      continue;
-    }
-
-    if (isGwRoot) {
-      branchItems.push({
-        label: branch,
-        value: `branch:${branch}`,
-        disabled: true,
-        disabledReason: 'gw_root - cannot remove',
+        disabledReason: 'protected branch - cannot remove',
       });
       continue;
     }

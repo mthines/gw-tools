@@ -3,7 +3,7 @@
  */
 
 import { assertEquals } from '@std/assert';
-import { CANONICAL_TRUNK_BRANCHES, isProtectedBranch } from './branch-protection.ts';
+import { isProtectedBranch } from './branch-protection.ts';
 
 Deno.test('isProtectedBranch - protects default branch', () => {
   assertEquals(isProtectedBranch('main', 'main'), true);
@@ -42,9 +42,4 @@ Deno.test('isProtectedBranch - case sensitive matching', () => {
   assertEquals(isProtectedBranch('Main', 'main'), false);
   assertEquals(isProtectedBranch('MAIN', 'main'), false);
   assertEquals(isProtectedBranch('GW_ROOT', 'main'), false);
-});
-
-Deno.test('CANONICAL_TRUNK_BRANCHES contains main and master', () => {
-  assertEquals(CANONICAL_TRUNK_BRANCHES.includes('main'), true);
-  assertEquals(CANONICAL_TRUNK_BRANCHES.includes('master'), true);
 });
