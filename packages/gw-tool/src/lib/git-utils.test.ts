@@ -8,9 +8,11 @@ import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import {
   copyStagedFiles,
+  findOrphanBranches,
   getBranchLastCommitDate,
   getStagedFileContent,
   getStagedFiles,
+  listWorktrees,
   probeAndFetchRemoteBranch,
 } from './git-utils.ts';
 
@@ -542,5 +544,93 @@ Deno.test('probeAndFetchRemoteBranch - finds remote branch and materialises orig
     await remote.cleanup();
     await teammate.cleanup();
     await local.cleanup();
+  }
+});
+
+// =============================================================================
+// findOrphanBranches tests
+// =============================================================================
+
+Deno.test('findOrphanBranches - does not return canonical trunk names when defaultBranch differs', async () => {
+  // Regression: with defaultBranch='master' and a leftover local 'main'
+  // branch (no worktree), `gw clean` interactive mode used to surface 'main'
+  // as a selectable orphan that was then force-deleted via `git branch -D`.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    // repo.init creates `main` as the initial branch — make `master` the
+    // checked-out branch and leave `main` as a leftover with no worktree.
+    await repo.createBranch('master');
+    await repo.runCommand('git', ['checkout', 'master'], repo.path);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const worktrees = await listWorktrees();
+      const orphans = await findOrphanBranches(worktrees, 'master');
+
+      const orphanNames = orphans.map((o) => o.name);
+      assertEquals(
+        orphanNames.includes('main'),
+        false,
+        '`main` must never be returned as an orphan — it is a canonical trunk name'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('findOrphanBranches - protects master when defaultBranch is main', async () => {
+  // Symmetric case: with defaultBranch='main' and a leftover 'master'
+  // (e.g. legacy repo that adopted gw without renaming), `master` must
+  // also be protected from automatic deletion.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('master');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const worktrees = await listWorktrees();
+      const orphans = await findOrphanBranches(worktrees, 'main');
+
+      const orphanNames = orphans.map((o) => o.name);
+      assertEquals(
+        orphanNames.includes('master'),
+        false,
+        '`master` must never be returned as an orphan — it is a canonical trunk name'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('findOrphanBranches - still protects configured default and gw_root', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createBranch('develop');
+    await repo.createBranch('gw_root');
+    await repo.createBranch('feat/work');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const worktrees = await listWorktrees();
+      const orphans = await findOrphanBranches(worktrees, 'develop');
+
+      const orphanNames = orphans.map((o) => o.name);
+      assertEquals(orphanNames.includes('develop'), false, 'configured default must be protected');
+      assertEquals(orphanNames.includes('gw_root'), false, 'gw_root must be protected');
+      assertEquals(orphanNames.includes('feat/work'), true, 'feature branches must still be orphans');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
   }
 });

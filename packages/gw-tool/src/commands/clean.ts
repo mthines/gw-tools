@@ -111,7 +111,9 @@ Safety Features:
   - Auto mode only removes worktrees with NO uncommitted changes or unpushed
     commits (unless --force is used)
   - Always prompts for confirmation before deletion
-  - Main/bare repository, default branch, and gw_root are never removed
+  - Bare repository, configured default branch, gw_root, and the canonical
+    trunk names "main" and "master" are never removed (even when one of
+    them is not the configured default)
   - After removing worktrees, automatically prunes orphan branches
     (branches with no worktree and no unpushed commits)
 
@@ -289,6 +291,19 @@ async function executeInteractiveClean(): Promise<void> {
       const parts: string[] = [];
       if (date) parts.push(date);
       parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
+
+      // Defense-in-depth: findOrphanBranches already filters protected
+      // branches, but the orphan section is the most destructive code path
+      // (force-deletes via -D), so re-assert protection here.
+      if (isProtectedBranch(o.name, defaultBranch)) {
+        return {
+          label: o.name,
+          value: `orphan:${o.name}`,
+          disabled: true,
+          disabledReason: 'protected branch - cannot remove',
+        };
+      }
+
       return {
         label: o.name,
         value: `orphan:${o.name}`,
