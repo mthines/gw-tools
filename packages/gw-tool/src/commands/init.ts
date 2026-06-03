@@ -980,7 +980,7 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     }
     if (config.autoClean) {
       console.log(
-        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking, non-blocking)')}`
+        `  Auto-cleanup: ${output.bold('enabled')} ${output.dim('(background, non-blocking)')}`
       );
     }
     if (config.updateStrategy) {

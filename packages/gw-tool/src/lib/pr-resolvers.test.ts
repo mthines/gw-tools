@@ -7,7 +7,7 @@
  */
 
 import { assertEquals } from '@std/assert';
-import { parseGithubIdentifier, resolvePrIdentifier } from './pr-resolvers.ts';
+import { enrichWithGh, parseGithubIdentifier, resolvePrIdentifier } from './pr-resolvers.ts';
 import type { PrResolver } from './types.ts';
 
 function withTempGitRoot<T>(fn: (root: string) => Promise<T>): Promise<T> {
@@ -207,6 +207,29 @@ Deno.test('resolvePrIdentifier - shell injection in identifier is contained', as
     }
     assertEquals(created, false);
   });
+});
+
+// ---------------------------------------------------------------------------
+// enrichWithGh
+// ---------------------------------------------------------------------------
+// Note: tests that would call `gh pr view` require network access and are
+// intentionally not included in the unit suite. The cases below exercise the
+// early-exit fast paths that require no I/O.
+
+Deno.test('enrichWithGh - returns input unchanged when all fields already present', async () => {
+  const resolved = { prNumber: 42, branch: 'feat/x', owner: 'acme', repo: 'api', isCrossRepository: false, remote: 'upstream' };
+  // All three key fields are set, so enrichWithGh returns early without calling gh.
+  const result = await enrichWithGh(resolved);
+  assertEquals(result, resolved);
+});
+
+Deno.test('enrichWithGh - preserves isCrossRepository: false when resolver sets it explicitly', async () => {
+  // Validates that the ??-based merge in enrichWithGh does not clobber a
+  // falsy-but-defined boolean value from the custom resolver.
+  const resolved = { prNumber: 42, branch: 'feat/x', owner: 'acme', repo: 'api', isCrossRepository: false };
+  const result = await enrichWithGh(resolved);
+  // isCrossRepository is false — the ?? operator must NOT replace false with enriched's true.
+  assertEquals(result.isCrossRepository, false);
 });
 
 Deno.test('resolvePrIdentifier - timeout kills slow resolvers', async () => {

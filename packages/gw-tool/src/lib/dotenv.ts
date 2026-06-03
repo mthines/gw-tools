@@ -8,6 +8,13 @@
  *   export KEY=value
  *   # comments (line-leading only)
  *
+ * Inline comments (TOKEN=abc # comment) are NOT stripped — the # and everything
+ * after it is included in the value. This differs from bash but matches
+ * dotenv-java / dotenv-go. To avoid surprises, wrap values in quotes:
+ *   TOKEN="abc123"  # the comment lives outside the quoted value here
+ * Note: `"abc123" # comment` does NOT strip quotes because the value does not
+ * end with `"` — use TOKEN="abc123" without a trailing inline comment.
+ *
  * Multiline values, variable expansion (${OTHER}), and shell interpolation
  * are intentionally NOT supported — resolvers should keep their .env files
  * simple and use real shell config for anything more complex.

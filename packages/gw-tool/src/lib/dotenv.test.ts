@@ -45,6 +45,26 @@ Deno.test('parseDotenv - handles CRLF line endings', () => {
   assertEquals(out, { FOO: 'bar', BAZ: 'qux' });
 });
 
+Deno.test('parseDotenv - inline # comments are NOT stripped (kept in value)', () => {
+  // The parser only strips line-leading comments. Inline `# comment` sequences
+  // are treated as part of the value. This matches dotenv-java / dotenv-go
+  // behavior and differs from bash, where inline comments are stripped.
+  // Users should quote values that contain # to avoid confusion:
+  //   TOKEN="abc123" # this is fine — quotes are stripped, comment is outside
+  //   TOKEN=abc123   # this includes " # this includes" in the value
+  const out = parseDotenv('TOKEN=abc123 # my api token\n');
+  assertEquals(out.TOKEN, 'abc123 # my api token');
+});
+
+Deno.test('parseDotenv - quoted values with trailing inline comment strip quotes only', () => {
+  // `TOKEN="abc123" # comment` → quotes stripped → value is `abc123`, # comment is outside quotes
+  // But our parser strips quotes only when the WHOLE value is a matched pair.
+  // `"abc123" # comment` does NOT end with `"`, so quotes are not stripped.
+  const out = parseDotenv('TOKEN="abc123" # my api token\n');
+  // Value after `=`: `"abc123" # my api token` — does not start+end with same quote char → kept as-is.
+  assertEquals(out.TOKEN, '"abc123" # my api token');
+});
+
 Deno.test('loadResolverEnv - missing .env is not an error', async () => {
   const tempDir = await Deno.makeTempDir({ prefix: 'gw-dotenv-test-' });
   try {
