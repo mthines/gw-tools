@@ -8,8 +8,9 @@ import { executeRemove } from './remove.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
-import { assertPathNotExists, assertWorktreeNotExists } from '../test-utils/assertions.ts';
+import { assertPathNotExists, assertWorktreeExists, assertWorktreeNotExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
+import { withMockedPrompt } from '../test-utils/mock-prompt.ts';
 import { assertShellRemoveNavigationWorks } from '../test-utils/assert-shell-nav.ts';
 
 Deno.test('remove command - removes worktree with --yes flag', async () => {
@@ -76,16 +77,10 @@ Deno.test('remove command - automatically removes leftover directory', async () 
     const cwd = new TempCwd(repo.path);
     try {
       // Should automatically remove leftover directory without prompting
-      const { exitCode } = await withMockedExit(() => executeRemove(['leftover']));
+      await executeRemove(['leftover']);
 
-      // Should have exited (either 0 for success or 1 if git worktree not found)
-      // The important thing is that it attempts to remove the directory
-      assertEquals(exitCode !== undefined, true, 'Should have called Deno.exit()');
-
-      // If removal was successful (exit 0), verify directory was removed
-      if (exitCode === 0) {
-        await assertPathNotExists(leftoverPath);
-      }
+      // Verify directory was removed
+      await assertPathNotExists(leftoverPath);
     } finally {
       cwd.restore();
     }
@@ -479,4 +474,258 @@ Deno.test('remove - shell integration navigates to git root after removal', asyn
 
 Deno.test('rm - shell integration navigates to git root after removal', async () => {
   await assertShellRemoveNavigationWorks('rm');
+});
+
+// =============================================================================
+// Glob pattern + multi-arg removal tests
+// =============================================================================
+
+Deno.test('remove command - glob pattern removes all matching worktrees', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('test/foo', 'test/foo');
+    await repo.createWorktree('test/bar', 'test/bar');
+    await repo.createWorktree('feat/keep', 'feat/keep');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // --yes skips the confirmation prompt
+      await executeRemove(['--yes', 'test/*']);
+
+      await assertWorktreeNotExists(repo.path, 'test/foo');
+      await assertWorktreeNotExists(repo.path, 'test/bar');
+
+      // feat/keep should still exist
+      const worktrees = await repo.listWorktrees();
+      const hasKeep = worktrees.some((wt) => wt.includes('feat/keep'));
+      assertEquals(hasKeep, true, 'feat/keep worktree should still exist');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - glob with no matches exits with error', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat/foo', 'feat/foo');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(() => executeRemove(['--yes', 'nope/*']));
+      assertEquals(exitCode, 1, 'Should exit with code 1 when pattern matches nothing');
+
+      // Existing worktree untouched
+      const worktrees = await repo.listWorktrees();
+      assertEquals(
+        worktrees.some((wt) => wt.includes('feat/foo')),
+        true
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - glob skips a worktree on a protected branch', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    // master is in the protected set; create a worktree on it alongside a removable one
+    await repo.createWorktree('protected-wt', 'master');
+    await repo.createWorktree('feat-removable', 'feat-removable');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Pattern matches both top-level worktree names; the master one is filtered out
+      await executeRemove(['--yes', '*']);
+
+      // protected-wt should still exist; feat-removable should be gone
+      const worktrees = await repo.listWorktrees();
+      assertEquals(
+        worktrees.some((wt) => wt.endsWith('/protected-wt')),
+        true,
+        'protected worktree should survive'
+      );
+      assertEquals(
+        worktrees.some((wt) => wt.endsWith('/feat-removable')),
+        false,
+        'removable worktree should be gone'
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - multiple literal args remove each worktree', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-a', 'feat-a');
+    await repo.createWorktree('feat-b', 'feat-b');
+    await repo.createWorktree('feat-c', 'feat-c');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['--yes', 'feat-a', 'feat-b']);
+
+      await assertWorktreeNotExists(repo.path, 'feat-a');
+      await assertWorktreeNotExists(repo.path, 'feat-b');
+
+      // feat-c should remain
+      const worktrees = await repo.listWorktrees();
+      assertEquals(
+        worktrees.some((wt) => wt.endsWith('/feat-c')),
+        true
+      );
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - dedupes overlapping glob and literal args', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('test/foo', 'test/foo');
+    await repo.createWorktree('test/bar', 'test/bar');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // 'test/*' matches both, and 'test/foo' overlaps — should not double-remove
+      await executeRemove(['--yes', 'test/*', 'test/foo']);
+
+      await assertWorktreeNotExists(repo.path, 'test/foo');
+      await assertWorktreeNotExists(repo.path, 'test/bar');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - -n is a short alias for --dry-run', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-foo', 'feat-foo');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['-n', 'feat-foo']);
+
+      await assertWorktreeExists(repo.path, 'feat-foo');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - --dry-run with glob removes nothing', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('test/foo', 'test/foo');
+    await repo.createWorktree('test/bar', 'test/bar');
+    await repo.createWorktree('feat/keep', 'feat/keep');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['--dry-run', 'test/*']);
+
+      // Every worktree should still exist
+      await assertWorktreeExists(repo.path, 'test/foo');
+      await assertWorktreeExists(repo.path, 'test/bar');
+      await assertWorktreeExists(repo.path, 'feat/keep');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - --dry-run leaves a literal worktree intact', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-foo', 'feat-foo');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['--dry-run', 'feat-foo']);
+
+      // Worktree should still exist on disk and in git's worktree list
+      await assertWorktreeExists(repo.path, 'feat-foo');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - batch confirmation prompt defaults to yes (empty Enter proceeds)', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-a', 'feat-a');
+    await repo.createWorktree('feat-b', 'feat-b');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Simulate the user just pressing Enter at the prompt
+      await withMockedPrompt([''], () => executeRemove(['feat-a', 'feat-b']));
+
+      // With default=yes, both worktrees should be removed
+      await assertWorktreeNotExists(repo.path, 'feat-a');
+      await assertWorktreeNotExists(repo.path, 'feat-b');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
 });

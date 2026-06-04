@@ -4,8 +4,6 @@
  */
 
 import { resolve } from '@std/path';
-import { executeGitWorktree } from '../lib/git-proxy.ts';
-import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig } from '../lib/config.ts';
 import {
   deleteLocalBranch,
@@ -14,8 +12,11 @@ import {
   isBranchCheckedOutElsewhere,
   listWorktrees,
   pruneOrphanBranches,
+  type WorktreeInfo,
 } from '../lib/git-utils.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
+import { containsGlob, matchWorktreesByPattern, worktreeName } from '../lib/glob-match.ts';
+import { isProtectedBranch } from '../lib/branch-protection.ts';
 import * as output from '../lib/output.ts';
 
 /**
@@ -28,332 +29,231 @@ function isPathInside(childPath: string, parentPath: string): boolean {
 }
 
 /**
- * Execute the remove command
- *
- * @param args Command-line arguments for the remove command
+ * What kind of target a positional argument resolves to.
  */
-export async function executeRemove(args: string[]): Promise<void> {
-  // Check for help flag
-  if (args.includes('--help') || args.includes('-h')) {
-    console.log(`gw remove - Remove a worktree from the repository
+interface ResolvedTarget {
+  /** User-facing label (typically the relative worktree name) */
+  name: string;
+  /** Absolute path on disk */
+  path: string;
+  /** Branch name, when known */
+  branch?: string;
+  /** True when the worktree is registered with git */
+  isValidWorktree: boolean;
+  /** True when path exists on disk but is not a registered worktree */
+  isLeftoverDirectory: boolean;
+}
 
-Usage:
-  gw remove [options] <worktree>
+/**
+ * Resolve a single literal worktree argument (no glob characters).
+ * Returns null when nothing matches; the caller decides whether that is fatal.
+ */
+async function resolveLiteralTarget(
+  arg: string,
+  worktrees: WorktreeInfo[],
+  gitRoot: string
+): Promise<ResolvedTarget | null> {
+  const exactMatch = worktrees.find((wt) => {
+    const wtName = wt.path.split('/').pop() || '';
+    if (wtName === arg) return true;
+    if (wt.path === arg) return true;
+    const resolvedPath = resolveWorktreePath(gitRoot, arg);
+    if (wt.path === resolvedPath) return true;
+    return false;
+  });
 
-This command wraps 'git worktree remove' and provides smart confirmation prompts.
-
-Branch Cleanup:
-  By default, gw remove also deletes the local branch associated with the worktree.
-  This prevents orphaned branches from accumulating.
-
-  - Uses safe delete (git branch -d) which warns if branch has unmerged commits
-  - Protected branches (defaultBranch, main, master) are never deleted
-  - Use --preserve-branch to keep the local branch after removing the worktree
-
-Prompting Behavior:
-  - If the worktree is clean (no uncommitted changes, all commits pushed): removes immediately
-  - If the worktree has uncommitted changes or unpushed commits: prompts for confirmation
-  - If --force is provided: skips all prompts and forces removal (including branch deletion)
-  - If --yes is provided: skips confirmation prompt
-
-If you remove the worktree you're currently in:
-  - The CLI automatically changes to the git root before removal
-  - With shell integration installed, your shell will also navigate to the root
-  - Without shell integration, you'll need to manually run: cd "$(gw root)"
-
-Options:
-  All 'git worktree remove' options are supported
-  --preserve-branch   Keep the local branch after removing the worktree
-  --yes, -y           Skip confirmation prompt (but still prompts if worktree is dirty unless --force is also used)
-  --force, -f         Force removal even if worktree is dirty or locked (also forces branch deletion)
-  -h, --help          Show this help message
-
-Examples:
-  gw remove feat-branch                    # Remove worktree AND delete local branch
-  gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
-  gw remove --yes feat-branch              # Skips confirmation, but prompts if dirty without --force
-  gw remove -y feat-branch                 # Same as --yes
-  gw remove --force feat-branch            # Force removal and branch deletion, never prompts
-  gw remove -f feat-branch                 # Same as --force (short form)
-  gw rm feat-branch                        # Short alias
-
-For full git worktree remove documentation:
-  git worktree remove --help
-`);
-    Deno.exit(0);
+  if (exactMatch) {
+    return {
+      name: worktreeName(exactMatch, gitRoot),
+      path: exactMatch.path,
+      branch: exactMatch.branch,
+      isValidWorktree: true,
+      isLeftoverDirectory: false,
+    };
   }
 
-  // Extract worktree name/path from args (first non-flag argument)
-  let worktreeName: string | undefined;
-  for (const arg of args) {
-    if (!arg.startsWith('-')) {
-      worktreeName = arg;
-      break;
-    }
-  }
-
-  if (!worktreeName) {
-    output.error('Missing worktree name');
-    console.log('Usage: gw remove [options] <worktree>');
-    Deno.exit(1);
-  }
-
-  // Check for --preserve-branch flag
-  const preserveBranch = args.includes('--preserve-branch');
-
-  // Check if we're currently inside the worktree being removed
-  const cwd = Deno.cwd();
-  let isRemovingCurrentWorktree = false;
-  let worktreePath: string | undefined;
-  let worktreeBranch: string | undefined;
-  let isValidWorktree = false;
-  let isLeftoverDirectory = false;
-
+  const resolvedPath = resolveWorktreePath(gitRoot, arg);
   try {
-    const { config, gitRoot } = await loadConfig();
-    const worktrees = await listWorktrees();
-
-    // First, try to find an EXACT match by worktree name or path
-    const exactMatch = worktrees.find((wt) => {
-      // Check if worktree name matches exactly (last part of path)
-      const wtName = wt.path.split('/').pop() || '';
-      if (wtName === worktreeName) return true;
-
-      // Check if full path matches
-      if (wt.path === worktreeName) return true;
-
-      // Check if resolved path matches
-      const resolvedPath = resolveWorktreePath(gitRoot, worktreeName);
-      if (wt.path === resolvedPath) return true;
-
-      return false;
-    });
-
-    if (exactMatch) {
-      // Found exact match - check if it's a protected branch
-      const defaultBranch = config.defaultBranch || 'main';
-      if (isProtectedBranch(exactMatch.branch, defaultBranch)) {
+    const stat = await Deno.stat(resolvedPath);
+    if (stat.isDirectory || stat.isFile) {
+      const isParentOfWorktrees = worktrees.some((wt) => wt.path.startsWith(resolvedPath + '/'));
+      if (isParentOfWorktrees) {
+        const childWorktrees = worktrees.filter((wt) => wt.path.startsWith(resolvedPath + '/'));
         console.log('');
-        output.error(`Cannot remove ${output.bold(exactMatch.branch)} - this is a protected branch.`);
+        output.error(`${output.bold(arg)} is not a worktree. It's a directory containing worktrees.`);
         console.log('');
-        console.log(
-          `Protected branches (default branch, gw_root, and canonical trunk names main/master) cannot be removed.`
-        );
+        console.log('Did you mean one of these?');
+        for (const wt of childWorktrees) {
+          const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
+          console.log(`  ${output.bold(worktreeName(wt, gitRoot))} -> ${wt.path}${branchInfo}`);
+        }
         console.log('');
         Deno.exit(1);
       }
-
-      worktreePath = exactMatch.path;
-      worktreeBranch = exactMatch.branch;
-      isValidWorktree = true;
-      isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);
-    } else {
-      // No exact match found, check if it's a leftover directory
-      const resolvedPath = resolveWorktreePath(gitRoot, worktreeName);
-      try {
-        const stat = await Deno.stat(resolvedPath);
-        if (stat.isDirectory || stat.isFile) {
-          // Check if this directory is a parent directory of any worktrees
-          const isParentOfWorktrees = worktrees.some((wt) => wt.path.startsWith(resolvedPath + '/'));
-
-          if (isParentOfWorktrees) {
-            // This is a parent directory containing worktrees, suggest the child worktrees
-            const childWorktrees = worktrees.filter((wt) => wt.path.startsWith(resolvedPath + '/'));
-
-            console.log('');
-            output.error(`${output.bold(worktreeName)} is not a worktree. It's a directory containing worktrees.`);
-            console.log('');
-            console.log('Did you mean one of these?');
-            for (const wt of childWorktrees) {
-              const wtName = wt.path.split('/').pop() || '';
-              const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
-              console.log(`  ${output.bold(wtName)} -> ${wt.path}${branchInfo}`);
-            }
-            console.log('');
-            Deno.exit(1);
-          } else {
-            // It's a leftover directory at the exact resolved path
-            worktreePath = resolvedPath;
-            isLeftoverDirectory = true;
-            isRemovingCurrentWorktree = isPathInside(cwd, worktreePath);
-          }
-        }
-      } catch {
-        // Path doesn't exist - look for similar matches to suggest
-        const similarMatches = worktrees.filter((wt) => {
-          const wtName = wt.path.split('/').pop() || '';
-          return wtName.includes(worktreeName!) || wt.path.includes(worktreeName!);
-        });
-
-        if (similarMatches.length > 0) {
-          console.log('');
-          output.error(`Worktree ${output.bold(worktreeName)} does not exist.`);
-          console.log('');
-          console.log('Did you mean one of these?');
-          for (const wt of similarMatches) {
-            const wtName = wt.path.split('/').pop() || '';
-            const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
-            console.log(`  ${output.bold(wtName)} -> ${wt.path}${branchInfo}`);
-          }
-          console.log('');
-          Deno.exit(1);
-        } else {
-          console.log('');
-          output.error(`Worktree ${output.bold(worktreeName)} does not exist.`);
-          console.log('');
-          Deno.exit(1);
-        }
-      }
+      return {
+        name: arg,
+        path: resolvedPath,
+        isValidWorktree: false,
+        isLeftoverDirectory: true,
+      };
     }
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    output.error(`Failed to resolve worktree: ${message}`);
-    Deno.exit(1);
+  } catch {
+    // Path doesn't exist — fall through to similar-match suggestion
   }
 
-  // Handle leftover directory removal automatically (no confirmation)
-  if (isLeftoverDirectory && worktreePath && worktreeName) {
+  return null;
+}
+
+function printRemovalPreview(targets: ResolvedTarget[]): void {
+  console.log('');
+  console.log(`The following ${output.bold(String(targets.length))} worktree(s) will be removed:`);
+  console.log('');
+  for (const t of targets) {
+    const branchInfo = t.branch ? ` [${t.branch}]` : '';
+    console.log(`  ${output.bold(t.name)} -> ${t.path}${branchInfo}`);
+  }
+  console.log('');
+}
+
+async function removeLeftoverDirectory(target: ResolvedTarget, currentCwd: string): Promise<boolean> {
+  console.log('');
+  output.warning(`${output.bold(target.name)} is not a valid worktree, but a leftover directory exists.`);
+  console.log(`Automatically removing...`);
+
+  const isRemovingCwd = isPathInside(currentCwd, target.path);
+
+  try {
+    if (isRemovingCwd) {
+      try {
+        const { gitRoot } = await loadConfig();
+        Deno.chdir(gitRoot);
+      } catch {
+        Deno.chdir(resolve(target.path, '..'));
+      }
+    }
+    await Deno.remove(target.path, { recursive: true });
+    output.success(`Leftover directory ${output.bold(`"${target.name}"`)} removed successfully`);
     console.log('');
-    output.warning(`${output.bold(worktreeName)} is not a valid worktree, but a leftover directory exists.`);
-    console.log(`Automatically removing...`);
 
     try {
-      // If we're inside the directory being removed, change to git root first
-      if (isRemovingCurrentWorktree) {
-        try {
-          const { gitRoot } = await loadConfig();
-          Deno.chdir(gitRoot);
-        } catch {
-          // If we can't get git root, try parent directory
-          const parentPath = resolve(worktreePath, '..');
-          Deno.chdir(parentPath);
-        }
-      }
-
-      await Deno.remove(worktreePath, { recursive: true });
-      output.success(`Leftover directory ${output.bold(`"${worktreeName}"`)} removed successfully`);
-      console.log('');
-
-      // Also clean up git's worktree metadata if it exists
-      try {
-        const pruneCmd = new Deno.Command('git', {
-          args: ['worktree', 'prune'],
-          stdout: 'null',
-          stderr: 'null',
-        });
-        await pruneCmd.output();
-      } catch {
-        // Ignore prune errors - not critical
-      }
-
-      Deno.exit(0);
-    } catch (error) {
-      const errorMsg = error instanceof Error ? error.message : String(error);
-      output.error(`Failed to remove directory: ${errorMsg}`);
-      Deno.exit(1);
+      const pruneCmd = new Deno.Command('git', {
+        args: ['worktree', 'prune'],
+        stdout: 'null',
+        stderr: 'null',
+      });
+      await pruneCmd.output();
+    } catch {
+      // ignore
     }
+    return true;
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    output.error(`Failed to remove directory: ${errorMsg}`);
+    return false;
   }
+}
 
-  // Check if --force flag is present
-  const hasForceFlag = args.includes('--force') || args.includes('-f');
+/**
+ * Remove a single registered worktree. Honors prompt/force semantics.
+ *
+ * `interactive` controls whether dirty worktrees trigger a confirmation prompt.
+ * In batch mode we already confirmed the whole list up front, so dirty ones are
+ * skipped with a warning unless --force was set.
+ */
+async function removeRegisteredWorktree(
+  target: ResolvedTarget,
+  options: {
+    hasForceFlag: boolean;
+    preserveBranch: boolean;
+    interactive: boolean;
+    currentCwd: string;
+  }
+): Promise<boolean> {
+  const { hasForceFlag, preserveBranch, interactive, currentCwd } = options;
 
-  // Check if we need to prompt based on worktree status
-  let shouldPrompt = false;
   let needsForce = false;
-
-  if (!hasForceFlag && worktreeName && !isLeftoverDirectory && worktreePath) {
+  if (!hasForceFlag) {
     try {
-      // Check if worktree has uncommitted changes or unpushed commits
       const [uncommitted, unpushed] = await Promise.all([
-        hasUncommittedChanges(worktreePath),
-        hasUnpushedCommits(worktreePath),
+        hasUncommittedChanges(target.path),
+        hasUnpushedCommits(target.path),
       ]);
-
       if (uncommitted || unpushed) {
-        shouldPrompt = true;
         needsForce = true;
       }
     } catch {
-      // If we can't check status, prompt to be safe
-      shouldPrompt = true;
       needsForce = true;
     }
   }
 
-  // Prompt for confirmation only if worktree has uncommitted changes or unpushed commits
-  if (shouldPrompt && worktreeName) {
+  const isRemovingCwd = isPathInside(currentCwd, target.path);
+
+  if (needsForce && interactive) {
     console.log('');
-
-    const message = isRemovingCurrentWorktree
-      ? `The worktree you're currently in (${output.bold(worktreeName)}) has uncommitted changes or unpushed commits.`
-      : `Worktree ${output.bold(worktreeName)} has uncommitted changes or unpushed commits.`;
-
+    const message = isRemovingCwd
+      ? `The worktree you're currently in (${output.bold(target.name)}) has uncommitted changes or unpushed commits.`
+      : `Worktree ${output.bold(target.name)} has uncommitted changes or unpushed commits.`;
     console.log(message);
     console.log('Removing it will result in data loss.');
 
-    // Ensure output is flushed before prompting
     await Deno.stdout.write(new TextEncoder().encode(''));
 
     const response = prompt(`Are you sure you want to force removal? (yes/no) [no]: `);
-
     if (response?.toLowerCase() !== 'yes' && response?.toLowerCase() !== 'y') {
       console.log('');
-      output.error('Removal cancelled.');
-      Deno.exit(1);
+      output.warning(`Skipping ${output.bold(target.name)}.`);
+      return false;
     }
-
-    // User confirmed - add --force flag to ensure removal succeeds
-    if (needsForce && !args.includes('--force') && !args.includes('-f')) {
-      args.push('--force');
-    }
-
     console.log('');
+  } else if (needsForce && !interactive) {
+    output.warning(
+      `Skipping ${output.bold(target.name)}: has uncommitted changes or unpushed commits. Use ${output.bold(
+        '--force'
+      )} to remove anyway.`
+    );
+    return false;
   }
 
-  // If we're removing the current worktree, change to the git root first
-  // This ensures git operations run from a safe location
-  if (isRemovingCurrentWorktree) {
+  if (isRemovingCwd) {
     try {
       const { gitRoot } = await loadConfig();
       Deno.chdir(gitRoot);
     } catch {
-      // If we can't get git root, continue anyway
-      // The git command might still work
+      // continue
     }
   }
 
-  // Filter out gw-specific flags before passing to git (git doesn't recognize them)
-  const filteredArgs = args.filter((arg) => arg !== '--yes' && arg !== '-y' && arg !== '--preserve-branch');
+  const gitArgs: string[] = ['worktree', 'remove'];
+  if (hasForceFlag || needsForce) {
+    gitArgs.push('--force');
+  }
+  gitArgs.push(target.path);
 
-  const successMessage = worktreeName
-    ? `Worktree ${output.bold(`"${worktreeName}"`)} removed successfully`
-    : 'Worktree removed successfully';
+  const gitProcess = new Deno.Command('git', {
+    args: gitArgs,
+    stdout: 'inherit',
+    stderr: 'inherit',
+  });
+  const { code } = await gitProcess.output();
+  if (code !== 0) {
+    output.error(`Failed to remove worktree ${output.bold(target.name)}`);
+    return false;
+  }
+  output.success(`Worktree ${output.bold(`"${target.name}"`)} removed successfully`);
 
-  await executeGitWorktree('remove', filteredArgs, successMessage);
-
-  // Delete the local branch unless --preserve-branch is set
-  if (!preserveBranch && worktreeBranch && isValidWorktree) {
-    // Get config to check protected branches
+  if (!preserveBranch && target.branch && target.isValidWorktree) {
     const { config } = await loadConfig();
     const defaultBranch = config.defaultBranch || 'main';
 
-    if (isProtectedBranch(worktreeBranch, defaultBranch)) {
-      // Don't delete protected branches (silently skip)
-    } else {
-      // Check if branch is checked out in another worktree
-      const isCheckedOutElsewhere = await isBranchCheckedOutElsewhere(worktreeBranch);
-
+    if (!isProtectedBranch(target.branch, defaultBranch)) {
+      const isCheckedOutElsewhere = await isBranchCheckedOutElsewhere(target.branch);
       if (isCheckedOutElsewhere) {
-        output.warning(`Branch ${output.bold(worktreeBranch)} is checked out in another worktree, keeping it.`);
+        output.warning(`Branch ${output.bold(target.branch)} is checked out in another worktree, keeping it.`);
       } else {
-        // Use -D (force) if --force flag was provided, otherwise use -d (safe)
-        const hasForceFlag = args.includes('--force') || args.includes('-f');
-        const deleteResult = await deleteLocalBranch(worktreeBranch, hasForceFlag);
-
+        const deleteResult = await deleteLocalBranch(target.branch, hasForceFlag);
         if (deleteResult.success) {
-          output.success(`Deleted branch ${output.bold(`"${worktreeBranch}"`)}`);
+          output.success(`Deleted branch ${output.bold(`"${target.branch}"`)}`);
         } else {
-          // Show warning but don't fail - worktree was already removed
           output.warning(`Could not delete branch: ${deleteResult.message}`);
           if (!hasForceFlag && deleteResult.message?.includes('not fully merged')) {
             console.log(`  Use ${output.bold('gw remove --force')} to force delete the branch.`);
@@ -363,10 +263,247 @@ For full git worktree remove documentation:
     }
   }
 
-  // Silently prune any other orphan branches
+  return true;
+}
+
+/**
+ * Execute the remove command
+ */
+export async function executeRemove(args: string[]): Promise<void> {
+  if (args.includes('--help') || args.includes('-h')) {
+    console.log(`gw remove - Remove a worktree from the repository
+
+Usage:
+  gw remove [options] <worktree...>
+
+This command wraps 'git worktree remove' and provides smart confirmation prompts.
+
+Multiple Worktrees & Glob Patterns:
+  You can remove several worktrees in one invocation by listing them, or by
+  using a glob pattern. When more than one worktree matches, the list is shown
+  and you are prompted to confirm before anything is removed.
+
+  Supported pattern syntax (quote to prevent shell expansion):
+    *       Matches anything except '/'
+    **      Matches anything including '/' (recursive)
+    ?       Matches any single character
+    [abc]   Matches one of the listed characters
+
+  Examples:
+    gw rm 'test/*'           Remove every worktree directly under test/
+    gw rm 'feat/**'          Remove feat/foo and feat/sub/bar
+    gw rm 'spike-?'          Remove spike-1, spike-a, etc.
+
+  In batch mode, dirty worktrees are skipped with a warning instead of being
+  prompted for one-by-one. Use --force to remove them anyway.
+
+Branch Cleanup:
+  By default, gw remove also deletes the local branch associated with the worktree.
+  This prevents orphaned branches from accumulating.
+
+  - Uses safe delete (git branch -d) which warns if branch has unmerged commits
+  - Protected branches (defaultBranch, main, master, gw_root) are never deleted
+  - Use --preserve-branch to keep the local branch after removing the worktree
+
+Prompting Behavior:
+  - Single worktree, clean: removes immediately
+  - Single worktree, dirty: prompts for confirmation (default: no — protects data)
+  - Multiple worktrees: shows the list and prompts once before removal (default: yes — just press Enter)
+  - --force: skips all prompts and forces removal (including branch deletion)
+  - --yes / -y: skips the confirmation prompt
+  - --dry-run / -n: shows the list and exits without removing anything
+
+If you remove the worktree you're currently in:
+  - The CLI automatically changes to the git root before removal
+  - With shell integration installed, your shell will also navigate to the root
+  - Without shell integration, you'll need to manually run: cd "$(gw root)"
+
+Options:
+  --preserve-branch   Keep the local branch after removing the worktree
+  --yes, -y           Skip confirmation prompts
+  --force, -f         Force removal even if worktrees are dirty or locked
+  --dry-run, -n       Show what would be removed without removing anything
+  -h, --help          Show this help message
+
+Examples:
+  gw remove feat-branch                    # Remove worktree AND delete local branch
+  gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
+  gw remove --yes feat-branch              # Skip confirmation
+  gw remove --force feat-branch            # Force removal and branch deletion
+  gw rm 'test/*'                           # Remove all worktrees under test/
+  gw rm 'feat/*' 'spike/*' --yes           # Remove every feat/* and spike/* worktree
+  gw rm feat-a feat-b                      # Remove multiple worktrees by name
+  gw rm --dry-run 'feat/*'                 # Preview what would be removed (no changes)
+  gw rm -n 'feat/*'                        # Same as above using short flag
+
+For full git worktree remove documentation:
+  git worktree remove --help
+`);
+    Deno.exit(0);
+  }
+
+  const flags = args.filter((a) => a.startsWith('-'));
+  const positionalArgs = args.filter((a) => !a.startsWith('-'));
+
+  if (positionalArgs.length === 0) {
+    output.error('Missing worktree name');
+    console.log('Usage: gw remove [options] <worktree...>');
+    Deno.exit(1);
+  }
+
+  const hasYesFlag = flags.includes('--yes') || flags.includes('-y');
+  const hasForceFlag = flags.includes('--force') || flags.includes('-f');
+  const preserveBranch = flags.includes('--preserve-branch');
+  const isDryRun = flags.includes('--dry-run') || flags.includes('-n');
+
+  const { config, gitRoot } = await loadConfig();
+  const worktrees = await listWorktrees();
+  const defaultBranch = config.defaultBranch || 'main';
+
+  const targets: ResolvedTarget[] = [];
+  const skippedProtected: { arg: string; branch: string }[] = [];
+
+  for (const arg of positionalArgs) {
+    if (containsGlob(arg)) {
+      const matches = matchWorktreesByPattern(worktrees, arg, gitRoot);
+      if (matches.length === 0) {
+        console.log('');
+        output.error(`No worktrees match pattern: ${output.bold(arg)}`);
+        console.log('');
+        Deno.exit(1);
+      }
+      for (const m of matches) {
+        if (isProtectedBranch(m.branch, defaultBranch)) {
+          if (m.branch) {
+            skippedProtected.push({ arg, branch: m.branch });
+          }
+          continue;
+        }
+        targets.push({
+          name: worktreeName(m, gitRoot),
+          path: m.path,
+          branch: m.branch,
+          isValidWorktree: true,
+          isLeftoverDirectory: false,
+        });
+      }
+    } else {
+      const resolved = await resolveLiteralTarget(arg, worktrees, gitRoot);
+      if (!resolved) {
+        const similarMatches = worktrees.filter((wt) => {
+          const wtName = wt.path.split('/').pop() || '';
+          return wtName.includes(arg) || wt.path.includes(arg);
+        });
+        console.log('');
+        output.error(`Worktree ${output.bold(arg)} does not exist.`);
+        if (similarMatches.length > 0) {
+          console.log('');
+          console.log('Did you mean one of these?');
+          for (const wt of similarMatches) {
+            const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
+            console.log(`  ${output.bold(worktreeName(wt, gitRoot))} -> ${wt.path}${branchInfo}`);
+          }
+        }
+        console.log('');
+        Deno.exit(1);
+      }
+      if (resolved.isValidWorktree && resolved.branch && isProtectedBranch(resolved.branch, defaultBranch)) {
+        console.log('');
+        output.error(`Cannot remove ${output.bold(resolved.branch)} - this is a protected branch.`);
+        console.log('');
+        if (resolved.branch === defaultBranch) {
+          console.log(`The default branch (${output.bold(defaultBranch)}) cannot be removed.`);
+        } else {
+          console.log(`The ${output.bold('gw_root')} branch is the bare repository root and cannot be removed.`);
+        }
+        console.log('');
+        Deno.exit(1);
+      }
+      targets.push(resolved);
+    }
+  }
+
+  const dedupedTargets: ResolvedTarget[] = [];
+  const seenPaths = new Set<string>();
+  for (const t of targets) {
+    if (!seenPaths.has(t.path)) {
+      seenPaths.add(t.path);
+      dedupedTargets.push(t);
+    }
+  }
+
+  if (dedupedTargets.length === 0) {
+    if (skippedProtected.length > 0) {
+      output.warning('All matches were protected branches; nothing to remove.');
+    } else {
+      output.error('No worktrees to remove.');
+    }
+    Deno.exit(1);
+  }
+
+  if (isDryRun) {
+    printRemovalPreview(dedupedTargets);
+    if (skippedProtected.length > 0) {
+      const branches = [...new Set(skippedProtected.map((s) => s.branch))].join(', ');
+      output.info(`Skipping protected branch(es): ${branches}`);
+      console.log('');
+    }
+    output.info(`Dry run: ${dedupedTargets.length} worktree(s) would be removed. No changes made.`);
+    return;
+  }
+
+  if (dedupedTargets.length > 1) {
+    printRemovalPreview(dedupedTargets);
+    if (skippedProtected.length > 0) {
+      const branches = [...new Set(skippedProtected.map((s) => s.branch))].join(', ');
+      output.info(`Skipping protected branch(es): ${branches}`);
+      console.log('');
+    }
+    if (!hasYesFlag && !hasForceFlag) {
+      await Deno.stdout.write(new TextEncoder().encode(''));
+      const response = prompt(`Remove ${dedupedTargets.length} worktree(s)? [Y/n]: `);
+      // Default is yes: cancel only on an explicit "no"/"n" or EOF (Ctrl-D).
+      const normalized = response?.trim().toLowerCase();
+      if (normalized === undefined || normalized === 'n' || normalized === 'no') {
+        console.log('');
+        output.error('Removal cancelled.');
+        Deno.exit(1);
+      }
+      console.log('');
+    }
+  }
+
+  const currentCwd = Deno.cwd();
+  const isBatch = dedupedTargets.length > 1;
+
+  let successCount = 0;
+  let failureCount = 0;
+  let removedCurrentWorktree = false;
+
+  for (const target of dedupedTargets) {
+    const removingCwd = isPathInside(currentCwd, target.path);
+
+    let ok = false;
+    if (target.isLeftoverDirectory) {
+      ok = await removeLeftoverDirectory(target, currentCwd);
+    } else if (target.isValidWorktree) {
+      ok = await removeRegisteredWorktree(target, {
+        hasForceFlag,
+        preserveBranch,
+        interactive: !isBatch,
+        currentCwd,
+      });
+    }
+
+    if (ok) {
+      successCount++;
+      if (removingCwd) removedCurrentWorktree = true;
+    } else {
+      failureCount++;
+    }
+  }
+
   try {
-    const { config: pruneConfig } = await loadConfig();
-    const defaultBranch = pruneConfig.defaultBranch || 'main';
     const deleted = await pruneOrphanBranches(defaultBranch);
     if (deleted > 0) {
       output.success(`Pruned ${deleted} orphan branch(es)`);
@@ -375,11 +512,23 @@ For full git worktree remove documentation:
     // Don't fail remove if orphan branch pruning fails
   }
 
-  // If we removed the current worktree, show a helpful message
-  if (isRemovingCurrentWorktree) {
+  if (isBatch) {
+    console.log('');
+    if (failureCount === 0) {
+      output.success(`Removed ${successCount} worktree(s).`);
+    } else {
+      output.warning(`Removed ${successCount} worktree(s); ${failureCount} skipped or failed.`);
+    }
+  }
+
+  if (removedCurrentWorktree) {
     console.log('');
     output.warning('You removed the current worktree. Your shell is now in a non-existent directory.');
     console.log(`  Navigate to the git root by running: ${output.bold('cd "$(gw root)"')}`);
     console.log('');
+  }
+
+  if (failureCount > 0 && successCount === 0) {
+    Deno.exit(1);
   }
 }

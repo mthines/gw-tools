@@ -1501,10 +1501,23 @@ gw list -v               # Verbose output
 Remove a worktree from the repository. By default, also deletes the local branch to prevent orphaned branches.
 
 ```bash
-gw remove <worktree>
+gw remove <worktree...>
 # or
-gw rm <worktree>
+gw rm <worktree...>
 ```
+
+**Multiple Worktrees & Glob Patterns:**
+
+You can remove several worktrees at once, either by listing them or by using a glob pattern. When more than one worktree resolves, gw shows the list and asks for confirmation before anything is removed. The batch prompt defaults to **yes** — just press Enter to proceed, or type `n` / `no` to cancel. Use `--dry-run` (or `-n`) to preview what would be removed without making any changes.
+
+Supported pattern syntax (quote to prevent shell expansion):
+
+- `*` — matches anything except `/`
+- `**` — matches anything including `/` (recursive)
+- `?` — matches a single character
+- `[abc]` — matches one of the listed characters
+
+In batch mode, dirty worktrees (uncommitted or unpushed) are skipped with a warning instead of being prompted one-by-one. Use `--force` to remove them anyway. Protected branches are silently filtered out of pattern matches.
 
 **Branch Cleanup:**
 
@@ -1531,6 +1544,11 @@ gw remove feat-branch                    # Remove worktree AND delete local bran
 gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
 gw remove --force feat-branch            # Force remove worktree and force delete branch
 gw rm feat-branch                        # Using alias
+gw rm 'test/*'                           # Remove all worktrees under test/ (with confirmation)
+gw rm 'feat/*' 'spike/*' --yes           # Remove every feat/* and spike/* worktree
+gw rm feat-a feat-b                      # Remove multiple worktrees by name
+gw rm --dry-run 'feat/*'                 # Preview what would be removed (no changes)
+gw rm -n 'feat/*'                        # Same as above using short flag
 ```
 
 #### move (mv)
