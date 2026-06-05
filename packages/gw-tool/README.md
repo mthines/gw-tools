@@ -1514,10 +1514,16 @@ With shell integration installed (`eval "$(gw install-shell)"`), you can use unq
 
 Supported pattern syntax:
 
-- `*` — matches anything except `/`
+- `*` — in a bare-name pattern (no `/`), matches anything including `/`. In a path-aware pattern (contains `/`), matches anything except `/`.
 - `**` — matches anything including `/` (recursive)
 - `?` — matches a single character
 - `[abc]` — matches one of the listed characters
+
+The `/`-aware split is what most people mean intuitively:
+
+- `fix*` — "anything starting with `fix`" → matches `fix/agent0-foo`, `fix-branch`, `fixture`
+- `fix/*` — "direct children of `fix/`" → matches `fix/agent0-foo` but NOT `fix/sub/nested`
+- `fix/**` — "everything under `fix/`" → matches both
 
 In batch mode, dirty worktrees (uncommitted or unpushed) are skipped with a warning instead of being prompted one-by-one. Use `--force` to remove them anyway. Protected branches are silently filtered out of pattern matches.
 

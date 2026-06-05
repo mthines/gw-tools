@@ -66,8 +66,33 @@ Deno.test('matchWorktreesByPattern - skips repo root (empty relative name)', () 
   assertEquals(matches.includes('/repo'), false);
 });
 
-Deno.test('matchWorktreesByPattern - * does not match across /', () => {
+Deno.test('matchWorktreesByPattern - prefix pattern without slash matches across /', () => {
+  // `fix*` (no `/` in the pattern) — user means "anything starting with fix",
+  // including names that contain '/'.
+  const matches = matchWorktreesByPattern(worktrees, 'fix*', gitRoot).map((w) => w.path);
+  // Should not match (none of our worktrees start with "fix"); let's use a real prefix
+  const featMatches = matchWorktreesByPattern(worktrees, 'feat*', gitRoot).map((w) => w.path);
+  assertEquals(featMatches.includes('/repo/feat/login'), true, 'feat* must match feat/login');
+});
+
+Deno.test('matchWorktreesByPattern - bare prefix pattern matches a one-segment name too', () => {
+  // The same `feat*` pattern should still match a name with no '/' if it starts with the prefix.
+  const wts = [...worktrees, makeWorktree('/repo/feature-x', 'feature-x')];
+  const matches = matchWorktreesByPattern(wts, 'feat*', gitRoot).map((w) => w.path);
+  assertEquals(matches.includes('/repo/feature-x'), true);
+  assertEquals(matches.includes('/repo/feat/login'), true);
+});
+
+Deno.test('matchWorktreesByPattern - pattern with slash keeps strict semantics', () => {
+  // When the user types `test/*` (with /), `*` must NOT cross another /.
+  const matches = matchWorktreesByPattern(worktrees, 'test/*', gitRoot).map((w) => w.path);
+  assertEquals(matches.sort(), ['/repo/test/bar', '/repo/test/foo'].sort(), 'test/* must not match test/sub/deep');
+});
+
+Deno.test('matchWorktreesByPattern - bare * matches every named worktree (greedy)', () => {
+  // Bare `*` (no slash in pattern) means "match anything" — every non-empty name
+  // matches, including names with `/` in them.
   const matches = matchWorktreesByPattern(worktrees, '*', gitRoot).map((w) => w.path);
-  // Only top-level: main, spike-1, spike-a
-  assertEquals(matches.sort(), ['/repo/main', '/repo/spike-1', '/repo/spike-a'].sort());
+  const expected = worktrees.map((w) => w.path);
+  assertEquals(matches.sort(), expected.sort());
 });

@@ -292,11 +292,17 @@ Multiple Worktrees & Glob Patterns:
   using a glob pattern. When more than one worktree matches, the list is shown
   and you are prompted to confirm before anything is removed.
 
-  Supported pattern syntax (quote to prevent shell expansion):
-    *       Matches anything except '/'
+  Supported pattern syntax:
+    *       In a pattern with no '/': matches anything (including '/').
+            In a pattern containing '/': matches anything except '/'.
     **      Matches anything including '/' (recursive)
     ?       Matches any single character
     [abc]   Matches one of the listed characters
+
+  Examples of the '/'-aware rule:
+    fix*        matches fix/agent0-foo, fix-branch, fixture
+    fix/*       matches fix/agent0-foo (direct children only)
+    fix/**      matches fix/agent0-foo AND fix/sub/nested
 
   Examples (no quotes needed with shell integration installed):
     gw rm test/*             Remove every worktree directly under test/
