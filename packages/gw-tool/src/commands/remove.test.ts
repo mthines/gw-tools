@@ -266,6 +266,110 @@ Deno.test('remove command - does not delete parent directory containing worktree
   }
 });
 
+Deno.test('remove command - dirty-worktree prompt defaults to yes (empty Enter proceeds)', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    await repo.createWorktree('feat-dirty', 'feat-dirty');
+
+    // Make the worktree dirty (uncommitted change)
+    const worktreePath = join(repo.path, 'feat-dirty');
+    await Deno.writeTextFile(join(worktreePath, 'uncommitted.txt'), 'dirty');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // User just hits Enter at the data-loss prompt — default should be yes
+      await withMockedPrompt([''], () => executeRemove(['feat-dirty']));
+
+      await assertWorktreeNotExists(repo.path, 'feat-dirty');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('remove command - parent-of-worktrees error suggests a glob pattern', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const tmpDir = join(repo.path, 'tmp');
+    await Deno.mkdir(tmpDir);
+    await repo.createWorktree('tmp/1', 'tmp-1');
+    await repo.createWorktree('tmp/2', 'tmp-2');
+
+    const config = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Capture stdout to inspect the suggestion
+      const originalLog = console.log;
+      const captured: string[] = [];
+      console.log = (...args: unknown[]) => {
+        captured.push(args.map(String).join(' '));
+      };
+
+      try {
+        await withMockedExit(() => executeRemove(['tmp']));
+      } finally {
+        console.log = originalLog;
+      }
+
+      const output = captured.join('\n');
+      const suggestsGlob = output.includes('gw rm tmp/*');
+      assertEquals(suggestsGlob, true, `Expected the error to suggest a glob pattern. Got:\n${output}`);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test(
+  'remove command - trailing slash on parent directory is treated as parent-of-worktrees, not leftover',
+  async () => {
+    const repo = new GitTestRepo();
+    try {
+      await repo.init();
+
+      const tmpDir = join(repo.path, 'tmp');
+      await Deno.mkdir(tmpDir);
+      await repo.createWorktree('tmp/1', 'tmp-1');
+      await repo.createWorktree('tmp/2', 'tmp-2');
+
+      const config = createMinimalConfig(repo.path);
+      await writeTestConfig(repo.path, config);
+
+      const cwd = new TempCwd(repo.path);
+      try {
+        // 'tmp/' (with trailing slash) used to bypass the parent-of-worktrees guard
+        // and attempt to remove tmp/ as a leftover directory, taking the worktrees with it.
+        const { exitCode } = await withMockedExit(() => executeRemove(['tmp/']));
+
+        // Should exit with error (parent-of-worktrees path), not silently remove.
+        assertEquals(exitCode, 1, 'Should refuse to remove parent directory containing worktrees');
+
+        // Worktrees must still be there
+        const tmp1Exists = await Deno.stat(join(tmpDir, '1'))
+          .then(() => true)
+          .catch(() => false);
+        assertEquals(tmp1Exists, true, 'tmp/1 should survive');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  }
+);
+
 Deno.test('remove command - prevents removal of default branch', async () => {
   const repo = new GitTestRepo();
   try {

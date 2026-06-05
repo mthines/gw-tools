@@ -25,7 +25,9 @@ Deno.test('install-shell - outputs zsh shell function to stdout', async () => {
       captureOutput: true,
     });
 
-    assertStringIncludes(stdout || '', 'gw() {', 'Should output gw function');
+    // zsh: noglob alias points at private impl function; this is what the user invokes via `gw`
+    assertStringIncludes(stdout || '', "alias gw='noglob __gw_impl_gw'", 'Should alias gw to noglob impl');
+    assertStringIncludes(stdout || '', '__gw_impl_gw() {', 'Should define private impl function');
     assertStringIncludes(stdout || '', 'if [[ "$1" == "cd" ]];', 'Should handle cd command');
     assertStringIncludes(stdout || '', '# gw-tools shell integration', 'Should include integration comment');
   } finally {
@@ -238,7 +240,13 @@ Deno.test('install-shell - outputs custom command name function', async () => {
       { captureOutput: true }
     );
 
-    assertStringIncludes(stdout || '', 'gw-dev() {', 'Should create function with custom name');
+    // Custom name is exposed via the noglob alias; impl function is private (__gw_impl_<name>)
+    assertStringIncludes(
+      stdout || '',
+      "alias gw-dev='noglob __gw_impl_gw_dev'",
+      'Should alias custom name to noglob impl'
+    );
+    assertStringIncludes(stdout || '', '__gw_impl_gw_dev() {', 'Should create impl function with custom name');
     assertStringIncludes(stdout || '', 'deno run --allow-all main.ts', 'Should use custom command');
   } finally {
     if (originalShell) {
@@ -292,6 +300,18 @@ Deno.test('install-shell - removes fish integration with --remove', async () => 
   } finally {
     await tempHome.cleanup();
   }
+});
+
+Deno.test('zsh integration - aliases gw to noglob so unquoted globs are passed through', () => {
+  const output = getZshFunction();
+  // The alias must wrap the function with noglob so `gw rm fix/*` reaches the binary
+  // without the shell expanding (or aborting on) the pattern.
+  assertStringIncludes(output, "alias gw='noglob");
+});
+
+Deno.test('zsh integration - custom command name still gets its noglob alias', () => {
+  const output = getZshFunction('gw-dev');
+  assertStringIncludes(output, "alias gw-dev='noglob");
 });
 
 // Shell completion tests

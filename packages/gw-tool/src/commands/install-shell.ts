@@ -235,8 +235,14 @@ export function getZshFunction(commandName = 'gw', actualCommand?: string): stri
 
   const completionCode = getZshCompletionFunction(commandName);
 
+  // Private function name + alias is the only way to apply `noglob` per-command
+  // in zsh. The alias substitutes before glob expansion runs, so
+  // `gw rm fix/*` becomes `noglob __gw_impl_<name> rm fix/*` and the pattern
+  // reaches gw untouched (instead of zsh aborting with "no matches found").
+  const implFn = `__gw_impl_${commandName.replace(/-/g, '_')}`;
+
   return `# gw-tools shell integration
-${commandName}() {
+${implFn}() {
   if [[ "$1" == "cd" ]]; then
     # Pass through help flags directly
     if [[ "$2" == "--help" || "$2" == "-h" ]]; then
@@ -278,6 +284,7 @@ ${commandName}() {
     ${cmdPrefix} "$@"
   fi
 }
+alias ${commandName}='noglob ${implFn}'
 ${completionCode}`;
 }
 

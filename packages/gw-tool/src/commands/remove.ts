@@ -72,17 +72,24 @@ async function resolveLiteralTarget(
     };
   }
 
-  const resolvedPath = resolveWorktreePath(gitRoot, arg);
+  // Strip a trailing slash so `gw rm tmp/` and `gw rm tmp` behave identically.
+  // Without this, `resolvedPath + '/'` would produce a `//` that never matches
+  // any worktree path, bypassing the parent-of-worktrees guard.
+  const resolvedPath = resolveWorktreePath(gitRoot, arg).replace(/\/+$/, '');
   try {
     const stat = await Deno.stat(resolvedPath);
     if (stat.isDirectory || stat.isFile) {
       const isParentOfWorktrees = worktrees.some((wt) => wt.path.startsWith(resolvedPath + '/'));
       if (isParentOfWorktrees) {
         const childWorktrees = worktrees.filter((wt) => wt.path.startsWith(resolvedPath + '/'));
+        const argNoTrailingSlash = arg.replace(/\/+$/, '');
         console.log('');
         output.error(`${output.bold(arg)} is not a worktree. It's a directory containing worktrees.`);
         console.log('');
-        console.log('Did you mean one of these?');
+        console.log(`To remove all worktrees under ${output.bold(argNoTrailingSlash)}:`);
+        console.log(`  ${output.bold(`gw rm ${argNoTrailingSlash}/*`)}`);
+        console.log('');
+        console.log('Or pick a specific worktree:');
         for (const wt of childWorktrees) {
           const branchInfo = wt.branch ? ` [${wt.branch}]` : '';
           console.log(`  ${output.bold(worktreeName(wt, gitRoot))} -> ${wt.path}${branchInfo}`);
@@ -198,8 +205,10 @@ async function removeRegisteredWorktree(
 
     await Deno.stdout.write(new TextEncoder().encode(''));
 
-    const response = prompt(`Are you sure you want to force removal? (yes/no) [no]: `);
-    if (response?.toLowerCase() !== 'yes' && response?.toLowerCase() !== 'y') {
+    const response = prompt(`Are you sure you want to force removal? [Y/n]: `);
+    // Default is yes: cancel only on explicit "no"/"n" or EOF (Ctrl-D).
+    const normalized = response?.trim().toLowerCase();
+    if (normalized === undefined || normalized === 'n' || normalized === 'no') {
       console.log('');
       output.warning(`Skipping ${output.bold(target.name)}.`);
       return false;
@@ -289,10 +298,13 @@ Multiple Worktrees & Glob Patterns:
     ?       Matches any single character
     [abc]   Matches one of the listed characters
 
-  Examples:
-    gw rm 'test/*'           Remove every worktree directly under test/
-    gw rm 'feat/**'          Remove feat/foo and feat/sub/bar
-    gw rm 'spike-?'          Remove spike-1, spike-a, etc.
+  Examples (no quotes needed with shell integration installed):
+    gw rm test/*             Remove every worktree directly under test/
+    gw rm feat/**            Remove feat/foo and feat/sub/bar (recursive)
+    gw rm spike-?            Remove spike-1, spike-a, etc.
+
+  Without shell integration, zsh users must quote: gw rm 'test/*'
+  (Install with: eval "$(gw install-shell)")
 
   In batch mode, dirty worktrees are skipped with a warning instead of being
   prompted for one-by-one. Use --force to remove them anyway.
@@ -307,8 +319,9 @@ Branch Cleanup:
 
 Prompting Behavior:
   - Single worktree, clean: removes immediately
-  - Single worktree, dirty: prompts for confirmation (default: no — protects data)
-  - Multiple worktrees: shows the list and prompts once before removal (default: yes — just press Enter)
+  - Single worktree, dirty: shows the data-loss warning and prompts (default: yes — Enter proceeds)
+  - Multiple worktrees: shows the list and prompts once (default: yes — Enter proceeds)
+  - To cancel any prompt: type 'n' or 'no', or press Ctrl-D
   - --force: skips all prompts and forces removal (including branch deletion)
   - --yes / -y: skips the confirmation prompt
   - --dry-run / -n: shows the list and exits without removing anything
@@ -330,11 +343,12 @@ Examples:
   gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
   gw remove --yes feat-branch              # Skip confirmation
   gw remove --force feat-branch            # Force removal and branch deletion
-  gw rm 'test/*'                           # Remove all worktrees under test/
-  gw rm 'feat/*' 'spike/*' --yes           # Remove every feat/* and spike/* worktree
+  gw rm test/*                             # Remove all worktrees under test/ (with shell integration)
+  gw rm 'test/*'                           # Same, explicit quoting if no shell integration
+  gw rm feat/* spike/* --yes               # Remove every feat/* and spike/* worktree
   gw rm feat-a feat-b                      # Remove multiple worktrees by name
-  gw rm --dry-run 'feat/*'                 # Preview what would be removed (no changes)
-  gw rm -n 'feat/*'                        # Same as above using short flag
+  gw rm --dry-run feat/*                   # Preview what would be removed (no changes)
+  gw rm -n feat/*                          # Same as above using short flag
 
 For full git worktree remove documentation:
   git worktree remove --help
