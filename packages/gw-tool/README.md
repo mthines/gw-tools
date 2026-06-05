@@ -1501,10 +1501,31 @@ gw list -v               # Verbose output
 Remove a worktree from the repository. By default, also deletes the local branch to prevent orphaned branches.
 
 ```bash
-gw remove <worktree>
+gw remove <worktree...>
 # or
-gw rm <worktree>
+gw rm <worktree...>
 ```
+
+**Multiple Worktrees & Glob Patterns:**
+
+You can remove several worktrees at once, either by listing them or by using a glob pattern. When more than one worktree resolves, gw shows the list and asks for confirmation before anything is removed. **Confirmation prompts default to yes** — just press Enter to proceed, or type `n` / `no` to cancel. Use `--dry-run` (or `-n`) to preview what would be removed without making any changes.
+
+With shell integration installed (`eval "$(gw install-shell)"`), you can use unquoted glob patterns: `gw rm fix/*`. The integration aliases `gw` with `noglob` for zsh so the shell doesn't try to expand the pattern against the current directory first. Without integration — or in bash with non-default options like `failglob` — quote the pattern: `gw rm 'fix/*'`.
+
+Supported pattern syntax:
+
+- `*` — in a bare-name pattern (no `/`), matches anything including `/`. In a path-aware pattern (contains `/`), matches anything except `/`.
+- `**` — matches anything including `/` (recursive)
+- `?` — matches a single character
+- `[abc]` — matches one of the listed characters
+
+The `/`-aware split is what most people mean intuitively:
+
+- `fix*` — "anything starting with `fix`" → matches `fix/agent0-foo`, `fix-branch`, `fixture`
+- `fix/*` — "direct children of `fix/`" → matches `fix/agent0-foo` but NOT `fix/sub/nested`
+- `fix/**` — "everything under `fix/`" → matches both
+
+In batch mode, dirty worktrees (uncommitted or unpushed) are skipped with a warning instead of being prompted one-by-one. Use `--force` to remove them anyway. Protected branches are silently filtered out of pattern matches.
 
 **Branch Cleanup:**
 
@@ -1531,6 +1552,12 @@ gw remove feat-branch                    # Remove worktree AND delete local bran
 gw remove feat-branch --preserve-branch  # Remove worktree but KEEP local branch
 gw remove --force feat-branch            # Force remove worktree and force delete branch
 gw rm feat-branch                        # Using alias
+gw rm test/*                             # Remove all worktrees under test/ (with shell integration)
+gw rm 'test/*'                           # Same — explicit quoting if you don't have shell integration
+gw rm feat/* spike/* --yes               # Remove every feat/* and spike/* worktree
+gw rm feat-a feat-b                      # Remove multiple worktrees by name
+gw rm --dry-run feat/*                   # Preview what would be removed (no changes)
+gw rm -n feat/*                          # Same as above using short flag
 ```
 
 #### move (mv)

@@ -56,30 +56,34 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 
 ### Primary Commands
 
-| Task                                      | Command                                           |
-| ----------------------------------------- | ------------------------------------------------- |
-| Create worktree (new branch)              | `gw checkout feat/name`                           |
-| Create worktree (alias)                   | `gw co feat/name` or `gw add feat/name`           |
-| Create from different branch              | `gw checkout feat/name --from develop`            |
-| Create from staged files (extract WIP)    | `gw checkout feat/name --from-staged`             |
-| Create without auto-navigation            | `gw checkout feat/name --no-cd`                   |
-| Skip remote probe (offline mode)          | `gw checkout feat/name --no-fetch`                |
-| Navigate to worktree by name              | `gw cd feat/name`                                 |
-| Navigate by partial match                 | `gw cd feat` (matches first worktree with "feat") |
-| Navigate to branch (even if in other wt)  | `gw checkout main`                                |
-| List all worktrees                        | `gw list`                                         |
-| Check out a PR into a worktree            | `gw pr 123`                                       |
-| Check out a PR by URL                     | `gw pr https://github.com/user/repo/pull/123`     |
-| Update with main (merge or rebase)        | `gw update`                                       |
-| Update from specific branch               | `gw update --from develop`                        |
-| Sync auto-copy files to current worktree  | `gw sync`                                         |
-| Sync specific files                       | `gw sync .env .env.local`                         |
-| Remove worktree + delete local branch     | `gw remove feat/name`                             |
-| Remove worktree but keep branch           | `gw remove feat/name --preserve-branch`           |
-| Batch remove safe (committed, pushed) wts | `gw clean`                                        |
-| Preview batch cleanup                     | `gw clean --dry-run`                              |
-| Full cleanup: worktrees + orphan branches | `gw prune`                                        |
-| Get repo root path (worktree-aware)       | `gw root`                                         |
+| Task                                      | Command                                                             |
+| ----------------------------------------- | ------------------------------------------------------------------- |
+| Create worktree (new branch)              | `gw checkout feat/name`                                             |
+| Create worktree (alias)                   | `gw co feat/name` or `gw add feat/name`                             |
+| Create from different branch              | `gw checkout feat/name --from develop`                              |
+| Create from staged files (extract WIP)    | `gw checkout feat/name --from-staged`                               |
+| Create without auto-navigation            | `gw checkout feat/name --no-cd`                                     |
+| Skip remote probe (offline mode)          | `gw checkout feat/name --no-fetch`                                  |
+| Navigate to worktree by name              | `gw cd feat/name`                                                   |
+| Navigate by partial match                 | `gw cd feat` (matches first worktree with "feat")                   |
+| Navigate to branch (even if in other wt)  | `gw checkout main`                                                  |
+| List all worktrees                        | `gw list`                                                           |
+| Check out a PR into a worktree            | `gw pr 123`                                                         |
+| Check out a PR by URL                     | `gw pr https://github.com/user/repo/pull/123`                       |
+| Update with main (merge or rebase)        | `gw update`                                                         |
+| Update from specific branch               | `gw update --from develop`                                          |
+| Sync auto-copy files to current worktree  | `gw sync`                                                           |
+| Sync specific files                       | `gw sync .env .env.local`                                           |
+| Remove worktree + delete local branch     | `gw remove feat/name`                                               |
+| Remove worktree but keep branch           | `gw remove feat/name --preserve-branch`                             |
+| Remove multiple worktrees by name         | `gw remove feat-a feat-b feat-c`                                    |
+| Remove every worktree under a scope       | `gw remove feat/*` (with shell integration) or `gw remove 'feat/*'` |
+| Remove every worktree starting with name  | `gw remove fix*` (greedy across `/`)                                |
+| Preview a destructive `gw remove`         | `gw remove --dry-run feat/*`                                        |
+| Batch remove safe (committed, pushed) wts | `gw clean`                                                          |
+| Preview batch cleanup                     | `gw clean --dry-run`                                                |
+| Full cleanup: worktrees + orphan branches | `gw prune`                                                          |
+| Get repo root path (worktree-aware)       | `gw root`                                                           |
 
 ### Setup Commands
 

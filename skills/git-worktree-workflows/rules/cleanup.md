@@ -53,6 +53,59 @@ Cannot be removed:
 - `gw_root` branch
 - Bare repository worktree
 
+## Removing Multiple Worktrees
+
+`gw remove` accepts several worktree names and glob patterns in a single call.
+When more than one worktree resolves, the list is shown and you confirm once
+before anything is removed.
+
+```bash
+# Multiple worktrees by name
+gw remove feat-a feat-b feat-c
+
+# Every worktree under a scope (with shell integration installed)
+gw remove feat/*
+
+# Same, without shell integration — quote so the shell doesn't expand the pattern
+gw remove 'feat/*'
+
+# Greedy across '/' when the pattern has no '/'
+gw remove fix*       # matches fix/agent0-foo, fix-branch, fixture
+
+# Recursive — also matches nested worktrees
+gw remove feat/**
+
+# Preview without removing anything
+gw remove --dry-run feat/*
+gw remove -n feat/*
+
+# Skip the confirmation prompt
+gw remove --yes feat/*
+```
+
+### Pattern Semantics
+
+- `*` in a pattern containing `/` (e.g. `feat/*`): bounded — does not cross `/`
+- `*` in a bare pattern (no `/`, e.g. `fix*`): greedy — matches across `/`
+- `**`: recursive — matches across `/`
+- `?`: single character
+- `[abc]` / `[!abc]`: character class
+
+### Confirmation Prompts
+
+- The batch confirmation prompt **defaults to yes** — just press Enter to proceed
+- Type `n` or `no` to cancel
+- Dirty worktrees in batch mode are skipped with a warning unless `--force` is set
+- Protected branches (defaultBranch, main, master, gw_root) are filtered out automatically
+
+### Shell Integration and Unquoted Globs
+
+`eval "$(gw install-shell)"` installs an alias that wraps `gw` with `noglob`
+on zsh. Without it, zsh's default `nomatch` aborts unquoted glob patterns
+before `gw` ever runs. After installing (or in a fresh shell), `gw rm fix/*`
+works unquoted. Bash with default options already passes unmatched globs
+through literally, so no quoting is needed there either.
+
 ## Batch Cleanup with `gw clean`
 
 ```bash
