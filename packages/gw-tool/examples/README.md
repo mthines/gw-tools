@@ -60,6 +60,32 @@ This directory contains example `.gw/config.json` files for various project type
   - Documentation generation hooks
   - Code quality checks on worktree creation
 
+### Telemetry (OpenTelemetry / Dash0)
+
+Opt-in telemetry is **disabled by default**. When enabled, gw emits one span + log
+per command (each tagged with `service.version`) and the release pipeline sends a
+`deployment.success` event — so Dash0 can correlate deployments with error spikes.
+See the [Telemetry section of the main README](../README.md#telemetry-opentelemetry--dash0)
+for the full reference.
+
+- **[config.telemetry-collector.json](./config.telemetry-collector.json)** - Recommended
+  - Sends to a local OpenTelemetry Collector on `http://localhost:4318`
+  - The Dash0 token stays in the Collector config, never in your repo
+  - Pair with **[otel-collector.dash0.yaml](./otel-collector.dash0.yaml)**
+
+- **[config.telemetry-direct.json](./config.telemetry-direct.json)** - Direct to Dash0
+  - Sends OTLP/HTTP straight to Dash0's ingress (no Collector)
+  - Committed file holds only non-secret settings
+
+- **[config.local.telemetry.json](./config.local.telemetry.json)** - Secret token (gitignored)
+  - Example `.gw/config.local.json` holding the OTLP `Authorization` header
+  - Never commit auth tokens — they belong here or in `OTEL_EXPORTER_OTLP_HEADERS`
+  - Note: `config.local.json` shallow-merges, so its `telemetry` block replaces the committed one entirely
+
+- **[otel-collector.dash0.yaml](./otel-collector.dash0.yaml)** - Collector config
+  - Receives OTLP from gw and forwards traces + logs to Dash0
+  - Reads the Dash0 endpoint/token/dataset from environment variables
+
 ## Configuration Options Reference
 
 ### Core Options

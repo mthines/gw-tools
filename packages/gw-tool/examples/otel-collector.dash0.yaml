@@ -1,0 +1,43 @@
+# Example OpenTelemetry Collector config: receive OTLP from gw, forward to Dash0.
+#
+# This is the recommended setup for gw telemetry: the Dash0 auth token lives
+# HERE (sourced from env), never in gw's committed .gw/config.json. gw exports
+# to the Collector on localhost (fast, no token in the binary); the Collector
+# batches and forwards to Dash0.
+#
+# Run:   otelcol-contrib --config otel-collector.dash0.yaml
+# Then:  set gw's telemetry.endpoint to http://localhost:4318
+#        (see config.telemetry-collector.json)
+#
+# Required env vars:
+#   DASH0_OTLP_GRPC_ENDPOINT  e.g. ingress.us-west-2.aws.dash0.com:4317
+#   DASH0_AUTH_TOKEN          your Dash0 auth token
+#   DASH0_DATASET             target dataset (e.g. "default")
+
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+
+processors:
+  # Batch before export to reduce request volume.
+  batch: {}
+
+exporters:
+  otlp/dash0:
+    endpoint: ${env:DASH0_OTLP_GRPC_ENDPOINT}
+    headers:
+      Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+      Dash0-Dataset: ${env:DASH0_DATASET}
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/dash0]
+    logs:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [otlp/dash0]

@@ -111,6 +111,8 @@ function createDefaultConfig(): Config {
     configVersion: CURRENT_CONFIG_VERSION,
     defaultBranch: 'main',
     cleanThreshold: 7,
+    // Telemetry is included disabled so it's discoverable — flip enabled to true to opt in.
+    telemetry: { enabled: false },
   };
 }
 
@@ -437,14 +439,15 @@ function generateConfigTemplate(config: Config): string {
   lines.push('  // your Dash0 token. Keep secrets out of this committed file — put OTLP auth');
   lines.push('  // headers in .gw/config.local.json (gitignored) or OTEL_EXPORTER_OTLP_HEADERS.');
 
-  if (config.telemetry) {
+  if (config.telemetry && (config.telemetry.enabled || config.telemetry.endpoint || config.telemetry.environment)) {
     lines.push(`  "telemetry": ${JSON.stringify(config.telemetry, null, 2).replace(/\n/g, '\n  ')},`);
   } else {
-    lines.push('  // "telemetry": {');
-    lines.push('  //   "enabled": true,');
-    lines.push('  //   "endpoint": "http://localhost:4318",  // local OTel Collector');
-    lines.push('  //   "environment": "production"           // deployment.environment.name');
-    lines.push('  // },');
+    // Always render an explicit disabled block so users can see and flip it.
+    lines.push('  "telemetry": {');
+    lines.push('    "enabled": false,  // set to true to start sending telemetry');
+    lines.push('    // "endpoint": "http://localhost:4318",  // local OTel Collector (recommended)');
+    lines.push('    // "environment": "production"           // deployment.environment.name');
+    lines.push('  },');
   }
 
   lines.push('');

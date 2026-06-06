@@ -1,0 +1,14 @@
+{
+  "_comment": "Opt-in telemetry sent directly to Dash0 (no Collector)",
+  "_description": "Sends OTLP/HTTP straight to Dash0's ingress. The auth token must NOT be committed here. Supply the Authorization header via .gw/config.local.json (gitignored, see config.local.telemetry.json) or the OTEL_EXPORTER_OTLP_HEADERS env var.",
+  "_usage": "Set endpoint to your Dash0 region ingress. This committed file holds only non-secret settings; the token comes from config.local.json or env.",
+
+  "defaultBranch": "main",
+
+  "telemetry": {
+    "enabled": true,
+    "endpoint": "https://ingress.us-west-2.aws.dash0.com:4318",
+    "environment": "production",
+    "serviceName": "gw"
+  }
+}

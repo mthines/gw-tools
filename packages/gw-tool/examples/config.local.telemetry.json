@@ -1,0 +1,15 @@
+{
+  "_comment": "Example .gw/config.local.json — personal/secret overrides (GITIGNORED)",
+  "_description": "config.local.json is shallow-merged on top of config.json (local wins) and is automatically gitignored by .gw/.gitignore. Put OTLP auth headers (secrets) HERE, never in the committed config.json.",
+  "_usage": "Save as .gw/config.local.json. NOTE: the merge is shallow, so this 'telemetry' block REPLACES the one in config.json entirely — repeat every field you still need (enabled/endpoint/environment), not just the secret.",
+
+  "telemetry": {
+    "enabled": true,
+    "endpoint": "https://ingress.us-west-2.aws.dash0.com:4318",
+    "environment": "production",
+    "headers": {
+      "Authorization": "Bearer <your-dash0-auth-token>",
+      "Dash0-Dataset": "default"
+    }
+  }
+}

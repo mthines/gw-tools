@@ -408,6 +408,10 @@ can observe how the tool is used and **correlate releases with errors** in
 [Dash0](https://www.dash0.com/). It is **opt-in and disabled by default** — no
 telemetry leaves your machine unless you turn it on.
 
+`gw init` writes a `"telemetry": { "enabled": false }` block into your
+`.gw/config.json` so the option is easy to find — flip `enabled` to `true` to
+start sending.
+
 ### What gets sent
 
 When enabled, each command emits:

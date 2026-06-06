@@ -408,6 +408,35 @@ Deno.test('saveConfigTemplate - shows active autoCopyFiles uncommented', async (
   }
 });
 
+Deno.test('saveConfigTemplate - includes a disabled telemetry block by default', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig(repo.path);
+    await saveConfigTemplate(repo.path, config);
+
+    const rawContent = await Deno.readTextFile(join(repo.path, '.gw', 'config.json'));
+
+    // Telemetry block is present and uncommented (discoverable), set to false
+    assertEquals(rawContent.includes('"telemetry": {'), true);
+    assertEquals(rawContent.includes('"enabled": false'), true);
+    // It must NOT be the fully-commented-out form
+    assertEquals(rawContent.includes('// "telemetry": {'), false);
+
+    // And it still loads as valid JSONC with telemetry disabled
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { config: loaded } = await loadConfig();
+      assertEquals(loaded.telemetry?.enabled, false);
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('saveConfigTemplate - shows inactive autoCopyFiles as commented examples', async () => {
   const repo = new GitTestRepo();
   try {
