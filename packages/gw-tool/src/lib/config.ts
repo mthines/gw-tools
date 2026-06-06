@@ -198,7 +198,7 @@ export async function loadConfig(): Promise<{
       const rawData = parseJsonc(content) as Record<string, unknown>;
 
       // Run migrations if needed
-      const { config: migratedData, migrated, appliedMigrations } = runMigrations(rawData);
+      const { config: migratedData, migrated, appliedMigrations, warnings } = runMigrations(rawData);
 
       if (!validateConfig(migratedData)) {
         throw new Error('Invalid configuration file format');
@@ -221,6 +221,10 @@ export async function loadConfig(): Promise<{
             appliedMigrations.length > 1 ? 's' : ''
           } applied)\n`
         );
+        // Surface non-fatal migration warnings (e.g. telemetry.enabled stripped)
+        for (const warning of warnings) {
+          console.error(`Warning: ${warning}`);
+        }
       }
 
       // Load local overrides (.gw/config.local.json) if present

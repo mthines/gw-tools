@@ -403,10 +403,24 @@ Local config is merged on top of `config.json` (shallow merge, local wins). Usef
 
 ## Telemetry (OpenTelemetry & Dash0)
 
-`gw` can emit [OpenTelemetry](https://opentelemetry.io/) traces and logs so you
-can observe how the tool is used and **correlate releases with errors** in
-[Dash0](https://www.dash0.com/). It is **opt-in and disabled by default** — no
-telemetry leaves your machine unless you turn it on.
+`gw` can send anonymous usage data to the maintainer's
+[Dash0](https://www.dash0.com/) instance so aggregate usage can be observed and
+releases correlated with error spikes. Telemetry is **opt-in and disabled by
+default** — nothing leaves your machine until you explicitly enable it.
+
+### Opting in and out
+
+```bash
+gw telemetry on      # enable on this machine
+gw telemetry off     # disable on this machine
+gw telemetry status  # show current effective state
+```
+
+`gw telemetry on/off` writes to `.gw/config.local.json`, which is gitignored,
+so your choice stays local and never affects other people who clone the repo.
+
+You can also use the env var `GW_TELEMETRY=1` to enable or `GW_TELEMETRY=0` to
+disable for a single session without touching any config file.
 
 `gw init` writes a `"telemetry": { "enabled": false }` block into your
 `.gw/config.json` so the option is easy to find — flip `enabled` to `true` to
@@ -414,107 +428,89 @@ start sending.
 
 ### What gets sent
 
-When enabled, each command emits:
+When enabled, each command emits **one span** and **one log record** via
+OTLP/HTTP to the maintainer's Dash0 instance:
 
-- **One span** per invocation (`gw <command>`) with `gw.command`,
-  `gw.command.exit_code`, `gw.command.duration_ms`, and `service.version`.
-- **One log record** — `INFO` on success, `ERROR` (with `error.message`) on
-  failure.
+- **Span attributes:** `gw.command`, `gw.command.exit_code`,
+  `gw.command.duration_ms`, `service.version`
+- **Log level:** `INFO` on success, `ERROR` on failure (with a redacted
+  `error.message`)
+- **Resource attributes:** `service.name`, `service.version`,
+  `deployment.environment.name` (if configured)
 
-Every signal carries the `service.version` resource attribute. That, combined
-with a **deployment event** emitted by the release pipeline (see below), is
-what lets Dash0 line up "a new version shipped" with "errors started".
+**What is NOT sent:** branch names, repository paths, file names, user identity,
+or any personally identifiable information. Error messages are client-side
+redacted before transmission — absolute paths, git refs, long hex SHAs, and
+`KEY=value` patterns are replaced with `<path>`, `<ref>`, `<sha>`, and
+`KEY=<redacted>` respectively.
 
-`gw` never sends branch names, repository paths, or file names. Error messages
-are included so failures can be investigated — redact them in the Collector if
-that is a concern.
+> **Fail-open design:** any export error is silently swallowed and never slows
+> down or breaks a command. Nothing is ever written to stdout (so shell-eval
+> commands like `gw cd` stay safe).
 
-> **Design note:** telemetry is fully fail-open. Any export error is swallowed
-> and never slows down or breaks a command, and nothing is ever written to
-> stdout (so shell-eval commands like `gw cd` stay safe).
+### Privacy and the threat model
 
-### Recommended setup: via a local OpenTelemetry Collector
+The compiled `gw` binary bundles the maintainer's Dash0 ingest endpoint and a
+scoped ingest token. This is the same approach used by Sentry DSNs, Vercel CLI
+analytics, and Deno's own telemetry. The token is scoped to the `gw-cli`
+dataset and subject to ingest quotas — it cannot read back data or access other
+Dash0 resources. Anyone who disassembles the binary could extract the token, but
+the worst-case impact is noise in a single dataset, not a data breach.
 
-Point `gw` at a local [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
-that holds your Dash0 auth token and forwards telemetry on. This keeps the
-token out of any committed config, keeps the CLI fast (the Collector ACKs
-locally), and lets you redact/transform data centrally.
+To completely opt out: `gw telemetry off` (or `GW_TELEMETRY=0`). The telemetry
+code path is never entered when disabled.
 
-1. Enable it in `.gw/config.json`:
+### Routing to your own backend
 
-   ```jsonc
-   {
-     "telemetry": {
-       "enabled": true,
-       "endpoint": "http://localhost:4318", // local OTel Collector
-       "environment": "production" // deployment.environment.name
-     }
-   }
-   ```
+Power users can override the maintainer's endpoint and route telemetry to their
+own OTel backend instead. The precedence is: \*\*env vars > `.gw/config.local.json`
 
-2. Run a Collector that exports to Dash0 (token stays in the Collector config,
-   not in your repo):
-
-   ```yaml
-   # otel-collector.yaml
-   receivers:
-     otlp:
-       protocols:
-         http: { endpoint: 0.0.0.0:4318 }
-   exporters:
-     otlp/dash0:
-       endpoint: ${env:DASH0_OTLP_ENDPOINT} # e.g. ingress.<region>.aws.dash0.com:4317
-       headers:
-         Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
-         Dash0-Dataset: ${env:DASH0_DATASET}
-   service:
-     pipelines:
-       traces: { receivers: [otlp], exporters: [otlp/dash0] }
-       logs: { receivers: [otlp], exporters: [otlp/dash0] }
-   ```
-
-### Alternative: send straight to Dash0
-
-Skip the Collector and supply the endpoint and token via env vars (or
-`.gw/config.local.json`, which is gitignored). **Never** put the token in the
-committed `config.json`:
+> committed `.gw/config.json` > build defaults\*\*.
 
 ```bash
-export GW_TELEMETRY=1
-export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingress.<region>.aws.dash0.com:4318"
-export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>,Dash0-Dataset=default"
+# Route to a local Collector
+export OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>,Dash0-Dataset=my-dataset"
+gw telemetry on
 ```
 
-### Configuration & env vars
+Or in `.gw/config.local.json` (gitignored):
 
-| Setting       | `config.json` key       | Env override                  | Default                 |
-| ------------- | ----------------------- | ----------------------------- | ----------------------- |
-| Enable        | `telemetry.enabled`     | `GW_TELEMETRY` (`1`/`0`)      | `false`                 |
-| Endpoint      | `telemetry.endpoint`    | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` |
-| Environment   | `telemetry.environment` | `OTEL_RESOURCE_ATTRIBUTES`    | _(unset)_               |
-| Service name  | `telemetry.serviceName` | `OTEL_SERVICE_NAME`           | `gw`                    |
-| Headers       | `telemetry.headers`     | `OTEL_EXPORTER_OTLP_HEADERS`  | _(none)_                |
-| Flush timeout | `telemetry.timeoutMs`   | —                             | `1500`                  |
+```jsonc
+{
+  "telemetry": {
+    "enabled": true,
+    "endpoint": "http://localhost:4318",
+    "headers": { "Authorization": "Bearer <token>", "Dash0-Dataset": "my-dataset" },
+  },
+}
+```
 
-`OTEL_SDK_DISABLED=true` is honoured as a hard kill switch. Set
-`GW_TELEMETRY_DEBUG=1` to log export problems to stderr while setting things up.
+**Note:** `telemetry.enabled` in the committed `.gw/config.json` has no effect.
+Opt-in is per-machine only (local config or env var). This prevents repo
+maintainers from silently enrolling everyone who clones the repo.
+
+### Configuration reference
+
+| Setting       | `config.local.json` key | Env override                  | Default           |
+| ------------- | ----------------------- | ----------------------------- | ----------------- |
+| Enable        | `telemetry.enabled`     | `GW_TELEMETRY` (`1`/`0`)      | `false`           |
+| Endpoint      | `telemetry.endpoint`    | `OTEL_EXPORTER_OTLP_ENDPOINT` | _(build default)_ |
+| Environment   | `telemetry.environment` | `OTEL_RESOURCE_ATTRIBUTES`    | _(unset)_         |
+| Service name  | `telemetry.serviceName` | `OTEL_SERVICE_NAME`           | `gw`              |
+| Headers       | `telemetry.headers`     | `OTEL_EXPORTER_OTLP_HEADERS`  | _(build default)_ |
+| Flush timeout | `telemetry.timeoutMs`   | —                             | `1500`            |
+
+`OTEL_SDK_DISABLED=true` is honoured as a hard kill switch regardless of other
+settings. Set `GW_TELEMETRY_DEBUG=1` to log export problems to stderr.
 
 ### Correlating deployments with errors
 
 The release pipeline (`scripts/release-ci.sh`) sends a `deployment.success`
-event log to Dash0 after a successful publish, tagged with the released
-`service.version` and the git commit. Because runtime error signals carry the
-same `service.version`, Dash0 can show a deployment marker on the error
-timeline and compare error rates before and after each release.
-
-You can also send one manually:
-
-```bash
-OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
-  deno run --allow-net --allow-env --allow-read \
-  packages/gw-tool/scripts/send-deployment-event.ts \
-  --version 1.2.3 --environment production --commit "$(git rev-parse HEAD)"
-```
+event to Dash0 after each publish, tagged with `service.version` and the git
+commit SHA. Because runtime error signals carry the same `service.version`,
+Dash0 can display a deployment marker on the error timeline and compare error
+rates before and after each release.
 
 ## Commands
 

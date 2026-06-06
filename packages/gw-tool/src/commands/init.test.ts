@@ -313,6 +313,7 @@ Deno.test('init command - interactive mode with all defaults', async () => {
         '', // clean threshold (accept default 7)
         'n', // enable auto-clean
         '', // update strategy (accept default "merge")
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -350,6 +351,7 @@ Deno.test('init command - interactive mode with custom values', async () => {
         '14', // clean threshold
         'y', // enable auto-clean
         'rebase', // update strategy
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -391,6 +393,7 @@ Deno.test('init command - interactive mode with multiple hooks', async () => {
         '', // clean threshold (default)
         'n', // enable auto-clean
         '', // update strategy (default)
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -423,6 +426,7 @@ Deno.test('init command - interactive mode with CLI flags takes precedence', asy
         '21', // clean threshold (should be ignored, CLI has "10")
         'y', // enable auto-clean (should be ignored, no CLI flag)
         'rebase', // update strategy (should be ignored, CLI has "merge")
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () =>
@@ -471,6 +475,7 @@ Deno.test('init command - interactive mode with invalid clean threshold', async 
         'invalid', // clean threshold (invalid, should use default)
         'n', // enable auto-clean
         '', // update strategy (default)
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -504,6 +509,7 @@ Deno.test("init command - interactive mode accepts 'yes' and 'y' responses", asy
         '', // clean threshold (default)
         'yes', // enable auto-clean (using "yes")
         '', // update strategy (default)
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -535,6 +541,7 @@ Deno.test('init command - interactive mode declining all optional features', asy
         '7', // clean threshold
         'n', // enable auto-clean
         '', // update strategy (default)
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -569,6 +576,7 @@ Deno.test('init command - interactive mode with whitespace in responses', async 
         ' 10 ', // clean threshold with whitespace (should be parsed)
         'n', // enable auto-clean
         ' merge ', // update strategy with whitespace (should be trimmed)
+        'n', // telemetry opt-in (decline)
       ];
 
       await withMockedPrompt(responses, () => executeInit(['--interactive']));
@@ -1099,6 +1107,67 @@ Deno.test('init command - interactive mode exits when URL prompt is skipped', as
     }
   } finally {
     await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+  }
+});
+
+// =============================================================================
+// Telemetry opt-in prompt tests
+// =============================================================================
+
+Deno.test('init command - non-interactive: does not write config.local.json when prompt returns null', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Simulate non-interactive environment: prompt() returns null
+      await withMockedPrompt([null], () => executeInit([]));
+
+      // config.local.json must NOT have been created (or if it exists, must not have telemetry.enabled)
+      const localConfigPath = join(repo.path, '.gw', 'config.local.json');
+      let localConfig: Record<string, unknown> = {};
+      try {
+        const content = await Deno.readTextFile(localConfigPath);
+        localConfig = JSON.parse(content) as Record<string, unknown>;
+      } catch {
+        // File doesn't exist — that's fine too
+      }
+      const telemetry = localConfig.telemetry as Record<string, unknown> | undefined;
+      assertEquals(telemetry?.enabled, undefined, 'Non-interactive init must not enable telemetry');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('init command - declines telemetry when n is entered', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      // Respond 'n' to the telemetry prompt
+      await withMockedPrompt(['n'], () => executeInit([]));
+
+      const localConfigPath = join(repo.path, '.gw', 'config.local.json');
+      let localConfig: Record<string, unknown> = {};
+      try {
+        const content = await Deno.readTextFile(localConfigPath);
+        localConfig = JSON.parse(content) as Record<string, unknown>;
+      } catch {
+        // File may not exist when telemetry is declined
+      }
+      const telemetry = localConfig.telemetry as Record<string, unknown> | undefined;
+      assertEquals(telemetry?.enabled, undefined, 'Declining telemetry prompt must not enable telemetry');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
   }
 });
 

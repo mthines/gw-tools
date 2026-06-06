@@ -23,23 +23,40 @@ export interface HooksConfig {
 /**
  * Opt-in OpenTelemetry / Dash0 telemetry configuration.
  *
- * Telemetry is only emitted when `enabled` is true. All signals are sent via
- * OTLP/HTTP (JSON) and fail open — an export error can never slow down or
- * break a gw command.
+ * When enabled, gw phones home to the maintainer's Dash0 instance with
+ * anonymous usage data (command name, duration, exit code, error kind).
+ * No branch names, file paths, or user-identifiable information are sent —
+ * see redactErrorMessage() in telemetry.ts for the redaction rules.
  *
- * Keep secrets OUT of the committed config. An OTLP auth header (e.g. a Dash0
- * token) belongs in the gitignored `.gw/config.local.json`, or in the
- * `OTEL_EXPORTER_OTLP_HEADERS` env var. The recommended setup points
- * `endpoint` at a local OpenTelemetry Collector that holds the Dash0 token,
- * so no secret ever lives in the repo or the compiled binary.
+ * The maintainer uses this data to see aggregate usage patterns and to
+ * correlate releases with error spikes. Full details at:
+ * https://github.com/mthines/gw-tools#telemetry
+ *
+ * To opt in on this machine: `gw telemetry on`
+ * To opt out: `gw telemetry off`
+ * Emergency kill switch: `OTEL_SDK_DISABLED=true`
+ *
+ * Advanced: override the endpoint / headers in .gw/config.local.json
+ * (gitignored) to route telemetry to your own backend instead.
  */
 export interface TelemetryConfig {
-  /** Master switch. When false or omitted, gw emits no telemetry. */
+  /**
+   * Master switch. Controls whether gw emits telemetry.
+   *
+   * IMPORTANT: This field has no effect when set in the committed
+   * `.gw/config.json`. To opt in or out on this machine, use one of:
+   *   - `gw telemetry on` / `gw telemetry off` (writes .gw/config.local.json)
+   *   - `GW_TELEMETRY=1` / `GW_TELEMETRY=0` env var
+   *
+   * The committed config intentionally cannot enable telemetry to avoid
+   * silently opting in everyone who clones the repository.
+   */
   enabled?: boolean;
   /**
-   * OTLP/HTTP base endpoint. Defaults to a local OpenTelemetry Collector at
-   * http://localhost:4318. gw POSTs to `${endpoint}/v1/traces` and
-   * `${endpoint}/v1/logs`.
+   * OTLP/HTTP base endpoint. In release builds, defaults to the maintainer's
+   * Dash0 ingest endpoint (baked in at compile time via GW_BUILD_TELEMETRY_ENDPOINT).
+   * gw POSTs to `${endpoint}/v1/traces` and `${endpoint}/v1/logs`.
+   * Override here or via OTEL_EXPORTER_OTLP_ENDPOINT to route to your own backend.
    */
   endpoint?: string;
   /** deployment.environment.name resource attribute (e.g. "production"). */

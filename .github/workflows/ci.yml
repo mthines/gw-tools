@@ -390,6 +390,14 @@ jobs:
           AUR_SSH_KEY: ${{ secrets.AUR_SSH_KEY }}
           RELEASE_VERSION: ${{ needs.version-gw.outputs.tag }}
           SKIP_NPM: 'true'
+          # Optional: telemetry build vars bake the maintainer ingest token into
+          # the compiled binary. When absent, binaries compile cleanly with
+          # telemetry off. Add these secrets to the npm-publish environment in
+          # GitHub repo settings before the first telemetry-enabled release.
+          # See packages/gw-tool/RUNBOOK-telemetry.md for setup instructions.
+          GW_BUILD_TELEMETRY_TOKEN: ${{ secrets.GW_BUILD_TELEMETRY_TOKEN }}
+          GW_BUILD_TELEMETRY_ENDPOINT: ${{ secrets.GW_BUILD_TELEMETRY_ENDPOINT }}
+          GW_BUILD_TELEMETRY_DATASET: ${{ secrets.GW_BUILD_TELEMETRY_DATASET }}
         run: npx nx run gw-tool:release:ci
 
       - name: Update npm

@@ -8,11 +8,14 @@
  * the same attribute on runtime error signals to correlate the release with
  * any error spike that follows it.
  *
- * Configuration:
- *   OTEL_EXPORTER_OTLP_ENDPOINT   OTLP/HTTP base endpoint (Collector or Dash0).
- *                                 Defaults to http://localhost:4318.
+ * Configuration (highest precedence first):
+ *   --endpoint <url>              OTLP/HTTP base endpoint.
+ *   OTEL_EXPORTER_OTLP_ENDPOINT   OTLP/HTTP base endpoint.
+ *   (build default)               BUILD_TELEMETRY_ENDPOINT baked at compile time.
+ *
  *   OTEL_EXPORTER_OTLP_HEADERS    Optional OTLP headers, "k=v,k=v"
  *                                 (e.g. "Authorization=Bearer <token>").
+ *   (build default)               BUILD_TELEMETRY_TOKEN / BUILD_TELEMETRY_DATASET.
  *
  * Usage:
  *   deno run --allow-net --allow-env --allow-read \
@@ -20,7 +23,13 @@
  *     --version 1.2.3 --environment production --commit "$(git rev-parse HEAD)"
  */
 
-import { parseHeaders, sendDeploymentEvent } from '../src/lib/telemetry.ts';
+import {
+  BUILD_TELEMETRY_DATASET,
+  BUILD_TELEMETRY_ENDPOINT,
+  BUILD_TELEMETRY_TOKEN,
+  parseHeaders,
+  sendDeploymentEvent,
+} from '../src/lib/telemetry.ts';
 
 function getFlag(args: string[], name: string): string | undefined {
   const idx = args.indexOf(`--${name}`);
@@ -38,8 +47,26 @@ async function main(): Promise<void> {
     Deno.exit(2);
   }
 
-  const endpoint = getFlag(args, 'endpoint') ?? Deno.env.get('OTEL_EXPORTER_OTLP_ENDPOINT') ?? 'http://localhost:4318';
-  const headers = parseHeaders(Deno.env.get('OTEL_EXPORTER_OTLP_HEADERS') ?? undefined);
+  // Build bundled headers as fallback defaults; OTEL_EXPORTER_OTLP_HEADERS overrides.
+  const buildHeaders: Record<string, string> = {};
+  if (BUILD_TELEMETRY_TOKEN) {
+    buildHeaders['Authorization'] = `Bearer ${BUILD_TELEMETRY_TOKEN}`;
+  }
+  if (BUILD_TELEMETRY_DATASET) {
+    buildHeaders['Dash0-Dataset'] = BUILD_TELEMETRY_DATASET;
+  }
+  const envHeaderOverrides = parseHeaders(Deno.env.get('OTEL_EXPORTER_OTLP_HEADERS') ?? undefined);
+
+  const endpoint =
+    getFlag(args, 'endpoint') ?? Deno.env.get('OTEL_EXPORTER_OTLP_ENDPOINT') ?? BUILD_TELEMETRY_ENDPOINT ?? '';
+
+  if (!endpoint) {
+    console.error('send-deployment-event: no OTLP endpoint configured (OTEL_EXPORTER_OTLP_ENDPOINT or build var)');
+    Deno.exit(2);
+  }
+
+  // Precedence: env headers > build defaults
+  const headers = { ...buildHeaders, ...envHeaderOverrides };
 
   const ok = await sendDeploymentEvent({
     endpoint,

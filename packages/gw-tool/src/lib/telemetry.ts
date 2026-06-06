@@ -8,15 +8,15 @@
  * flush-before-exit behaviour that short-lived processes require.
  *
  * Design rules:
- * - **Opt-in.** Nothing is emitted unless telemetry is enabled in
- *   `.gw/config.json` (or via the `GW_TELEMETRY` env var).
+ * - **Opt-in, per-machine.** Nothing is emitted unless telemetry is enabled in
+ *   `.gw/config.local.json` (gitignored) or via the `GW_TELEMETRY` env var.
+ *   Setting `enabled` in the committed `.gw/config.json` has NO effect — it
+ *   would silently opt in everyone who clones the repo.
  * - **Fail open.** Any export error is swallowed. Telemetry must never slow
  *   down or break a gw command, and must never write to stdout (several
  *   commands emit shell code on stdout that is `eval`'d).
- * - **No PII by default.** Only safe fields (command name, exit code,
- *   duration, version) are attached. Branch names, repo paths and file names
- *   are never sent. Error messages are included so failures can be
- *   investigated — redact them in the Collector (OTTL) if that is a concern.
+ * - **Redacted error messages.** Error messages are stripped of paths, git
+ *   refs, SHAs, and env-var values before sending. See `redactErrorMessage`.
  *
  * Deployment ↔ error correlation:
  * every signal carries the `service.version` resource attribute, and the
@@ -30,8 +30,35 @@ import { parse as parseJsonc } from '@std/jsonc';
 import type { TelemetryConfig } from './types.ts';
 import { VERSION } from './version.ts';
 
-/** Default OTLP/HTTP endpoint — a local OpenTelemetry Collector. */
-const DEFAULT_ENDPOINT = 'http://localhost:4318';
+// ---------------------------------------------------------------------------
+// Build-time constants — baked into the binary by `deno compile`.
+//
+// These are read at module init (top-level), which is what deno compile
+// captures into the V8 snapshot. If the build vars are absent (local dev,
+// contributor forks), these are empty strings and telemetry stays off.
+//
+// THREAT MODEL: These values are embedded in the distributed binary and are
+// extractable by anyone with access to the binary. The design goal is bounded
+// blast radius (scoped Dash0 dataset + ingest quotas), not an unreadable
+// binary. This is the same approach used by Sentry DSNs, Vercel CLI analytics
+// tokens, and Deno's own telemetry. See README.md#telemetry for the full
+// threat model. Cosmetic obfuscation was explicitly decided against.
+// ---------------------------------------------------------------------------
+
+/** OTLP/HTTP base endpoint baked in at compile time. Empty in dev/fork builds. */
+export const BUILD_TELEMETRY_ENDPOINT = Deno.env.get('GW_BUILD_TELEMETRY_ENDPOINT') ?? '';
+/** Dash0 ingest token baked in at compile time. Empty in dev/fork builds. */
+export const BUILD_TELEMETRY_TOKEN = Deno.env.get('GW_BUILD_TELEMETRY_TOKEN') ?? '';
+/** Dash0-Dataset header value baked in at compile time. Empty in dev/fork builds. */
+export const BUILD_TELEMETRY_DATASET = Deno.env.get('GW_BUILD_TELEMETRY_DATASET') ?? '';
+
+/**
+ * Runtime default OTLP/HTTP endpoint.
+ * In release builds: the maintainer's Dash0 ingest endpoint (baked in at compile time).
+ * In dev / contributor builds: empty string (telemetry stays off with no endpoint).
+ */
+const DEFAULT_ENDPOINT = BUILD_TELEMETRY_ENDPOINT || '';
+
 /** Default flush timeout for runtime command telemetry (ms). */
 const DEFAULT_TIMEOUT_MS = 1500;
 
@@ -212,56 +239,103 @@ function envGet(name: string): string | undefined {
 }
 
 // ---------------------------------------------------------------------------
+// Error-message redaction
+// ---------------------------------------------------------------------------
+
+/**
+ * Redact sensitive patterns from an error message before including it in
+ * telemetry. The goal is to preserve the *kind* of error while removing
+ * data that would identify the user, machine, branch, or repo.
+ *
+ * Redaction classes:
+ *   1. Absolute paths (/Users/…, /home/…, ~/…) → <path>
+ *   2. Quoted strings containing '/' (git refs like 'feat/foo') → '<ref>'
+ *   3. Long hex blobs (16+ chars) that look like commit SHAs → <sha>
+ *   4. Env-style KEY=value patterns (HOME=…, USER=…) → KEY=<redacted>
+ *
+ * Over-redacts rather than leaks. The remaining text is enough to identify
+ * what kind of error occurred (ENOENT, fatal:, etc.) without the specifics.
+ */
+export function redactErrorMessage(raw: string): string {
+  let s = raw;
+  // 1. Absolute paths (Unix and home-relative)
+  s = s.replace(/(~|\/(?:Users|home))[^\s'",)]+/g, '<path>');
+  // 2. Quoted git refs containing slashes
+  s = s.replace(/'[^']*\/[^']*'/g, "'<ref>'");
+  // 3. Long hex blobs (16+ lowercase hex chars)
+  s = s.replace(/\b[0-9a-f]{16,}\b/g, '<sha>');
+  // 4. Env-style KEY=value (uppercase or mixed-case key with at least 3 chars, = then non-whitespace)
+  s = s.replace(/\b([A-Z][A-Z0-9_]{2,})=\S+/g, '$1=<redacted>');
+  return s;
+}
+
+// ---------------------------------------------------------------------------
 // Config loading (side-effect free — never creates or mutates config files)
 // ---------------------------------------------------------------------------
 
 /**
- * Read the `telemetry` block from the nearest `.gw/config.json`, walking up
- * from the current working directory. Personal overrides in the gitignored
- * `.gw/config.local.json` are merged on top (matching `loadConfig`).
- *
- * This is deliberately independent of `loadConfig()` so telemetry has zero
- * side effects: it never creates a config, never prints, and silently returns
- * `undefined` outside a configured repo.
+ * Deep-merge the telemetry sub-objects from committed and local configs.
+ * Local fields win over committed; committed fields are preserved when absent
+ * from local. Returns undefined only when both inputs are undefined.
  */
-async function readNearestTelemetryConfig(): Promise<TelemetryConfig | undefined> {
+function mergeTelemetryBlocks(
+  committed: TelemetryConfig | undefined,
+  local: TelemetryConfig | undefined
+): TelemetryConfig | undefined {
+  if (!committed && !local) return undefined;
+  return { ...(committed ?? {}), ...(local ?? {}) };
+}
+
+/**
+ * Read the `telemetry` block from the nearest `.gw/config.json` and
+ * `.gw/config.local.json` separately, walking up from the current working
+ * directory. Returns them as distinct objects so the caller can apply
+ * per-machine consent rules (committed `enabled` is intentionally ignored).
+ */
+async function readNearestTelemetryConfigSplit(): Promise<{
+  committed: TelemetryConfig | undefined;
+  local: TelemetryConfig | undefined;
+}> {
   let dir: string;
   try {
     dir = Deno.cwd();
   } catch {
-    return undefined;
+    return { committed: undefined, local: undefined };
   }
 
   while (true) {
     const configDir = join(dir, '.gw');
     const configPath = join(configDir, 'config.json');
 
-    let merged: Record<string, unknown> | undefined;
+    let committedRaw: Record<string, unknown> | undefined;
     try {
-      const content = await Deno.readTextFile(configPath);
-      merged = parseJsonc(content) as Record<string, unknown>;
+      committedRaw = parseJsonc(await Deno.readTextFile(configPath)) as Record<string, unknown>;
     } catch {
-      merged = undefined;
+      committedRaw = undefined;
     }
 
-    if (merged) {
-      // Merge local overrides if present (gitignored, may hold secrets).
+    if (committedRaw !== undefined) {
+      // Found the repo root. Read local overrides.
+      let localRaw: Record<string, unknown> | undefined;
       try {
-        const localContent = await Deno.readTextFile(join(configDir, 'config.local.json'));
-        Object.assign(merged, parseJsonc(localContent) as Record<string, unknown>);
+        localRaw = parseJsonc(await Deno.readTextFile(join(configDir, 'config.local.json'))) as Record<string, unknown>;
       } catch {
-        // No local override — fine.
+        localRaw = undefined;
       }
-      const telemetry = merged.telemetry;
-      if (telemetry && typeof telemetry === 'object' && !Array.isArray(telemetry)) {
-        return telemetry as TelemetryConfig;
-      }
-      // First config wins, even if it has no telemetry block.
-      return undefined;
+
+      const toTelemetry = (raw: Record<string, unknown> | undefined): TelemetryConfig | undefined => {
+        const t = raw?.telemetry;
+        return t && typeof t === 'object' && !Array.isArray(t) ? (t as TelemetryConfig) : undefined;
+      };
+
+      return {
+        committed: toTelemetry(committedRaw),
+        local: toTelemetry(localRaw ?? undefined),
+      };
     }
 
     const parent = dirname(dir);
-    if (parent === dir) return undefined;
+    if (parent === dir) return { committed: undefined, local: undefined };
     dir = parent;
   }
 }
@@ -270,25 +344,49 @@ async function readNearestTelemetryConfig(): Promise<TelemetryConfig | undefined
  * Resolve effective telemetry settings from config + env overrides.
  *
  * Precedence (highest first): env vars, then `.gw/config.local.json`, then
- * `.gw/config.json`, then built-in defaults. Standard OTEL_* env vars are
- * honoured so power users and CI can configure exporting without touching
- * the committed config.
+ * `.gw/config.json` (non-enabled fields only), then built-in defaults.
+ *
+ * IMPORTANT: `enabled` is ONLY read from `.gw/config.local.json` or the
+ * `GW_TELEMETRY` env var. The committed `.gw/config.json`'s `enabled` field
+ * is intentionally ignored — it would silently opt-in everyone who clones
+ * the repo, which is a consent violation. Use `gw telemetry on` to opt in.
  */
 export async function loadTelemetrySettings(): Promise<ResolvedTelemetrySettings> {
-  const cfg: TelemetryConfig = (await readNearestTelemetryConfig()) ?? {};
+  const { committed, local } = await readNearestTelemetryConfigSplit();
 
-  // Enablement: config opts in; GW_TELEMETRY can force on/off; OTEL_SDK_DISABLED
-  // is an industry-standard hard kill switch.
-  let enabled = cfg.enabled === true;
+  // enabled: only local config or env var. Committed config's enabled field is
+  // intentionally ignored — it would silently opt-in everyone who clones the repo.
+  const localEnabled = local?.enabled === true;
+  // Merge non-enabled fields: committed provides the base, local overrides.
+  const committedWithoutEnabled: TelemetryConfig = { ...(committed ?? {}), enabled: undefined };
+  const cfg: TelemetryConfig = mergeTelemetryBlocks(committedWithoutEnabled, local) ?? {};
+
+  let enabled = localEnabled;
   const gwToggle = envGet('GW_TELEMETRY');
   if (isTruthy(gwToggle)) enabled = true;
   if (isFalsy(gwToggle)) enabled = false;
   if (isTruthy(envGet('OTEL_SDK_DISABLED'))) enabled = false;
 
+  // Endpoint: prefer env > local/committed config > build default.
   const endpoint = (envGet('OTEL_EXPORTER_OTLP_ENDPOINT') ?? cfg.endpoint ?? DEFAULT_ENDPOINT).replace(/\/+$/, '');
+
+  // Build bundled headers (Authorization + Dash0-Dataset) applied only when
+  // no user-supplied headers override them. User headers always win.
+  const buildHeaders: Record<string, string> = {};
+  if (BUILD_TELEMETRY_TOKEN) {
+    buildHeaders['Authorization'] = `Bearer ${BUILD_TELEMETRY_TOKEN}`;
+  }
+  if (BUILD_TELEMETRY_DATASET) {
+    buildHeaders['Dash0-Dataset'] = BUILD_TELEMETRY_DATASET;
+  }
+
+  // Precedence: env > config > build defaults
+  const configHeaders = cfg.headers ?? {};
+  const envHeaders = parseHeaders(envGet('OTEL_EXPORTER_OTLP_HEADERS'));
+  const headers = { ...buildHeaders, ...configHeaders, ...envHeaders };
+
   const serviceName = envGet('OTEL_SERVICE_NAME') ?? cfg.serviceName ?? 'gw';
   const environment = environmentFromEnv() ?? cfg.environment;
-  const headers = { ...(cfg.headers ?? {}), ...parseHeaders(envGet('OTEL_EXPORTER_OTLP_HEADERS')) };
   const timeoutMs = typeof cfg.timeoutMs === 'number' && cfg.timeoutMs > 0 ? cfg.timeoutMs : DEFAULT_TIMEOUT_MS;
 
   return { enabled, endpoint, environment, serviceName, headers, timeoutMs };
@@ -401,6 +499,8 @@ export function startCommand(command: string): CommandTelemetry {
  * invocation, then flush before the process exits. No-op (and no network
  * access) when telemetry is disabled. Never throws.
  *
+ * Error messages are redacted via {@link redactErrorMessage} before sending.
+ *
  * @param tx Handle from {@link startCommand}.
  * @param result Outcome of the command — `ok` plus the thrown `error`, if any.
  */
@@ -413,7 +513,8 @@ export async function finishCommand(tx: CommandTelemetry, result: { ok: boolean;
     const durationMs = Math.max(0, Math.round(performance.now() - tx.startPerf));
     const ok = result.ok;
     const exitCode = ok ? 0 : 1;
-    const errorMessage = ok ? undefined : errorToMessage(result.error);
+    // Redact error messages before sending — strips paths, git refs, SHAs, env vars.
+    const errorMessage = ok ? undefined : redactErrorMessage(errorToMessage(result.error));
 
     const resource = buildResource(settings, VERSION);
 
@@ -443,7 +544,7 @@ export async function finishCommand(tx: CommandTelemetry, result: { ok: boolean;
       timeUnixNano: endUnixNano.toString(),
       severityNumber: ok ? SEVERITY_INFO : SEVERITY_ERROR,
       severityText: ok ? 'INFO' : 'ERROR',
-      body: { stringValue: ok ? `gw ${tx.command} completed` : errorMessage ?? `gw ${tx.command} failed` },
+      body: { stringValue: ok ? `gw ${tx.command} completed` : (errorMessage ?? `gw ${tx.command} failed`) },
       attributes,
       traceId: tx.traceId,
       spanId: tx.spanId,

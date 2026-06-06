@@ -75,6 +75,7 @@ packages/gw-tool/
 │   │   ├── list.ts          # Proxy command (git worktree list)
 │   │   ├── remove.ts        # Proxy command (git worktree remove)
 │   │   └── ...              # Other proxy commands
+│   │   ├── telemetry.ts     # Custom command (opt-in/off/status subcommands)
 │   └── lib/                 # Shared utilities
 │       ├── types.ts         # TypeScript type definitions
 │       ├── config.ts        # Configuration management
@@ -84,7 +85,7 @@ packages/gw-tool/
 │       ├── path-resolver.ts # Path resolution utilities
 │       ├── output.ts        # Colored output formatting
 │       ├── git-proxy.ts     # Git command proxy utilities
-│       ├── telemetry.ts     # Opt-in OpenTelemetry/Dash0 OTLP export
+│       ├── telemetry.ts     # Maintainer-observe OTLP export + build constants
 │       └── version.ts       # Version constant
 ├── npm/                     # npm package files
 ├── scripts/                 # Build/release scripts
@@ -514,6 +515,68 @@ nx run gw-tool:release
 ```
 
 This handles versioning (via conventional commits), building, GitHub release, and npm publish.
+
+## Telemetry Architecture
+
+`gw` uses a **maintainer-observe** model: opt-in users phone home to the
+maintainer's Dash0 instance via OTLP/HTTP (no SDK dependency). Core module:
+`src/lib/telemetry.ts`.
+
+### Build-time constants
+
+Three module-level constants are read at import time so `deno compile` bakes
+them into the V8 snapshot of the binary:
+
+```typescript
+export const BUILD_TELEMETRY_ENDPOINT = Deno.env.get('GW_BUILD_TELEMETRY_ENDPOINT') ?? '';
+export const BUILD_TELEMETRY_TOKEN = Deno.env.get('GW_BUILD_TELEMETRY_TOKEN') ?? '';
+export const BUILD_TELEMETRY_DATASET = Deno.env.get('GW_BUILD_TELEMETRY_DATASET') ?? '';
+```
+
+When the build env vars are absent (local dev, contributor forks) the constants
+are empty strings and telemetry defaults off. The release CI sets these from
+GitHub Actions secrets.
+
+### Per-machine consent
+
+`telemetry.enabled` in the committed `.gw/config.json` is intentionally
+ignored at runtime. It is read only from:
+
+1. `.gw/config.local.json` (gitignored, managed by `gw telemetry on/off`)
+2. The `GW_TELEMETRY` env var (`1` = on, `0` = off)
+
+This prevents repo maintainers from silently enrolling all cloners.
+
+### Deep-merge for telemetry sub-object
+
+`loadTelemetrySettings()` reads committed and local config separately and
+deep-merges the `telemetry` sub-objects:
+`{ ...committedTelemetry, ...localTelemetry }`. This ensures that local-config
+fields (e.g. `endpoint`) survive a committed config that also sets other fields.
+
+### Error message redaction
+
+`redactErrorMessage(raw: string): string` in `telemetry.ts` strips four
+classes of PII before the error message is sent:
+
+1. Absolute paths (`/Users/…`, `/home/…`, `~/…`) → `<path>`
+2. Quoted git refs (`'…/…'`) → `<ref>`
+3. Long hex blobs (16+ chars) → `<sha>`
+4. Env-style `KEY=value` patterns → `KEY=<redacted>`
+
+`finishCommand()` calls this before setting `error.message` on the span.
+
+### `gw telemetry` command
+
+`src/commands/telemetry.ts` implements the `status / on / off` subcommands.
+`on/off` performs a deep-merge write to `.gw/config.local.json` so existing
+local-config fields are never clobbered.
+
+### Config migration v4
+
+The v4 migration in `config-migrations.ts` strips `telemetry.enabled` from any
+committed `config.json` that has it set (and emits a `warnings[]` entry that
+`config.ts` logs via `console.error`).
 
 ## Common Patterns
 

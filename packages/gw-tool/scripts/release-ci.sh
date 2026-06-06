@@ -77,33 +77,57 @@ echo -e "\n${BLUE}🔨 Building binaries for all platforms...${NC}"
 
 mkdir -p "$BINARIES_DIR"
 
+# Build-time telemetry injection. Vars are expected to come from GitHub Actions
+# secrets (GW_BUILD_TELEMETRY_TOKEN, GW_BUILD_TELEMETRY_ENDPOINT,
+# GW_BUILD_TELEMETRY_DATASET). When absent (local dev, forks), compile proceeds
+# with empty defaults and telemetry stays off — no build failure.
+# The token is an ingest-only Dash0 credential scoped to the gw-cli dataset.
+# It is embedded in the binary (same approach as Sentry DSNs, Vercel CLI, Deno
+# telemetry). The design goal is bounded blast radius via dataset scope + quotas.
+TELEMETRY_BUILD_ARGS=()
+if [ -n "${GW_BUILD_TELEMETRY_TOKEN:-}" ]; then
+  TELEMETRY_BUILD_ARGS+=(
+    "--env=GW_BUILD_TELEMETRY_TOKEN=${GW_BUILD_TELEMETRY_TOKEN}"
+    "--env=GW_BUILD_TELEMETRY_ENDPOINT=${GW_BUILD_TELEMETRY_ENDPOINT:-https://ingress.europe-west4.gcp.dash0-dev.com}"
+    "--env=GW_BUILD_TELEMETRY_DATASET=${GW_BUILD_TELEMETRY_DATASET:-gw-cli}"
+  )
+  echo -e "${BLUE}  Telemetry build vars: present (token, endpoint, dataset)${NC}"
+else
+  echo -e "${YELLOW}  GW_BUILD_TELEMETRY_TOKEN not set — compiling with empty defaults (telemetry off)${NC}"
+fi
+
 # On Linux CI, compile Linux natively and cross-compile others
 echo -e "${BLUE}  Compiling Linux x64...${NC}"
 deno compile --allow-all --no-check --no-npm \
+  "${TELEMETRY_BUILD_ARGS[@]}" \
   --target x86_64-unknown-linux-gnu \
   --output "$BINARIES_DIR/gw-linux-x64" \
   "$PACKAGE_DIR/src/main.ts"
 
 echo -e "${BLUE}  Compiling Linux arm64...${NC}"
 deno compile --allow-all --no-check --no-npm \
+  "${TELEMETRY_BUILD_ARGS[@]}" \
   --target aarch64-unknown-linux-gnu \
   --output "$BINARIES_DIR/gw-linux-arm64" \
   "$PACKAGE_DIR/src/main.ts"
 
 echo -e "${BLUE}  Compiling macOS x64...${NC}"
 deno compile --allow-all --no-check --no-npm \
+  "${TELEMETRY_BUILD_ARGS[@]}" \
   --target x86_64-apple-darwin \
   --output "$BINARIES_DIR/gw-macos-x64" \
   "$PACKAGE_DIR/src/main.ts"
 
 echo -e "${BLUE}  Compiling macOS arm64...${NC}"
 deno compile --allow-all --no-check --no-npm \
+  "${TELEMETRY_BUILD_ARGS[@]}" \
   --target aarch64-apple-darwin \
   --output "$BINARIES_DIR/gw-macos-arm64" \
   "$PACKAGE_DIR/src/main.ts"
 
 echo -e "${BLUE}  Compiling Windows x64...${NC}"
 deno compile --allow-all --no-check --no-npm \
+  "${TELEMETRY_BUILD_ARGS[@]}" \
   --target x86_64-pc-windows-msvc \
   --output "$BINARIES_DIR/gw-windows-x64.exe" \
   "$PACKAGE_DIR/src/main.ts"
@@ -375,22 +399,32 @@ cd "$WORKSPACE_ROOT"
 # Step 7: Emit Dash0 deployment event (best-effort — never fails the release)
 # =============================================================================
 # Correlates this release with any error spike that follows it in Dash0. Sends
-# a `deployment.success` event log carrying service.version=$VERSION. Runs only
-# when an OTLP endpoint is configured; failures are logged but non-fatal.
-if [ "$DRY_RUN" != "true" ] && [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ]; then
-  echo -e "\n${BLUE}📡 Sending deployment event to Dash0...${NC}"
-  COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo "")"
-  if deno run --allow-net --allow-env --allow-read \
-    "$PACKAGE_DIR/scripts/send-deployment-event.ts" \
-    --version "$VERSION" \
-    --environment "${GW_DEPLOY_ENVIRONMENT:-production}" \
-    --commit "$COMMIT_SHA"; then
-    echo -e "${GREEN}✅ Deployment event sent${NC}"
-  else
-    echo -e "${YELLOW}⚠️  Failed to send deployment event (non-fatal)${NC}"
+# a `deployment.success` event log carrying service.version=$VERSION. Runs when
+# OTEL_EXPORTER_OTLP_ENDPOINT is set explicitly, or falls back to the build
+# vars if GW_BUILD_TELEMETRY_TOKEN is present.
+if [ "$DRY_RUN" != "true" ]; then
+  # Expose build vars as OTLP env vars for the deployment event script,
+  # if they are set and no explicit OTEL_EXPORTER_OTLP_ENDPOINT override exists.
+  if [ -z "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ] && [ -n "${GW_BUILD_TELEMETRY_TOKEN:-}" ]; then
+    export OTEL_EXPORTER_OTLP_ENDPOINT="${GW_BUILD_TELEMETRY_ENDPOINT:-https://ingress.europe-west4.gcp.dash0-dev.com}"
+    export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer ${GW_BUILD_TELEMETRY_TOKEN},Dash0-Dataset=${GW_BUILD_TELEMETRY_DATASET:-gw-cli}"
   fi
-elif [ "$DRY_RUN" != "true" ]; then
-  echo -e "\n${YELLOW}⚠️  OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping Dash0 deployment event${NC}"
+
+  if [ -n "${OTEL_EXPORTER_OTLP_ENDPOINT:-}" ]; then
+    echo -e "\n${BLUE}📡 Sending deployment event to Dash0...${NC}"
+    COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo "")"
+    if deno run --allow-net --allow-env --allow-read \
+      "$PACKAGE_DIR/scripts/send-deployment-event.ts" \
+      --version "$VERSION" \
+      --environment "${GW_DEPLOY_ENVIRONMENT:-production}" \
+      --commit "$COMMIT_SHA"; then
+      echo -e "${GREEN}✅ Deployment event sent${NC}"
+    else
+      echo -e "${YELLOW}⚠️  Failed to send deployment event (non-fatal)${NC}"
+    fi
+  else
+    echo -e "\n${YELLOW}⚠️  No OTLP endpoint configured, skipping Dash0 deployment event${NC}"
+  fi
 fi
 
 # =============================================================================

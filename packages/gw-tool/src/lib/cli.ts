@@ -103,6 +103,7 @@ Commands:
   install-shell    Output shell integration code (use with eval)
   root             Get the root directory of the current git repository
   clean            Interactive cleanup of worktrees and branches (--auto for batch)
+  telemetry        Manage anonymous usage telemetry (on/off/status)
 
 Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository

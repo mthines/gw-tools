@@ -71,12 +71,12 @@ carrying the `service.version` resource attribute. Paired with the
 `deployment.success` event the release pipeline sends, this lets Dash0 correlate
 deployments with errors. Telemetry fails open — export errors never affect the command.
 
-| Field         | Type    | Default                 | Notes                                                                                          |
-| ------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
-| `enabled`     | boolean | `false`                 | Master switch. Env override: `GW_TELEMETRY=1`/`0`.                                             |
-| `endpoint`    | string  | `http://localhost:4318` | OTLP/HTTP base. Env: `OTEL_EXPORTER_OTLP_ENDPOINT`.                                            |
-| `environment` | string  | _(unset)_               | `deployment.environment.name`. Env: `OTEL_RESOURCE_ATTRIBUTES`.                               |
-| `serviceName` | string  | `gw`                    | `service.name`. Env: `OTEL_SERVICE_NAME`.                                                      |
+| Field         | Type    | Default                 | Notes                                                                                           |
+| ------------- | ------- | ----------------------- | ----------------------------------------------------------------------------------------------- |
+| `enabled`     | boolean | `false`                 | Master switch. Env override: `GW_TELEMETRY=1`/`0`.                                              |
+| `endpoint`    | string  | `http://localhost:4318` | OTLP/HTTP base. Env: `OTEL_EXPORTER_OTLP_ENDPOINT`.                                             |
+| `environment` | string  | _(unset)_               | `deployment.environment.name`. Env: `OTEL_RESOURCE_ATTRIBUTES`.                                 |
+| `serviceName` | string  | `gw`                    | `service.name`. Env: `OTEL_SERVICE_NAME`.                                                       |
 | `headers`     | object  | _(none)_                | OTLP headers. Env: `OTEL_EXPORTER_OTLP_HEADERS`. **No secrets here** — use `config.local.json`. |
 | `timeoutMs`   | integer | `1500`                  | Export flush timeout (ms).                                                                      |
 

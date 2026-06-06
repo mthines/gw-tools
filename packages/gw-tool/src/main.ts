@@ -23,6 +23,7 @@ import { executeRepair } from './commands/repair.ts';
 import { executeClean } from './commands/clean.ts';
 import { executeShowInit } from './commands/show-init.ts';
 import { executePr } from './commands/pr.ts';
+import { executeTelemetry } from './commands/telemetry.ts';
 import * as output from './lib/output.ts';
 import * as telemetry from './lib/telemetry.ts';
 
@@ -52,6 +53,7 @@ const COMMANDS = {
   clean: executeClean,
   'show-init': executeShowInit,
   pr: executePr,
+  telemetry: executeTelemetry,
 };
 
 if (import.meta.main) {

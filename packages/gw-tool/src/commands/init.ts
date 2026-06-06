@@ -4,6 +4,7 @@
  */
 
 import { join, resolve } from '@std/path';
+import { parse as parseJsonc } from '@std/jsonc';
 import { ensureConfigDir, ensureSchemaInConfig, saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
@@ -516,6 +517,54 @@ Existing Repository Examples:
 }
 
 /**
+ * Read the local config file (if present) or return empty object.
+ * Simple best-effort read — errors return {}.
+ */
+async function readLocalTelemetryConfig(localConfigPath: string): Promise<Record<string, unknown>> {
+  try {
+    return parseJsonc(await Deno.readTextFile(localConfigPath)) as Record<string, unknown>;
+  } catch {
+    return {};
+  }
+}
+
+/**
+ * Prompt the user to opt in to anonymous telemetry after gw init.
+ * Only prompts in interactive (TTY) sessions. Deno's prompt() returns null
+ * in non-TTY environments — that is treated as a silent skip (no opt-in).
+ *
+ * @param configDir The directory containing the .gw folder (worktree root).
+ */
+async function promptTelemetryOptIn(configDir: string): Promise<void> {
+  // prompt() returns null when stdin is not a TTY — skip silently.
+  const response = prompt('Help improve gw by sending anonymous usage data to the maintainer? [Y/n]: ');
+
+  // null = non-interactive; '' or 'y' / 'Y' / 'yes' = opt in; anything else = opt out
+  const shouldOptIn =
+    response !== null &&
+    (response.trim() === '' || response.trim().toLowerCase() === 'y' || response.trim().toLowerCase() === 'yes');
+
+  if (shouldOptIn) {
+    const localConfigPath = join(configDir, '.gw', 'config.local.json');
+    const existing = await readLocalTelemetryConfig(localConfigPath);
+    const existingTelemetry = (existing.telemetry ?? {}) as Record<string, unknown>;
+    const updated = {
+      ...existing,
+      telemetry: { ...existingTelemetry, enabled: true },
+    };
+    try {
+      await Deno.mkdir(join(localConfigPath, '..'), { recursive: true });
+      await Deno.writeTextFile(localConfigPath, JSON.stringify(updated, null, 2) + '\n');
+      output.success('Telemetry enabled on this machine (saved to .gw/config.local.json)');
+    } catch {
+      output.warning('Could not write .gw/config.local.json — run `gw telemetry on` manually.');
+    }
+  }
+
+  console.log(output.dim('  Telemetry details: https://github.com/mthines/gw-tools#telemetry'));
+}
+
+/**
  * Build config from parsed arguments
  */
 function buildConfigFromArgs(parsed: ParsedInitArgs): Partial<Config> {
@@ -793,6 +842,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
       }
     }
 
+    // Prompt for telemetry opt-in (skips silently in non-interactive sessions)
+    await promptTelemetryOptIn(worktreePath);
+
     // Navigate to the repository directory
     await signalNavigation(fullPath);
   } catch (error) {
@@ -981,6 +1033,9 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
     output.error(`Failed to create config - ${message}`);
     Deno.exit(1);
   }
+
+  // Prompt for telemetry opt-in (skips silently in non-interactive sessions)
+  await promptTelemetryOptIn(rootPath);
 }
 
 /**

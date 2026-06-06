@@ -88,12 +88,20 @@ The canonical migration guide is in the project root `CLAUDE.md` under
   // Override per-command with --merge or --rebase flags.
   "updateStrategy": "merge",
 
-  // Opt-in OpenTelemetry / Dash0 telemetry (disabled by default). Emits one span + log
-  // per command so deployments can be correlated with errors. Recommended: point "endpoint"
-  // at a local OTel Collector that holds the Dash0 token. NEVER put secrets (auth headers)
-  // in this committed file — use .gw/config.local.json or OTEL_EXPORTER_OTLP_HEADERS.
+  // Opt-in OpenTelemetry / Dash0 telemetry (disabled by default). When enabled, emits
+  // one span + log per command to the maintainer's Dash0 instance. No branch names,
+  // paths, or user identity are sent. Error messages are client-side redacted.
+  //
+  // IMPORTANT: "enabled" here has NO EFFECT. Opt-in is per-machine only:
+  //   - Run `gw telemetry on` (writes to .gw/config.local.json, gitignored), OR
+  //   - Set the GW_TELEMETRY=1 env var.
+  // Setting "enabled: true" in this committed file does NOT opt in repo cloners.
+  // The v4 migration strips "enabled" from committed configs automatically.
+  //
+  // To route to your own backend instead of the maintainer's, set "endpoint" here
+  // or via .gw/config.local.json / OTEL_EXPORTER_OTLP_ENDPOINT.
+  // NEVER put auth secrets in this committed file — use .gw/config.local.json.
   "telemetry": {
-    "enabled": false,
     "endpoint": "http://localhost:4318", // OTLP/HTTP base; gw POSTs /v1/traces and /v1/logs
     "environment": "production", // deployment.environment.name
     "serviceName": "gw", // service.name (default: "gw")
@@ -104,6 +112,9 @@ The canonical migration guide is in the project root `CLAUDE.md` under
 
 **Local overrides** — create `.gw/config.local.json` to override any field for your machine only.
 It is gitignored automatically and shallow-merged on top of `config.json` (local wins).
+`telemetry.enabled` is the notable exception: it is only effective when set in
+`config.local.json` (or via `GW_TELEMETRY` env var), never in the committed `config.json`.
+Use `gw telemetry on` / `gw telemetry off` to manage it.
 
 ## Hook Variables
 
