@@ -423,8 +423,9 @@ You can also use the env var `GW_TELEMETRY=1` to enable or `GW_TELEMETRY=0` to
 disable for a single session without touching any config file.
 
 `gw init` writes a `"telemetry": { "enabled": false }` block into your
-`.gw/config.json` so the option is easy to find — flip `enabled` to `true` to
-start sending.
+`.gw/config.json` so the option is easy to discover. Note that `enabled` in the
+committed `config.json` has no effect — opt-in is per-machine only (use
+`gw telemetry on` or `GW_TELEMETRY=1`).
 
 ### What gets sent
 

@@ -1,12 +1,11 @@
 {
-  "_comment": "Opt-in telemetry via a local OpenTelemetry Collector (RECOMMENDED)",
-  "_description": "Sends gw traces + logs to a local OTel Collector that forwards to Dash0. The Dash0 token lives in the Collector config (see otel-collector.dash0.yaml), never in this committed file. Safe to commit.",
-  "_usage": "1) Run a Collector listening on http://localhost:4318. 2) Enable telemetry below. gw emits one span + log per command, each tagged with service.version so Dash0 can correlate deployments with errors.",
+  "_comment": "Route gw telemetry to your own backend via a local OpenTelemetry Collector",
+  "_description": "Overrides the maintainer's built-in endpoint so gw sends to a local Collector instead. The Dash0 token lives in the Collector config (see otel-collector.dash0.yaml), never in this committed file. NOTE: 'enabled' here has no effect — opt-in is per-machine: run 'gw telemetry on' or set GW_TELEMETRY=1.",
+  "_usage": "1) Commit this (or merge fields into your config.json). 2) Run a Collector on http://localhost:4318. 3) Each user who wants to send telemetry runs 'gw telemetry on' on their own machine.",
 
   "defaultBranch": "main",
 
   "telemetry": {
-    "enabled": true,
     "endpoint": "http://localhost:4318",
     "environment": "production"
   }
