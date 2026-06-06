@@ -34,7 +34,7 @@ import type { Config } from './types.ts';
 /**
  * Current config version - increment when adding migrations
  */
-export const CURRENT_CONFIG_VERSION = 2;
+export const CURRENT_CONFIG_VERSION = 3;
 
 /**
  * Migration definition
@@ -74,6 +74,17 @@ export const MIGRATIONS: Migration[] = [
       delete config.root;
       delete config.lastAutoCleanTime;
       config.configVersion = 2;
+      return config;
+    },
+  },
+  {
+    version: 3,
+    description: 'Add opt-in telemetry configuration support',
+    migrate: (config) => {
+      // `telemetry` is a new optional field — no data transformation is
+      // needed. Bump the version so the schema default stays in sync and
+      // existing configs adopt the current version on next load.
+      config.configVersion = 3;
       return config;
     },
   },

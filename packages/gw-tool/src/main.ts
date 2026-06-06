@@ -24,6 +24,7 @@ import { executeClean } from './commands/clean.ts';
 import { executeShowInit } from './commands/show-init.ts';
 import { executePr } from './commands/pr.ts';
 import * as output from './lib/output.ts';
+import * as telemetry from './lib/telemetry.ts';
 
 /**
  * Available commands mapped to their handler functions
@@ -87,8 +88,19 @@ if (import.meta.main) {
       Deno.exit(1);
     }
 
-    // Execute command
-    await handler(args);
+    // Execute command, wrapped in opt-in telemetry. Telemetry fails open and
+    // is a no-op unless enabled in .gw/config.json (or via GW_TELEMETRY).
+    // Note: commands that call Deno.exit() internally (e.g. some help/exit
+    // paths) bypass this capture; errors that propagate as exceptions and
+    // normal completions are recorded here.
+    const tx = telemetry.startCommand(command);
+    try {
+      await handler(args);
+    } catch (error) {
+      await telemetry.finishCommand(tx, { ok: false, error });
+      throw error;
+    }
+    await telemetry.finishCommand(tx, { ok: true });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     output.error(message);

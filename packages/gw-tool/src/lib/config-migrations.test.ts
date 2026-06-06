@@ -33,11 +33,12 @@ Deno.test('runMigrations - migrates hooks.add to hooks.checkout (v0 -> v1)', () 
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  // Both v1 and v2 are applied starting from v0
-  assertEquals(result.appliedMigrations.length, 2);
+  // v1, v2 and v3 are all applied starting from v0
+  assertEquals(result.appliedMigrations.length, 3);
   assertEquals(result.appliedMigrations[0], 'v1: Rename hooks.add to hooks.checkout (command rename)');
   assertEquals(result.appliedMigrations[1], 'v2: Remove machine-specific fields to make config committable');
-  assertEquals(result.config.configVersion, 2);
+  assertEquals(result.appliedMigrations[2], 'v3: Add opt-in telemetry configuration support');
+  assertEquals(result.config.configVersion, 3);
   assertEquals(result.config.hooks?.checkout?.pre, ['echo pre']);
   assertEquals(result.config.hooks?.checkout?.post, ['npm install']);
   assertEquals((result.config.hooks as Record<string, unknown>).add, undefined);
@@ -77,7 +78,7 @@ Deno.test('runMigrations - handles config without hooks', () => {
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.config.configVersion, 2);
+  assertEquals(result.config.configVersion, 3);
   assertEquals(result.config.hooks, undefined);
   assertEquals((result.config as Record<string, unknown>).root, undefined);
 });
@@ -92,7 +93,7 @@ Deno.test('runMigrations - handles config with empty hooks', () => {
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.config.configVersion, 2);
+  assertEquals(result.config.configVersion, 3);
 });
 
 Deno.test('needsMigration - returns true for config without version', () => {
@@ -153,9 +154,11 @@ Deno.test('runMigrations - v2: removes root and lastAutoCleanTime fields', () =>
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.appliedMigrations.length, 1);
+  // Starting from v1, both v2 and v3 are applied
+  assertEquals(result.appliedMigrations.length, 2);
   assertEquals(result.appliedMigrations[0], 'v2: Remove machine-specific fields to make config committable');
-  assertEquals(result.config.configVersion, 2);
+  assertEquals(result.appliedMigrations[1], 'v3: Add opt-in telemetry configuration support');
+  assertEquals(result.config.configVersion, 3);
   assertEquals((result.config as Record<string, unknown>).root, undefined);
   assertEquals((result.config as Record<string, unknown>).lastAutoCleanTime, undefined);
   // Other fields should be preserved
@@ -172,8 +175,31 @@ Deno.test('runMigrations - v2: safe when root and lastAutoCleanTime are already 
   const result = runMigrations(config);
 
   assertEquals(result.migrated, true);
-  assertEquals(result.config.configVersion, 2);
+  assertEquals(result.config.configVersion, 3);
   assertEquals((result.config as Record<string, unknown>).root, undefined);
   assertEquals((result.config as Record<string, unknown>).lastAutoCleanTime, undefined);
   assertEquals(result.config.defaultBranch, 'develop');
+});
+
+Deno.test('runMigrations - v3: bumps version and preserves telemetry config', () => {
+  const config = {
+    configVersion: 2,
+    defaultBranch: 'main',
+    telemetry: {
+      enabled: true,
+      endpoint: 'http://localhost:4318',
+      environment: 'production',
+    },
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.migrated, true);
+  assertEquals(result.appliedMigrations.length, 1);
+  assertEquals(result.appliedMigrations[0], 'v3: Add opt-in telemetry configuration support');
+  assertEquals(result.config.configVersion, 3);
+  // Telemetry block is preserved untouched
+  assertEquals(result.config.telemetry?.enabled, true);
+  assertEquals(result.config.telemetry?.endpoint, 'http://localhost:4318');
+  assertEquals(result.config.telemetry?.environment, 'production');
 });

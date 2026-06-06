@@ -35,7 +35,7 @@ Config lives at `.gw/config.json` (committable) and `.gw/config.local.json`
 
 The canonical migration guide is in the project root `CLAUDE.md` under
 "Config Migration System". See also `packages/gw-tool/src/lib/config-migrations.ts`
-(current version: `CURRENT_CONFIG_VERSION = 2`).
+(current version: `CURRENT_CONFIG_VERSION = 3`).
 
 ## Rules
 
@@ -57,7 +57,7 @@ The canonical migration guide is in the project root `CLAUDE.md` under
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
   // Managed automatically — do not edit manually
-  "configVersion": 2,
+  "configVersion": 3,
 
   // Branch whose worktree is the source for auto-copy and sync (default: "main")
   // This worktree is protected from auto-clean.
@@ -87,6 +87,18 @@ The canonical migration guide is in the project root `CLAUDE.md` under
   // Default strategy for gw update: "merge" (preserves history) or "rebase" (linear). (default: "merge")
   // Override per-command with --merge or --rebase flags.
   "updateStrategy": "merge",
+
+  // Opt-in OpenTelemetry / Dash0 telemetry (disabled by default). Emits one span + log
+  // per command so deployments can be correlated with errors. Recommended: point "endpoint"
+  // at a local OTel Collector that holds the Dash0 token. NEVER put secrets (auth headers)
+  // in this committed file — use .gw/config.local.json or OTEL_EXPORTER_OTLP_HEADERS.
+  "telemetry": {
+    "enabled": false,
+    "endpoint": "http://localhost:4318", // OTLP/HTTP base; gw POSTs /v1/traces and /v1/logs
+    "environment": "production", // deployment.environment.name
+    "serviceName": "gw", // service.name (default: "gw")
+    "timeoutMs": 1500, // export flush timeout in ms
+  },
 }
 ```
 

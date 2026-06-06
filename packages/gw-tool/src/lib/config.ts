@@ -163,6 +163,12 @@ function validateConfig(data: unknown): data is Config {
     }
   }
 
+  if (config.telemetry !== undefined) {
+    if (typeof config.telemetry !== 'object' || config.telemetry === null || Array.isArray(config.telemetry)) {
+      return false;
+    }
+  }
+
   return true;
 }
 
@@ -414,10 +420,31 @@ function generateConfigTemplate(config: Config): string {
 
   // updateStrategy
   if (config.updateStrategy !== undefined) {
-    lines.push(`  "updateStrategy": ${JSON.stringify(config.updateStrategy)}`);
+    lines.push(`  "updateStrategy": ${JSON.stringify(config.updateStrategy)},`);
     lines.push('  // Default update strategy: "merge" or "rebase"');
   } else {
     lines.push('  // "updateStrategy": "merge",  // Default: "merge" or "rebase"');
+  }
+
+  lines.push('');
+
+  // Telemetry Section (opt-in)
+  lines.push('  // Telemetry (OpenTelemetry / Dash0) — opt-in, disabled by default');
+  lines.push('  // ----------------------------------------------------------------------------');
+  lines.push('  // Emits one span + log per command (and lets the release pipeline send a');
+  lines.push('  // deployment event) so deployments can be correlated with errors in Dash0.');
+  lines.push('  // Recommended: point "endpoint" at a local OpenTelemetry Collector that holds');
+  lines.push('  // your Dash0 token. Keep secrets out of this committed file — put OTLP auth');
+  lines.push('  // headers in .gw/config.local.json (gitignored) or OTEL_EXPORTER_OTLP_HEADERS.');
+
+  if (config.telemetry) {
+    lines.push(`  "telemetry": ${JSON.stringify(config.telemetry, null, 2).replace(/\n/g, '\n  ')},`);
+  } else {
+    lines.push('  // "telemetry": {');
+    lines.push('  //   "enabled": true,');
+    lines.push('  //   "endpoint": "http://localhost:4318",  // local OTel Collector');
+    lines.push('  //   "environment": "production"           // deployment.environment.name');
+    lines.push('  // },');
   }
 
   lines.push('');

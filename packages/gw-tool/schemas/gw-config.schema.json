@@ -13,7 +13,7 @@
       "type": "integer",
       "minimum": 0,
       "description": "Config schema version for migrations. Managed automatically by gw — do not edit manually.",
-      "default": 2
+      "default": 3
     },
     "defaultBranch": {
       "type": "string",
@@ -87,6 +87,45 @@
       "enum": ["merge", "rebase"],
       "description": "Default strategy for 'gw update' when syncing worktrees with the latest changes from the default branch. Can be overridden per-command with --merge or --rebase flags.",
       "default": "merge"
+    },
+    "telemetry": {
+      "type": "object",
+      "description": "Opt-in OpenTelemetry / Dash0 telemetry. Disabled unless 'enabled' is true. gw emits one span + log per command via OTLP/HTTP and fails open (export errors never affect the command). Keep secrets out of this committed file — put OTLP auth headers in .gw/config.local.json (gitignored) or the OTEL_EXPORTER_OTLP_HEADERS env var.",
+      "properties": {
+        "enabled": {
+          "type": "boolean",
+          "description": "Master switch. When false or omitted, gw emits no telemetry.",
+          "default": false
+        },
+        "endpoint": {
+          "type": "string",
+          "description": "OTLP/HTTP base endpoint. gw POSTs to '${endpoint}/v1/traces' and '${endpoint}/v1/logs'. Recommended: a local OpenTelemetry Collector that forwards to Dash0.",
+          "default": "http://localhost:4318",
+          "examples": ["http://localhost:4318", "https://ingress.eu-west-1.aws.dash0.com:4318"]
+        },
+        "environment": {
+          "type": "string",
+          "description": "deployment.environment.name resource attribute, used to separate environments and to correlate deployments with errors.",
+          "examples": ["production", "staging", "development"]
+        },
+        "serviceName": {
+          "type": "string",
+          "description": "service.name resource attribute.",
+          "default": "gw"
+        },
+        "headers": {
+          "type": "object",
+          "description": "Extra OTLP/HTTP headers (e.g. Authorization). Do NOT store secrets here in a committed config — use .gw/config.local.json or OTEL_EXPORTER_OTLP_HEADERS instead.",
+          "additionalProperties": { "type": "string" }
+        },
+        "timeoutMs": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Export flush timeout in milliseconds.",
+          "default": 1500
+        }
+      },
+      "additionalProperties": false
     }
   },
   "additionalProperties": false

@@ -21,6 +21,41 @@ export interface HooksConfig {
 }
 
 /**
+ * Opt-in OpenTelemetry / Dash0 telemetry configuration.
+ *
+ * Telemetry is only emitted when `enabled` is true. All signals are sent via
+ * OTLP/HTTP (JSON) and fail open — an export error can never slow down or
+ * break a gw command.
+ *
+ * Keep secrets OUT of the committed config. An OTLP auth header (e.g. a Dash0
+ * token) belongs in the gitignored `.gw/config.local.json`, or in the
+ * `OTEL_EXPORTER_OTLP_HEADERS` env var. The recommended setup points
+ * `endpoint` at a local OpenTelemetry Collector that holds the Dash0 token,
+ * so no secret ever lives in the repo or the compiled binary.
+ */
+export interface TelemetryConfig {
+  /** Master switch. When false or omitted, gw emits no telemetry. */
+  enabled?: boolean;
+  /**
+   * OTLP/HTTP base endpoint. Defaults to a local OpenTelemetry Collector at
+   * http://localhost:4318. gw POSTs to `${endpoint}/v1/traces` and
+   * `${endpoint}/v1/logs`.
+   */
+  endpoint?: string;
+  /** deployment.environment.name resource attribute (e.g. "production"). */
+  environment?: string;
+  /** service.name resource attribute (default: "gw"). */
+  serviceName?: string;
+  /**
+   * Extra OTLP/HTTP headers (e.g. Authorization). Do NOT put secrets here in a
+   * committed config — use .gw/config.local.json or OTEL_EXPORTER_OTLP_HEADERS.
+   */
+  headers?: Record<string, string>;
+  /** Export flush timeout in milliseconds (default: 1500). */
+  timeoutMs?: number;
+}
+
+/**
  * Per-repository configuration stored at .gw/config.json
  *
  * This file is safe to commit to your repository. Machine-specific
@@ -44,6 +79,8 @@ export interface Config {
   autoClean?: boolean;
   /** Default update strategy for the update command (optional, default: "merge") */
   updateStrategy?: 'merge' | 'rebase';
+  /** Opt-in OpenTelemetry / Dash0 telemetry configuration (optional, disabled by default) */
+  telemetry?: TelemetryConfig;
 }
 
 /**

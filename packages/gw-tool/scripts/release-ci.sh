@@ -372,6 +372,28 @@ fi
 cd "$WORKSPACE_ROOT"
 
 # =============================================================================
+# Step 7: Emit Dash0 deployment event (best-effort — never fails the release)
+# =============================================================================
+# Correlates this release with any error spike that follows it in Dash0. Sends
+# a `deployment.success` event log carrying service.version=$VERSION. Runs only
+# when an OTLP endpoint is configured; failures are logged but non-fatal.
+if [ "$DRY_RUN" != "true" ] && [ -n "$OTEL_EXPORTER_OTLP_ENDPOINT" ]; then
+  echo -e "\n${BLUE}📡 Sending deployment event to Dash0...${NC}"
+  COMMIT_SHA="$(git rev-parse HEAD 2>/dev/null || echo "")"
+  if deno run --allow-net --allow-env --allow-read \
+    "$PACKAGE_DIR/scripts/send-deployment-event.ts" \
+    --version "$VERSION" \
+    --environment "${GW_DEPLOY_ENVIRONMENT:-production}" \
+    --commit "$COMMIT_SHA"; then
+    echo -e "${GREEN}✅ Deployment event sent${NC}"
+  else
+    echo -e "${YELLOW}⚠️  Failed to send deployment event (non-fatal)${NC}"
+  fi
+elif [ "$DRY_RUN" != "true" ]; then
+  echo -e "\n${YELLOW}⚠️  OTEL_EXPORTER_OTLP_ENDPOINT not set, skipping Dash0 deployment event${NC}"
+fi
+
+# =============================================================================
 # Done!
 # =============================================================================
 if [ "$DRY_RUN" = "true" ]; then

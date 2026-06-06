@@ -32,7 +32,7 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
 {
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
-  "configVersion": 2,
+  "configVersion": 3,
 
   // Core Settings
   "defaultBranch": "main",
@@ -52,8 +52,37 @@ The `$schema` property enables autocompletion and validation in VS Code, JetBrai
   // Advanced Options
   "autoClean": false,
   "updateStrategy": "merge",
+
+  // Telemetry (opt-in, disabled by default)
+  "telemetry": {
+    "enabled": false,
+    "endpoint": "http://localhost:4318",
+    "environment": "production",
+  },
 }
 ```
+
+## `telemetry`
+
+**Purpose**: Opt-in OpenTelemetry / Dash0 telemetry. Disabled unless `enabled` is `true`.
+
+When enabled, gw emits one span + one log record per command via OTLP/HTTP, each
+carrying the `service.version` resource attribute. Paired with the
+`deployment.success` event the release pipeline sends, this lets Dash0 correlate
+deployments with errors. Telemetry fails open — export errors never affect the command.
+
+| Field         | Type    | Default                 | Notes                                                                                          |
+| ------------- | ------- | ----------------------- | ---------------------------------------------------------------------------------------------- |
+| `enabled`     | boolean | `false`                 | Master switch. Env override: `GW_TELEMETRY=1`/`0`.                                             |
+| `endpoint`    | string  | `http://localhost:4318` | OTLP/HTTP base. Env: `OTEL_EXPORTER_OTLP_ENDPOINT`.                                            |
+| `environment` | string  | _(unset)_               | `deployment.environment.name`. Env: `OTEL_RESOURCE_ATTRIBUTES`.                               |
+| `serviceName` | string  | `gw`                    | `service.name`. Env: `OTEL_SERVICE_NAME`.                                                      |
+| `headers`     | object  | _(none)_                | OTLP headers. Env: `OTEL_EXPORTER_OTLP_HEADERS`. **No secrets here** — use `config.local.json`. |
+| `timeoutMs`   | integer | `1500`                  | Export flush timeout (ms).                                                                      |
+
+**Recommended**: point `endpoint` at a local OpenTelemetry Collector that holds the
+Dash0 token, so no secret lives in the committed config. `OTEL_SDK_DISABLED=true` is
+a hard kill switch.
 
 ## `$schema`
 

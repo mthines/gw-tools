@@ -84,6 +84,7 @@ packages/gw-tool/
 │       ├── path-resolver.ts # Path resolution utilities
 │       ├── output.ts        # Colored output formatting
 │       ├── git-proxy.ts     # Git command proxy utilities
+│       ├── telemetry.ts     # Opt-in OpenTelemetry/Dash0 OTLP export
 │       └── version.ts       # Version constant
 ├── npm/                     # npm package files
 ├── scripts/                 # Build/release scripts

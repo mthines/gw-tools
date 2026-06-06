@@ -25,6 +25,7 @@ A command-line tool for managing git worktrees, built with Deno.
     - [Auto-Detection](#auto-detection)
     - [Example Configuration](#example-configuration)
     - [Configuration Options](#configuration-options)
+  - [Telemetry (OpenTelemetry & Dash0)](#telemetry-opentelemetry--dash0)
   - [Commands](#commands)
     - [checkout](#checkout)
       - [Arguments](#arguments)
@@ -385,6 +386,7 @@ All fields are optional and safe to commit — no machine-specific paths or runt
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (defaults to 7, set via `gw init --clean-threshold`)
 - **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (defaults to "merge", set via `gw init --update-strategy`)
+- **telemetry**: Opt-in OpenTelemetry / Dash0 telemetry (disabled by default). See [Telemetry](#telemetry-opentelemetry--dash0)
 
 ### Local Overrides (`config.local.json`)
 
@@ -398,6 +400,117 @@ Create `.gw/config.local.json` to override any config value for your machine onl
 ```
 
 Local config is merged on top of `config.json` (shallow merge, local wins). Useful for adding personal files to `autoCopyFiles` without modifying the team config.
+
+## Telemetry (OpenTelemetry & Dash0)
+
+`gw` can emit [OpenTelemetry](https://opentelemetry.io/) traces and logs so you
+can observe how the tool is used and **correlate releases with errors** in
+[Dash0](https://www.dash0.com/). It is **opt-in and disabled by default** — no
+telemetry leaves your machine unless you turn it on.
+
+### What gets sent
+
+When enabled, each command emits:
+
+- **One span** per invocation (`gw <command>`) with `gw.command`,
+  `gw.command.exit_code`, `gw.command.duration_ms`, and `service.version`.
+- **One log record** — `INFO` on success, `ERROR` (with `error.message`) on
+  failure.
+
+Every signal carries the `service.version` resource attribute. That, combined
+with a **deployment event** emitted by the release pipeline (see below), is
+what lets Dash0 line up "a new version shipped" with "errors started".
+
+`gw` never sends branch names, repository paths, or file names. Error messages
+are included so failures can be investigated — redact them in the Collector if
+that is a concern.
+
+> **Design note:** telemetry is fully fail-open. Any export error is swallowed
+> and never slows down or breaks a command, and nothing is ever written to
+> stdout (so shell-eval commands like `gw cd` stay safe).
+
+### Recommended setup: via a local OpenTelemetry Collector
+
+Point `gw` at a local [OpenTelemetry Collector](https://opentelemetry.io/docs/collector/)
+that holds your Dash0 auth token and forwards telemetry on. This keeps the
+token out of any committed config, keeps the CLI fast (the Collector ACKs
+locally), and lets you redact/transform data centrally.
+
+1. Enable it in `.gw/config.json`:
+
+   ```jsonc
+   {
+     "telemetry": {
+       "enabled": true,
+       "endpoint": "http://localhost:4318", // local OTel Collector
+       "environment": "production" // deployment.environment.name
+     }
+   }
+   ```
+
+2. Run a Collector that exports to Dash0 (token stays in the Collector config,
+   not in your repo):
+
+   ```yaml
+   # otel-collector.yaml
+   receivers:
+     otlp:
+       protocols:
+         http: { endpoint: 0.0.0.0:4318 }
+   exporters:
+     otlp/dash0:
+       endpoint: ${env:DASH0_OTLP_ENDPOINT} # e.g. ingress.<region>.aws.dash0.com:4317
+       headers:
+         Authorization: Bearer ${env:DASH0_AUTH_TOKEN}
+         Dash0-Dataset: ${env:DASH0_DATASET}
+   service:
+     pipelines:
+       traces: { receivers: [otlp], exporters: [otlp/dash0] }
+       logs: { receivers: [otlp], exporters: [otlp/dash0] }
+   ```
+
+### Alternative: send straight to Dash0
+
+Skip the Collector and supply the endpoint and token via env vars (or
+`.gw/config.local.json`, which is gitignored). **Never** put the token in the
+committed `config.json`:
+
+```bash
+export GW_TELEMETRY=1
+export OTEL_EXPORTER_OTLP_ENDPOINT="https://ingress.<region>.aws.dash0.com:4318"
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer <token>,Dash0-Dataset=default"
+```
+
+### Configuration & env vars
+
+| Setting       | `config.json` key       | Env override                  | Default                 |
+| ------------- | ----------------------- | ----------------------------- | ----------------------- |
+| Enable        | `telemetry.enabled`     | `GW_TELEMETRY` (`1`/`0`)      | `false`                 |
+| Endpoint      | `telemetry.endpoint`    | `OTEL_EXPORTER_OTLP_ENDPOINT` | `http://localhost:4318` |
+| Environment   | `telemetry.environment` | `OTEL_RESOURCE_ATTRIBUTES`    | _(unset)_               |
+| Service name  | `telemetry.serviceName` | `OTEL_SERVICE_NAME`           | `gw`                    |
+| Headers       | `telemetry.headers`     | `OTEL_EXPORTER_OTLP_HEADERS`  | _(none)_                |
+| Flush timeout | `telemetry.timeoutMs`   | —                             | `1500`                  |
+
+`OTEL_SDK_DISABLED=true` is honoured as a hard kill switch. Set
+`GW_TELEMETRY_DEBUG=1` to log export problems to stderr while setting things up.
+
+### Correlating deployments with errors
+
+The release pipeline (`scripts/release-ci.sh`) sends a `deployment.success`
+event log to Dash0 after a successful publish, tagged with the released
+`service.version` and the git commit. Because runtime error signals carry the
+same `service.version`, Dash0 can show a deployment marker on the error
+timeline and compare error rates before and after each release.
+
+You can also send one manually:
+
+```bash
+OTEL_EXPORTER_OTLP_ENDPOINT="http://localhost:4318" \
+  deno run --allow-net --allow-env --allow-read \
+  packages/gw-tool/scripts/send-deployment-event.ts \
+  --version 1.2.3 --environment production --commit "$(git rev-parse HEAD)"
+```
 
 ## Commands
 
