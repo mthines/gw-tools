@@ -613,8 +613,8 @@ Deno.test('init command - clone mode with file URL', async () => {
       const sourceDirName = sourceRepo.path.split('/').pop();
       const expectedRepoName = `${sourceDirName}.git`;
 
-      // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(['n'], async () => {
+      // Mock the shell integration prompt and telemetry opt-in prompt (both respond 'n')
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([cloneUrl]);
       });
 
@@ -651,8 +651,8 @@ Deno.test('init command - clone mode with custom directory', async () => {
     try {
       const cloneUrl = `file://${sourceRepo.path}`;
 
-      // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(['n'], async () => {
+      // Mock the shell integration prompt and telemetry opt-in prompt (both respond 'n')
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([cloneUrl, 'custom-name']);
       });
 
@@ -690,8 +690,8 @@ Deno.test('init command - clone mode with configuration options', async () => {
       const sourceDirName = sourceRepo.path.split('/').pop();
       const expectedRepoName = `${sourceDirName}.git`;
 
-      // Mock the shell integration prompt (respond 'n' to decline)
-      await withMockedPrompt(['n'], async () => {
+      // Mock the shell integration prompt and telemetry opt-in prompt (both respond 'n')
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([
           cloneUrl,
           '--auto-copy-files',
@@ -783,7 +783,7 @@ Deno.test('init command - clone mode with empty repository', async () => {
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(['n'], async () => {
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([cloneUrl, 'my-empty-repo']);
       });
 
@@ -828,7 +828,7 @@ Deno.test('init command - clone mode with empty repository creates initial commi
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(['n'], async () => {
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([cloneUrl, 'my-empty-repo']);
       });
 
@@ -865,7 +865,7 @@ Deno.test('init command - clone mode with empty repository and custom default br
     try {
       const cloneUrl = `file://${sourceRepoPath}`;
 
-      await withMockedPrompt(['n'], async () => {
+      await withMockedPrompt(['n', 'n'], async () => {
         await executeInit([cloneUrl, 'my-empty-repo', '--default-source', 'develop']);
       });
 
@@ -1061,6 +1061,7 @@ Deno.test('init command - interactive mode prompts for URL when not in git repo'
           'n', // enable auto-clean
           '', // update strategy (accept default "merge")
           'n', // shell integration install prompt (decline)
+          'n', // telemetry opt-in (decline)
         ];
 
         await withMockedPrompt(responses, () => executeInit(['--interactive']));
