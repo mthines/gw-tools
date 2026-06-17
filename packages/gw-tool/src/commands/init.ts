@@ -4,7 +4,7 @@
  */
 
 import { join, resolve } from '@std/path';
-import { ensureConfigDir, ensureSchemaInConfig, saveConfigTemplate } from '../lib/config.ts';
+import { ensureConfigDir, ensureSchemaInConfig, resolveConfigPaths, saveConfigTemplate } from '../lib/config.ts';
 import { findGitRoot, getWorktreeRoot, pathExists, validatePathExists } from '../lib/path-resolver.ts';
 import type { Config } from '../lib/types.ts';
 import * as output from '../lib/output.ts';
@@ -844,10 +844,15 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   }
 
   if (initialized && !parsed.interactive) {
+    const knownConfigPath = join(configDir!, '.gw', 'config.json');
     await ensureConfigDir(configDir!);
-    await ensureSchemaInConfig(join(configDir!, '.gw', 'config.json'));
+    await ensureSchemaInConfig(knownConfigPath);
     output.info('gw is already initialized in this repository');
-    console.log(`  Config: ${output.path(join(configDir!, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(knownConfigPath)}`);
+    const { localConfigPath } = await resolveConfigPaths();
+    if (localConfigPath) {
+      console.log(`  Local overrides: ${output.path(localConfigPath)}`);
+    }
     console.log(`\nUse ${output.bold('gw init --interactive')} to reconfigure`);
     return;
   }

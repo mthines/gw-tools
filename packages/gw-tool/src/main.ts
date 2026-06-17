@@ -75,7 +75,7 @@ if (import.meta.main) {
 
     // Show help if requested or no command provided
     if (help || !command) {
-      showGlobalHelp();
+      await showGlobalHelp();
       Deno.exit(command ? 0 : 1);
     }
 

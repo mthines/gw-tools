@@ -61,12 +61,31 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
   }
 }
 
+const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
+
+/**
+ * Resolve the paths of the config files that would be loaded, without
+ * creating, migrating, or parsing them. Returns `null` for entries that
+ * don't exist on disk.
+ */
+export async function resolveConfigPaths(): Promise<{
+  configPath: string | null;
+  localConfigPath: string | null;
+}> {
+  const configPath = await findConfigFile();
+  if (!configPath) {
+    return { configPath: null, localConfigPath: null };
+  }
+  const configDir = configPath.replace(/[/\\]config\.json$/, '');
+  const localCandidate = join(configDir, CONFIG_LOCAL_FILE_NAME);
+  const localConfigPath = (await pathExists(localCandidate)) ? localCandidate : null;
+  return { configPath, localConfigPath };
+}
+
 /**
  * Content for .gw/.gitignore — keeps artifacts and state out of git
  * while allowing config.json to be committed.
  */
-const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
-
 const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed)
 */
 
@@ -174,11 +193,14 @@ function validateConfig(data: unknown): data is Config {
  * 4. On auto-detection success, create config with detected root
  * 5. On failure, throw error with instruction to run gw init
  *
- * @returns Config and git root path
+ * @returns Config, git root path, the path of the loaded config file, and
+ *   the path of any active `.gw/config.local.json` override (null if absent).
  */
 export async function loadConfig(): Promise<{
   config: Config;
   gitRoot: string;
+  configPath: string;
+  localConfigPath: string | null;
 }> {
   // Try to find existing config file
   const configPath = await findConfigFile();
@@ -217,12 +239,14 @@ export async function loadConfig(): Promise<{
 
       // Load local overrides (.gw/config.local.json) if present
       const configDir = configPath.replace(/[/\\]config\.json$/, '');
-      const localConfigPath = join(configDir, CONFIG_LOCAL_FILE_NAME);
+      const localConfigCandidate = join(configDir, CONFIG_LOCAL_FILE_NAME);
+      let localConfigPath: string | null = null;
       try {
-        const localContent = await Deno.readTextFile(localConfigPath);
+        const localContent = await Deno.readTextFile(localConfigCandidate);
         const localData = parseJsonc(localContent) as Record<string, unknown>;
         // Merge: local overrides base (shallow merge)
         Object.assign(migratedData, localData);
+        localConfigPath = localConfigCandidate;
       } catch (error) {
         if (!(error instanceof Deno.errors.NotFound)) {
           // Only ignore "not found" — other errors should surface
@@ -231,7 +255,7 @@ export async function loadConfig(): Promise<{
         }
       }
 
-      return { config: migratedData, gitRoot };
+      return { config: migratedData, gitRoot, configPath, localConfigPath };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to load config: ${message}`);
@@ -249,10 +273,11 @@ export async function loadConfig(): Promise<{
 
     await saveConfig(configDir, config);
 
-    console.log(`Created config at ${getConfigPath(configDir)}`);
+    const newConfigPath = getConfigPath(configDir);
+    console.log(`Created config at ${newConfigPath}`);
     console.log(`Default source worktree: ${config.defaultBranch}\n`);
 
-    return { config, gitRoot };
+    return { config, gitRoot, configPath: newConfigPath, localConfigPath: null };
   } catch {
     throw new Error(
       "Could not auto-detect git root. Please run 'gw init --root <path>' to specify the repository root manually."
