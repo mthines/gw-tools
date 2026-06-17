@@ -61,6 +61,8 @@ async function findConfigFile(startPath?: string): Promise<string | null> {
   }
 }
 
+const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
+
 /**
  * Resolve the paths of the config files that would be loaded, without
  * creating, migrating, or parsing them. Returns `null` for entries that
@@ -84,8 +86,6 @@ export async function resolveConfigPaths(): Promise<{
  * Content for .gw/.gitignore — keeps artifacts and state out of git
  * while allowing config.json to be committed.
  */
-const CONFIG_LOCAL_FILE_NAME = 'config.local.json';
-
 const GW_GITIGNORE_CONTENT = `# Workflow artifacts (per-developer, not committed)
 */
 
@@ -193,7 +193,8 @@ function validateConfig(data: unknown): data is Config {
  * 4. On auto-detection success, create config with detected root
  * 5. On failure, throw error with instruction to run gw init
  *
- * @returns Config and git root path
+ * @returns Config, git root path, the path of the loaded config file, and
+ *   the path of any active `.gw/config.local.json` override (null if absent).
  */
 export async function loadConfig(): Promise<{
   config: Config;

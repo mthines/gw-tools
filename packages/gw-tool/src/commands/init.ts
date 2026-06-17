@@ -844,11 +844,12 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   }
 
   if (initialized && !parsed.interactive) {
+    const knownConfigPath = join(configDir!, '.gw', 'config.json');
     await ensureConfigDir(configDir!);
-    await ensureSchemaInConfig(join(configDir!, '.gw', 'config.json'));
+    await ensureSchemaInConfig(knownConfigPath);
     output.info('gw is already initialized in this repository');
-    const { configPath, localConfigPath } = await resolveConfigPaths();
-    console.log(`  Config: ${output.path(configPath ?? join(configDir!, '.gw/config.json'))}`);
+    console.log(`  Config: ${output.path(knownConfigPath)}`);
+    const { localConfigPath } = await resolveConfigPaths();
     if (localConfigPath) {
       console.log(`  Local overrides: ${output.path(localConfigPath)}`);
     }
