@@ -52,7 +52,7 @@ Deno.test('renderAnnotatedList - annotates user-protected branch', async () => {
     };
 
     try {
-      await renderAnnotatedList(['feat-branch'], 'main');
+      await renderAnnotatedList(['feat-branch']);
 
       // At least one line should contain [protected]
       const hasProtectedLine = logLines.some((line) => line.includes('[protected]'));
@@ -66,7 +66,7 @@ Deno.test('renderAnnotatedList - annotates user-protected branch', async () => {
   }
 });
 
-Deno.test('renderAnnotatedList - annotates system-protected default branch', async () => {
+Deno.test('renderAnnotatedList - does NOT annotate system-protected branches (main, gw_root)', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -79,11 +79,13 @@ Deno.test('renderAnnotatedList - annotates system-protected default branch', asy
     };
 
     try {
-      // main is the default branch — always protected
-      await renderAnnotatedList([], 'main');
+      // main is system-protected but the user did not opt in via `gw protect`.
+      // The tag is reserved for user-controlled protection so its meaning
+      // stays consistent with the command output.
+      await renderAnnotatedList([]);
 
       const hasProtectedLine = logLines.some((line) => line.includes('[protected]'));
-      assertEquals(hasProtectedLine, true);
+      assertEquals(hasProtectedLine, false);
     } finally {
       console.log = origLog;
       cwd.restore();
@@ -108,7 +110,7 @@ Deno.test('renderAnnotatedList - does not annotate unprotected branch', async ()
 
     try {
       // feat-branch is not in the user-protected list
-      await renderAnnotatedList([], 'main');
+      await renderAnnotatedList([]);
 
       // Find the feat-branch line specifically
       const featLine = logLines.find((line) => line.includes('feat-branch'));

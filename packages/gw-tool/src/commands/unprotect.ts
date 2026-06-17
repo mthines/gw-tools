@@ -96,7 +96,7 @@ export async function executeUnprotect(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  const { config, gitRoot } = await loadConfig();
+  const { config, configPath } = await loadConfig();
 
   const existing = config.protectedBranches ?? [];
 
@@ -115,7 +115,9 @@ export async function executeUnprotect(args: string[]): Promise<void> {
     newConfig.protectedBranches = updated;
   }
 
-  await saveConfig(gitRoot, newConfig);
+  // Save to the same file we loaded from — see the matching note in protect.ts.
+  const configDir = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+  await saveConfig(configDir, newConfig);
 
   output.success(`Branch ${output.bold(branch)} is no longer protected`);
 }

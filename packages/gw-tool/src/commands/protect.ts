@@ -102,7 +102,7 @@ export async function executeProtect(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  const { config, gitRoot } = await loadConfig();
+  const { config, configPath } = await loadConfig();
 
   const existing = config.protectedBranches ?? [];
 
@@ -112,7 +112,12 @@ export async function executeProtect(args: string[]): Promise<void> {
   }
 
   const updated = [...existing, branch];
-  await saveConfig(gitRoot, { ...config, protectedBranches: updated });
+  // Save to the same file we loaded from. Using gitRoot would write to the
+  // root .gw/config.json while loadConfig walks up from cwd, so when a
+  // worktree has its own .gw/config.json the two diverge and `gw ls` reads
+  // a different file than `gw protect` wrote.
+  const configDir = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
+  await saveConfig(configDir, { ...config, protectedBranches: updated });
 
   output.success(`Branch ${output.bold(branch)} is now protected`);
 }

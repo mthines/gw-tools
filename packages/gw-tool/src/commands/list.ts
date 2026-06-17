@@ -7,7 +7,6 @@ import { runAutoClean } from '../lib/auto-clean.ts';
 import { loadConfig } from '../lib/config.ts';
 import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 import { listWorktrees } from '../lib/git-utils.ts';
-import { isProtectedBranch } from '../lib/branch-protection.ts';
 import * as output from '../lib/output.ts';
 
 /**
@@ -28,10 +27,13 @@ export function shouldUseRawProxy(args: string[]): boolean {
 /**
  * Render the annotated worktree list.
  * Reproduces git worktree list's default (non-porcelain) format and appends
- * a cyan "[protected]" tag for any branch that is in protectedBranches or
- * is system-protected (defaultBranch, main, master, gw_root).
+ * a cyan "[protected]" tag for branches the user has explicitly protected
+ * via `gw protect`. System-protected branches (defaultBranch, main, master,
+ * gw_root) are deliberately NOT tagged here — that protection is implicit
+ * and unrelated to the user-controlled list, and showing it confuses the
+ * meaning of the tag.
  */
-export async function renderAnnotatedList(protectedBranches: string[], defaultBranch: string): Promise<void> {
+export async function renderAnnotatedList(protectedBranches: string[]): Promise<void> {
   const worktrees = await listWorktrees();
 
   if (worktrees.length === 0) {
@@ -55,9 +57,8 @@ export async function renderAnnotatedList(protectedBranches: string[], defaultBr
       branchCol = `[${wt.branch}]`;
     }
 
-    const isSystem = isProtectedBranch(wt.branch, defaultBranch);
     const isUserProtected = !wt.bare && !!wt.branch && protectedBranches.includes(wt.branch);
-    const tag = isSystem || isUserProtected ? `  ${output.path('[protected]')}` : '';
+    const tag = isUserProtected ? `  ${output.path('[protected]')}` : '';
 
     console.log(`${pathCol}  ${head}  ${branchCol}${tag}`);
   }
@@ -91,8 +92,7 @@ export async function executeList(args: string[]): Promise<void> {
   try {
     const { config } = await loadConfig();
     const protectedBranches = config.protectedBranches ?? [];
-    const defaultBranch = config.defaultBranch ?? 'main';
-    await renderAnnotatedList(protectedBranches, defaultBranch);
+    await renderAnnotatedList(protectedBranches);
   } catch {
     // If config loading fails or git errors, fall back to raw proxy
     await executeGitWorktree('list', args);
