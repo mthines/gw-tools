@@ -19,6 +19,6 @@ Symptom: `gh pr create` fails with "you must first push the current branch to a
 remote, or use the --head flag" even though the branch is clearly on the remote.
 
 Resolution: after the worktree's first push, run:
-  git push --set-upstream origin <branch>
+git push --set-upstream origin <branch>
 
 Or use `--head <branch>` flag with `gh pr create` as a workaround.
