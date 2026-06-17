@@ -84,8 +84,8 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Preview batch cleanup                     | `gw clean --dry-run`                                                |
 | Full cleanup: worktrees + orphan branches | `gw prune`                                                          |
 | Get repo root path (worktree-aware)       | `gw root`                                                           |
-| Protect branch from cleanup               | `gw protect [branch]`  (default: cwd branch)                        |
-| Remove protection from branch             | `gw unprotect [branch]`  (default: cwd branch)                      |
+| Protect branch from cleanup               | `gw protect [branch]` (default: cwd branch)                         |
+| Remove protection from branch             | `gw unprotect [branch]` (default: cwd branch)                       |
 
 ### Setup Commands
 
