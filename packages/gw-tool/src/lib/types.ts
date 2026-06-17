@@ -44,6 +44,8 @@ export interface Config {
   autoClean?: boolean;
   /** Default update strategy for the update command (optional, default: "merge") */
   updateStrategy?: 'merge' | 'rebase';
+  /** Branch names explicitly protected from auto-clean and manual clean */
+  protectedBranches?: string[];
 }
 
 /**

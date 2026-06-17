@@ -80,6 +80,10 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options-7)
       - [Examples](#examples-8)
       - [How It Works](#how-it-works-4)
+    - [protect](#protect)
+      - [Examples](#examples-protect)
+    - [unprotect](#unprotect)
+      - [Examples](#examples-unprotect)
     - [Git Worktree Proxy Commands](#git-worktree-proxy-commands)
       - [list (ls)](#list-ls)
       - [remove (rm)](#remove-rm)
@@ -385,6 +389,7 @@ All fields are optional and safe to commit — no machine-specific paths or runt
 - **cleanThreshold**: Number of days before worktrees are considered stale for `gw clean` (defaults to 7, set via `gw init --clean-threshold`)
 - **autoClean**: Silently remove stale worktrees in the background when running `gw checkout` or `gw list` (defaults to false, set via `gw init --auto-clean`)
 - **updateStrategy**: Default strategy for `gw update` command: "merge" or "rebase" (defaults to "merge", set via `gw init --update-strategy`)
+- **protectedBranches**: Array of branch names protected from `gw clean` and auto-clean (managed with `gw protect` / `gw unprotect`)
 
 ### Local Overrides (`config.local.json`)
 
@@ -1480,7 +1485,7 @@ These commands wrap native `git worktree` operations, providing consistent color
 
 #### list (ls)
 
-List all worktrees in the repository.
+List all worktrees in the repository. Protected branches (the default branch, `main`, `master`, `gw_root`, and any branches marked with `gw protect`) are annotated with a `[protected]` tag.
 
 ```bash
 gw list
@@ -1491,10 +1496,12 @@ gw ls
 **Examples:**
 
 ```bash
-gw list                  # List all worktrees
-gw list --porcelain      # Machine-readable output
-gw list -v               # Verbose output
+gw list                  # List all worktrees (with [protected] annotations)
+gw list --porcelain      # Machine-readable output (raw git proxy, no annotation)
+gw list -v               # Verbose output (raw git proxy, no annotation)
 ```
+
+> **Note:** `--porcelain`, `-z`, `--verbose`, and `-v` fall back to the raw `git worktree list` proxy so machine-readable and scripting use cases are never broken.
 
 #### remove (rm)
 
@@ -1635,6 +1642,57 @@ gw prune --stale-only        # Only clean git metadata (like git worktree prune)
 | Deletes orphan branches   | No                     | No                                   | Yes                    |
 | Runs `git worktree prune` | No                     | No                                   | Yes                    |
 | Use case                  | Clean up finished work | Regular maintenance                  | Full cleanup           |
+
+### protect
+
+Mark a branch as protected, preventing it from being removed by `gw clean` (both interactive and auto modes) and auto-clean.
+
+```bash
+gw protect [branch]
+```
+
+If no branch is given, the current branch is auto-detected from the working directory.
+
+The protected branch list is stored in `protectedBranches` inside `.gw/config.json` and is safe to commit to your repository.
+
+> **Note:** The `defaultBranch`, `main`, `master`, and `gw_root` are always system-protected regardless of this setting. Use `gw protect` only for additional branches you want to keep around long-term (e.g. `staging`, `release/*`).
+
+<a name="examples-protect"></a>
+
+**Examples:**
+
+```bash
+# Protect the current branch
+gw protect
+
+# Protect a specific branch
+gw protect staging
+
+# Protect a release branch
+gw protect release/v2
+```
+
+### unprotect
+
+Remove a branch from the `protectedBranches` list, allowing `gw clean` and auto-clean to remove it again.
+
+```bash
+gw unprotect [branch]
+```
+
+If no branch is given, the current branch is auto-detected from the working directory.
+
+<a name="examples-unprotect"></a>
+
+**Examples:**
+
+```bash
+# Unprotect the current branch
+gw unprotect
+
+# Unprotect a specific branch
+gw unprotect staging
+```
 
 #### lock
 

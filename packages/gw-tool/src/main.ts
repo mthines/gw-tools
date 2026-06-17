@@ -21,6 +21,8 @@ import { executeLock } from './commands/lock.ts';
 import { executeUnlock } from './commands/unlock.ts';
 import { executeRepair } from './commands/repair.ts';
 import { executeClean } from './commands/clean.ts';
+import { executeProtect } from './commands/protect.ts';
+import { executeUnprotect } from './commands/unprotect.ts';
 import { executeShowInit } from './commands/show-init.ts';
 import { executePr } from './commands/pr.ts';
 import * as output from './lib/output.ts';
@@ -49,6 +51,8 @@ const COMMANDS = {
   unlock: executeUnlock,
   repair: executeRepair,
   clean: executeClean,
+  protect: executeProtect,
+  unprotect: executeUnprotect,
   'show-init': executeShowInit,
   pr: executePr,
 };

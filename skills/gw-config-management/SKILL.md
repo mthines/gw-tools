@@ -57,7 +57,7 @@ The canonical migration guide is in the project root `CLAUDE.md` under
   "$schema": "https://raw.githubusercontent.com/mthines/gw-tools/main/packages/gw-tool/schemas/gw-config.schema.json",
 
   // Managed automatically — do not edit manually
-  "configVersion": 2,
+  "configVersion": 3,
 
   // Branch whose worktree is the source for auto-copy and sync (default: "main")
   // This worktree is protected from auto-clean.
@@ -87,6 +87,11 @@ The canonical migration guide is in the project root `CLAUDE.md` under
   // Default strategy for gw update: "merge" (preserves history) or "rebase" (linear). (default: "merge")
   // Override per-command with --merge or --rebase flags.
   "updateStrategy": "merge",
+
+  // Extra branch names to protect from gw clean and auto-clean.
+  // Managed with 'gw protect' / 'gw unprotect'. defaultBranch, main, master,
+  // and gw_root are always protected regardless of this list. (default: [])
+  "protectedBranches": ["staging", "release/v2"],
 }
 ```
 
