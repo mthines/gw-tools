@@ -3,6 +3,7 @@
  */
 
 import { parseArgs as denoParseArgs } from '@std/cli/parse-args';
+import { resolveConfigPaths } from './config.ts';
 import type { CopyOptions, GlobalArgs, UpdateOptions } from './types.ts';
 import { VERSION } from './version.ts';
 
@@ -84,7 +85,12 @@ export function showLogo(): void {
 /**
  * Display global help text
  */
-export function showGlobalHelp(): void {
+export async function showGlobalHelp(): Promise<void> {
+  const { configPath, localConfigPath } = await resolveConfigPaths();
+  const configLines = configPath
+    ? `\nConfig:\n  Loaded: ${configPath}${localConfigPath ? `\n  Local overrides: ${localConfigPath}` : ''}\n`
+    : '\nConfig:\n  No .gw/config.json found — run `gw init` to create one.\n';
+
   console.log(`
 gw - Git Worktree Tools (v${VERSION})
 
@@ -136,7 +142,8 @@ Examples:
   gw clean
 
 For command-specific help:
-  gw <command> --help`);
+  gw <command> --help
+${configLines}`);
 }
 
 /**

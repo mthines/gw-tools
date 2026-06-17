@@ -160,13 +160,20 @@ export async function executeShowInit(args: string[]): Promise<void> {
 
   try {
     // Load current config
-    const { config, gitRoot } = await loadConfig();
+    const { config, gitRoot, configPath, localConfigPath } = await loadConfig();
 
     // Fetch remote URL from git
     const remoteUrl = await getRemoteUrl(gitRoot);
 
     // Generate the init command with URL
     const initCommand = generateInitCommand(config, gitRoot, remoteUrl);
+
+    // Emit loaded config paths to stderr so they don't end up in piped
+    // output (e.g. `gw show-init | pbcopy`).
+    console.error(`# Loaded config: ${configPath}`);
+    if (localConfigPath) {
+      console.error(`# Local overrides: ${localConfigPath}`);
+    }
 
     // Output the command
     console.log(initCommand);
