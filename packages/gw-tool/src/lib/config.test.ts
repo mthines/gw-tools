@@ -2,9 +2,10 @@
  * Tests for config.ts
  */
 
-import { assertEquals, assertRejects } from '@std/assert';
+import { assertEquals, assertRejects, assertStringIncludes } from '@std/assert';
 import { join } from '@std/path';
 import { loadConfig, saveConfig, saveConfigTemplate } from './config.ts';
+import { CURRENT_CONFIG_VERSION } from './config-migrations.ts';
 import { resolveWorktreePath } from './path-resolver.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import {
@@ -717,3 +718,84 @@ Deno.test(
     }
   }
 );
+
+// ============================================================================
+// Future-version warning: config written by a newer binary
+// ============================================================================
+
+Deno.test('loadConfig - emits warning when configVersion exceeds CURRENT_CONFIG_VERSION', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Write a config with a version higher than this binary knows about
+    const futureVersion = CURRENT_CONFIG_VERSION + 1;
+    const futureConfig = {
+      configVersion: futureVersion,
+      defaultBranch: 'main',
+      cleanThreshold: 7,
+      newFieldFromFuture: 'ignored',
+    };
+    await Deno.mkdir(join(repo.path, '.gw'), { recursive: true });
+    await Deno.writeTextFile(join(repo.path, '.gw', 'config.json'), JSON.stringify(futureConfig, null, 2));
+
+    // Capture console.log to detect the warning output
+    const logged: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      logged.push(args.join(' '));
+      originalLog(...args);
+    };
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { config: loaded } = await loadConfig();
+
+      // Config must be returned as-is (non-blocking)
+      assertEquals((loaded as Record<string, unknown>).configVersion, futureVersion);
+      assertEquals(loaded.defaultBranch, 'main');
+
+      // Warning must mention both versions
+      const warningOutput = logged.join('\n');
+      assertStringIncludes(warningOutput, String(futureVersion));
+      assertStringIncludes(warningOutput, String(CURRENT_CONFIG_VERSION));
+      assertStringIncludes(warningOutput, 'brew upgrade gw');
+    } finally {
+      console.log = originalLog;
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('loadConfig - no warning when configVersion equals CURRENT_CONFIG_VERSION', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createMinimalConfig();
+    await writeTestConfig(repo.path, config);
+
+    // Capture console.log — no warning should appear
+    const logged: string[] = [];
+    const originalLog = console.log;
+    console.log = (...args: unknown[]) => {
+      logged.push(args.join(' '));
+      originalLog(...args);
+    };
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await loadConfig();
+
+      const warningOutput = logged.join('\n');
+      assertEquals(warningOutput.includes('brew upgrade gw'), false);
+    } finally {
+      console.log = originalLog;
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
