@@ -4,7 +4,8 @@
  */
 
 import { runAutoClean } from '../lib/auto-clean.ts';
-import { loadConfig } from '../lib/config.ts';
+import { loadConfig, loadProtectedBranches } from '../lib/config.ts';
+import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { executeGitWorktree, showProxyHelp } from '../lib/git-proxy.ts';
 import { listWorktrees } from '../lib/git-utils.ts';
 import * as output from '../lib/output.ts';
@@ -27,13 +28,12 @@ export function shouldUseRawProxy(args: string[]): boolean {
 /**
  * Render the annotated worktree list.
  * Reproduces git worktree list's default (non-porcelain) format and appends
- * a cyan "[protected]" tag for branches the user has explicitly protected
- * via `gw protect`. System-protected branches (defaultBranch, main, master,
- * gw_root) are deliberately NOT tagged here — that protection is implicit
- * and unrelated to the user-controlled list, and showing it confuses the
- * meaning of the tag.
+ * a cyan "[protected]" tag for any branch that the user explicitly protected
+ * via `gw protect` OR that is system-protected (defaultBranch, main, master,
+ * gw_root). System protection is real — those branches cannot be removed by
+ * clean — so the tag must reflect that.
  */
-export async function renderAnnotatedList(protectedBranches: string[]): Promise<void> {
+export async function renderAnnotatedList(protectedBranches: string[], defaultBranch: string): Promise<void> {
   const worktrees = await listWorktrees();
 
   if (worktrees.length === 0) {
@@ -57,8 +57,9 @@ export async function renderAnnotatedList(protectedBranches: string[]): Promise<
       branchCol = `[${wt.branch}]`;
     }
 
+    const isSystem = isProtectedBranch(wt.branch, defaultBranch);
     const isUserProtected = !wt.bare && !!wt.branch && protectedBranches.includes(wt.branch);
-    const tag = isUserProtected ? `  ${output.path('[protected]')}` : '';
+    const tag = isSystem || isUserProtected ? `  ${output.path('[protected]')}` : '';
 
     console.log(`${pathCol}  ${head}  ${branchCol}${tag}`);
   }
@@ -88,11 +89,14 @@ export async function executeList(args: string[]): Promise<void> {
     return;
   }
 
-  // Custom renderer with [protected] annotation
+  // Custom renderer with [protected] annotation. protectedBranches is
+  // sourced from the canonical git-root config so the tag is visible from
+  // any worktree, not just the one whose .gw/config.json is nearest cwd.
   try {
     const { config } = await loadConfig();
-    const protectedBranches = config.protectedBranches ?? [];
-    await renderAnnotatedList(protectedBranches);
+    const protectedBranches = await loadProtectedBranches();
+    const defaultBranch = config.defaultBranch ?? 'main';
+    await renderAnnotatedList(protectedBranches, defaultBranch);
   } catch {
     // If config loading fails or git errors, fall back to raw proxy
     await executeGitWorktree('list', args);

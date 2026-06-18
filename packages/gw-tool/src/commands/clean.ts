@@ -5,7 +5,7 @@
 
 import { resolve } from '@std/path';
 import { isProtectedBranch } from '../lib/branch-protection.ts';
-import { loadConfig } from '../lib/config.ts';
+import { loadConfig, loadProtectedBranches } from '../lib/config.ts';
 import {
   deleteBranch,
   findOrphanBranches,
@@ -199,7 +199,9 @@ interface CleanableWorktree extends WorktreeInfo {
 async function executeInteractiveClean(): Promise<void> {
   const { config } = await loadConfig();
   const defaultBranch = config.defaultBranch || 'main';
-  const userProtected = config.protectedBranches ?? [];
+  // protectedBranches comes from the canonical git-root config — see
+  // protect.ts for the rationale.
+  const userProtected = await loadProtectedBranches();
 
   output.info('Scanning worktrees, branches, and orphans...');
 
@@ -448,9 +450,10 @@ export async function executeClean(args: string[]): Promise<void> {
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
-  // Filter out bare repository and protected branches
+  // Filter out bare repository and protected branches. protectedBranches
+  // comes from the canonical git-root config — see protect.ts.
   const defaultBranch = config.defaultBranch || 'main';
-  const userProtectedAuto = config.protectedBranches ?? [];
+  const userProtectedAuto = await loadProtectedBranches();
   const nonBareWorktrees = worktrees.filter(
     (wt) => !wt.bare && !isEffectivelyProtected(wt.branch, defaultBranch, userProtectedAuto)
   );

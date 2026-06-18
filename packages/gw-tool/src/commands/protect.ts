@@ -3,7 +3,7 @@
  * Marks a branch as protected, exempting it from auto-clean and manual clean
  */
 
-import { loadConfig, saveConfig } from '../lib/config.ts';
+import { loadRootConfig, saveConfig } from '../lib/config.ts';
 import * as output from '../lib/output.ts';
 
 /**
@@ -102,7 +102,10 @@ export async function executeProtect(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  const { config, configPath } = await loadConfig();
+  // protectedBranches lives in the git-root config so the protection is
+  // visible from every worktree. Per-worktree configs override other fields
+  // (cleanThreshold, autoClean) but not this one.
+  const { config, gitRoot } = await loadRootConfig();
 
   const existing = config.protectedBranches ?? [];
 
@@ -112,12 +115,7 @@ export async function executeProtect(args: string[]): Promise<void> {
   }
 
   const updated = [...existing, branch];
-  // Save to the same file we loaded from. Using gitRoot would write to the
-  // root .gw/config.json while loadConfig walks up from cwd, so when a
-  // worktree has its own .gw/config.json the two diverge and `gw ls` reads
-  // a different file than `gw protect` wrote.
-  const configDir = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
-  await saveConfig(configDir, { ...config, protectedBranches: updated });
+  await saveConfig(gitRoot, { ...config, protectedBranches: updated });
 
   output.success(`Branch ${output.bold(branch)} is now protected`);
 }

@@ -3,7 +3,7 @@
  * Removes a branch from the protected list, allowing cleanup to remove it
  */
 
-import { loadConfig, saveConfig } from '../lib/config.ts';
+import { loadRootConfig, saveConfig } from '../lib/config.ts';
 import * as output from '../lib/output.ts';
 
 /**
@@ -96,7 +96,9 @@ export async function executeUnprotect(args: string[]): Promise<void> {
     Deno.exit(1);
   }
 
-  const { config, configPath } = await loadConfig();
+  // protectedBranches lives in the git-root config — see protect.ts for
+  // the rationale. unprotect edits the same canonical list.
+  const { config, gitRoot } = await loadRootConfig();
 
   const existing = config.protectedBranches ?? [];
 
@@ -115,9 +117,7 @@ export async function executeUnprotect(args: string[]): Promise<void> {
     newConfig.protectedBranches = updated;
   }
 
-  // Save to the same file we loaded from — see the matching note in protect.ts.
-  const configDir = configPath.replace(/[/\\]\.gw[/\\]config\.json$/, '');
-  await saveConfig(configDir, newConfig);
+  await saveConfig(gitRoot, newConfig);
 
   output.success(`Branch ${output.bold(branch)} is no longer protected`);
 }

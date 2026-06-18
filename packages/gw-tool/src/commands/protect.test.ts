@@ -105,45 +105,42 @@ Deno.test('protect - shows help and exits 0', async () => {
   assertEquals(exitCode, 0);
 });
 
-Deno.test(
-  'protect - writes to the loaded config file, not the git root, when a worktree has its own .gw/config.json',
-  async () => {
-    // Regression: previously `executeProtect` used `gitRoot` as the save target,
-    // but `loadConfig` walks up from cwd and may find a nearer worktree-local
-    // config. When the two diverge, `gw protect` wrote to the root and
-    // `gw ls` (which reads via the same loader) never saw the change.
-    const repo = new GitTestRepo();
+Deno.test('protect - writes to the git-root config so the protection is visible from any worktree', async () => {
+  // Protection is a repo-wide setting. When run from a sub-worktree that has
+  // its own .gw/config.json, the protection list must still land in the
+  // git-root config — otherwise `gw ls` from a different worktree would
+  // resolve a different protectedBranches list and the tag would disappear
+  // as soon as the user navigates away.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    // Root config (the canonical home for protectedBranches)
+    const rootConfig = createMinimalConfig(repo.path);
+    await writeTestConfig(repo.path, rootConfig);
+
+    // Worktree with its own .gw/config.json — loadConfig would normally
+    // pick this up first when walking up from cwd. The protection write
+    // must NOT land here.
+    const worktreePath = await repo.createWorktree('feat-x', 'feat-x');
+    const worktreeConfig = createMinimalConfig(worktreePath);
+    await writeTestConfig(worktreePath, worktreeConfig);
+
+    const cwd = new TempCwd(worktreePath);
     try {
-      await repo.init();
-      // Root config (the one gitRoot would resolve to)
-      const rootConfig = createMinimalConfig(repo.path);
-      await writeTestConfig(repo.path, rootConfig);
+      await executeProtect(['feat-x']);
 
-      // Worktree with its own .gw/config.json — this is the file loadConfig will
-      // find when cwd is the worktree, so it must be the file we write back to.
-      const worktreePath = await repo.createWorktree('feat-x', 'feat-x');
-      const worktreeConfig = createMinimalConfig(worktreePath);
-      await writeTestConfig(worktreePath, worktreeConfig);
+      const rootSaved = await readTestConfig(repo.path);
+      assertEquals(rootSaved.protectedBranches, ['feat-x']);
 
-      const cwd = new TempCwd(worktreePath);
-      try {
-        await executeProtect(['feat-x']);
-
-        // The worktree config must reflect the new protection
-        const worktreeSaved = await readTestConfig(worktreePath);
-        assertEquals(worktreeSaved.protectedBranches, ['feat-x']);
-
-        // The root config must remain untouched
-        const rootSaved = await readTestConfig(repo.path);
-        assertEquals(rootSaved.protectedBranches, undefined);
-      } finally {
-        cwd.restore();
-      }
+      const worktreeSaved = await readTestConfig(worktreePath);
+      assertEquals(worktreeSaved.protectedBranches, undefined);
     } finally {
-      await repo.cleanup();
+      cwd.restore();
     }
+  } finally {
+    await repo.cleanup();
   }
-);
+});
 
 // ── unprotect command ────────────────────────────────────────────────────────
 
@@ -236,33 +233,29 @@ Deno.test('unprotect - shows help and exits 0', async () => {
   assertEquals(exitCode, 0);
 });
 
-Deno.test(
-  'unprotect - writes to the loaded config file, not the git root, when a worktree has its own .gw/config.json',
-  async () => {
-    const repo = new GitTestRepo();
+Deno.test('unprotect - removes the branch from the git-root config, not the worktree-local config', async () => {
+  // Symmetric with protect: unprotect edits the canonical repo-wide list.
+  // If it touched only the worktree-local config the branch would remain
+  // protected from every other worktree's point of view.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    const rootConfig = { ...createMinimalConfig(repo.path), protectedBranches: ['feat-x'] };
+    await writeTestConfig(repo.path, rootConfig);
+
+    const worktreePath = await repo.createWorktree('feat-x', 'feat-x');
+    await writeTestConfig(worktreePath, createMinimalConfig(worktreePath));
+
+    const cwd = new TempCwd(worktreePath);
     try {
-      await repo.init();
-      const rootConfig = createMinimalConfig(repo.path);
-      await writeTestConfig(repo.path, rootConfig);
+      await executeUnprotect(['feat-x']);
 
-      const worktreePath = await repo.createWorktree('feat-x', 'feat-x');
-      const worktreeConfig = { ...createMinimalConfig(worktreePath), protectedBranches: ['feat-x'] };
-      await writeTestConfig(worktreePath, worktreeConfig);
-
-      const cwd = new TempCwd(worktreePath);
-      try {
-        await executeUnprotect(['feat-x']);
-
-        const worktreeSaved = await readTestConfig(worktreePath);
-        assertEquals(worktreeSaved.protectedBranches, undefined);
-
-        const rootSaved = await readTestConfig(repo.path);
-        assertEquals(rootSaved.protectedBranches, undefined);
-      } finally {
-        cwd.restore();
-      }
+      const rootSaved = await readTestConfig(repo.path);
+      assertEquals(rootSaved.protectedBranches, undefined);
     } finally {
-      await repo.cleanup();
+      cwd.restore();
     }
+  } finally {
+    await repo.cleanup();
   }
-);
+});

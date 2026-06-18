@@ -286,6 +286,53 @@ export async function loadConfig(): Promise<{
 }
 
 /**
+ * Load the canonical git-root config — always `<gitRoot>/.gw/config.json`.
+ *
+ * Unlike `loadConfig`, this does NOT walk up from cwd. It is the single
+ * source of truth for repo-wide settings (e.g. `protectedBranches`) that
+ * must be visible from every worktree regardless of which worktree's
+ * `.gw/config.json` happens to be nearest. Creates the file with defaults
+ * when absent so callers can always save back to the returned `gitRoot`.
+ */
+export async function loadRootConfig(): Promise<{
+  config: Config;
+  gitRoot: string;
+  configPath: string;
+}> {
+  const gitRoot = await findGitRoot();
+  const rootConfigPath = getConfigPath(gitRoot);
+
+  if (!(await pathExists(rootConfigPath))) {
+    const config = createDefaultConfig();
+    await saveConfig(gitRoot, config);
+    return { config, gitRoot, configPath: rootConfigPath };
+  }
+
+  const content = await Deno.readTextFile(rootConfigPath);
+  const rawData = parseJsonc(content) as Record<string, unknown>;
+  const { config: migratedData, migrated } = runMigrations(rawData);
+
+  if (!validateConfig(migratedData)) {
+    throw new Error('Invalid configuration file format');
+  }
+
+  if (migrated) {
+    await saveConfig(gitRoot, migratedData);
+  }
+
+  return { config: migratedData, gitRoot, configPath: rootConfigPath };
+}
+
+/**
+ * Read the canonical list of user-protected branches. Always sourced from
+ * the git-root config so the answer is identical from every worktree.
+ */
+export async function loadProtectedBranches(): Promise<string[]> {
+  const { config } = await loadRootConfig();
+  return config.protectedBranches ?? [];
+}
+
+/**
  * Save configuration to disk
  * @param dir Directory where .gw/config.json should be saved (typically the git root)
  * @param config Configuration to save

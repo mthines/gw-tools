@@ -5,7 +5,7 @@
  */
 
 import { isProtectedBranch } from './branch-protection.ts';
-import { loadConfig } from './config.ts';
+import { loadConfig, loadProtectedBranches } from './config.ts';
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
@@ -104,10 +104,13 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
       return { removed: [] };
     }
 
-    // Get threshold (default 7 days), defaultBranch, and user-protected branches
+    // Get threshold (default 7 days), defaultBranch, and user-protected branches.
+    // protectedBranches comes from the canonical git-root config so worktrees
+    // protected via `gw protect` are honoured no matter which cwd auto-clean
+    // fires from.
     const threshold = config.cleanThreshold ?? 7;
     const defaultBranch = config.defaultBranch ?? 'main';
-    const userProtected = config.protectedBranches ?? [];
+    const userProtected = await loadProtectedBranches();
 
     // Find cleanable worktrees (excludes defaultBranch and user-protected)
     const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch, userProtected);

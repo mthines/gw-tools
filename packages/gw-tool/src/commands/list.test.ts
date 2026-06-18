@@ -52,7 +52,7 @@ Deno.test('renderAnnotatedList - annotates user-protected branch', async () => {
     };
 
     try {
-      await renderAnnotatedList(['feat-branch']);
+      await renderAnnotatedList(['feat-branch'], 'main');
 
       // At least one line should contain [protected]
       const hasProtectedLine = logLines.some((line) => line.includes('[protected]'));
@@ -66,7 +66,7 @@ Deno.test('renderAnnotatedList - annotates user-protected branch', async () => {
   }
 });
 
-Deno.test('renderAnnotatedList - does NOT annotate system-protected branches (main, gw_root)', async () => {
+Deno.test('renderAnnotatedList - tags system-protected default branch even without user opt-in', async () => {
   const repo = new GitTestRepo();
   try {
     await repo.init();
@@ -79,13 +79,14 @@ Deno.test('renderAnnotatedList - does NOT annotate system-protected branches (ma
     };
 
     try {
-      // main is system-protected but the user did not opt in via `gw protect`.
-      // The tag is reserved for user-controlled protection so its meaning
-      // stays consistent with the command output.
-      await renderAnnotatedList([]);
+      // main is system-protected because it is the configured default branch.
+      // System protection is real protection from cleanup, so the tag must
+      // reflect that — otherwise users see "main" listed without [protected]
+      // and assume it can be removed by clean.
+      await renderAnnotatedList([], 'main');
 
-      const hasProtectedLine = logLines.some((line) => line.includes('[protected]'));
-      assertEquals(hasProtectedLine, false);
+      const mainLine = logLines.find((line) => line.includes('[main]'));
+      assertStringIncludes(mainLine ?? '', '[protected]');
     } finally {
       console.log = origLog;
       cwd.restore();
@@ -109,8 +110,8 @@ Deno.test('renderAnnotatedList - does not annotate unprotected branch', async ()
     };
 
     try {
-      // feat-branch is not in the user-protected list
-      await renderAnnotatedList([]);
+      // feat-branch is not in the user-protected list, and not system-protected
+      await renderAnnotatedList([], 'main');
 
       // Find the feat-branch line specifically
       const featLine = logLines.find((line) => line.includes('feat-branch'));
@@ -239,6 +240,45 @@ Deno.test('list command - shows [protected] tag for user-protected branch', asyn
       await _drainAutoClean();
 
       const stagingLine = logLines.find((line) => line.includes('staging'));
+      assertStringIncludes(stagingLine ?? '', '[protected]');
+    } finally {
+      console.log = origLog;
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('list command - shows [protected] from any worktree, not just the cwd worktree', async () => {
+  // Cross-worktree visibility regression: `gw protect` writes the list to the
+  // git-root config. `gw ls` run from a different worktree must read that
+  // same canonical list — otherwise the tag disappears when the user navigates
+  // away from the worktree where they ran `gw protect`.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+    // Protection lives in the git-root config (single source of truth).
+    const rootConfig = { ...createMinimalConfig(repo.path), protectedBranches: ['staging'] };
+    await writeTestConfig(repo.path, rootConfig);
+
+    await repo.createWorktree('staging', 'staging');
+    // Sibling worktree without staging in its local config — the cwd for the test.
+    const siblingPath = await repo.createWorktree('feat-y', 'feat-y');
+    await writeTestConfig(siblingPath, createMinimalConfig(siblingPath));
+
+    const logLines: string[] = [];
+    const origLog = console.log;
+    console.log = (...args: unknown[]) => {
+      logLines.push(args.map(String).join(' '));
+    };
+
+    const cwd = new TempCwd(siblingPath);
+    try {
+      await executeList([]);
+      await _drainAutoClean();
+
+      const stagingLine = logLines.find((line) => line.includes('[staging]'));
       assertStringIncludes(stagingLine ?? '', '[protected]');
     } finally {
       console.log = origLog;
