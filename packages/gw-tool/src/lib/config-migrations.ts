@@ -34,7 +34,7 @@ import type { Config } from './types.ts';
 /**
  * Current config version - increment when adding migrations
  */
-export const CURRENT_CONFIG_VERSION = 2;
+export const CURRENT_CONFIG_VERSION = 3;
 
 /**
  * Migration definition
@@ -74,6 +74,16 @@ export const MIGRATIONS: Migration[] = [
       delete config.root;
       delete config.lastAutoCleanTime;
       config.configVersion = 2;
+      return config;
+    },
+  },
+  {
+    version: 3,
+    description: 'Add protectedBranches field (no-op — new optional field)',
+    migrate: (config) => {
+      // protectedBranches is a new optional array field.
+      // No data transformation needed — absence means an empty set.
+      config.configVersion = 3;
       return config;
     },
   },

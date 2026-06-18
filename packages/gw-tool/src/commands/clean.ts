@@ -5,7 +5,7 @@
 
 import { resolve } from '@std/path';
 import { isProtectedBranch } from '../lib/branch-protection.ts';
-import { loadConfig } from '../lib/config.ts';
+import { loadConfig, loadProtectedBranches } from '../lib/config.ts';
 import {
   deleteBranch,
   findOrphanBranches,
@@ -23,6 +23,21 @@ import {
 import { multiSelect, type SelectItem, type SelectSection } from '../lib/interactive-select.ts';
 import * as output from '../lib/output.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
+
+/**
+ * Check whether a branch is protected by any mechanism — system rules
+ * (defaultBranch, main, master, gw_root) or the user-configured list.
+ *
+ * @param branch The branch name to check
+ * @param defaultBranch The configured default branch name
+ * @param userProtected Additional branch names the user has explicitly protected
+ */
+function isEffectivelyProtected(branch: string | undefined, defaultBranch: string, userProtected: string[]): boolean {
+  if (isProtectedBranch(branch, defaultBranch)) {
+    return true;
+  }
+  return !!branch && userProtected.includes(branch);
+}
 
 /**
  * Check if a path is inside or equal to another path
@@ -184,6 +199,9 @@ interface CleanableWorktree extends WorktreeInfo {
 async function executeInteractiveClean(): Promise<void> {
   const { config } = await loadConfig();
   const defaultBranch = config.defaultBranch || 'main';
+  // protectedBranches comes from the canonical git-root config — see
+  // protect.ts for the rationale.
+  const userProtected = await loadProtectedBranches();
 
   output.info('Scanning worktrees, branches, and orphans...');
 
@@ -203,7 +221,7 @@ async function executeInteractiveClean(): Promise<void> {
   for (const wt of worktrees) {
     if (wt.bare) continue;
 
-    if (isProtectedBranch(wt.branch, defaultBranch)) {
+    if (isEffectivelyProtected(wt.branch, defaultBranch, userProtected)) {
       worktreeItems.push({
         label: wt.branch || wt.path,
         value: `worktree:${wt.path}`,
@@ -236,7 +254,7 @@ async function executeInteractiveClean(): Promise<void> {
     // Skip branches that have an active worktree
     if (worktreeBranches.has(branch)) continue;
 
-    if (isProtectedBranch(branch, defaultBranch)) {
+    if (isEffectivelyProtected(branch, defaultBranch, userProtected)) {
       branchItems.push({
         label: branch,
         value: `branch:${branch}`,
@@ -269,7 +287,7 @@ async function executeInteractiveClean(): Promise<void> {
       // Defense-in-depth: findOrphanBranches already filters protected
       // branches, but the orphan section is the most destructive code path
       // (force-deletes via -D), so re-assert protection here.
-      if (isProtectedBranch(o.name, defaultBranch)) {
+      if (isEffectivelyProtected(o.name, defaultBranch, userProtected)) {
         return {
           label: o.name,
           value: `orphan:${o.name}`,
@@ -432,9 +450,13 @@ export async function executeClean(args: string[]): Promise<void> {
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
 
-  // Filter out bare repository and protected branches
+  // Filter out bare repository and protected branches. protectedBranches
+  // comes from the canonical git-root config — see protect.ts.
   const defaultBranch = config.defaultBranch || 'main';
-  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && !isProtectedBranch(wt.branch, defaultBranch));
+  const userProtectedAuto = await loadProtectedBranches();
+  const nonBareWorktrees = worktrees.filter(
+    (wt) => !wt.bare && !isEffectivelyProtected(wt.branch, defaultBranch, userProtectedAuto)
+  );
 
   if (nonBareWorktrees.length === 0) {
     if (parsed.json) {

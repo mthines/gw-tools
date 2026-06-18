@@ -5,7 +5,7 @@
  */
 
 import { isProtectedBranch } from './branch-protection.ts';
-import { loadConfig } from './config.ts';
+import { loadConfig, loadProtectedBranches } from './config.ts';
 import {
   getWorktreeAgeDays,
   hasUncommittedChanges,
@@ -41,8 +41,14 @@ export interface AutoCleanResult {
  *   to be considered stale
  * @param defaultBranch Branch name that should never be
  *   cleaned (e.g., "main")
+ * @param userProtected Additional branch names the user has
+ *   explicitly protected via 'gw protect'
  */
-async function getCleanableWorktrees(threshold: number, defaultBranch: string): Promise<CleanableWorktree[]> {
+async function getCleanableWorktrees(
+  threshold: number,
+  defaultBranch: string,
+  userProtected: string[]
+): Promise<CleanableWorktree[]> {
   const worktrees = await listWorktrees();
 
   // Filter out bare repository
@@ -51,8 +57,8 @@ async function getCleanableWorktrees(threshold: number, defaultBranch: string): 
   const cleanable: CleanableWorktree[] = [];
 
   for (const wt of nonBareWorktrees) {
-    // Never clean protected branches (defaultBranch, gw_root)
-    if (isProtectedBranch(wt.branch, defaultBranch)) {
+    // Never clean protected branches (system or user-configured)
+    if (isProtectedBranch(wt.branch, defaultBranch) || (wt.branch && userProtected.includes(wt.branch))) {
       continue;
     }
 
@@ -98,12 +104,16 @@ export async function executeAutoClean(): Promise<AutoCleanResult> {
       return { removed: [] };
     }
 
-    // Get threshold (default 7 days) and defaultBranch
+    // Get threshold (default 7 days), defaultBranch, and user-protected branches.
+    // protectedBranches comes from the canonical git-root config so worktrees
+    // protected via `gw protect` are honoured no matter which cwd auto-clean
+    // fires from.
     const threshold = config.cleanThreshold ?? 7;
     const defaultBranch = config.defaultBranch ?? 'main';
+    const userProtected = await loadProtectedBranches();
 
-    // Find cleanable worktrees (excludes defaultBranch)
-    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch);
+    // Find cleanable worktrees (excludes defaultBranch and user-protected)
+    const cleanableWorktrees = await getCleanableWorktrees(threshold, defaultBranch, userProtected);
 
     if (cleanableWorktrees.length === 0) {
       return { removed: [] };

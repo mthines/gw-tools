@@ -109,6 +109,8 @@ Commands:
   install-shell    Output shell integration code (use with eval)
   root             Get the root directory of the current git repository
   clean            Interactive cleanup of worktrees and branches (--auto for batch)
+  protect          Mark a branch as protected from cleanup
+  unprotect        Remove a branch from the protected list
 
 Git Worktree Proxy Commands:
   list, ls         List all worktrees in the repository

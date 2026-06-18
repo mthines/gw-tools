@@ -239,6 +239,50 @@ Deno.test('executeAutoClean - does not remove freshly created worktree from old 
   }
 });
 
+Deno.test(
+  'executeAutoClean - respects protectedBranches from git-root config when invoked from a sub-worktree',
+  async () => {
+    // The user runs `gw protect feat-old-branch` which stores the protection
+    // in the git-root config. Auto-clean later fires from inside a different
+    // worktree (cwd != gitRoot). It must still resolve protectedBranches
+    // from the canonical git-root config — otherwise a protected worktree
+    // gets silently deleted just because we happened to launch from somewhere
+    // that has its own .gw/config.json.
+    const repo = new GitTestRepo();
+    try {
+      await repo.init();
+
+      const oldWorktreePath = await repo.createWorktree('feat-old-branch', 'feat-old-branch');
+      await makeWorktreeOld(oldWorktreePath, 10);
+
+      // Root config has autoClean + the protection.
+      const rootConfig = {
+        ...createConfigWithAutoClean(repo.path, 1),
+        protectedBranches: ['feat-old-branch'],
+      };
+      await writeTestConfig(repo.path, rootConfig);
+
+      // Sibling worktree with its own .gw/config.json — also has autoClean
+      // (so the auto-clean code path runs) but no protectedBranches field.
+      const cwdWorktreePath = await repo.createWorktree('feat-cwd', 'feat-cwd');
+      await writeTestConfig(cwdWorktreePath, createConfigWithAutoClean(cwdWorktreePath, 1));
+
+      const cwd = new TempCwd(cwdWorktreePath);
+      try {
+        const result = await executeAutoClean();
+
+        assertEquals(result.removed.includes('feat-old-branch'), false);
+        const worktrees = await repo.listWorktrees();
+        assertEquals(worktrees.includes(oldWorktreePath), true);
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  }
+);
+
 Deno.test('executeAutoClean - removes multiple old worktrees', async () => {
   const repo = new GitTestRepo();
   try {

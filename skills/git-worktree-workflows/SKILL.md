@@ -84,6 +84,8 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Preview batch cleanup                     | `gw clean --dry-run`                                                |
 | Full cleanup: worktrees + orphan branches | `gw prune`                                                          |
 | Get repo root path (worktree-aware)       | `gw root`                                                           |
+| Protect branch from cleanup               | `gw protect [branch]` (default: cwd branch)                         |
+| Remove protection from branch             | `gw unprotect [branch]` (default: cwd branch)                       |
 
 ### Setup Commands
 
@@ -165,6 +167,7 @@ Config lives at `.gw/config.json` (committable) and `.gw/config.local.json` (git
   "cleanThreshold": 7, // days before worktrees are "stale" for gw clean
   "autoClean": true, // silently prune stale worktrees on gw checkout / gw list
   "updateStrategy": "merge", // "merge" | "rebase"
+  "protectedBranches": ["staging"], // extra branches exempt from gw clean / auto-clean
 }
 ```
 

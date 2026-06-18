@@ -13,7 +13,7 @@
       "type": "integer",
       "minimum": 0,
       "description": "Config schema version for migrations. Managed automatically by gw — do not edit manually.",
-      "default": 2
+      "default": 3
     },
     "defaultBranch": {
       "type": "string",
@@ -87,6 +87,20 @@
       "enum": ["merge", "rebase"],
       "description": "Default strategy for 'gw update' when syncing worktrees with the latest changes from the default branch. Can be overridden per-command with --merge or --rebase flags.",
       "default": "merge"
+    },
+    "protectedBranches": {
+      "type": "array",
+      "description": "Additional branch names to protect from 'gw clean' and auto-clean. These branches will never be removed automatically. The defaultBranch, 'main', 'master', and 'gw_root' are always protected regardless of this setting. Managed with 'gw protect' and 'gw unprotect'.",
+      "items": {
+        "type": "string",
+        "description": "Branch name to protect."
+      },
+      "uniqueItems": true,
+      "default": [],
+      "examples": [
+        ["develop", "staging"],
+        ["release/v2", "hotfix/critical"]
+      ]
     }
   },
   "additionalProperties": false
