@@ -99,6 +99,12 @@ export interface MigrationResult {
   migrated: boolean;
   /** List of migrations that were applied */
   appliedMigrations: string[];
+  /**
+   * True when the config's configVersion is strictly greater than
+   * CURRENT_CONFIG_VERSION — meaning the config was written by a newer binary.
+   * The caller should surface a warning; the config is returned as-is.
+   */
+  futureVersion: boolean;
 }
 
 /**
@@ -111,12 +117,25 @@ export function runMigrations(rawConfig: Record<string, unknown>): MigrationResu
   const currentVersion = (rawConfig.configVersion as number) ?? 0;
   const appliedMigrations: string[] = [];
 
-  // If already at current version, no migrations needed
-  if (currentVersion >= CURRENT_CONFIG_VERSION) {
+  // Config was written by a newer binary — return as-is with a flag so the
+  // caller can surface a warning. Do not refuse to run: pure additions in
+  // future versions are typically safe.
+  if (currentVersion > CURRENT_CONFIG_VERSION) {
     return {
       config: rawConfig as Config,
       migrated: false,
       appliedMigrations: [],
+      futureVersion: true,
+    };
+  }
+
+  // If already at current version, no migrations needed
+  if (currentVersion === CURRENT_CONFIG_VERSION) {
+    return {
+      config: rawConfig as Config,
+      migrated: false,
+      appliedMigrations: [],
+      futureVersion: false,
     };
   }
 
@@ -134,6 +153,7 @@ export function runMigrations(rawConfig: Record<string, unknown>): MigrationResu
     config: config as Config,
     migrated: appliedMigrations.length > 0,
     appliedMigrations,
+    futureVersion: false,
   };
 }
 
