@@ -8,6 +8,7 @@ import { parse as parseJsonc } from '@std/jsonc';
 import type { Config } from './types.ts';
 import { findGitRoot, getWorktreeRoot, pathExists } from './path-resolver.ts';
 import { CURRENT_CONFIG_VERSION, runMigrations } from './config-migrations.ts';
+import * as output from './output.ts';
 
 /**
  * URL to the JSON Schema for .gw/config.json
@@ -212,10 +213,20 @@ export async function loadConfig(): Promise<{
       const rawData = parseJsonc(content) as Record<string, unknown>;
 
       // Run migrations if needed
-      const { config: migratedData, migrated, appliedMigrations } = runMigrations(rawData);
+      const { config: migratedData, migrated, appliedMigrations, futureVersion } = runMigrations(rawData);
 
       if (!validateConfig(migratedData)) {
         throw new Error('Invalid configuration file format');
+      }
+
+      // Warn when the config was written by a newer binary. Do not block — pure
+      // additions in future versions are typically safe.
+      if (futureVersion) {
+        const configVersion = (rawData.configVersion as number) ?? 0;
+        output.warning(
+          `.gw/config.json is at version ${configVersion}, but this gw only knows up to version ${CURRENT_CONFIG_VERSION}.\n` +
+            `Some fields may be ignored. Run \`brew upgrade gw\` to update.`
+        );
       }
 
       // Derive git root from the config file path.

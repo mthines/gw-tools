@@ -217,3 +217,49 @@ Deno.test('runMigrations - v3: does not overwrite existing protectedBranches', (
   assertEquals(result.config.configVersion, 3);
   assertEquals(result.config.protectedBranches, ['staging', 'develop']);
 });
+
+// ---------------------------------------------------------------------------
+// futureVersion flag — binary is older than the committed config
+// ---------------------------------------------------------------------------
+
+Deno.test('runMigrations - futureVersion is false when config is at current version', () => {
+  const config = {
+    configVersion: CURRENT_CONFIG_VERSION,
+    defaultBranch: 'main',
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.futureVersion, false);
+  assertEquals(result.migrated, false);
+});
+
+Deno.test('runMigrations - futureVersion is false when config needs migration (older version)', () => {
+  const config = {
+    configVersion: CURRENT_CONFIG_VERSION - 1,
+    defaultBranch: 'main',
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.futureVersion, false);
+  assertEquals(result.migrated, true);
+});
+
+Deno.test('runMigrations - futureVersion is true when config version exceeds current', () => {
+  const futureVersion = CURRENT_CONFIG_VERSION + 1;
+  const config = {
+    configVersion: futureVersion,
+    defaultBranch: 'main',
+    someNewField: 'value-from-the-future',
+  };
+
+  const result = runMigrations(config);
+
+  assertEquals(result.futureVersion, true);
+  assertEquals(result.migrated, false);
+  assertEquals(result.appliedMigrations, []);
+  // Config must be returned as-is — the binary should not strip unknown fields
+  assertEquals((result.config as Record<string, unknown>).someNewField, 'value-from-the-future');
+  assertEquals((result.config as Record<string, unknown>).configVersion, futureVersion);
+});
