@@ -34,7 +34,7 @@ async function readConfig(configPath: string): Promise<string> {
 
 describe('addToAutoCopyFiles', () => {
   describe('adding files', () => {
-    it('should add a single file to an existing array', async () => {
+    it('should add a single file to an existing multi-line array', async () => {
       const configPath = await writeConfig(JSON.stringify({ autoCopyFiles: ['.env'] }, null, 2));
 
       const result = await addToAutoCopyFiles(configPath, ['components/.env']);
@@ -68,6 +68,30 @@ describe('addToAutoCopyFiles', () => {
       const written = await readConfig(configPath);
       const parsed = JSON.parse(written) as { autoCopyFiles: string[] };
       expect(parsed.autoCopyFiles).toEqual(['a.env', 'b.env', 'c.env']);
+    });
+
+    it('should handle empty array []', async () => {
+      const configPath = await writeConfig('{\n  "autoCopyFiles": []\n}');
+
+      const result = await addToAutoCopyFiles(configPath, ['.env']);
+
+      expect(result.added).toEqual(['.env']);
+
+      const written = await readConfig(configPath);
+      const parsed = JSON.parse(written) as { autoCopyFiles: string[] };
+      expect(parsed.autoCopyFiles).toEqual(['.env']);
+    });
+
+    it('should handle array with trailing comma on last element', async () => {
+      const configPath = await writeConfig('{\n  "autoCopyFiles": [\n    ".env",\n  ]\n}');
+
+      const result = await addToAutoCopyFiles(configPath, ['secrets.json']);
+
+      expect(result.added).toEqual(['secrets.json']);
+
+      const written = await readConfig(configPath);
+      // Should be valid JSON (or parseable after stripping trailing comma)
+      expect(written).toContain('secrets.json');
     });
   });
 
@@ -119,15 +143,44 @@ describe('addToAutoCopyFiles', () => {
       expect(result.alreadyPresent).toEqual([]);
 
       const written = await readConfig(configPath);
-      const parsed = JSON.parse(written) as { autoCopyFiles: string[] };
+      const parsed = JSON.parse(written) as { configVersion: number; autoCopyFiles: string[] };
       expect(parsed.autoCopyFiles).toEqual(['.env']);
+      // Original key preserved
+      expect(parsed.configVersion).toBe(2);
+    });
+
+    it('should create the autoCopyFiles key with multiple entries', async () => {
+      const configPath = await writeConfig(JSON.stringify({ configVersion: 1 }, null, 2));
+
+      const result = await addToAutoCopyFiles(configPath, ['.env', 'secrets.json']);
+
+      expect(result.added).toEqual(['.env', 'secrets.json']);
+
+      const written = await readConfig(configPath);
+      const parsed = JSON.parse(written) as { autoCopyFiles: string[] };
+      expect(parsed.autoCopyFiles).toEqual(['.env', 'secrets.json']);
     });
   });
 
   describe('JSONC comment preservation', () => {
-    it('should preserve existing JSONC comments after mutation', async () => {
+    it('should preserve top-level JSONC comments after mutation', async () => {
       const jsoncContent = `{
   // This is a comment about auto-copy files
+  "autoCopyFiles": [
+    ".env"
+  ]
+}`;
+      const configPath = await writeConfig(jsoncContent);
+
+      await addToAutoCopyFiles(configPath, ['secrets.json']);
+
+      const written = await readConfig(configPath);
+      expect(written).toContain('// This is a comment about auto-copy files');
+      expect(written).toContain('secrets.json');
+    });
+
+    it('should preserve inline comments between array elements', async () => {
+      const jsoncContent = `{
   "autoCopyFiles": [
     ".env" // keep this secret
   ]
@@ -137,9 +190,35 @@ describe('addToAutoCopyFiles', () => {
       await addToAutoCopyFiles(configPath, ['secrets.json']);
 
       const written = await readConfig(configPath);
-      expect(written).toContain('// This is a comment about auto-copy files');
       expect(written).toContain('// keep this secret');
       expect(written).toContain('secrets.json');
+    });
+
+    it('should not treat a commented-out path as already present', async () => {
+      const jsoncContent = `{
+  "autoCopyFiles": [
+    ".env" // ".env.local" is also a good idea
+  ]
+}`;
+      const configPath = await writeConfig(jsoncContent);
+
+      // ".env.local" appears only in a comment — should be treated as new
+      const result = await addToAutoCopyFiles(configPath, ['.env.local']);
+
+      expect(result.added).toEqual(['.env.local']);
+      expect(result.alreadyPresent).toEqual([]);
+    });
+
+    it('should preserve indentation style', async () => {
+      // Tab-indented config
+      const jsoncContent = `{\n\t"autoCopyFiles": [\n\t\t".env"\n\t]\n}`;
+      const configPath = await writeConfig(jsoncContent);
+
+      await addToAutoCopyFiles(configPath, ['secrets.json']);
+
+      const written = await readConfig(configPath);
+      // New entry should use detected tab indentation
+      expect(written).toContain('\t"secrets.json"');
     });
   });
 
