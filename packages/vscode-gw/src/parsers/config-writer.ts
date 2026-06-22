@@ -28,7 +28,7 @@ export interface AddToAutoCopyResult {
  * @param configPath Absolute path to `.gw/config.json`
  * @param filePaths  Repo-root-relative paths to add (no leading `./`)
  * @returns Result describing which paths were added vs already present
- * @throws If the config file cannot be read, parsed, or written
+ * @throws {Error} If the config file cannot be read, parsed, or written
  */
 export async function addToAutoCopyFiles(configPath: string, filePaths: string[]): Promise<AddToAutoCopyResult> {
   if (filePaths.length === 0) {
@@ -46,7 +46,7 @@ export async function addToAutoCopyFiles(configPath: string, filePaths: string[]
     );
   }
 
-  const existing: string[] = Array.isArray(parsed?.autoCopyFiles) ? (parsed.autoCopyFiles as string[]) : [];
+  const existing: string[] = Array.isArray(parsed.autoCopyFiles) ? (parsed.autoCopyFiles as string[]) : [];
 
   const added: string[] = [];
   const alreadyPresent: string[] = [];
