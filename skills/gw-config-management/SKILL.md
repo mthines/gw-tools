@@ -152,16 +152,17 @@ Migration skeleton:
 
 ## Quick Command Reference
 
-| Task                           | Command                                                                  |
-| ------------------------------ | ------------------------------------------------------------------------ |
-| Initialize config              | `gw init`                                                                |
-| Init with options              | `gw init --auto-copy-files .env,secrets/ --post-checkout "pnpm install"` |
-| Interactive setup              | `gw init --interactive`                                                  |
-| Clone and initialize           | `gw init git@github.com:user/repo.git`                                   |
-| Show generated init command    | `gw show-init`                                                           |
-| Sync files to current worktree | `gw sync`                                                                |
-| Sync to specific worktree      | `gw sync feat/branch`                                                    |
-| Sync specific files            | `gw sync feat/branch .env .env.local`                                    |
+| Task                                | Command                                                                                                                                                                                    |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Initialize config                   | `gw init`                                                                                                                                                                                  |
+| Init with options                   | `gw init --auto-copy-files .env,secrets/ --post-checkout "pnpm install"`                                                                                                                   |
+| Interactive setup                   | `gw init --interactive`                                                                                                                                                                    |
+| Clone and initialize                | `gw init git@github.com:user/repo.git`                                                                                                                                                     |
+| Show generated init command         | `gw show-init`                                                                                                                                                                             |
+| Sync files to current worktree      | `gw sync`                                                                                                                                                                                  |
+| Sync to specific worktree           | `gw sync feat/branch`                                                                                                                                                                      |
+| Sync specific files                 | `gw sync feat/branch .env .env.local`                                                                                                                                                      |
+| Add file to autoCopyFiles (VS Code) | Command palette → `gw: Add to Auto-Copy Files`, or right-click a file in the Explorer or editor tab. Supports multi-file selection. Requires `.gw/config.json` to exist (`gw init` first). |
 
 ## Anti-Patterns
 

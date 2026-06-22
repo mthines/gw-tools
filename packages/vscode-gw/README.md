@@ -41,13 +41,14 @@ The extension adds a "gw" activity bar icon with one view:
 
 ## Commands
 
-| Command                               | Description                                    |
-| ------------------------------------- | ---------------------------------------------- |
-| `GW: Refresh Worktrees`               | Refresh the worktree list                      |
-| `GW: Create Worktree`                 | Create a new worktree via `gw checkout`        |
-| `GW: Open Worktree in New Window`     | Open selected worktree in a new VS Code window |
-| `GW: Open Worktree in Current Window` | Switch to selected worktree                    |
-| `GW: Remove Worktree`                 | Remove a worktree (with confirmation)          |
+| Command                               | Description                                                                                                                                                                                                                                      |
+| ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `GW: Refresh Worktrees`               | Refresh the worktree list                                                                                                                                                                                                                        |
+| `GW: Create Worktree`                 | Create a new worktree via `gw checkout`                                                                                                                                                                                                          |
+| `GW: Open Worktree in New Window`     | Open selected worktree in a new VS Code window                                                                                                                                                                                                   |
+| `GW: Open Worktree in Current Window` | Switch to selected worktree                                                                                                                                                                                                                      |
+| `GW: Remove Worktree`                 | Remove a worktree (with confirmation)                                                                                                                                                                                                            |
+| `GW: Add to Auto-Copy Files`          | Add the selected/open file(s) to `autoCopyFiles` in `.gw/config.json`. Available from the command palette, the Explorer context menu (right-click on file), and the editor tab context menu (right-click on tab). Supports multi-file selection. |
 
 ## Settings
 

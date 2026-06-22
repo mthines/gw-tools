@@ -8,6 +8,7 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { WorktreeProvider, WorktreeItem } from './providers/worktree-provider';
 import { WorktreeWatcher } from './watchers/worktree-watcher';
+import { addToAutoCopyFiles } from './parsers/config-writer';
 import {
   removeWorktree,
   createWorktreeWithProgress,
@@ -1063,6 +1064,62 @@ export function activate(context: vscode.ExtensionContext): void {
         vscode.window.showErrorMessage(`Failed to sync: ${stripAnsi(msg)}`);
       }
     }),
+
+    vscode.commands.registerCommand(
+      'gw.addToAutoCopyFiles',
+      async (clickedUri?: vscode.Uri, selectedUris?: vscode.Uri[]) => {
+        log('Command: addToAutoCopyFiles');
+
+        // Collect URIs: multi-select from explorer takes priority,
+        // then the clicked URI, then the active editor file.
+        const uris =
+          selectedUris && selectedUris.length > 0
+            ? selectedUris
+            : clickedUri
+              ? [clickedUri]
+              : vscode.window.activeTextEditor
+                ? [vscode.window.activeTextEditor.document.uri]
+                : [];
+
+        // Skip virtual/untitled files (no fsPath)
+        const fileUris = uris.filter((uri) => uri.scheme === 'file');
+
+        if (fileUris.length === 0) {
+          vscode.window.showWarningMessage('No file selected.');
+          return;
+        }
+
+        // Normalize to repo-root-relative paths, no leading "./"
+        const filePaths = fileUris.map((uri) => {
+          const rel = path.relative(workspacePath, uri.fsPath);
+          return rel.replace(/\\/g, '/');
+        });
+
+        const configPath = path.join(workspacePath, '.gw', 'config.json');
+
+        try {
+          const result = await addToAutoCopyFiles(configPath, filePaths);
+
+          const parts: string[] = [];
+          if (result.added.length > 0) {
+            parts.push(`${result.added.length} added`);
+          }
+          if (result.alreadyPresent.length > 0) {
+            parts.push(`${result.alreadyPresent.length} already present`);
+          }
+          if (parts.length > 0) {
+            vscode.window.showInformationMessage(parts.join(', '));
+          }
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          if (msg.includes('ENOENT') || msg.includes('no such file')) {
+            vscode.window.showErrorMessage('No .gw/config.json found. Run `gw init` first.');
+          } else {
+            vscode.window.showErrorMessage(`Failed to update autoCopyFiles: ${msg}`);
+          }
+        }
+      }
+    ),
   ];
 
   // Refresh worktrees when workspace changes
