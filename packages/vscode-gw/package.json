@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees directly from the VS Code sidebar",
-  "version": "0.80.0",
+  "version": "0.81.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -156,9 +156,8 @@
       },
       {
         "command": "gw.addToAutoCopyFiles",
-        "title": "Add to Auto-Copy Files",
-        "icon": "$(add)",
-        "category": "gw"
+        "title": "gw: Add to Auto-Copy Files",
+        "icon": "$(add)"
       }
     ],
     "menus": {
