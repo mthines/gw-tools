@@ -2,7 +2,7 @@
   "name": "gw-worktrees",
   "displayName": "gw - Git Worktrees",
   "description": "Manage Git worktrees directly from the VS Code sidebar",
-  "version": "0.77.0",
+  "version": "0.81.0",
   "publisher": "mthines",
   "license": "MIT",
   "repository": {
@@ -153,6 +153,11 @@
         "title": "Show Output Log",
         "icon": "$(output)",
         "category": "gw"
+      },
+      {
+        "command": "gw.addToAutoCopyFiles",
+        "title": "gw: Add to Auto-Copy Files",
+        "icon": "$(add)"
       }
     ],
     "menus": {
@@ -237,6 +242,18 @@
           "command": "gw.removeSelectedWorktrees",
           "when": "view == gwWorktreeExplorer && viewItem == worktree && listMultiSelection",
           "group": "danger@1"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "gw.addToAutoCopyFiles",
+          "group": "gw@1"
+        }
+      ],
+      "editor/title/context": [
+        {
+          "command": "gw.addToAutoCopyFiles",
+          "group": "gw@1"
         }
       ]
     },
