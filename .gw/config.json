@@ -4,7 +4,9 @@
   "cleanThreshold": 3,
   "hooks": {
     "checkout": {
-      "post": ["pnpm install"]
+      "post": [
+        "pnpm install"
+      ]
     }
   },
   "autoClean": true,
