@@ -32,12 +32,14 @@ function parsePrArgs(args: string[]): {
   prIdentifier?: string;
   name?: string;
   noNavigate: boolean;
+  noHooks: boolean;
 } {
   const result = {
     help: false,
     prIdentifier: undefined as string | undefined,
     name: undefined as string | undefined,
     noNavigate: false,
+    noHooks: false,
   };
 
   // Check for help flag
@@ -50,6 +52,12 @@ function parsePrArgs(args: string[]): {
   if (args.includes('--no-cd')) {
     result.noNavigate = true;
     args = args.filter((a) => a !== '--no-cd');
+  }
+
+  // Check for --no-hooks flag (skips pre- and post-checkout hooks)
+  if (args.includes('--no-hooks')) {
+    result.noHooks = true;
+    args = args.filter((a) => a !== '--no-hooks');
   }
 
   // Parse remaining arguments
@@ -100,6 +108,7 @@ Arguments:
 Options:
   --name <name>         Custom name for the worktree directory
   --no-cd               Don't navigate to the new worktree after creation
+  --no-hooks            Skip pre- and post-checkout hooks for this run
   -h, --help            Show this help message
 
 Examples:
@@ -111,6 +120,9 @@ Examples:
 
   # Use custom worktree name
   gw pr 42 --name review-feature
+
+  # Check out a PR without running checkout hooks
+  gw pr 42 --no-hooks
 
 Requirements:
   - GitHub CLI (gh) must be installed and authenticated
@@ -375,8 +387,8 @@ export async function executePr(args: string[]): Promise<void> {
     }
   }
 
-  // Execute pre-add hooks (abort on failure)
-  if (config.hooks?.checkout?.pre && config.hooks.checkout.pre.length > 0) {
+  // Execute pre-checkout hooks (abort on failure)
+  if (!parsed.noHooks && config.hooks?.checkout?.pre && config.hooks.checkout.pre.length > 0) {
     const { allSuccessful } = await executeHooks(
       config.hooks.checkout.pre,
       gitRoot,
@@ -488,7 +500,7 @@ export async function executePr(args: string[]): Promise<void> {
   }
 
   // Execute post-checkout hooks (warn but don't abort on failure)
-  if (config.hooks?.checkout?.post && config.hooks.checkout.post.length > 0) {
+  if (!parsed.noHooks && config.hooks?.checkout?.post && config.hooks.checkout.post.length > 0) {
     const { allSuccessful } = await executeHooks(
       config.hooks.checkout.post,
       worktreePath,

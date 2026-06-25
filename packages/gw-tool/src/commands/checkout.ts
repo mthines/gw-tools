@@ -157,6 +157,7 @@ function parseCheckoutArgs(args: string[]): {
   gitArgs: string[];
   noNavigate: boolean;
   noFetch: boolean;
+  noHooks: boolean;
   fromBranch?: string;
   fromStaged: boolean;
 } {
@@ -167,6 +168,7 @@ function parseCheckoutArgs(args: string[]): {
     gitArgs: [] as string[],
     noNavigate: false,
     noFetch: false,
+    noHooks: false,
     fromBranch: undefined as string | undefined,
     fromStaged: false,
   };
@@ -188,6 +190,12 @@ function parseCheckoutArgs(args: string[]): {
   if (args.includes('--no-fetch')) {
     result.noFetch = true;
     args = args.filter((a) => a !== '--no-fetch');
+  }
+
+  // Check for --no-hooks flag (skips pre- and post-checkout hooks)
+  if (args.includes('--no-hooks')) {
+    result.noHooks = true;
+    args = args.filter((a) => a !== '--no-hooks');
   }
 
   // Check for --from-staged flag
@@ -289,6 +297,7 @@ Options:
   --no-cd                 Don't navigate to the new worktree after creation
   --no-fetch              Skip the remote probe (offline mode); don't query
                           origin for branches that aren't yet local
+  --no-hooks              Skip pre- and post-checkout hooks for this run
   --from <branch>         Create new branch from specified branch instead of defaultBranch
                           (skips the remote probe; a same-named remote branch, if any, is ignored)
   --from-staged           Copy staged files from current worktree to new worktree
@@ -309,6 +318,9 @@ Examples:
 
   # Create worktree without navigating to it
   gw checkout feat/new-feature --no-cd
+
+  # Create worktree without running pre/post-checkout hooks
+  gw checkout feat/new-feature --no-hooks
 
   # Create worktree from a different branch
   gw checkout feat/new-feature --from develop
@@ -397,6 +409,9 @@ Hooks:
 
   Pre-checkout hooks run before the worktree is created and abort on failure.
   Post-checkout hooks run in the new worktree directory after creation.
+
+  Use --no-hooks to skip both pre- and post-checkout hooks for a single run
+  (e.g. when you want a worktree without triggering a slow install hook).
 `);
 }
 
@@ -552,7 +567,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   const hooksConfig = config.hooks?.checkout;
 
   // Execute pre-checkout hooks (abort on failure)
-  if (hooksConfig?.pre && hooksConfig.pre.length > 0) {
+  if (!parsed.noHooks && hooksConfig?.pre && hooksConfig.pre.length > 0) {
     const { allSuccessful } = await executeHooks(
       hooksConfig.pre,
       gitRoot,
@@ -892,7 +907,7 @@ export async function executeCheckout(args: string[]): Promise<void> {
   }
 
   // Execute post-checkout hooks (warn but don't abort on failure)
-  if (hooksConfig?.post && hooksConfig.post.length > 0) {
+  if (!parsed.noHooks && hooksConfig?.post && hooksConfig.post.length > 0) {
     const { allSuccessful } = await executeHooks(
       hooksConfig.post,
       worktreePath, // Run post-checkout hooks in the new worktree directory
