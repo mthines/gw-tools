@@ -479,6 +479,7 @@ If you try to add a worktree that already exists, the command will prompt you to
 
 - `--no-cd`: Don't navigate to the new worktree after creation
 - `--no-fetch`: Skip the remote probe (offline mode); don't query origin for branches that aren't yet local
+- `--no-hooks`: Skip pre- and post-checkout hooks for this run
 - `--from <branch>`: Create new branch from specified branch instead of `defaultBranch`
 - `--from-staged`: Copy staged files from current worktree to new worktree (see [Staged Files](#staged-files))
 
@@ -508,6 +509,9 @@ gw checkout main
 
 # Create worktree without navigating to it
 gw checkout feat/new-feature --no-cd
+
+# Create worktree without running pre/post-checkout hooks
+gw checkout feat/new-feature --no-hooks
 
 # Create worktree from a different branch instead of defaultBranch
 gw checkout feat/new-feature --from develop
@@ -778,6 +782,7 @@ The `gw pr` command does all of this in a single step.
 
 - `--name <name>`: Custom name for the worktree directory (defaults to PR's branch name)
 - `--no-cd`: Don't navigate to the new worktree after creation
+- `--no-hooks`: Skip pre- and post-checkout hooks for this run
 - `-h, --help`: Show help message
 
 #### Examples
@@ -794,6 +799,9 @@ gw pr 42 --name review-feature
 
 # Check out without auto-navigation
 gw pr 42 --no-cd
+
+# Check out a PR without running checkout hooks
+gw pr 42 --no-hooks
 ```
 
 #### Requirements

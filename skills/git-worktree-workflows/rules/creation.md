@@ -80,6 +80,7 @@ gw init
 | Local branch exists        | Uses local directly, no fetch                                                      |
 | Remote-only branch         | Fetches and creates local tracking branch (e.g., after `gw remove`)                |
 | `--no-fetch`               | Skips the remote probe (offline mode); local refs only                             |
+| `--no-hooks`               | Skips pre- and post-checkout hooks for this run                                    |
 
 ### GOOD Pattern
 

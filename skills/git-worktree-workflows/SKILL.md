@@ -64,6 +64,7 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Create from staged files (extract WIP)    | `gw checkout feat/name --from-staged`                               |
 | Create without auto-navigation            | `gw checkout feat/name --no-cd`                                     |
 | Skip remote probe (offline mode)          | `gw checkout feat/name --no-fetch`                                  |
+| Skip pre/post-checkout hooks              | `gw checkout feat/name --no-hooks`                                  |
 | Navigate to worktree by name              | `gw cd feat/name`                                                   |
 | Navigate by partial match                 | `gw cd feat` (matches first worktree with "feat")                   |
 | Navigate to branch (even if in other wt)  | `gw checkout main`                                                  |

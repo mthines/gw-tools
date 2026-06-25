@@ -990,6 +990,105 @@ Deno.test(
   }
 );
 
+// =============================================================================
+// --no-hooks flag tests
+// =============================================================================
+
+Deno.test('checkout command - --no-hooks skips post-checkout hooks', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Post-checkout hooks run in the new worktree directory; the sentinel file
+    // it would create is the observable proof that the hook executed.
+    const config = createConfigWithHooks(repo.path, undefined, ['touch post-hook-sentinel.txt']);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat-no-hooks-post', '--no-hooks']);
+      });
+      await _drainAutoClean();
+
+      const sentinel = join(repo.path, 'feat-no-hooks-post', 'post-hook-sentinel.txt');
+      let sentinelExists = true;
+      try {
+        await Deno.stat(sentinel);
+      } catch {
+        sentinelExists = false;
+      }
+      assertEquals(sentinelExists, false, '--no-hooks should skip the post-checkout hook');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - runs post-checkout hooks without --no-hooks (control)', async () => {
+  // Proves the sentinel mechanism the --no-hooks tests rely on actually fires
+  // when hooks are enabled — otherwise a broken hook command would make the
+  // skip assertions pass for the wrong reason.
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const config = createConfigWithHooks(repo.path, undefined, ['touch post-hook-sentinel.txt']);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat-hooks-run']);
+      });
+      await _drainAutoClean();
+
+      const sentinel = join(repo.path, 'feat-hooks-run', 'post-hook-sentinel.txt');
+      const stat = await Deno.stat(sentinel);
+      assertEquals(stat.isFile, true, 'post-checkout hook should run when --no-hooks is absent');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
+Deno.test('checkout command - --no-hooks skips pre-checkout hooks', async () => {
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    // Pre-checkout hooks run in the git root before the worktree is created;
+    // the sentinel lands in repo.path when the hook executes.
+    const config = createConfigWithHooks(repo.path, ['touch pre-hook-sentinel.txt'], undefined);
+    await writeTestConfig(repo.path, config);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await withMockedExit(async () => {
+        await executeCheckout(['feat-no-hooks-pre', '--no-hooks']);
+      });
+      await _drainAutoClean();
+
+      const sentinel = join(repo.path, 'pre-hook-sentinel.txt');
+      let sentinelExists = true;
+      try {
+        await Deno.stat(sentinel);
+      } catch {
+        sentinelExists = false;
+      }
+      assertEquals(sentinelExists, false, '--no-hooks should skip the pre-checkout hook');
+    } finally {
+      cwd.restore();
+    }
+  } finally {
+    await repo.cleanup();
+  }
+});
+
 Deno.test('checkout command - --no-fetch skips remote probe and creates new branch from main', async () => {
   const remoteRepo = new GitTestRepo();
   const teammateRepo = new GitTestRepo();
