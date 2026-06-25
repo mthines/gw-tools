@@ -26,6 +26,7 @@ Git Worktree Tools - A CLI for managing Git worktrees with automatic file syncin
 [-> See docs <-](packages/gw-tool/README.md)
 
 ### [See demo](https://www.loom.com/share/3932770bf16d4ae49fe9bca89fb64644)
+
 <a href="https://www.loom.com/share/3932770bf16d4ae49fe9bca89fb64644">
 <img width="300" alt="Gemini_Generated_Image_1h2vv91h2vv91h2v" src="https://github.com/user-attachments/assets/4a5d73d9-ff00-4841-bb22-5488849b23c0" />
 </a>
