@@ -6,6 +6,7 @@
 import { resolve } from '@std/path';
 import { isProtectedBranch } from '../lib/branch-protection.ts';
 import { loadConfig, loadProtectedBranches } from '../lib/config.ts';
+import { mapWithConcurrency } from '../lib/concurrency.ts';
 import {
   deleteBranch,
   findOrphanBranches,
@@ -217,92 +218,94 @@ async function executeInteractiveClean(): Promise<void> {
   const worktreeBranches = new Set(worktrees.map((wt) => wt.branch).filter(Boolean));
 
   // ── Build Worktrees section ───────────────────────────
-  const worktreeItems: SelectItem[] = [];
-  for (const wt of worktrees) {
-    if (wt.bare) continue;
-
-    if (isEffectivelyProtected(wt.branch, defaultBranch, userProtected)) {
-      worktreeItems.push({
-        label: wt.branch || wt.path,
-        value: `worktree:${wt.path}`,
-        disabled: true,
-        disabledReason: 'protected branch - cannot remove',
-      });
-      continue;
-    }
-
-    const ageDays = await getWorktreeAgeDays(wt.path);
-    const hasUncommitted = await hasUncommittedChanges(wt.path);
-    const hasUnpushed = await hasUnpushedCommits(wt.path);
-
-    const hints: string[] = [];
-    if (ageDays > 0) hints.push(`${ageDays}d old`);
-    if (hasUncommitted) hints.push('uncommitted');
-    if (hasUnpushed) hints.push('unpushed');
-    const hint = hints.length > 0 ? `(${hints.join(', ')})` : '';
-
-    worktreeItems.push({
-      label: wt.branch || wt.path,
-      value: `worktree:${wt.path}`,
-      hint,
-    });
-  }
-
-  // ── Build Local Branches section (no worktree) ────────
-  const branchItems: SelectItem[] = [];
-  for (const branch of allBranches) {
-    // Skip branches that have an active worktree
-    if (worktreeBranches.has(branch)) continue;
-
-    if (isEffectivelyProtected(branch, defaultBranch, userProtected)) {
-      branchItems.push({
-        label: branch,
-        value: `branch:${branch}`,
-        disabled: true,
-        disabledReason: 'protected branch - cannot remove',
-      });
-      continue;
-    }
-
-    const date = await getBranchLastCommitDate(branch);
-    const hint = date ? `(${date})` : '';
-
-    branchItems.push({
-      label: branch,
-      value: `branch:${branch}`,
-      hint,
-    });
-  }
-
-  // ── Build Orphan Branches section ─────────────────────
-  const orphans = await findOrphanBranches(worktrees, defaultBranch);
-  const orphanNames = new Set(orphans.map((o) => o.name));
-  const orphanItems: SelectItem[] = await Promise.all(
-    orphans.map(async (o) => {
-      const date = await getBranchLastCommitDate(o.name);
-      const parts: string[] = [];
-      if (date) parts.push(date);
-      parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
-
-      // Defense-in-depth: findOrphanBranches already filters protected
-      // branches, but the orphan section is the most destructive code path
-      // (force-deletes via -D), so re-assert protection here.
-      if (isEffectivelyProtected(o.name, defaultBranch, userProtected)) {
+  // Analyze worktrees in parallel — each requires several git calls, so
+  // running them sequentially is slow when there are many worktrees. The
+  // pool bounds how many run at once so large repos don't exhaust resources.
+  const worktreeItems: SelectItem[] = await mapWithConcurrency(
+    worktrees.filter((wt) => !wt.bare),
+    async (wt): Promise<SelectItem> => {
+      if (isEffectivelyProtected(wt.branch, defaultBranch, userProtected)) {
         return {
-          label: o.name,
-          value: `orphan:${o.name}`,
+          label: wt.branch || wt.path,
+          value: `worktree:${wt.path}`,
           disabled: true,
           disabledReason: 'protected branch - cannot remove',
         };
       }
 
+      const [ageDays, hasUncommitted, hasUnpushed] = await Promise.all([
+        getWorktreeAgeDays(wt.path),
+        hasUncommittedChanges(wt.path),
+        hasUnpushedCommits(wt.path),
+      ]);
+
+      const hints: string[] = [];
+      if (ageDays > 0) hints.push(`${ageDays}d old`);
+      if (hasUncommitted) hints.push('uncommitted');
+      if (hasUnpushed) hints.push('unpushed');
+      const hint = hints.length > 0 ? `(${hints.join(', ')})` : '';
+
+      return {
+        label: wt.branch || wt.path,
+        value: `worktree:${wt.path}`,
+        hint,
+      };
+    }
+  );
+
+  // ── Build Local Branches section (no worktree) ────────
+  // Analyze branches in parallel for the same reason as worktrees above.
+  const branchItems: SelectItem[] = await mapWithConcurrency(
+    // Skip branches that have an active worktree
+    allBranches.filter((branch) => !worktreeBranches.has(branch)),
+    async (branch): Promise<SelectItem> => {
+      if (isEffectivelyProtected(branch, defaultBranch, userProtected)) {
+        return {
+          label: branch,
+          value: `branch:${branch}`,
+          disabled: true,
+          disabledReason: 'protected branch - cannot remove',
+        };
+      }
+
+      const date = await getBranchLastCommitDate(branch);
+      const hint = date ? `(${date})` : '';
+
+      return {
+        label: branch,
+        value: `branch:${branch}`,
+        hint,
+      };
+    }
+  );
+
+  // ── Build Orphan Branches section ─────────────────────
+  const orphans = await findOrphanBranches(worktrees, defaultBranch);
+  const orphanNames = new Set(orphans.map((o) => o.name));
+  const orphanItems: SelectItem[] = await mapWithConcurrency(orphans, async (o): Promise<SelectItem> => {
+    const date = await getBranchLastCommitDate(o.name);
+    const parts: string[] = [];
+    if (date) parts.push(date);
+    parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
+
+    // Defense-in-depth: findOrphanBranches already filters protected
+    // branches, but the orphan section is the most destructive code path
+    // (force-deletes via -D), so re-assert protection here.
+    if (isEffectivelyProtected(o.name, defaultBranch, userProtected)) {
       return {
         label: o.name,
         value: `orphan:${o.name}`,
-        hint: `(${parts.join(', ')})`,
+        disabled: true,
+        disabledReason: 'protected branch - cannot remove',
       };
-    })
-  );
+    }
+
+    return {
+      label: o.name,
+      value: `orphan:${o.name}`,
+      hint: `(${parts.join(', ')})`,
+    };
+  });
 
   // Filter out branches that already appear in the orphans section
   const filteredBranchItems = branchItems.filter((item) => !orphanNames.has(item.label));
@@ -353,39 +356,50 @@ async function executeInteractiveClean(): Promise<void> {
   const navigatedToRoot = await navigateAwayIfNeeded(selectedWorktreePaths);
 
   // ── Process selections ────────────────────────────────
-  console.log();
+  // Selected items are independent (branches with an active worktree are
+  // excluded from the branch/orphan sections), so removals run in parallel.
+  // Results are collected and printed in order afterwards to keep output
+  // readable despite the concurrent execution.
+  console.log(`Removing ${result.selected.length} item(s)...\n`);
   let removedWorktrees = 0;
   let removedBranches = 0;
   let failed = 0;
 
-  for (const value of result.selected) {
+  const removalResults = await mapWithConcurrency(result.selected, async (value) => {
     const [type, ...rest] = value.split(':');
     const target = rest.join(':');
 
     if (type === 'worktree') {
+      const wt = worktrees.find((w) => w.path === target);
+      const label = wt?.branch || target;
       try {
-        const wt = worktrees.find((w) => w.path === target);
-        const label = wt?.branch || target;
-        console.log(`Removing worktree ${output.path(label)}...`);
         await removeWorktree(target, true); // force
-        console.log(`  ${output.checkmark()} Removed\n`);
-        removedWorktrees++;
+        return { kind: 'worktree' as const, label, success: true as const };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
-        console.log(`  ${output.errorSymbol()} Failed: ${output.dim(msg)}\n`);
-        failed++;
+        return { kind: 'worktree' as const, label, success: false as const, error: msg };
       }
-    } else if (type === 'branch' || type === 'orphan') {
-      try {
-        console.log(`Deleting branch ${output.path(target)}...`);
-        await deleteBranch(target, true); // force
-        console.log(`  ${output.checkmark()} Deleted\n`);
-        removedBranches++;
-      } catch (error) {
-        const msg = error instanceof Error ? error.message : String(error);
-        console.log(`  ${output.errorSymbol()} Failed: ${output.dim(msg)}\n`);
-        failed++;
-      }
+    }
+
+    // branch or orphan
+    try {
+      await deleteBranch(target, true); // force
+      return { kind: 'branch' as const, label: target, success: true as const };
+    } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error);
+      return { kind: 'branch' as const, label: target, success: false as const, error: msg };
+    }
+  });
+
+  for (const r of removalResults) {
+    const verb = r.kind === 'worktree' ? 'worktree' : 'branch';
+    if (r.success) {
+      console.log(`  ${output.checkmark()} Removed ${verb} ${output.path(r.label)}`);
+      if (r.kind === 'worktree') removedWorktrees++;
+      else removedBranches++;
+    } else {
+      console.log(`  ${output.errorSymbol()} Failed ${verb} ${output.path(r.label)}: ${output.dim(r.error)}`);
+      failed++;
     }
   }
 
@@ -471,19 +485,21 @@ export async function executeClean(args: string[]): Promise<void> {
     console.log(`Found ${nonBareWorktrees.length} worktree(s)\n`);
   }
 
-  // Analyze each worktree
-  const analyzed: CleanableWorktree[] = [];
-
-  for (const wt of nonBareWorktrees) {
+  // Analyze each worktree in parallel — each needs several git calls, so
+  // sequential analysis is slow when there are many worktrees. The pool
+  // bounds how many run at once so large repos don't exhaust resources.
+  const analyzedOrNull = await mapWithConcurrency(nonBareWorktrees, async (wt): Promise<CleanableWorktree | null> => {
     const ageDays = await getWorktreeAgeDays(wt.path);
 
     // Skip if not old enough (only when using threshold)
     if (parsed.useThreshold && ageDays < threshold) {
-      continue;
+      return null;
     }
 
-    const hasUncommitted = await hasUncommittedChanges(wt.path);
-    const hasUnpushed = await hasUnpushedCommits(wt.path);
+    const [hasUncommitted, hasUnpushed] = await Promise.all([
+      hasUncommittedChanges(wt.path),
+      hasUnpushedCommits(wt.path),
+    ]);
 
     let canClean = true;
     let reason: string | undefined;
@@ -498,15 +514,17 @@ export async function executeClean(args: string[]): Promise<void> {
       }
     }
 
-    analyzed.push({
+    return {
       ...wt,
       ageDays,
       hasUncommitted,
       hasUnpushed,
       canClean,
       reason,
-    });
-  }
+    };
+  });
+
+  const analyzed: CleanableWorktree[] = analyzedOrNull.filter((wt): wt is CleanableWorktree => wt !== null);
 
   // Separate cleanable and skipped
   const toClean = analyzed.filter((wt) => wt.canClean);
@@ -592,24 +610,32 @@ export async function executeClean(args: string[]): Promise<void> {
   // Navigate away if removing current worktree
   const navigatedToRoot = await navigateAwayIfNeeded(toClean.map((wt) => wt.path));
 
-  // Remove worktrees
-  console.log();
+  // Remove worktrees in parallel — worktree removals are independent, so
+  // running them concurrently is much faster when cleaning many at once.
+  // Results are collected and printed in order afterwards to keep output
+  // readable despite the concurrent execution.
+  console.log(`Removing ${toClean.length} worktree(s)...\n`);
   const results: {
     worktree: CleanableWorktree;
     success: boolean;
     error?: string;
-  }[] = [];
-
-  for (const wt of toClean) {
+  }[] = await mapWithConcurrency(toClean, async (wt) => {
     try {
-      console.log(`Removing ${output.path(wt.branch || wt.path)}...`);
       await removeWorktree(wt.path, parsed.force);
-      results.push({ worktree: wt, success: true });
-      console.log(`  ${output.checkmark()} Removed\n`);
+      return { worktree: wt, success: true };
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
-      results.push({ worktree: wt, success: false, error: message });
-      console.log(`  ${output.errorSymbol()} Failed: ${output.dim(message)}\n`);
+      return { worktree: wt, success: false, error: message };
+    }
+  });
+
+  for (const r of results) {
+    if (r.success) {
+      console.log(`  ${output.checkmark()} Removed ${output.path(r.worktree.branch || r.worktree.path)}`);
+    } else {
+      console.log(
+        `  ${output.errorSymbol()} Failed ${output.path(r.worktree.branch || r.worktree.path)}: ${output.dim(r.error || '')}`
+      );
     }
   }
 
