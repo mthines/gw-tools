@@ -1393,6 +1393,8 @@ Remove safe worktrees with no uncommitted changes and no unpushed commits. By de
 
 **Note:** For automatic cleanup, see `gw init --auto-clean`. The `clean` command provides interactive, manual cleanup with detailed output and confirmation prompts.
 
+**Performance:** Worktree/branch analysis and the removals themselves run in parallel (bounded to 25 concurrent operations), so cleaning many worktrees at once is fast. Results are printed in a stable order after the batch completes.
+
 ```bash
 gw clean [options]
 ```
