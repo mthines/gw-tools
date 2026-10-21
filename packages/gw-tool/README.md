@@ -1409,7 +1409,7 @@ gw clean [options]
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits, and `--remove`'s branch-commit check). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
-- `--json`: Output results as JSON and exit, no prompts (implies dry-run in `--auto` mode; machine-readable report with `--stats`; with `--remove`, pass `--yes` or `--dry-run`)
+- `--json`: Output results as JSON and exit, no prompts (implies dry-run in `--auto` mode; machine-readable report with `--stats`; with `--remove`, pass `--yes` or `--dry-run`; with `--all` it needs `--auto`, `--stats`, or `--remove`)
 - `-y, --yes`: Skip confirmation prompt
 - `-h, --help`: Show help message
 

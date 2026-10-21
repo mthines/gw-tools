@@ -96,7 +96,7 @@ interface CleanArgs {
 /**
  * Parse clean command arguments
  */
-function parseCleanArgs(args: string[]): CleanArgs {
+export function parseCleanArgs(args: string[]): CleanArgs {
   const remove: string[] = [];
   for (let i = 0; i < args.length; i++) {
     let id: string | undefined;
@@ -114,7 +114,7 @@ function parseCleanArgs(args: string[]): CleanArgs {
     remove.push(id);
   }
 
-  return {
+  const parsed: CleanArgs = {
     help: args.includes('--help') || args.includes('-h'),
     force: args.includes('--force') || args.includes('-f'),
     dryRun: args.includes('--dry-run') || args.includes('-n'),
@@ -127,6 +127,13 @@ function parseCleanArgs(args: string[]): CleanArgs {
     size: args.includes('--size'),
     remove,
   };
+
+  // The --all picker is interactive and cannot produce JSON
+  if (!parsed.help && parsed.all && parsed.json && !parsed.auto && !parsed.stats && remove.length === 0) {
+    throw new Error('--json with --all needs --auto, --stats, or --remove');
+  }
+
+  return parsed;
 }
 
 /**
@@ -175,7 +182,8 @@ Options:
                              (applies to --auto and --remove)
   --json                     Output results as JSON and exit (implies --dry-run in
                              --auto mode; machine-readable report with --stats
-                             and --remove)
+                             and --remove). With --all it needs --auto,
+                             --stats, or --remove
   -y, --yes                  Skip confirmation prompt (applies to --auto and --remove)
   -h, --help                 Show this help message
 

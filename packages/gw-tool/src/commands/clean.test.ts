@@ -3,9 +3,15 @@
  * Tests the cleanup of stale/safe worktrees with various flags
  */
 
-import { assertEquals } from '@std/assert';
+import { assertEquals, assertThrows } from '@std/assert';
 import { join } from '@std/path';
-import { buildRepoDisplayNames, executeClean, executeInteractiveCleanAll, isPathInside } from './clean.ts';
+import {
+  buildRepoDisplayNames,
+  executeClean,
+  executeInteractiveCleanAll,
+  isPathInside,
+  parseCleanArgs,
+} from './clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd, TempEnv } from '../test-utils/temp-env.ts';
 import { loadRegistry, registerRepo } from '../lib/repo-registry.ts';
@@ -1793,6 +1799,23 @@ Deno.test('clean --remove - a missing id is an error, never a fall-through to an
       await repo.cleanup();
     }
   });
+});
+
+Deno.test('clean --all --json - needs a JSON-producing mode', () => {
+  assertThrows(
+    () => parseCleanArgs(['--all', '--json']),
+    Error,
+    '--json with --all needs --auto, --stats, or --remove'
+  );
+  for (const args of [
+    ['--all', '--auto', '--json'],
+    ['--all', '--stats', '--json'],
+    ['--all', '--json', '--remove', 'wt:/x'],
+    ['--all', '--json', '--help'],
+    ['--json'],
+  ]) {
+    assertEquals(parseCleanArgs(args).json, true, `accepts ${args.join(' ')}`);
+  }
 });
 
 // ── orphan pruning honors protectedBranches ─────────────
