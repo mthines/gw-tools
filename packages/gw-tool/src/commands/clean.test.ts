@@ -1016,3 +1016,55 @@ Deno.test('clean --all - missing path is skipped and dropped from the registry',
     }
   });
 });
+
+Deno.test(
+  'clean --all --auto - protects the worktree defaultBranch of a bare repo with a default-only root config',
+  async () => {
+    await withTempRegistry(async () => {
+      // Source repo with a `develop` trunk, cloned bare like `gw init --clone`
+      const source = new GitTestRepo();
+      const holder = await Deno.makeTempDir({ prefix: 'gw-bare-holder-' });
+      try {
+        await source.init();
+        await source.createBranch('develop');
+        const bare = join(await Deno.realPath(holder), 'project.git');
+        await source.runCommand('git', ['clone', '--bare', source.path, bare]);
+        await source.runCommand('git', ['-C', bare, 'worktree', 'add', join(bare, 'develop'), 'develop']);
+        await source.runCommand('git', [
+          '-C',
+          bare,
+          'worktree',
+          'add',
+          '-b',
+          'feat-z',
+          join(bare, 'feat-z'),
+          'develop',
+        ]);
+
+        // Real settings live in the trunk worktree; the root config holds only
+        // defaults (as loadRootConfig writes them on first protect/clean).
+        await writeTestConfig(join(bare, 'develop'), { ...createMinimalConfig(), defaultBranch: 'develop' });
+        await writeTestConfig(bare, { ...createMinimalConfig(), defaultBranch: 'main' });
+        await registerRepo(bare);
+
+        const cwd = new TempCwd(source.path);
+        let stdout = '';
+        try {
+          const res = await withMockedExit(() => executeClean(['--all', '--auto', '--json']), { captureOutput: true });
+          assertEquals(res.exitCode, 0);
+          stdout = res.stdout ?? '';
+        } finally {
+          cwd.restore();
+        }
+
+        const data = JSON.parse(stdout.trim().split('\n').pop()!);
+        const listed = [...data.repos[0].cleanable, ...data.repos[0].skipped].map((w: { branch: string }) => w.branch);
+        assertEquals(listed.includes('develop'), false, 'trunk worktree must never be a removal candidate');
+        assertEquals(listed.includes('feat-z'), true);
+      } finally {
+        await source.cleanup();
+        await Deno.remove(holder, { recursive: true });
+      }
+    });
+  }
+);

@@ -206,7 +206,7 @@ Deno.test('repo-registry - registry write failure does not fail the gw command',
 
 Deno.test('repo-registry - missing path is dropped by pruneMissingRepos', async () => {
   await withTempConfigHome(async () => {
-    const existingDir = await Deno.makeTempDir({ prefix: 'gw-registry-existing-' });
+    const existingDir = await Deno.realPath(await Deno.makeTempDir({ prefix: 'gw-registry-existing-' }));
     try {
       await registerRepo(existingDir);
       await registerRepo('/definitely/not/a/real/path/gw-repo');
@@ -228,6 +228,26 @@ Deno.test('repo-registry - missing path is dropped by pruneMissingRepos', async 
       );
     } finally {
       await Deno.remove(existingDir, { recursive: true });
+    }
+  });
+});
+
+Deno.test('repo-registry - symlinked and real paths of one repo are registered once', async () => {
+  await withTempConfigHome(async () => {
+    const real = await Deno.realPath(await Deno.makeTempDir({ prefix: 'gw-registry-real-' }));
+    const linkHolder = await Deno.makeTempDir({ prefix: 'gw-registry-link-' });
+    const link = join(linkHolder, 'repo-link');
+    try {
+      await Deno.symlink(real, link);
+      assertEquals(await registerRepo(link), true);
+      assertEquals(await registerRepo(real), false);
+      assertEquals(
+        (await loadRegistry()).map((r) => r.path),
+        [real]
+      );
+    } finally {
+      await Deno.remove(linkHolder, { recursive: true });
+      await Deno.remove(real, { recursive: true });
     }
   });
 });

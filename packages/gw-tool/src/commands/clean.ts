@@ -26,6 +26,7 @@ import * as output from '../lib/output.ts';
 import { pathExists } from '../lib/path-resolver.ts';
 import { getRepoDisplayName, pruneMissingRepos, type RegisteredRepo } from '../lib/repo-registry.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
+import type { Config } from '../lib/types.ts';
 
 /**
  * Check whether a branch is protected by any mechanism — system rules
@@ -524,36 +525,46 @@ async function executeInteractiveClean(): Promise<void> {
  * Load the clean settings of the repository whose root is the current
  * directory, without creating any config file.
  *
- * The canonical git-root config wins (it also holds protectedBranches —
- * see protect.ts). Repos whose config only lives inside a worktree fall
- * back to that worktree's config; with no config at all, defaults apply.
+ * Mirrors single-repo clean: defaultBranch and cleanThreshold come from a
+ * worktree's config (as loadConfig resolves it from inside a worktree,
+ * including config.local.json), and protectedBranches from the canonical
+ * git-root config (see protect.ts). On bare repos the root config often
+ * holds only defaults, so it is used for defaultBranch only as a fallback.
+ *
+ * Every defaultBranch found (worktree and root) is protected, so a stale
+ * or default-only config can never expose the real trunk to removal.
  */
 async function loadRepoCleanSettings(repoRoot: string): Promise<RepoCleanSettings> {
+  let rootConfig: Config | undefined;
   if (await pathExists(join(repoRoot, '.gw', 'config.json'))) {
-    const { config } = await loadRootConfig();
-    return {
-      defaultBranch: config.defaultBranch || 'main',
-      userProtected: config.protectedBranches ?? [],
-      cleanThreshold: config.cleanThreshold ?? 7,
-    };
+    rootConfig = (await loadRootConfig()).config;
   }
 
+  let worktreeConfig: Config | undefined;
   for (const wt of await listWorktrees()) {
     if (wt.bare || !(await pathExists(join(wt.path, '.gw', 'config.json')))) continue;
     Deno.chdir(wt.path);
     try {
-      const { config } = await loadConfig();
-      return {
-        defaultBranch: config.defaultBranch || 'main',
-        userProtected: config.protectedBranches ?? [],
-        cleanThreshold: config.cleanThreshold ?? 7,
-      };
+      worktreeConfig = (await loadConfig()).config;
     } finally {
       Deno.chdir(repoRoot);
     }
+    break;
   }
 
-  return { defaultBranch: 'main', userProtected: [], cleanThreshold: 7 };
+  const defaultBranch = worktreeConfig?.defaultBranch || rootConfig?.defaultBranch || 'main';
+  const userProtected = [...(rootConfig?.protectedBranches ?? worktreeConfig?.protectedBranches ?? [])];
+  for (const branch of [worktreeConfig?.defaultBranch, rootConfig?.defaultBranch]) {
+    if (branch && branch !== defaultBranch && !userProtected.includes(branch)) {
+      userProtected.push(branch);
+    }
+  }
+
+  return {
+    defaultBranch,
+    userProtected,
+    cleanThreshold: worktreeConfig?.cleanThreshold ?? rootConfig?.cleanThreshold ?? 7,
+  };
 }
 
 /**

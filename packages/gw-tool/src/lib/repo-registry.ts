@@ -86,15 +86,30 @@ async function saveRegistry(repos: RegisteredRepo[]): Promise<void> {
 }
 
 /**
+ * Canonical form of a path for comparison and storage: symlinks resolved
+ * (e.g. /tmp vs /private/tmp on macOS), falling back to a plain resolve
+ * when the path does not exist.
+ */
+async function canonicalPath(path: string): Promise<string> {
+  try {
+    return await Deno.realPath(path);
+  } catch {
+    return resolve(path);
+  }
+}
+
+/**
  * Add a repository root to the registry.
  * @returns true if the repo was newly added, false if already registered
  * @throws if the registry cannot be written
  */
 export async function registerRepo(repoPath: string): Promise<boolean> {
-  const normalized = resolve(repoPath);
+  const normalized = await canonicalPath(repoPath);
   const repos = await loadRegistry();
-  if (repos.some((r) => resolve(r.path) === normalized)) {
-    return false;
+  for (const r of repos) {
+    if ((await canonicalPath(r.path)) === normalized) {
+      return false;
+    }
   }
   repos.push({ path: normalized, addedAt: new Date().toISOString() });
   await saveRegistry(repos);
