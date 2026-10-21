@@ -146,8 +146,10 @@ worktrees that actually exist on disk are shown.
 
 Options:
   --all                      Clean across ALL gw repositories on this machine
-                             (every repo registered in ~/.config/gw/repos.json).
-                             Works with both interactive and --auto mode
+                             (every repo registered in
+                             $XDG_CONFIG_HOME/gw/repos.json, default
+                             ~/.config/gw/repos.json). Works with both
+                             interactive and --auto mode
   --stats                    Report what could be cleaned (overview chart + items
                              with ids) and exit without removing anything.
                              Combine with --all for every repo, --json for agents
@@ -169,11 +171,11 @@ Options:
                              and --remove's branch-commit check)
                              WARNING: This may result in data loss
   -n, --dry-run              Preview what would be removed without actually removing
-                             (only applies in --auto mode)
+                             (applies to --auto and --remove)
   --json                     Output results as JSON and exit (implies --dry-run in
                              --auto mode; machine-readable report with --stats
                              and --remove)
-  -y, --yes                  Skip confirmation prompt (only applies in --auto mode)
+  -y, --yes                  Skip confirmation prompt (applies to --auto and --remove)
   -h, --help                 Show this help message
 
 Safety Features:
