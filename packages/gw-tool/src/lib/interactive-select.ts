@@ -422,7 +422,7 @@ function render(
   const hasCategories = options.sections.some((s) => s.category);
   const categoryHint = hasCategories ? '  w select category' : '';
   lines.push(
-    output.dim(`  \u2191\u2193 navigate  \u2423 toggle  a select all${categoryHint}  \u23CE confirm  ^C cancel`)
+    output.dim(`  \u2191\u2193 navigate  \u2423 toggle  a select section${categoryHint}  \u23CE confirm  ^C cancel`)
   );
 
   // Render: move cursor home and overwrite
