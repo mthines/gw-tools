@@ -26,6 +26,7 @@ import { executeUnprotect } from './commands/unprotect.ts';
 import { executeShowInit } from './commands/show-init.ts';
 import { executePr } from './commands/pr.ts';
 import * as output from './lib/output.ts';
+import { autoRegisterCurrentRepo } from './lib/repo-registry.ts';
 
 /**
  * Available commands mapped to their handler functions
@@ -90,6 +91,11 @@ if (import.meta.main) {
       console.error("Run 'gw --help' for usage information\n");
       Deno.exit(1);
     }
+
+    // Record this repo in the global registry (used by `gw clean --all`).
+    // Best-effort and silent; also back-fills repos initialized before
+    // the registry existed.
+    await autoRegisterCurrentRepo();
 
     // Execute command
     await handler(args);

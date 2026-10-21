@@ -4,6 +4,7 @@
 
 import { dirname, join } from '@std/path';
 import { isProtectedBranch } from './branch-protection.ts';
+import { loadProtectedBranches } from './config.ts';
 
 /**
  * Worktree information from git worktree list
@@ -719,14 +720,19 @@ export async function findOrphanBranches(worktrees: WorktreeInfo[], defaultBranc
 /**
  * Silently prune orphan branches (branches without worktrees
  * that have no unpushed commits). Safe to call from any command.
+ * Branches in the user's `protectedBranches` are never deleted.
  * @param defaultBranch Default branch name to protect
+ * @param userProtected User-protected branch names to keep. When omitted,
+ *   they are loaded from the current repo's root config (best-effort:
+ *   no extra protection if the config cannot be read).
  * @returns Number of branches deleted
  */
-export async function pruneOrphanBranches(defaultBranch: string): Promise<number> {
+export async function pruneOrphanBranches(defaultBranch: string, userProtected?: string[]): Promise<number> {
+  const protectedNames = new Set(userProtected ?? (await loadProtectedBranches().catch(() => [] as string[])));
   const worktrees = await listWorktrees();
   const orphans = await findOrphanBranches(worktrees, defaultBranch);
 
-  const toDelete = orphans.filter((b) => b.canDelete);
+  const toDelete = orphans.filter((b) => b.canDelete && !protectedNames.has(b.name));
   if (toDelete.length === 0) return 0;
 
   let deleted = 0;

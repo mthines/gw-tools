@@ -1401,11 +1401,15 @@ gw clean [options]
 
 #### Options
 
+- `--all`: Clean across **all** gw repositories on this machine (see [Cleaning all repositories](#cleaning-all-repositories)). Works with both the interactive picker and `--auto`
+- `--stats`: Report what could be cleaned — an overview chart plus every removable item with its id — without removing anything. Combine with `--all` and `--json` (see [Stats and agent cleanup](#stats-and-agent-cleanup))
+- `--size`: Measure worktree disk usage (slow on large repos — a full `du`); adds sizes to the `--all` overview chart, `--stats`, and the single-repo interactive picker
+- `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`. `--force` applies to every id in the call — pass it only with the ids that need it
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
-- `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
+- `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits, and `--remove`'s branch-commit check). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
-- `--json`: Output results as JSON and exit (implies dry-run, no prompts)
+- `--json`: Output results as JSON and exit, no prompts (implies dry-run in `--auto` mode; machine-readable report with `--stats`; with `--remove`, pass `--yes` or `--dry-run`; with `--all` it needs `--auto`, `--stats`, or `--remove`)
 - `-y, --yes`: Skip confirmation prompt
 - `-h, --help`: Show help message
 
@@ -1435,7 +1439,45 @@ gw clean --json
 
 # Skip confirmation prompt (auto-confirm removal)
 gw clean --yes
+
+# Interactive picker across every gw repository
+gw clean --all
+
+# Auto mode across every gw repository (preview first)
+gw clean --all --auto --dry-run
 ```
+
+#### Cleaning all repositories
+
+`gw clean --all` cleans every gw repository on your machine from one place.
+
+gw keeps a registry of repository roots at `$XDG_CONFIG_HOME/gw/repos.json` (falling back to `~/.config/gw/repos.json`). A repository is added when you run `gw init`, and whenever any `gw` command runs inside a repository that has a `.gw/config.json` — so repositories set up before the registry existed are picked up the next time you use gw in them. Registration is silent and never makes a command fail. Repositories that no longer exist on disk are skipped and dropped from the registry.
+
+- **Interactive (`gw clean --all`)**: the picker groups items per repository — `<repo> › Worktrees`, `<repo> › Local Branches (no worktree)`, `<repo> › Orphan Branches`. A root **Select all (every repository)** row at the top selects everything at once, so you can then unselect what to keep. Press `a` (or space on a section header) to toggle that section — e.g. everything of one kind in one repo — and `w` to toggle the same category in **every** repository (e.g. all worktrees everywhere). Selected items are force-deleted.
+- **Auto (`gw clean --all --auto`)**: runs auto mode in each repository with a single confirmation, honoring `--dry-run`, `--json`, `--yes`, `--force`, and `--use-autoclean-threshold`. `--json` prints `{ "repos": [{ "name", "path", "cleanable", "skipped" }], "errors": [{ "name", "path", "error" }] }`.
+
+Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed. The default worktree (the repo root, or `<root>/<defaultBranch>`) stays protected even on a detached HEAD.
+
+The picker opens immediately and repositories stream into the list as each scan finishes, with a progress line at the top. When scanning is done, an **overview chart** replaces it, ranking up to 10 repositories (5 on short terminals) by how much can be cleaned up (worktrees, branches, orphans). Add `--size` to measure disk usage: sizes fill in after the list is shown, and the chart re-ranks by space — it runs `du` on every worktree, so it can take a while on large repos. Pressing enter while loading stops the scan first; only items you could see are removed.
+
+#### Stats and agent cleanup
+
+`gw clean --stats` reports what could be cleaned without removing anything: the overview chart plus each removable item with an id. Add `--all` for every registered repository, `--size` for disk usage, and `--json` for a machine-readable report:
+
+```bash
+gw clean --stats --all --size          # human-readable: where is the clutter?
+gw clean --stats --all --json          # {"repos":[{name,path,defaultBranch,worktrees,branches,orphans,totals}],"totals":{...},"errors":[...]}
+```
+
+Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). A repository that fails to scan is listed in the top-level `errors` array (`{ name, path, error }`, `[]` when none) instead of being silently omitted. Pass ids back to remove exactly those items:
+
+```bash
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --yes --json
+# → {"dryRun":false,"removed":[...],"refused":[{"id","reason"}],"failed":[{"id","error"}]}
+```
+
+`--remove` is safer than the interactive picker: it only acts on registered gw repositories, protected items are always refused, and unless `--force` it refuses worktrees with uncommitted changes or unpushed commits and branches with commits that exist on no remote and not in the default branch. A worktree and its branch can be removed in the same call. `--force` applies to every id in the call — pass it only with the ids that need it (a refused branch's reason says to re-run with only that id and `--force`), so batching never drops the safety checks on the other items. It exits `1` when any item was refused or failed. With `--json`, pass `--yes` (or `--dry-run`) — there is no prompt.
 
 #### How It Works
 
@@ -1457,6 +1499,10 @@ The clean command:
 | `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
 | `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
+| `gw clean --all`                     | N/A (user picks)   | No (force delete)    | Pick items across all repositories  |
+| `gw clean --all --auto`              | No (all worktrees) | Yes (unless --force) | Clean finished work in every repo   |
+| `gw clean --stats [--all] [--json]`  | N/A (report only)  | N/A                  | See where the clutter is            |
+| `gw clean --remove <id>...`          | N/A (given ids)    | Yes (unless --force) | Agent / scripted targeted cleanup   |
 | `gw prune`                           | No (all worktrees) | Yes                  | Full cleanup (worktrees + branches) |
 | `gw prune --stale-only`              | N/A                | N/A                  | Git passthrough (metadata only)     |
 

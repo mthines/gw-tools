@@ -31,6 +31,12 @@ export interface SelectSection {
   title: string;
   /** Items in this section */
   items: SelectItem[];
+  /**
+   * Optional category shared by related sections (e.g. "worktrees" across
+   * several repos). The 'w' key toggles every section of the current
+   * section's category at once.
+   */
+  category?: string;
 }
 
 /** Configuration for the multi-select prompt */
@@ -41,6 +47,22 @@ export interface MultiSelectOptions {
   sections: SelectSection[];
   /** Warning banner shown below the message */
   warningBanner?: string;
+  /** Extra lines (e.g. an overview chart) shown above the message */
+  headerLines?: string[];
+  /**
+   * Live mode: called once the prompt is on screen with a `refresh`
+   * function. The caller may then keep mutating `sections` (add sections,
+   * update items) and `headerLines`, and call `refresh()` to redraw — e.g.
+   * to stream in results that are still loading. The cursor stays on the
+   * same row. `refresh()` is a no-op once the prompt has closed.
+   */
+  onReady?: (refresh: () => void) => void;
+  /**
+   * When set, a root row with this label is shown above all sections.
+   * Toggling it selects (or deselects) every selectable item at once, so the
+   * user can select everything and then unselect what to keep.
+   */
+  selectAllLabel?: string;
 }
 
 /** Result returned by the multi-select prompt */
@@ -53,11 +75,11 @@ export interface MultiSelectResult {
 
 // ── Internal row types for the flattened render list ────────
 
-type RowType = 'section-header' | 'item' | 'separator';
+type RowType = 'select-all' | 'section-header' | 'item' | 'separator';
 
 interface Row {
   type: RowType;
-  /** Index of the section this row belongs to */
+  /** Index of the section this row belongs to (-1 for the select-all row) */
   sectionIndex: number;
   /** For item rows, the index into the section's items array */
   itemIndex?: number;
@@ -123,6 +145,7 @@ function parseKey(buf: Uint8Array, n: number): string {
       default: {
         const ch = String.fromCharCode(buf[0]);
         if (ch === 'a' || ch === 'A') return 'a';
+        if (ch === 'w' || ch === 'W') return 'w';
         return ch;
       }
     }
@@ -145,8 +168,12 @@ function parseKey(buf: Uint8Array, n: number): string {
 
 // ── Core logic ─────────────────────────────────────────────
 
-function buildRows(sections: SelectSection[]): Row[] {
+function buildRows(sections: SelectSection[], withSelectAll = false): Row[] {
   const rows: Row[] = [];
+  if (withSelectAll) {
+    rows.push({ type: 'select-all', sectionIndex: -1, focusable: true });
+    rows.push({ type: 'separator', sectionIndex: -1, focusable: false });
+  }
   for (let si = 0; si < sections.length; si++) {
     if (si > 0) {
       rows.push({
@@ -171,6 +198,16 @@ function buildRows(sections: SelectSection[]): Row[] {
     }
   }
   return rows;
+}
+
+/** Stable identity of a row, used to keep the cursor in place across rebuilds */
+function rowKey(row: Row | undefined, sections: SelectSection[]): string {
+  if (!row) return '';
+  if (row.type === 'select-all') return 'select-all';
+  const section = sections[row.sectionIndex];
+  if (row.type === 'section-header') return `header\0${section.title}`;
+  if (row.type === 'item') return `item\0${section.title}\0${section.items[row.itemIndex!].value}`;
+  return '';
 }
 
 function findNextFocusable(rows: Row[], current: number, direction: 1 | -1): number {
@@ -202,6 +239,33 @@ function toggleSectionAll(section: SelectSection): void {
   const selectable = section.items.filter((i) => !i.disabled);
   const state = getSectionSelectionState(section);
   const newValue = state !== 'all';
+  for (const item of selectable) {
+    item.selected = newValue;
+  }
+}
+
+/**
+ * Toggle all items in every section sharing the given section's category.
+ * Selects everything when anything is unselected, otherwise deselects all —
+ * mirroring toggleSectionAll across sections. Falls back to the single
+ * section when it has no category.
+ */
+function toggleCategoryAll(sections: SelectSection[], section: SelectSection): void {
+  const group = section.category ? sections.filter((s) => s.category === section.category) : [section];
+  const selectable = group.flatMap((s) => s.items.filter((i) => !i.disabled));
+  const newValue = selectable.some((i) => !i.selected);
+  for (const item of selectable) {
+    item.selected = newValue;
+  }
+}
+
+/**
+ * Toggle every selectable item in every section: selects all when anything
+ * is unselected, otherwise deselects all.
+ */
+function toggleEverything(sections: SelectSection[]): void {
+  const selectable = sections.flatMap((s) => s.items.filter((i) => !i.disabled));
+  const newValue = selectable.some((i) => !i.selected);
   for (const item of selectable) {
     item.selected = newValue;
   }
@@ -245,12 +309,21 @@ function getSelected(sections: SelectSection[]): string[] {
 const HEADER_LINES = 3; // header, warning, blank
 const FOOTER_LINES = 2; // blank, controls
 
-function renderRowLine(row: Row, isCursor: boolean, sections: SelectSection[]): string {
-  const section = sections[row.sectionIndex];
-
+function renderRowLine(row: Row, isCursor: boolean, sections: SelectSection[], selectAllLabel?: string): string {
   if (row.type === 'separator') {
     return '';
   }
+
+  if (row.type === 'select-all') {
+    const sel = countSelected(sections);
+    const tot = countTotal(sections);
+    const checkbox = tot > 0 && sel === tot ? output.checkmark() : sel > 0 ? output.warningSymbol() : ' ';
+    const title = output.bold(selectAllLabel ?? 'Select all');
+    const count = output.dim(` (${sel}/${tot})`);
+    return isCursor ? `${output.bold('>')} [${checkbox}] ${title}${count}` : `  [${checkbox}] ${title}${count}`;
+  }
+
+  const section = sections[row.sectionIndex];
 
   if (row.type === 'section-header') {
     const state = getSectionSelectionState(section);
@@ -299,7 +372,9 @@ function render(
 
   // Calculate viewport size for the scrollable area
   const hasWarning = options.warningBanner ? 1 : 0;
-  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES;
+  const headerLines = options.headerLines ?? [];
+  const extraHeader = headerLines.length > 0 ? headerLines.length + 1 : 0; // + blank line
+  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES + extraHeader;
   const viewportHeight = Math.max(5, termRows - fixedLines);
 
   // Adjust viewport offset to keep cursor visible
@@ -316,6 +391,9 @@ function render(
   const lines: string[] = [];
 
   // Header
+  if (headerLines.length > 0) {
+    lines.push(...headerLines, '');
+  }
   lines.push(`${output.bold(options.message)} ${output.dim(`(${sel}/${tot} selected)`)}`);
   if (options.warningBanner) {
     lines.push(`${output.warningSymbol()} ${options.warningBanner}`);
@@ -332,7 +410,7 @@ function render(
   }
 
   for (let ri = viewportOffset; ri < visibleEnd; ri++) {
-    lines.push(renderRowLine(rows[ri], ri === cursor, options.sections));
+    lines.push(renderRowLine(rows[ri], ri === cursor, options.sections, options.selectAllLabel));
   }
 
   if (showDownArrow) {
@@ -341,7 +419,11 @@ function render(
 
   // Footer
   lines.push('');
-  lines.push(output.dim('  \u2191\u2193 navigate  \u2423 toggle  a select all  \u23CE confirm  ^C cancel'));
+  const hasCategories = options.sections.some((s) => s.category);
+  const categoryHint = hasCategories ? '  w select category' : '';
+  lines.push(
+    output.dim(`  \u2191\u2193 navigate  \u2423 toggle  a select section${categoryHint}  \u23CE confirm  ^C cancel`)
+  );
 
   // Render: move cursor home and overwrite
   io.write(encoder.encode(CURSOR_HOME));
@@ -363,7 +445,8 @@ function render(
  * Display an interactive multi-select prompt with grouped sections.
  *
  * Navigation: Arrow keys up/down, Space to toggle, Enter to confirm,
- * Ctrl+C/Escape to cancel, 'a' to toggle all in current section.
+ * Ctrl+C/Escape to cancel, 'a' to toggle all in current section, 'w' to
+ * toggle all sections sharing the current section's category.
  *
  * Uses the alternate screen buffer so the main scrollback is preserved.
  *
@@ -379,9 +462,10 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
     throw new Error('Interactive mode requires a terminal (TTY). ' + 'Use non-interactive mode instead.');
   }
 
-  const rows = buildRows(options.sections);
+  const withSelectAll = options.selectAllLabel !== undefined;
+  let rows = buildRows(options.sections, withSelectAll);
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !options.onReady) {
     return { selected: [], cancelled: false };
   }
 
@@ -397,6 +481,23 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
   try {
     // Initial render
     viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+
+    // Live mode: let the caller stream in sections/header updates
+    let closed = false;
+    if (options.onReady) {
+      options.onReady(() => {
+        if (closed) return;
+        const key = rowKey(rows[cursor], options.sections);
+        rows = buildRows(options.sections, withSelectAll);
+        const same = rows.findIndex((r) => r.focusable && rowKey(r, options.sections) === key);
+        cursor = same >= 0 ? same : findFirstFocusable(rows);
+        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+      });
+    }
+    const close = <T>(result: T): T => {
+      closed = true;
+      return result;
+    };
 
     // Input loop
     const buf = new Uint8Array(16);
@@ -417,7 +518,10 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
         case 'space': {
           const row = rows[cursor];
-          if (row.type === 'section-header') {
+          if (!row) break;
+          if (row.type === 'select-all') {
+            toggleEverything(options.sections);
+          } else if (row.type === 'section-header') {
             toggleSectionAll(options.sections[row.sectionIndex]);
           } else if (row.type === 'item' && row.itemIndex !== undefined) {
             const item = options.sections[row.sectionIndex].items[row.itemIndex];
@@ -430,20 +534,37 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
         case 'a': {
           const row = rows[cursor];
-          toggleSectionAll(options.sections[row.sectionIndex]);
+          if (!row) break;
+          if (row.type === 'select-all') {
+            toggleEverything(options.sections);
+          } else {
+            toggleSectionAll(options.sections[row.sectionIndex]);
+          }
+          break;
+        }
+
+        case 'w': {
+          const row = rows[cursor];
+          if (!row) break;
+          if (row.type === 'select-all') {
+            toggleEverything(options.sections);
+          } else {
+            toggleCategoryAll(options.sections, options.sections[row.sectionIndex]);
+          }
           break;
         }
 
         case 'enter':
-          return { selected: getSelected(options.sections), cancelled: false };
+          return close({ selected: getSelected(options.sections), cancelled: false });
 
         case 'ctrl-c':
         case 'escape':
-          return { selected: [], cancelled: true };
+          return close({ selected: [], cancelled: true });
       }
 
       viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
     }
+    closed = true;
   } finally {
     // Always restore terminal state
     terminal.setRaw(false);

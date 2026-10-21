@@ -128,6 +128,41 @@ gw clean --json
 gw clean --yes
 ```
 
+### Cleaning Every Repository (`--all`)
+
+gw registers each repository it is used in (`gw init`, or any `gw` command run inside a repo with `.gw/config.json`) in `~/.config/gw/repos.json` (or `$XDG_CONFIG_HOME/gw/repos.json`). `--all` uses that registry:
+
+```bash
+# Interactive picker grouped per repo: "<repo> › Worktrees", "<repo> › Orphan Branches", ...
+#   top "Select all" row = everything (then unselect what to keep)
+#   a = toggle current section, w = toggle that category in every repo
+gw clean --all
+
+# Auto mode in every repo (same safety checks, one confirmation)
+gw clean --all --auto --dry-run
+gw clean --all --auto
+```
+
+Missing repositories are skipped and dropped from the registry; each repo keeps its own protected branches.
+
+### Agent Cleanup with `--stats` and `--remove`
+
+Agents should not drive the interactive picker. Read a report, decide, then remove by id:
+
+```bash
+# 1. Report (never removes). --size adds disk usage (slow: runs du per worktree)
+gw clean --stats --all --json
+#    repos[].worktrees[] / branches[] / orphans[] each have: id, protected,
+#    uncommitted, unpushed, ageDays / lastCommit, sizeBytes
+#    errors[] lists repos that failed to scan: { name, path, error }
+
+# 2. Preview, then remove exactly the chosen ids
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --yes --json
+```
+
+`--remove` only acts on registered gw repos, refuses protected items, refuses worktrees with uncommitted/unpushed work and branches with commits on no remote or default branch unless `--force`, and exits 1 if anything was refused or failed — check `refused` and `failed` in the JSON.
+
 ### Safety Checks
 
 Only removes worktrees with:
