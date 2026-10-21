@@ -4,6 +4,8 @@
  */
 
 import { dirname, join } from '@std/path';
+// Side effect: isolate the global repo registry from the real ~/.config/gw
+import './isolate-registry.ts';
 
 /**
  * Creates an isolated temporary git repository for testing

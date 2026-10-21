@@ -31,6 +31,12 @@ export interface SelectSection {
   title: string;
   /** Items in this section */
   items: SelectItem[];
+  /**
+   * Optional category shared by related sections (e.g. "worktrees" across
+   * several repos). The 'w' key toggles every section of the current
+   * section's category at once.
+   */
+  category?: string;
 }
 
 /** Configuration for the multi-select prompt */
@@ -123,6 +129,7 @@ function parseKey(buf: Uint8Array, n: number): string {
       default: {
         const ch = String.fromCharCode(buf[0]);
         if (ch === 'a' || ch === 'A') return 'a';
+        if (ch === 'w' || ch === 'W') return 'w';
         return ch;
       }
     }
@@ -202,6 +209,21 @@ function toggleSectionAll(section: SelectSection): void {
   const selectable = section.items.filter((i) => !i.disabled);
   const state = getSectionSelectionState(section);
   const newValue = state !== 'all';
+  for (const item of selectable) {
+    item.selected = newValue;
+  }
+}
+
+/**
+ * Toggle all items in every section sharing the given section's category.
+ * Selects everything when anything is unselected, otherwise deselects all —
+ * mirroring toggleSectionAll across sections. Falls back to the single
+ * section when it has no category.
+ */
+function toggleCategoryAll(sections: SelectSection[], section: SelectSection): void {
+  const group = section.category ? sections.filter((s) => s.category === section.category) : [section];
+  const selectable = group.flatMap((s) => s.items.filter((i) => !i.disabled));
+  const newValue = selectable.some((i) => !i.selected);
   for (const item of selectable) {
     item.selected = newValue;
   }
@@ -341,7 +363,11 @@ function render(
 
   // Footer
   lines.push('');
-  lines.push(output.dim('  \u2191\u2193 navigate  \u2423 toggle  a select all  \u23CE confirm  ^C cancel'));
+  const hasCategories = options.sections.some((s) => s.category);
+  const categoryHint = hasCategories ? '  w select category' : '';
+  lines.push(
+    output.dim(`  \u2191\u2193 navigate  \u2423 toggle  a select all${categoryHint}  \u23CE confirm  ^C cancel`)
+  );
 
   // Render: move cursor home and overwrite
   io.write(encoder.encode(CURSOR_HOME));
@@ -363,7 +389,8 @@ function render(
  * Display an interactive multi-select prompt with grouped sections.
  *
  * Navigation: Arrow keys up/down, Space to toggle, Enter to confirm,
- * Ctrl+C/Escape to cancel, 'a' to toggle all in current section.
+ * Ctrl+C/Escape to cancel, 'a' to toggle all in current section, 'w' to
+ * toggle all sections sharing the current section's category.
  *
  * Uses the alternate screen buffer so the main scrollback is preserved.
  *
@@ -431,6 +458,12 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
         case 'a': {
           const row = rows[cursor];
           toggleSectionAll(options.sections[row.sectionIndex]);
+          break;
+        }
+
+        case 'w': {
+          const row = rows[cursor];
+          toggleCategoryAll(options.sections, options.sections[row.sectionIndex]);
           break;
         }
 

@@ -361,3 +361,67 @@ Deno.test('multiSelect - multiple items across sections', async () => {
   assertEquals(result.cancelled, false);
   assertEquals(result.selected, ['wt:feat/old', 'br:fix/bug']);
 });
+
+// ── Category toggle ('w') ───────────────────────────────────
+
+function createMultiRepoSections(): SelectSection[] {
+  return [
+    {
+      title: 'repo-a › Worktrees',
+      category: 'worktrees',
+      items: [
+        { label: 'feat/a', value: 'a:wt:feat/a' },
+        { label: 'main', value: 'a:wt:main', disabled: true, disabledReason: 'protected' },
+      ],
+    },
+    {
+      title: 'repo-a › Orphan Branches',
+      category: 'orphans',
+      items: [{ label: 'old/a', value: 'a:orphan:old/a' }],
+    },
+    {
+      title: 'repo-b › Worktrees',
+      category: 'worktrees',
+      items: [{ label: 'feat/b', value: 'b:wt:feat/b' }],
+    },
+  ];
+}
+
+Deno.test("multiSelect - category toggle: 'w' selects the section's category in all repos", async () => {
+  // Cursor starts on the repo-a Worktrees header
+  const keys = encodeKeys('w', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect({ message: 'Test', sections: createMultiRepoSections() }, io);
+
+  assertEquals(result.cancelled, false);
+  assertEquals(result.selected, ['a:wt:feat/a', 'b:wt:feat/b']);
+});
+
+Deno.test("multiSelect - category toggle: pressing 'w' twice deselects the category", async () => {
+  const keys = encodeKeys('w', 'w', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect({ message: 'Test', sections: createMultiRepoSections() }, io);
+
+  assertEquals(result.selected, []);
+});
+
+Deno.test("multiSelect - category toggle: 'w' completes a partially selected category", async () => {
+  // down -> feat/a, space selects it, then 'w' selects the rest of the category
+  const keys = encodeKeys('down', 'space', 'w', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect({ message: 'Test', sections: createMultiRepoSections() }, io);
+
+  assertEquals(result.selected, ['a:wt:feat/a', 'b:wt:feat/b']);
+});
+
+Deno.test("multiSelect - category toggle: 'w' without categories toggles only the current section", async () => {
+  const keys = encodeKeys('w', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect({ message: 'Test', sections: createTestSections() }, io);
+
+  assertEquals(result.selected, ['wt:feat/old', 'wt:feat/new']);
+});
