@@ -1476,6 +1476,37 @@ Deno.test(
   }
 );
 
+Deno.test(
+  'clean --all interactive - leaving before the scan finishes says Cancelled, not Nothing to clean',
+  async () => {
+    await withTempRegistry(async () => {
+      // The first repo fails to scan (not a git repo); the second, never
+      // scanned because the user leaves at once, has work
+      const broken = await Deno.makeTempDir({ prefix: 'gw-not-a-repo-' });
+      await registerRepo(broken);
+      const repoB = await createRegisteredRepo(['feat-b']);
+      try {
+        const cwd = new TempCwd(repoB.path);
+        try {
+          const { io } = createPickerIO(['enter'], false);
+          const { stdout } = await withMockedExit(() => executeInteractiveCleanAll(io), { captureOutput: true });
+          assertEquals(stdout?.includes('Cancelled.'), true, 'reports the early exit');
+          assertEquals(stdout?.includes('Nothing to clean'), false, 'does not claim unscanned repos are clean');
+        } finally {
+          cwd.restore();
+        }
+        assertEquals(
+          (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+          true
+        );
+      } finally {
+        await Deno.remove(broken, { recursive: true });
+        await repoB.cleanup();
+      }
+    });
+  }
+);
+
 Deno.test('clean --all interactive - opens before scanning finishes and shows a loading line', async () => {
   await withTempRegistry(async () => {
     const repoA = await createRegisteredRepo(['feat-a']);

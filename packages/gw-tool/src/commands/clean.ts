@@ -158,12 +158,14 @@ Options:
                              br:<repo>:<branch>. Protected items are refused;
                              dirty/unpushed worktrees and branches with
                              commits not on a remote or the default branch
-                             need --force. Only registered gw repos
+                             need --force. Only items in registered gw repos
+                             are accepted
   -a, --auto                 Auto mode: remove all safe worktrees without
                              interactive selection (previous default behavior)
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
                              (only applies in --auto mode)
-  -f, --force                Skip safety checks (uncommitted changes, unpushed commits)
+  -f, --force                Skip safety checks (uncommitted changes, unpushed commits,
+                             and --remove's branch-commit check)
                              WARNING: This may result in data loss
   -n, --dry-run              Preview what would be removed without actually removing
                              (only applies in --auto mode)
@@ -683,6 +685,8 @@ export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = fal
   let stopped = false;
   let progress = { label: 'Scanning repositories', done: 0, total: repos.length };
   let loading = true;
+  // True only when every repo was scanned (not when the user left early)
+  let scanComplete = false;
   let frame = 0;
 
   const drawHeader = () => {
@@ -731,6 +735,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = fal
       drawHeader();
       refresh();
     }
+    scanComplete = !stopped;
 
     if (withSize && !stopped) {
       const ready = scanned.map((s, i) => [s, i] as const).filter((e): e is [RepoStats, number] => e[0] !== null);
@@ -788,7 +793,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = fal
   }
 
   for (const failure of failures) output.warning(`Skipped ${failure}`);
-  if (!loading && sections.length === 0) {
+  if (scanComplete && sections.length === 0) {
     output.success('Nothing to clean');
     Deno.exit(0);
   }
