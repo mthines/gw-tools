@@ -1794,3 +1794,82 @@ Deno.test('clean --remove - a missing id is an error, never a fall-through to an
     }
   });
 });
+
+// ── orphan pruning honors protectedBranches ─────────────
+
+/**
+ * Create a pushed `branch` with no worktree (an orphan that pruning would
+ * otherwise delete). Returns the bare remote; the caller cleans it up.
+ */
+async function createPushedOrphan(repo: GitTestRepo, branch: string): Promise<GitTestRepo> {
+  const remote = new GitTestRepo();
+  await remote.initBare();
+  await repo.runCommand('git', ['remote', 'add', 'origin', remote.path]);
+  await repo.createBranch(branch);
+  await repo.runCommand('git', ['push', '-u', 'origin', branch]);
+  return remote;
+}
+
+async function branchExists(repo: GitTestRepo, branch: string): Promise<boolean> {
+  const { stdout } = await new Deno.Command('git', {
+    args: ['branch', '--list', branch],
+    cwd: repo.path,
+    stdout: 'piped',
+  }).output();
+  return new TextDecoder().decode(stdout).trim() !== '';
+}
+
+Deno.test('clean --all --auto - keeps protected orphan branches when pruning', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-a'], ['develop']);
+    const remote = await createPushedOrphan(repo, 'develop');
+    try {
+      const cwd = new TempCwd(repo.path);
+      try {
+        const { exitCode } = await withMockedExit(() => executeClean(['--all', '--auto', '--yes']));
+        assertEquals(exitCode ?? 0, 0);
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        false,
+        'removable worktree removed'
+      );
+      assertEquals(await branchExists(repo, 'develop'), true, 'protected orphan branch kept');
+    } finally {
+      await repo.cleanup();
+      await remote.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --auto - keeps protected orphan branches when pruning', async () => {
+  const repo = new GitTestRepo();
+  let remote: GitTestRepo | undefined;
+  try {
+    await repo.init();
+    await writeTestConfig(repo.path, { ...createMinimalConfig(repo.path), protectedBranches: ['develop'] });
+    await repo.createWorktree('feat-a');
+    remote = await createPushedOrphan(repo, 'develop');
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      const { exitCode } = await withMockedExit(() => executeClean(['--auto', '--yes']));
+      assertEquals(exitCode ?? 0, 0);
+    } finally {
+      cwd.restore();
+    }
+
+    assertEquals(
+      (await repo.listWorktrees()).some((wt) => wt.includes('feat-a')),
+      false,
+      'removable worktree removed'
+    );
+    assertEquals(await branchExists(repo, 'develop'), true, 'protected orphan branch kept');
+  } finally {
+    await repo.cleanup();
+    await remote?.cleanup();
+  }
+});

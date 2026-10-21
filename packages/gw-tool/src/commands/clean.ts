@@ -1007,12 +1007,13 @@ async function removeAutoCleanWorktrees(
 }
 
 /**
- * Silently prune orphan branches in the current repository
+ * Silently prune orphan branches in the current repository,
+ * keeping any branch in `userProtected`
  * @returns Number of branches deleted (0 on failure)
  */
-async function pruneOrphansQuietly(defaultBranch: string): Promise<number> {
+async function pruneOrphansQuietly(defaultBranch: string, userProtected: string[]): Promise<number> {
   try {
-    return await pruneOrphanBranches(defaultBranch);
+    return await pruneOrphanBranches(defaultBranch, userProtected);
   } catch {
     // Don't fail clean if orphan branch pruning fails
     return 0;
@@ -1149,7 +1150,7 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
       failed += r.failed;
       // Silently prune orphan branches after cleaning worktrees
       if (r.successful > 0) {
-        prunedOrphans += await pruneOrphansQuietly(a.settings.defaultBranch);
+        prunedOrphans += await pruneOrphansQuietly(a.settings.defaultBranch, a.settings.userProtected);
       }
     });
   }
@@ -1638,7 +1639,7 @@ async function runClean(parsed: CleanArgs): Promise<void> {
 
   // Silently prune orphan branches after cleaning worktrees
   if (successful > 0) {
-    const deleted = await pruneOrphansQuietly(defaultBranch);
+    const deleted = await pruneOrphansQuietly(defaultBranch, userProtectedAuto);
     if (deleted > 0) {
       output.success(`Pruned ${deleted} orphan branch(es)`);
     }

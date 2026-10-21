@@ -833,3 +833,37 @@ Deno.test('remove command - batch confirmation prompt defaults to yes (empty Ent
     await repo.cleanup();
   }
 });
+
+Deno.test('remove command - keeps protected orphan branches when pruning', async () => {
+  const repo = new GitTestRepo();
+  const remote = new GitTestRepo();
+  try {
+    await repo.init();
+    await writeTestConfig(repo.path, { ...createMinimalConfig(repo.path), protectedBranches: ['develop'] });
+    await repo.createWorktree('feat-branch', 'feat-branch');
+
+    // A pushed `develop` with no worktree: an orphan pruning would otherwise delete
+    await remote.initBare();
+    await repo.runCommand('git', ['remote', 'add', 'origin', remote.path]);
+    await repo.createBranch('develop');
+    await repo.runCommand('git', ['push', '-u', 'origin', 'develop']);
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeRemove(['--yes', 'feat-branch']);
+    } finally {
+      cwd.restore();
+    }
+
+    await assertWorktreeNotExists(repo.path, 'feat-branch');
+    const { stdout } = await new Deno.Command('git', {
+      args: ['branch', '--list', 'develop'],
+      cwd: repo.path,
+      stdout: 'piped',
+    }).output();
+    assertEquals(new TextDecoder().decode(stdout).trim() !== '', true, 'protected orphan branch kept');
+  } finally {
+    await repo.cleanup();
+    await remote.cleanup();
+  }
+});
