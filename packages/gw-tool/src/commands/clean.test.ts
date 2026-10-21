@@ -1529,3 +1529,169 @@ Deno.test('clean --all interactive - --size fills in sizes after the list is sho
     }
   });
 });
+
+Deno.test('clean --remove - refuses items in repos that are not registered gw repos', async () => {
+  await withTempRegistry(async () => {
+    const registered = await createRegisteredRepo([]);
+    const stranger = new GitTestRepo();
+    try {
+      await stranger.init();
+      await stranger.createWorktree('develop');
+      const cwd = new TempCwd(registered.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson(['--remove', `wt:${join(stranger.path, 'develop')}`, '--yes', '--force', '--json']);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.exitCode, 1);
+      assertEquals((result.data.refused as { reason: string }[])[0].reason.includes('not a registered gw repo'), true);
+      assertEquals(
+        (await stranger.listWorktrees()).some((wt) => wt.includes('develop')),
+        true
+      );
+    } finally {
+      await registered.cleanup();
+      await stranger.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - refuses a branch id whose repo path is not the repo root', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo([]);
+    try {
+      await repo.createBranch('feature');
+      await Deno.mkdir(join(repo.path, 'sub'));
+      const cwd = new TempCwd(repo.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson(['--remove', `br:${join(repo.path, 'sub')}:feature`, '--yes', '--json']);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.exitCode, 1);
+      assertEquals((await repo.listBranches()).includes('feature'), true);
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - refuses a branch with commits found nowhere else unless --force', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['unique']);
+    try {
+      // A commit that exists only on `unique`
+      await repo.runCommand('git', ['-C', join(repo.path, 'unique'), 'commit', '--allow-empty', '-m', 'only here']);
+      await repo.runCommand('git', ['worktree', 'remove', join(repo.path, 'unique')], repo.path);
+      const id = `br:${repo.path}:unique`;
+      const cwd = new TempCwd(repo.path);
+      try {
+        const refusedRun = await runCleanJson(['--remove', id, '--yes', '--json']);
+        assertEquals(refusedRun.exitCode, 1);
+        assertEquals((await repo.listBranches()).includes('unique'), true);
+
+        const forcedRun = await runCleanJson(['--remove', id, '--yes', '--force', '--json']);
+        assertEquals(forcedRun.exitCode ?? 0, 0);
+        assertEquals((await repo.listBranches()).includes('unique'), false);
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - removes a worktree and its branch in one call', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-x']);
+    try {
+      const cwd = new TempCwd(repo.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson([
+          '--remove',
+          `br:${repo.path}:feat-x`,
+          '--remove',
+          `wt:${join(repo.path, 'feat-x')}`,
+          '--yes',
+          '--json',
+        ]);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.exitCode ?? 0, 0);
+      assertEquals((result.data.removed as string[]).length, 2);
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('feat-x')),
+        false
+      );
+      assertEquals((await repo.listBranches()).includes('feat-x'), false);
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - deletes a fully merged branch in a bare repo without --force', async () => {
+  await withTempRegistry(async () => {
+    const source = new GitTestRepo();
+    const holder = await Deno.makeTempDir({ prefix: 'gw-bare-remove-' });
+    try {
+      await source.init();
+      const bare = join(await Deno.realPath(holder), 'project.git');
+      await source.runCommand('git', ['clone', '--bare', source.path, bare]);
+      await source.runCommand('git', ['-C', bare, 'worktree', 'add', join(bare, 'main'), 'main']);
+      await source.runCommand('git', ['-C', bare, 'branch', 'merged', 'main']);
+      await writeTestConfig(join(bare, 'main'), createMinimalConfig());
+      await registerRepo(bare);
+
+      const cwd = new TempCwd(join(bare, 'main'));
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson(['--remove', `br:${bare}:merged`, '--yes', '--json']);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.exitCode ?? 0, 0);
+      assertEquals(result.data.removed, [`br:${bare}:merged`]);
+    } finally {
+      await source.cleanup();
+      await Deno.remove(holder, { recursive: true });
+    }
+  });
+});
+
+Deno.test('clean --remove - a missing id is an error, never a fall-through to another mode', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-y']);
+    try {
+      const cwd = new TempCwd(repo.path);
+      try {
+        for (const args of [
+          ['--auto', '--force', '--yes', '--remove'],
+          ['--remove', '--auto', '--yes'],
+          ['--remove=', '--auto', '--yes'],
+        ]) {
+          let threw = false;
+          try {
+            await withMockedExit(() => executeClean(args));
+          } catch (error) {
+            threw = String(error).includes('--remove needs an item id');
+          }
+          assertEquals(threw, true, `rejects ${args.join(' ')}`);
+        }
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('feat-y')),
+        true
+      );
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});

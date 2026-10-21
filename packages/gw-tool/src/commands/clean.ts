@@ -33,7 +33,7 @@ import {
 import { multiSelect, type SelectItem, type SelectSection, type TerminalIO } from '../lib/interactive-select.ts';
 import * as output from '../lib/output.ts';
 import { findGitRoot, pathExists } from '../lib/path-resolver.ts';
-import { getRepoDisplayName, pruneMissingRepos, type RegisteredRepo } from '../lib/repo-registry.ts';
+import { getRepoDisplayName, isRegisteredRepo, pruneMissingRepos, type RegisteredRepo } from '../lib/repo-registry.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import type { Config } from '../lib/types.ts';
 
@@ -99,11 +99,19 @@ interface CleanArgs {
 function parseCleanArgs(args: string[]): CleanArgs {
   const remove: string[] = [];
   for (let i = 0; i < args.length; i++) {
-    if (args[i] === '--remove' && i + 1 < args.length) {
-      remove.push(args[++i]);
+    let id: string | undefined;
+    if (args[i] === '--remove') {
+      id = args[++i];
     } else if (args[i].startsWith('--remove=')) {
-      remove.push(args[i].slice('--remove='.length));
+      id = args[i].slice('--remove='.length);
+    } else {
+      continue;
     }
+    // A missing id must never fall through to another (destructive) mode
+    if (!id || id.startsWith('-')) {
+      throw new Error('--remove needs an item id (wt:<path> or br:<repo>:<branch>; see gw clean --stats --json)');
+    }
+    remove.push(id);
   }
 
   return {
@@ -148,7 +156,9 @@ Options:
   --remove <id>              Remove exactly this item (repeatable). Ids come from
                              --stats / --stats --json: wt:<path> or
                              br:<repo>:<branch>. Protected items are refused;
-                             dirty/unpushed worktrees need --force
+                             dirty/unpushed worktrees and branches with
+                             commits not on a remote or the default branch
+                             need --force. Only registered gw repos
   -a, --auto                 Auto mode: remove all safe worktrees without
                              interactive selection (previous default behavior)
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
@@ -1233,9 +1243,29 @@ interface RemovalTarget {
 }
 
 /**
+ * Whether a branch has commits that exist nowhere else — not on any remote
+ * branch and not in the default branch — i.e. deleting it would lose work.
+ * Errors count as "yes" (fail safe).
+ */
+async function hasUniqueCommits(branch: string, defaultBranch: string, localBranches: Set<string>): Promise<boolean> {
+  const args = ['rev-list', '--count', `refs/heads/${branch}`, '--not', '--remotes'];
+  if (localBranches.has(defaultBranch) && defaultBranch !== branch) {
+    args.push(`refs/heads/${defaultBranch}`);
+  }
+  try {
+    const { code, stdout } = await new Deno.Command('git', { args, stdout: 'piped', stderr: 'null' }).output();
+    if (code !== 0) return true;
+    return Number(new TextDecoder().decode(stdout).trim()) > 0;
+  } catch {
+    return true;
+  }
+}
+
+/**
  * Validate --remove ids within the repository of the current directory.
  * Protected items are always refused; worktrees with uncommitted or unpushed
- * work are refused unless --force.
+ * work, and branches whose commits exist nowhere else, are refused unless
+ * --force.
  */
 async function planRepoRemovals(
   repoRoot: string,
@@ -1248,7 +1278,10 @@ async function planRepoRemovals(
   const allowed: RemovalTarget[] = [];
   const refused: { id: string; reason: string }[] = [];
 
-  for (const item of items) {
+  // Worktrees first, so a branch whose worktree is removed in the same call
+  // is no longer considered checked out.
+  const ordered = [...items].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'worktree' ? -1 : 1));
+  for (const item of ordered) {
     if (item.kind === 'worktree') {
       const wt = worktrees.find((w) => !w.bare && resolve(w.path) === resolve(item.target));
       if (!wt) {
@@ -1263,13 +1296,19 @@ async function planRepoRemovals(
         allowed.push({ id: item.id, kind: 'worktree', target: wt.path, label: wt.branch || wt.path });
       }
     } else {
-      const holder = worktrees.find((w) => w.branch === item.target);
+      const holder = worktrees.find(
+        (w) =>
+          w.branch === item.target &&
+          !allowed.some((t) => t.kind === 'worktree' && resolve(t.target) === resolve(w.path))
+      );
       if (!branches.has(item.target)) {
         refused.push({ id: item.id, reason: 'branch not found' });
       } else if (isEffectivelyProtected(item.target, settings.defaultBranch, settings.userProtected)) {
         refused.push({ id: item.id, reason: 'protected branch' });
       } else if (holder) {
         refused.push({ id: item.id, reason: `checked out in worktree ${holder.path}` });
+      } else if (!force && (await hasUniqueCommits(item.target, settings.defaultBranch, branches))) {
+        refused.push({ id: item.id, reason: 'has commits not on any remote or the default branch (use --force)' });
       } else {
         allowed.push({ id: item.id, kind: 'branch', target: item.target, label: item.target });
       }
@@ -1300,9 +1339,18 @@ async function executeRemoveItems(parsed: CleanArgs): Promise<void> {
     let root: string;
     try {
       if (!(await pathExists(probe))) throw new Error('missing');
-      root = await findGitRoot(probe);
+      root = await Deno.realPath(await findGitRoot(probe));
     } catch {
       refused.push({ id, reason: `${parsedId.kind === 'worktree' ? 'worktree' : 'repository'} not found` });
+      continue;
+    }
+    // Only gw-managed repos: their protection settings are known
+    if (!(await isRegisteredRepo(root))) {
+      refused.push({ id, reason: `repository ${root} is not a registered gw repo` });
+      continue;
+    }
+    if (parsedId.kind === 'branch' && (await Deno.realPath(parsedId.repoPath)) !== root) {
+      refused.push({ id, reason: `${parsedId.repoPath} is not a repository root (expected ${root})` });
       continue;
     }
     const list = byRepo.get(root) ?? [];
@@ -1379,7 +1427,10 @@ async function executeRemoveItems(parsed: CleanArgs): Promise<void> {
           if (t.kind === 'worktree') {
             await removeWorktree(t.target, parsed.force);
           } else {
-            await deleteBranch(t.target, parsed.force);
+            // Safety was checked in planRepoRemovals (hasUniqueCommits); `-d`
+            // is unreliable here — from a bare root it compares against a
+            // HEAD that usually does not exist.
+            await deleteBranch(t.target, true);
           }
           removed.push(t.id);
           if (!parsed.json) console.log(`  ${output.checkmark()} Removed ${t.kind} ${output.path(t.label)}`);

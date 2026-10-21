@@ -160,7 +160,7 @@ gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --
 gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --yes --json
 ```
 
-`--remove` refuses protected items, refuses worktrees with uncommitted/unpushed work unless `--force`, deletes branches with `-d` (`-D` with `--force`), and exits 1 if anything was refused or failed — check `refused` and `failed` in the JSON.
+`--remove` only acts on registered gw repos, refuses protected items, refuses worktrees with uncommitted/unpushed work and branches with commits on no remote or default branch unless `--force`, and exits 1 if anything was refused or failed — check `refused` and `failed` in the JSON.
 
 ### Safety Checks
 

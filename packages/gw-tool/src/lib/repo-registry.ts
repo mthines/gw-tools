@@ -99,6 +99,17 @@ async function canonicalPath(path: string): Promise<string> {
 }
 
 /**
+ * Whether a path is a registered repository root (compared canonically)
+ */
+export async function isRegisteredRepo(repoPath: string): Promise<boolean> {
+  const target = await canonicalPath(repoPath);
+  for (const r of await loadRegistry()) {
+    if ((await canonicalPath(r.path)) === target) return true;
+  }
+  return false;
+}
+
+/**
  * Add a repository root to the registry.
  * @returns true if the repo was newly added, false if already registered
  * @throws if the registry cannot be written
