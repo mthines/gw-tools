@@ -128,6 +128,22 @@ gw clean --json
 gw clean --yes
 ```
 
+### Cleaning Every Repository (`--all`)
+
+gw registers each repository it is used in (`gw init`, or any `gw` command run inside a repo with `.gw/config.json`) in `~/.config/gw/repos.json` (or `$XDG_CONFIG_HOME/gw/repos.json`). `--all` uses that registry:
+
+```bash
+# Interactive picker grouped per repo: "<repo> › Worktrees", "<repo> › Orphan Branches", ...
+#   a = toggle current section, w = toggle that category in every repo
+gw clean --all
+
+# Auto mode in every repo (same safety checks, one confirmation)
+gw clean --all --auto --dry-run
+gw clean --all --auto
+```
+
+Missing repositories are skipped and dropped from the registry; each repo keeps its own protected branches.
+
 ### Safety Checks
 
 Only removes worktrees with:

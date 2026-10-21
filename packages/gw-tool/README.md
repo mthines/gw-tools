@@ -1401,6 +1401,7 @@ gw clean [options]
 
 #### Options
 
+- `--all`: Clean across **all** gw repositories on this machine (see [Cleaning all repositories](#cleaning-all-repositories)). Works with both the interactive picker and `--auto`
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
@@ -1435,7 +1436,24 @@ gw clean --json
 
 # Skip confirmation prompt (auto-confirm removal)
 gw clean --yes
+
+# Interactive picker across every gw repository
+gw clean --all
+
+# Auto mode across every gw repository (preview first)
+gw clean --all --auto --dry-run
 ```
+
+#### Cleaning all repositories
+
+`gw clean --all` cleans every gw repository on your machine from one place.
+
+gw keeps a registry of repository roots at `$XDG_CONFIG_HOME/gw/repos.json` (falling back to `~/.config/gw/repos.json`). A repository is added when you run `gw init`, and whenever any `gw` command runs inside a repository that has a `.gw/config.json` — so repositories set up before the registry existed are picked up the next time you use gw in them. Registration is silent and never makes a command fail. Repositories that no longer exist on disk are skipped and dropped from the registry.
+
+- **Interactive (`gw clean --all`)**: the picker groups items per repository — `<repo> › Worktrees`, `<repo> › Local Branches (no worktree)`, `<repo> › Orphan Branches`. Press `a` (or space on a section header) to toggle that section — e.g. everything of one kind in one repo — and `w` to toggle the same category in **every** repository (e.g. all worktrees everywhere). Selected items are force-deleted.
+- **Auto (`gw clean --all --auto`)**: runs auto mode in each repository with a single confirmation, honoring `--dry-run`, `--json`, `--yes`, `--force`, and `--use-autoclean-threshold`. `--json` prints `{ "repos": [{ "name", "path", "cleanable", "skipped" }] }`.
+
+Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed.
 
 #### How It Works
 
@@ -1457,6 +1475,8 @@ The clean command:
 | `gw clean`                           | No (all worktrees) | Yes (unless --force) | Clean up all finished work          |
 | `gw clean --use-autoclean-threshold` | Yes (7+ days)      | Yes (unless --force) | Clean up old, stale worktrees       |
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
+| `gw clean --all`                     | N/A (user picks)   | No (force delete)    | Pick items across all repositories  |
+| `gw clean --all --auto`              | No (all worktrees) | Yes (unless --force) | Clean finished work in every repo   |
 | `gw prune`                           | No (all worktrees) | Yes                  | Full cleanup (worktrees + branches) |
 | `gw prune --stale-only`              | N/A                | N/A                  | Git passthrough (metadata only)     |
 

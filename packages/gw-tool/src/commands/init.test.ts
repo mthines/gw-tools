@@ -6,7 +6,8 @@ import { assertEquals, assertRejects } from '@std/assert';
 import { join } from '@std/path';
 import { executeInit } from './init.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { TempCwd } from '../test-utils/temp-env.ts';
+import { TempCwd, TempEnv } from '../test-utils/temp-env.ts';
+import { loadRegistry } from '../lib/repo-registry.ts';
 import { readTestConfig } from '../test-utils/fixtures.ts';
 import { assertDirExists, assertFileExists } from '../test-utils/assertions.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
@@ -1108,4 +1109,30 @@ Deno.test('init command - interactive mode exits when URL prompt is skipped', as
 
 Deno.test('init - shell integration navigates after command', async () => {
   await assertShellNavigationWorks('init');
+});
+
+Deno.test('init command - registers repo in global registry', async () => {
+  const configHome = await Deno.makeTempDir({ prefix: 'gw-init-registry-' });
+  const env = new TempEnv();
+  env.set('XDG_CONFIG_HOME', configHome);
+  const repo = new GitTestRepo();
+  try {
+    await repo.init();
+
+    const cwd = new TempCwd(repo.path);
+    try {
+      await executeInit([]);
+    } finally {
+      cwd.restore();
+    }
+
+    assertEquals(
+      (await loadRegistry()).map((r) => r.path),
+      [repo.path]
+    );
+  } finally {
+    env.restore();
+    await repo.cleanup();
+    await Deno.remove(configHome, { recursive: true });
+  }
 });

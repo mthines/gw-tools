@@ -108,7 +108,8 @@ Commands:
   show-init        Generate a 'gw init' command from current configuration
   install-shell    Output shell integration code (use with eval)
   root             Get the root directory of the current git repository
-  clean            Interactive cleanup of worktrees and branches (--auto for batch)
+  clean            Interactive cleanup of worktrees and branches (--auto for batch,
+                   --all for every gw repository)
   protect          Mark a branch as protected from cleanup
   unprotect        Remove a branch from the protected list
 
@@ -142,6 +143,7 @@ Examples:
   gw remove feat-branch
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
   gw clean
+  gw clean --all                                    (clean across all gw repos)
 
 For command-specific help:
   gw <command> --help

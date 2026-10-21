@@ -64,9 +64,9 @@ export async function loadRegistry(): Promise<RegisteredRepo[]> {
     const content = await Deno.readTextFile(getRegistryPath());
     const data = JSON.parse(content) as Partial<RegistryFile>;
     if (!Array.isArray(data.repos)) return [];
-    return data.repos.filter(
-      (r): r is RegisteredRepo => typeof r?.path === 'string' && r.path.length > 0
-    ).map((r) => ({ path: r.path, addedAt: typeof r.addedAt === 'string' ? r.addedAt : '' }));
+    return data.repos
+      .filter((r): r is RegisteredRepo => typeof r?.path === 'string' && r.path.length > 0)
+      .map((r) => ({ path: r.path, addedAt: typeof r.addedAt === 'string' ? r.addedAt : '' }));
   } catch {
     return [];
   }

@@ -83,6 +83,8 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Preview a destructive `gw remove`         | `gw remove --dry-run feat/*`                                        |
 | Batch remove safe (committed, pushed) wts | `gw clean`                                                          |
 | Preview batch cleanup                     | `gw clean --dry-run`                                                |
+| Clean across ALL gw repos (interactive)   | `gw clean --all` (`w` toggles a category in every repo)             |
+| Auto-clean safe worktrees in ALL gw repos | `gw clean --all --auto` (add `--dry-run` to preview)                |
 | Full cleanup: worktrees + orphan branches | `gw prune`                                                          |
 | Get repo root path (worktree-aware)       | `gw root`                                                           |
 | Protect branch from cleanup               | `gw protect [branch]` (default: cwd branch)                         |
@@ -148,6 +150,7 @@ gw checkout feat/extracted --from-staged
 # 7. Clean up when done
 gw remove feat/my-feature   # removes worktree + local branch
 gw clean                    # batch remove safe (committed + pushed) worktrees
+gw clean --all              # clean across every gw repo on this machine
 gw prune                    # full cleanup: worktrees + orphan branches
 ```
 

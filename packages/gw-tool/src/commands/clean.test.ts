@@ -5,9 +5,11 @@
 
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
-import { executeClean, isPathInside } from './clean.ts';
+import { executeClean, executeInteractiveCleanAll, isPathInside } from './clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { TempCwd } from '../test-utils/temp-env.ts';
+import { TempCwd, TempEnv } from '../test-utils/temp-env.ts';
+import { loadRegistry, registerRepo } from '../lib/repo-registry.ts';
+import type { TerminalIO } from '../lib/interactive-select.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 
@@ -726,4 +728,291 @@ Deno.test('clean command - prunes multiple phantom worktrees at once', async () 
   } finally {
     await repo.cleanup();
   }
+});
+
+// ── --all (across registered repos) ─────────────────────
+
+/**
+ * Run a test with an isolated, empty repo registry
+ */
+async function withTempRegistry(fn: () => Promise<void>): Promise<void> {
+  const configHome = await Deno.makeTempDir({ prefix: 'gw-clean-all-registry-' });
+  const env = new TempEnv();
+  env.set('XDG_CONFIG_HOME', configHome);
+  try {
+    await fn();
+  } finally {
+    env.restore();
+    await Deno.remove(configHome, { recursive: true });
+  }
+}
+
+/**
+ * Create a registered gw repo with the given worktrees
+ */
+async function createRegisteredRepo(worktreeNames: string[], protectedBranches?: string[]): Promise<GitTestRepo> {
+  const repo = new GitTestRepo();
+  await repo.init();
+  await writeTestConfig(repo.path, {
+    ...createMinimalConfig(repo.path),
+    ...(protectedBranches ? { protectedBranches } : {}),
+  });
+  for (const name of worktreeNames) {
+    await repo.createWorktree(name);
+  }
+  await registerRepo(repo.path);
+  return repo;
+}
+
+/** Mock picker terminal that presses the given keys */
+function createPickerIO(keys: string[]): { io: TerminalIO; screen: () => string } {
+  const encoded = keys.map((k) => {
+    if (k === 'enter') return new Uint8Array([0x0d]);
+    if (k === 'down') return new Uint8Array([0x1b, 0x5b, 0x42]);
+    if (k === 'space') return new Uint8Array([0x20]);
+    return new Uint8Array([k.charCodeAt(0)]);
+  });
+  let index = 0;
+  let screen = '';
+  const decoder = new TextDecoder();
+  const io: TerminalIO = {
+    read: async (buf: Uint8Array) => {
+      await new Promise((r) => setTimeout(r, 1));
+      if (index >= encoded.length) return null;
+      const key = encoded[index++];
+      buf.set(key);
+      return key.length;
+    },
+    write: (data: Uint8Array) => {
+      screen += decoder.decode(data);
+    },
+    setRaw: () => {},
+    isTerminal: () => true,
+  };
+  return { io, screen: () => screen };
+}
+
+Deno.test('clean --all interactive - lists every registered repo and removes worktrees in all of them', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        // 'w' on the first "Worktrees" section selects worktrees in every repo
+        const { io, screen } = createPickerIO(['w', 'enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+
+        const nameA = repoA.path.split('/').pop();
+        const nameB = repoB.path.split('/').pop();
+        assertEquals(screen().includes(`${nameA} › Worktrees`), true, 'repo A section shown');
+        assertEquals(screen().includes(`${nameB} › Worktrees`), true, 'repo B section shown');
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        false
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        false
+      );
+      // The main worktree of each repo is protected and stays
+      assertEquals((await repoA.listWorktrees()).length, 1);
+      assertEquals((await repoB.listWorktrees()).length, 1);
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test("clean --all interactive - honors each repo's protected branches", async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['keep-me', 'feat-b'], ['keep-me']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        const { io } = createPickerIO(['w', 'enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+      } finally {
+        cwd.restore();
+      }
+
+      const worktreesB = await repoB.listWorktrees();
+      assertEquals(
+        worktreesB.some((wt) => wt.includes('keep-me')),
+        true,
+        'protected worktree kept'
+      );
+      assertEquals(
+        worktreesB.some((wt) => wt.includes('feat-b')),
+        false,
+        'unprotected worktree removed'
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all interactive - selecting one section only cleans that repo', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        // 'a' toggles only the first repo's Worktrees section
+        const { io } = createPickerIO(['a', 'enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        false
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        true
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all --auto - removes safe worktrees in every registered repo', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        const { exitCode } = await withMockedExit(() => executeClean(['--all', '--auto', '--yes']));
+        assertEquals(exitCode ?? 0, 0);
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        false
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        false
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all --auto - --dry-run removes nothing', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        const { exitCode } = await withMockedExit(() => executeClean(['--all', '--auto', '--dry-run']));
+        assertEquals(exitCode, 0);
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        true
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all --auto - --json reports cleanable worktrees per repo', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      let stdout = '';
+      try {
+        const res = await withMockedExit(() => executeClean(['--all', '--auto', '--json']), { captureOutput: true });
+        assertEquals(res.exitCode, 0);
+        stdout = res.stdout ?? '';
+      } finally {
+        cwd.restore();
+      }
+
+      const data = JSON.parse(stdout.trim().split('\n').pop()!);
+      assertEquals(
+        data.repos.map((r: { path: string }) => r.path),
+        [repoA.path, repoB.path]
+      );
+      assertEquals(
+        data.repos[0].cleanable.map((w: { branch: string }) => w.branch),
+        ['feat-a']
+      );
+      assertEquals(
+        data.repos[1].cleanable.map((w: { branch: string }) => w.branch),
+        ['feat-b']
+      );
+
+      // JSON implies dry-run
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all - missing path is skipped and dropped from the registry', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const missing = join(await Deno.makeTempDir({ prefix: 'gw-gone-' }), 'deleted-repo');
+    await registerRepo(missing);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      let stdout = '';
+      try {
+        const res = await withMockedExit(() => executeClean(['--all', '--auto', '--json']), { captureOutput: true });
+        assertEquals(res.exitCode, 0);
+        stdout = res.stdout ?? '';
+      } finally {
+        cwd.restore();
+      }
+
+      const data = JSON.parse(stdout.trim().split('\n').pop()!);
+      assertEquals(
+        data.repos.map((r: { path: string }) => r.path),
+        [repoA.path]
+      );
+      assertEquals(
+        (await loadRegistry()).map((r) => r.path),
+        [repoA.path]
+      );
+    } finally {
+      await repoA.cleanup();
+    }
+  });
 });
