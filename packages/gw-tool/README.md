@@ -1403,7 +1403,7 @@ gw clean [options]
 
 - `--all`: Clean across **all** gw repositories on this machine (see [Cleaning all repositories](#cleaning-all-repositories)). Works with both the interactive picker and `--auto`
 - `--stats`: Report what could be cleaned — an overview chart plus every removable item with its id — without removing anything. Combine with `--all` and `--json` (see [Stats and agent cleanup](#stats-and-agent-cleanup))
-- `--size`: Measure worktree disk usage (slow on large repos — a full `du`); adds sizes to the `--all` overview chart and to `--stats`
+- `--size`: Measure worktree disk usage (slow on large repos — a full `du`); adds sizes to the `--all` overview chart, `--stats`, and the single-repo interactive picker
 - `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`. `--force` applies to every id in the call — pass it only with the ids that need it
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)

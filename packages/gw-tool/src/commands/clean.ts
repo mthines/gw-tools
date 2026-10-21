@@ -154,7 +154,8 @@ Options:
                              with ids) and exit without removing anything.
                              Combine with --all for every repo, --json for agents
   --size                     Measure worktree disk usage (slow on large repos);
-                             adds sizes to the --all overview chart and --stats
+                             adds sizes to the --all overview chart, --stats,
+                             and the single-repo interactive picker
   --remove <id>              Remove exactly this item (repeatable). Ids come from
                              --stats / --stats --json: wt:<path> or
                              br:<repo>:<branch>. Protected items are refused;
