@@ -1263,6 +1263,39 @@ for (const args of [
   });
 }
 
+Deno.test('clean --stats --all --json - empty registry keeps the full report shape', async () => {
+  await withTempRegistry(async () => {
+    const { data } = await runCleanJson(['--stats', '--all', '--json']);
+    assertEquals(data.repos, []);
+    assertEquals(data.errors, []);
+    assertEquals(data.totals, {
+      repos: 0,
+      worktrees: 0,
+      branches: 0,
+      orphans: 0,
+      removable: 0,
+      sizeBytes: null,
+    });
+  });
+});
+
+Deno.test('clean --all --auto --json - empty registry reports empty repos and errors', async () => {
+  await withTempRegistry(async () => {
+    const { exitCode, data } = await runCleanJson(['--all', '--auto', '--json']);
+    assertEquals(exitCode, 0);
+    assertEquals(data.repos, []);
+    assertEquals(data.errors, []);
+  });
+});
+
+Deno.test('clean --all --auto - empty registry prints the human message', async () => {
+  await withTempRegistry(async () => {
+    const res = await withMockedExit(() => executeClean(['--all', '--auto']), { captureOutput: true });
+    assertEquals(res.exitCode, 0);
+    assertEquals((res.stdout ?? '').includes('No gw repositories registered yet'), true);
+  });
+});
+
 Deno.test('clean --stats - human output lists removable items with their ids', async () => {
   await withTempRegistry(async () => {
     const repo = await createRegisteredRepo(['feat-a']);

@@ -570,7 +570,8 @@ export function buildRepoDisplayNames(repos: RegisteredRepo[]): string[] {
 
 /**
  * Load the registered repos for --all, dropping ones missing on disk.
- * Exits when there is nothing to clean.
+ * Exits when there is nothing to clean; in JSON mode returns an empty list
+ * instead so callers emit their usual report shape.
  */
 async function loadReposForCleanAll(json: boolean): Promise<RegisteredRepo[]> {
   const { existing, removed } = await pruneMissingRepos();
@@ -582,10 +583,7 @@ async function loadReposForCleanAll(json: boolean): Promise<RegisteredRepo[]> {
   }
 
   if (existing.length === 0) {
-    if (json) {
-      printJson({ repos: [] });
-      Deno.exit(0);
-    }
+    if (json) return [];
     output.info('No gw repositories registered yet.');
     console.log(output.dim('Run gw init, or any gw command inside a repository, to register it.\n'));
     Deno.exit(0);
