@@ -1407,7 +1407,7 @@ gw clean [options]
 - `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
-- `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
+- `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits, and `--remove`'s branch-commit check). WARNING: This may result in data loss
 - `-n, --dry-run`: Preview what would be removed without actually removing
 - `--json`: Output results as JSON and exit (implies dry-run, no prompts)
 - `-y, --yes`: Skip confirmation prompt
