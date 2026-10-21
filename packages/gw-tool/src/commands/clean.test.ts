@@ -1431,3 +1431,32 @@ Deno.test('clean --stats --json - config warnings go to stderr, stdout stays val
     }
   });
 });
+
+Deno.test(
+  'clean --all interactive - overview chart lists up to 10 repos on tall terminals, 5 on short ones',
+  async () => {
+    await withTempRegistry(async () => {
+      const repos: GitTestRepo[] = [];
+      try {
+        for (let i = 0; i < 6; i++) repos.push(await createRegisteredRepo([`feat-${i}`]));
+        const cwd = new TempCwd(repos[0].path);
+        try {
+          // deno-lint-ignore no-control-regex
+          const strip = (t: string) => t.replace(/\x1b\[[0-9;]*m/g, '');
+
+          const tall = createPickerIO(['enter']);
+          await withMockedExit(() => executeInteractiveCleanAll({ ...tall.io, getRows: () => 40 }));
+          assertEquals(strip(tall.screen()).includes('more'), false, 'all 6 repos listed');
+
+          const short = createPickerIO(['enter']);
+          await withMockedExit(() => executeInteractiveCleanAll({ ...short.io, getRows: () => 24 }));
+          assertEquals(strip(short.screen()).includes('… 1 more'), true, '5 listed, 1 summarized');
+        } finally {
+          cwd.restore();
+        }
+      } finally {
+        for (const r of repos) await r.cleanup();
+      }
+    });
+  }
+);

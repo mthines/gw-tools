@@ -598,6 +598,20 @@ async function withCwd<T>(dir: string, fallbackDir: string, fn: () => Promise<T>
 }
 
 /**
+ * How many repos the picker's overview chart lists: up to 10, or 5 on short
+ * terminals (under 30 rows) so the item list keeps enough room.
+ */
+function overviewChartRows(io?: TerminalIO): number {
+  let rows = 24;
+  try {
+    rows = io?.getRows?.() ?? Deno.consoleSize().rows;
+  } catch {
+    // Not a terminal — keep the default
+  }
+  return rows >= 30 ? 10 : 5;
+}
+
+/**
  * Scan repositories one at a time (git commands run against the current
  * directory; each scan is internally parallel). A repo that fails to scan
  * is reported and yields null.
@@ -668,7 +682,10 @@ export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = fal
       message: 'Select items to clean across all repositories:',
       sections,
       selectAllLabel: 'Select all (every repository)',
-      headerLines: renderOverviewChart(scanned.filter((s): s is RepoStats => s !== null)),
+      headerLines: renderOverviewChart(
+        scanned.filter((s): s is RepoStats => s !== null),
+        overviewChartRows(io)
+      ),
       warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
     },
     io
