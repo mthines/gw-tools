@@ -628,10 +628,17 @@ function overviewChartRows(io?: TerminalIO): number {
   return rows >= 30 ? 10 : 5;
 }
 
+/** A repository that could not be scanned, as reported in JSON output */
+interface RepoScanError {
+  name: string;
+  path: string;
+  error: string;
+}
+
 /**
  * Scan repositories one at a time (git commands run against the current
  * directory; each scan is internally parallel). A repo that fails to scan
- * is reported and yields null.
+ * is recorded in `errors` (and warned about when `warn` is set).
  *
  * @param warn Print a warning for repos that fail to scan
  */
@@ -640,9 +647,10 @@ async function scanRepos(
   startDir: string,
   withSize: boolean,
   warn: boolean
-): Promise<(RepoStats | null)[]> {
+): Promise<{ results: RepoStats[]; errors: RepoScanError[] }> {
   const names = buildRepoDisplayNames(repos);
-  const results: (RepoStats | null)[] = [];
+  const results: RepoStats[] = [];
+  const errors: RepoScanError[] = [];
   for (let i = 0; i < repos.length; i++) {
     try {
       results.push(
@@ -652,14 +660,12 @@ async function scanRepos(
         })
       );
     } catch (error) {
-      if (warn) {
-        const msg = error instanceof Error ? error.message : String(error);
-        output.warning(`Skipping ${names[i]}: ${msg}`);
-      }
-      results.push(null);
+      const msg = error instanceof Error ? error.message : String(error);
+      if (warn) output.warning(`Skipping ${names[i]}: ${msg}`);
+      errors.push({ name: names[i], path: repos[i].path, error: msg });
     }
   }
-  return results;
+  return { results, errors };
 }
 
 /**
@@ -1033,6 +1039,7 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
     toClean: CleanableWorktree[];
     toSkip: CleanableWorktree[];
   }[] = [];
+  const errors: RepoScanError[] = [];
   for (let i = 0; i < repos.length; i++) {
     try {
       const analysis = await withCwd(repos[i].path, startDir, async () => {
@@ -1041,10 +1048,9 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
       });
       analyses.push({ index: i, settings: analysis.settings, toClean: analysis.toClean, toSkip: analysis.toSkip });
     } catch (error) {
-      if (!parsed.json) {
-        const msg = error instanceof Error ? error.message : String(error);
-        output.warning(`Skipping ${names[i]}: ${msg}`);
-      }
+      const msg = error instanceof Error ? error.message : String(error);
+      if (!parsed.json) output.warning(`Skipping ${names[i]}: ${msg}`);
+      errors.push({ name: names[i], path: repos[i].path, error: msg });
     }
   }
 
@@ -1056,6 +1062,7 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
         path: repos[a.index].path,
         ...toAutoCleanJson(a.toClean, a.toSkip),
       })),
+      errors,
     });
     Deno.exit(0);
   }
@@ -1187,7 +1194,7 @@ async function executeCleanStats(parsed: CleanArgs): Promise<void> {
     );
   }
 
-  const stats = (await scanRepos(repos, startDir, parsed.size, !parsed.json)).filter((s): s is RepoStats => s !== null);
+  const { results: stats, errors } = await scanRepos(repos, startDir, parsed.size, !parsed.json);
 
   if (parsed.json) {
     const sum = (f: (s: RepoStats) => number) => stats.reduce((n, s) => n + f(s), 0);
@@ -1201,6 +1208,7 @@ async function executeCleanStats(parsed: CleanArgs): Promise<void> {
         removable: sum((s) => s.totals.removable),
         sizeBytes: parsed.size ? sum((s) => s.totals.sizeBytes ?? 0) : null,
       },
+      errors,
     });
     return;
   }

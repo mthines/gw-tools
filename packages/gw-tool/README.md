@@ -1454,7 +1454,7 @@ gw clean --all --auto --dry-run
 gw keeps a registry of repository roots at `$XDG_CONFIG_HOME/gw/repos.json` (falling back to `~/.config/gw/repos.json`). A repository is added when you run `gw init`, and whenever any `gw` command runs inside a repository that has a `.gw/config.json` — so repositories set up before the registry existed are picked up the next time you use gw in them. Registration is silent and never makes a command fail. Repositories that no longer exist on disk are skipped and dropped from the registry.
 
 - **Interactive (`gw clean --all`)**: the picker groups items per repository — `<repo> › Worktrees`, `<repo> › Local Branches (no worktree)`, `<repo> › Orphan Branches`. A root **Select all (every repository)** row at the top selects everything at once, so you can then unselect what to keep. Press `a` (or space on a section header) to toggle that section — e.g. everything of one kind in one repo — and `w` to toggle the same category in **every** repository (e.g. all worktrees everywhere). Selected items are force-deleted.
-- **Auto (`gw clean --all --auto`)**: runs auto mode in each repository with a single confirmation, honoring `--dry-run`, `--json`, `--yes`, `--force`, and `--use-autoclean-threshold`. `--json` prints `{ "repos": [{ "name", "path", "cleanable", "skipped" }] }`.
+- **Auto (`gw clean --all --auto`)**: runs auto mode in each repository with a single confirmation, honoring `--dry-run`, `--json`, `--yes`, `--force`, and `--use-autoclean-threshold`. `--json` prints `{ "repos": [{ "name", "path", "cleanable", "skipped" }], "errors": [{ "name", "path", "error" }] }`.
 
 Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed. The default worktree (the repo root, or `<root>/<defaultBranch>`) stays protected even on a detached HEAD.
 
@@ -1466,10 +1466,10 @@ The picker opens immediately and repositories stream into the list as each scan 
 
 ```bash
 gw clean --stats --all --size          # human-readable: where is the clutter?
-gw clean --stats --all --json          # {"repos":[{name,path,defaultBranch,worktrees,branches,orphans,totals}],"totals":{...}}
+gw clean --stats --all --json          # {"repos":[{name,path,defaultBranch,worktrees,branches,orphans,totals}],"totals":{...},"errors":[...]}
 ```
 
-Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). Pass ids back to remove exactly those items:
+Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). A repository that fails to scan is listed in the top-level `errors` array (`{ name, path, error }`, `[]` when none) instead of being silently omitted. Pass ids back to remove exactly those items:
 
 ```bash
 gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json

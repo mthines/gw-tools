@@ -154,6 +154,7 @@ Agents should not drive the interactive picker. Read a report, decide, then remo
 gw clean --stats --all --json
 #    repos[].worktrees[] / branches[] / orphans[] each have: id, protected,
 #    uncommitted, unpushed, ageDays / lastCommit, sizeBytes
+#    errors[] lists repos that failed to scan: { name, path, error }
 
 # 2. Preview, then remove exactly the chosen ids
 gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json

@@ -1228,6 +1228,41 @@ Deno.test('clean --stats --json --all --size - reports every registered repo wit
   });
 });
 
+for (const args of [
+  ['--stats', '--all', '--json'],
+  ['--all', '--auto', '--json'],
+]) {
+  Deno.test(`clean ${args.join(' ')} - a repo that fails to scan is reported in errors`, async () => {
+    await withTempRegistry(async () => {
+      // Real path: the registry stores canonical paths (/var -> /private/var on macOS)
+      const broken = await Deno.realPath(await Deno.makeTempDir({ prefix: 'gw-not-a-repo-' }));
+      await registerRepo(broken);
+      const repo = await createRegisteredRepo(['feat-a']);
+      try {
+        const cwd = new TempCwd(repo.path);
+        let data: { repos: { path: string }[]; errors: { name: string; path: string; error: string }[] };
+        try {
+          data = (await runCleanJson(args)).data as unknown as typeof data;
+        } finally {
+          cwd.restore();
+        }
+
+        assertEquals(
+          data.repos.map((r) => r.path),
+          [repo.path]
+        );
+        assertEquals(data.errors.length, 1);
+        assertEquals(data.errors[0].path, broken);
+        assertEquals(typeof data.errors[0].name, 'string');
+        assertEquals(data.errors[0].error.length > 0, true);
+      } finally {
+        await Deno.remove(broken, { recursive: true });
+        await repo.cleanup();
+      }
+    });
+  });
+}
+
 Deno.test('clean --stats - human output lists removable items with their ids', async () => {
   await withTempRegistry(async () => {
     const repo = await createRegisteredRepo(['feat-a']);
