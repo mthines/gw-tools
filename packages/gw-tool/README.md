@@ -1404,7 +1404,7 @@ gw clean [options]
 - `--all`: Clean across **all** gw repositories on this machine (see [Cleaning all repositories](#cleaning-all-repositories)). Works with both the interactive picker and `--auto`
 - `--stats`: Report what could be cleaned — an overview chart plus every removable item with its id — without removing anything. Combine with `--all` and `--json` (see [Stats and agent cleanup](#stats-and-agent-cleanup))
 - `--size`: Measure worktree disk usage (slow on large repos — a full `du`); adds sizes to the `--all` overview chart and to `--stats`
-- `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`
+- `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`. `--force` applies to every id in the call — pass it only with the ids that need it
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits, and `--remove`'s branch-commit check). WARNING: This may result in data loss
@@ -1477,7 +1477,7 @@ gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --
 # → {"dryRun":false,"removed":[...],"refused":[{"id","reason"}],"failed":[{"id","error"}]}
 ```
 
-`--remove` is safer than the interactive picker: it only acts on registered gw repositories, protected items are always refused, and unless `--force` it refuses worktrees with uncommitted changes or unpushed commits and branches with commits that exist on no remote and not in the default branch. A worktree and its branch can be removed in the same call. It exits `1` when any item was refused or failed. With `--json`, pass `--yes` (or `--dry-run`) — there is no prompt.
+`--remove` is safer than the interactive picker: it only acts on registered gw repositories, protected items are always refused, and unless `--force` it refuses worktrees with uncommitted changes or unpushed commits and branches with commits that exist on no remote and not in the default branch. A worktree and its branch can be removed in the same call. `--force` applies to every id in the call — pass it only with the ids that need it (a refused branch's reason says to re-run with only that id and `--force`), so batching never drops the safety checks on the other items. It exits `1` when any item was refused or failed. With `--json`, pass `--yes` (or `--dry-run`) — there is no prompt.
 
 #### How It Works
 

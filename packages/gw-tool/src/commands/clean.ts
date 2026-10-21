@@ -158,8 +158,9 @@ Options:
                              br:<repo>:<branch>. Protected items are refused;
                              dirty/unpushed worktrees and branches with
                              commits not on a remote or the default branch
-                             need --force. Only items in registered gw repos
-                             are accepted
+                             need --force. --force applies to every id in the
+                             call — pass it only with the ids that need it.
+                             Only items in registered gw repos are accepted
   -a, --auto                 Auto mode: remove all safe worktrees without
                              interactive selection (previous default behavior)
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
@@ -1321,7 +1322,10 @@ async function planRepoRemovals(
       } else if (holder) {
         refused.push({ id: item.id, reason: `checked out in worktree ${holder.path}` });
       } else if (!force && (await hasUniqueCommits(item.target, settings.defaultBranch, branches))) {
-        refused.push({ id: item.id, reason: 'has commits not on any remote or the default branch (use --force)' });
+        refused.push({
+          id: item.id,
+          reason: 'has commits not on any remote or the default branch (re-run with only this id and --force)',
+        });
       } else {
         allowed.push({ id: item.id, kind: 'branch', target: item.target, label: item.target });
       }
