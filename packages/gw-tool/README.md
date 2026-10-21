@@ -1402,6 +1402,9 @@ gw clean [options]
 #### Options
 
 - `--all`: Clean across **all** gw repositories on this machine (see [Cleaning all repositories](#cleaning-all-repositories)). Works with both the interactive picker and `--auto`
+- `--stats`: Report what could be cleaned — an overview chart plus every removable item with its id — without removing anything. Combine with `--all` and `--json` (see [Stats and agent cleanup](#stats-and-agent-cleanup))
+- `--size`: Measure worktree disk usage (slow on large repos — a full `du`); adds sizes to the `--all` overview chart and to `--stats`
+- `--remove <id>`: Remove exactly the given item (repeatable); ids come from `--stats`
 - `-i, --interactive`: Interactive mode — select worktrees, branches, and orphan branches to remove using a multi-select checklist. Uses arrow keys to navigate, space to toggle, enter to confirm, Ctrl+C to cancel. **WARNING:** Uses force deletion for all selected items
 - `--use-autoclean-threshold`: Only remove worktrees older than configured threshold (default: 7 days)
 - `-f, --force`: Skip safety checks (uncommitted changes, unpushed commits). WARNING: This may result in data loss
@@ -1453,7 +1456,28 @@ gw keeps a registry of repository roots at `$XDG_CONFIG_HOME/gw/repos.json` (fal
 - **Interactive (`gw clean --all`)**: the picker groups items per repository — `<repo> › Worktrees`, `<repo> › Local Branches (no worktree)`, `<repo> › Orphan Branches`. A root **Select all (every repository)** row at the top selects everything at once, so you can then unselect what to keep. Press `a` (or space on a section header) to toggle that section — e.g. everything of one kind in one repo — and `w` to toggle the same category in **every** repository (e.g. all worktrees everywhere). Selected items are force-deleted.
 - **Auto (`gw clean --all --auto`)**: runs auto mode in each repository with a single confirmation, honoring `--dry-run`, `--json`, `--yes`, `--force`, and `--use-autoclean-threshold`. `--json` prints `{ "repos": [{ "name", "path", "cleanable", "skipped" }] }`.
 
-Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed.
+Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed. The default worktree (the repo root, or `<root>/<defaultBranch>`) stays protected even on a detached HEAD.
+
+Above the picker, an **overview chart** ranks repositories by how much can be cleaned up (worktrees, branches, orphans). Add `--size` to measure disk usage and rank by space instead — it runs `du` on every worktree, so it can take a while on large repos.
+
+#### Stats and agent cleanup
+
+`gw clean --stats` reports what could be cleaned without removing anything: the overview chart plus each removable item with an id. Add `--all` for every registered repository, `--size` for disk usage, and `--json` for a machine-readable report:
+
+```bash
+gw clean --stats --all --size          # human-readable: where is the clutter?
+gw clean --stats --all --json          # {"repos":[{name,path,defaultBranch,worktrees,branches,orphans,totals}],"totals":{...}}
+```
+
+Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). Pass ids back to remove exactly those items:
+
+```bash
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --yes --json
+# → {"dryRun":false,"removed":[...],"refused":[{"id","reason"}],"failed":[{"id","error"}]}
+```
+
+`--remove` is safer than the interactive picker: protected items are always refused, worktrees with uncommitted changes or unpushed commits are refused unless `--force`, and branches are deleted with `git branch -d` (`-D` with `--force`). It exits `1` when any item was refused or failed. With `--json`, pass `--yes` (or `--dry-run`) — there is no prompt.
 
 #### How It Works
 
@@ -1477,6 +1501,8 @@ The clean command:
 | `gw clean --force`                   | No (all worktrees) | No                   | Force removal of all worktrees      |
 | `gw clean --all`                     | N/A (user picks)   | No (force delete)    | Pick items across all repositories  |
 | `gw clean --all --auto`              | No (all worktrees) | Yes (unless --force) | Clean finished work in every repo   |
+| `gw clean --stats [--all] [--json]`  | N/A (report only)  | N/A                  | See where the clutter is            |
+| `gw clean --remove <id>...`          | N/A (given ids)    | Yes (unless --force) | Agent / scripted targeted cleanup   |
 | `gw prune`                           | No (all worktrees) | Yes                  | Full cleanup (worktrees + branches) |
 | `gw prune --stale-only`              | N/A                | N/A                  | Git passthrough (metadata only)     |
 

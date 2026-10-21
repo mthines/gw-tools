@@ -47,6 +47,8 @@ export interface MultiSelectOptions {
   sections: SelectSection[];
   /** Warning banner shown below the message */
   warningBanner?: string;
+  /** Extra lines (e.g. an overview chart) shown above the message */
+  headerLines?: string[];
   /**
    * When set, a root row with this label is shown above all sections.
    * Toggling it selects (or deselects) every selectable item at once, so the
@@ -352,7 +354,9 @@ function render(
 
   // Calculate viewport size for the scrollable area
   const hasWarning = options.warningBanner ? 1 : 0;
-  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES;
+  const headerLines = options.headerLines ?? [];
+  const extraHeader = headerLines.length > 0 ? headerLines.length + 1 : 0; // + blank line
+  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES + extraHeader;
   const viewportHeight = Math.max(5, termRows - fixedLines);
 
   // Adjust viewport offset to keep cursor visible
@@ -369,6 +373,9 @@ function render(
   const lines: string[] = [];
 
   // Header
+  if (headerLines.length > 0) {
+    lines.push(...headerLines, '');
+  }
   lines.push(`${output.bold(options.message)} ${output.dim(`(${sel}/${tot} selected)`)}`);
   if (options.warningBanner) {
     lines.push(`${output.warningSymbol()} ${options.warningBanner}`);

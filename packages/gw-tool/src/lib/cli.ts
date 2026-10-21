@@ -144,6 +144,7 @@ Examples:
   gw init --root /path/to/repo.git --auto-copy-files .env,secrets/
   gw clean
   gw clean --all                                    (clean across all gw repos)
+  gw clean --stats --all --json                     (report for agents; then --remove <id>)
 
 For command-specific help:
   gw <command> --help

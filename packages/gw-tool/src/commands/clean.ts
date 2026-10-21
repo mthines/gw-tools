@@ -4,13 +4,21 @@
  */
 
 import { join, resolve } from '@std/path';
-import { isProtectedBranch } from '../lib/branch-protection.ts';
+import {
+  collectRepoStats,
+  formatBytes,
+  isEffectivelyProtected,
+  isProtectedWorktree,
+  parseItemId,
+  type RepoCleanSettings,
+  type RepoStats,
+  renderOverviewChart,
+  type WorktreeStat,
+} from '../lib/clean-stats.ts';
 import { loadConfig, loadProtectedBranches, loadRootConfig } from '../lib/config.ts';
 import { mapWithConcurrency } from '../lib/concurrency.ts';
 import {
   deleteBranch,
-  findOrphanBranches,
-  getBranchLastCommitDate,
   getWorktreeAgeDays,
   hasUncommittedChanges,
   hasUnpushedCommits,
@@ -23,25 +31,18 @@ import {
 } from '../lib/git-utils.ts';
 import { multiSelect, type SelectItem, type SelectSection, type TerminalIO } from '../lib/interactive-select.ts';
 import * as output from '../lib/output.ts';
-import { pathExists } from '../lib/path-resolver.ts';
+import { findGitRoot, pathExists } from '../lib/path-resolver.ts';
 import { getRepoDisplayName, pruneMissingRepos, type RegisteredRepo } from '../lib/repo-registry.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import type { Config } from '../lib/types.ts';
 
 /**
- * Check whether a branch is protected by any mechanism — system rules
- * (defaultBranch, main, master, gw_root) or the user-configured list.
- *
- * @param branch The branch name to check
- * @param defaultBranch The configured default branch name
- * @param userProtected Additional branch names the user has explicitly protected
+ * Print a JSON report on stdout. In the JSON modes of --all, --stats and
+ * --remove, executeClean points this at the real stdout and routes every
+ * other console.log (e.g. config warnings) to stderr, so stdout stays
+ * parseable.
  */
-function isEffectivelyProtected(branch: string | undefined, defaultBranch: string, userProtected: string[]): boolean {
-  if (isProtectedBranch(branch, defaultBranch)) {
-    return true;
-  }
-  return !!branch && userProtected.includes(branch);
-}
+let printJson = (value: unknown): void => console.log(JSON.stringify(value));
 
 /**
  * Check if a path is inside or equal to another path
@@ -85,12 +86,25 @@ interface CleanArgs {
   yes: boolean;
   auto: boolean;
   all: boolean;
+  stats: boolean;
+  size: boolean;
+  /** Item ids passed via --remove (repeatable) */
+  remove: string[];
 }
 
 /**
  * Parse clean command arguments
  */
 function parseCleanArgs(args: string[]): CleanArgs {
+  const remove: string[] = [];
+  for (let i = 0; i < args.length; i++) {
+    if (args[i] === '--remove' && i + 1 < args.length) {
+      remove.push(args[++i]);
+    } else if (args[i].startsWith('--remove=')) {
+      remove.push(args[i].slice('--remove='.length));
+    }
+  }
+
   return {
     help: args.includes('--help') || args.includes('-h'),
     force: args.includes('--force') || args.includes('-f'),
@@ -100,6 +114,9 @@ function parseCleanArgs(args: string[]): CleanArgs {
     yes: args.includes('--yes') || args.includes('-y'),
     auto: args.includes('--auto') || args.includes('-a'),
     all: args.includes('--all'),
+    stats: args.includes('--stats'),
+    size: args.includes('--size'),
+    remove,
   };
 }
 
@@ -122,6 +139,15 @@ Options:
   --all                      Clean across ALL gw repositories on this machine
                              (every repo registered in ~/.config/gw/repos.json).
                              Works with both interactive and --auto mode
+  --stats                    Report what could be cleaned (overview chart + items
+                             with ids) and exit without removing anything.
+                             Combine with --all for every repo, --json for agents
+  --size                     Measure worktree disk usage (slow on large repos);
+                             adds sizes to the --all overview chart and --stats
+  --remove <id>              Remove exactly this item (repeatable). Ids come from
+                             --stats / --stats --json: wt:<path> or
+                             br:<repo>:<branch>. Protected items are refused;
+                             dirty/unpushed worktrees need --force
   -a, --auto                 Auto mode: remove all safe worktrees without
                              interactive selection (previous default behavior)
   --use-autoclean-threshold  Only remove worktrees older than configured threshold
@@ -130,8 +156,9 @@ Options:
                              WARNING: This may result in data loss
   -n, --dry-run              Preview what would be removed without actually removing
                              (only applies in --auto mode)
-  --json                     Output results as JSON and exit (implies --dry-run,
-                             only applies in --auto mode)
+  --json                     Output results as JSON and exit (implies --dry-run in
+                             --auto mode; machine-readable report with --stats
+                             and --remove)
   -y, --yes                  Skip confirmation prompt (only applies in --auto mode)
   -h, --help                 Show this help message
 
@@ -155,7 +182,8 @@ Repository Registry (--all):
 
   In the interactive --all picker, sections are grouped per repo
   ("<repo> › Worktrees", "<repo> › Local Branches", "<repo> › Orphan
-  Branches"). The root "Select all" row selects everything, so you can
+  Branches"), under an overview chart ranking repos by how much can be
+  cleaned (by disk usage with --size). The root "Select all" row selects everything, so you can
   then unselect what to keep. Press 'a' to toggle the current section, or
   'w' to toggle that category (e.g. all worktrees) in every repo.
 
@@ -171,6 +199,13 @@ Examples:
 
   # Auto mode across every gw repository (preview first)
   gw clean --all --auto --dry-run
+
+  # Where is the clutter? Stats for every repo, with disk usage
+  gw clean --stats --all --size
+
+  # Agent workflow: read the report, then remove chosen items by id
+  gw clean --stats --all --json
+  gw clean --remove wt:/path/to/repo.git/feat-x --remove br:/path/to/repo.git:old --yes --json
 
   # Preview what auto mode would remove
   gw clean --auto --dry-run
@@ -227,15 +262,6 @@ interface CleanableWorktree extends WorktreeInfo {
 }
 
 /**
- * Per-repository settings that decide what clean may touch
- */
-interface RepoCleanSettings {
-  defaultBranch: string;
-  userProtected: string[];
-  cleanThreshold: number;
-}
-
-/**
  * Options for building the interactive clean sections of one repository
  */
 interface SectionOptions {
@@ -248,119 +274,47 @@ interface SectionOptions {
 }
 
 /**
- * Scan the repository in the current directory and build the interactive
- * clean sections: worktrees, local branches without a worktree, and orphans.
+ * Build the interactive clean sections (worktrees, local branches without a
+ * worktree, orphans) from a repository's statistics.
  */
-async function buildCleanSections(
-  settings: RepoCleanSettings,
-  options: SectionOptions
-): Promise<{ sections: SelectSection[]; worktrees: WorktreeInfo[] }> {
-  const { defaultBranch, userProtected } = settings;
+function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSection[] {
   const { titlePrefix, valuePrefix, withCategories } = options;
-
-  // Prune stale metadata first
-  try {
-    await pruneWorktrees(true);
-  } catch {
-    // Continue if prune fails
-  }
-
-  const worktrees = await listWorktrees();
-  const allBranches = await listLocalBranches();
-  const worktreeBranches = new Set(worktrees.map((wt) => wt.branch).filter(Boolean));
-
-  // ── Build Worktrees section ───────────────────────────
-  // Analyze worktrees in parallel — each requires several git calls, so
-  // running them sequentially is slow when there are many worktrees. The
-  // pool bounds how many run at once so large repos don't exhaust resources.
-  const worktreeItems: SelectItem[] = await mapWithConcurrency(
-    worktrees.filter((wt) => !wt.bare),
-    async (wt): Promise<SelectItem> => {
-      if (isEffectivelyProtected(wt.branch, defaultBranch, userProtected)) {
-        return {
-          label: wt.branch || wt.path,
-          value: `${valuePrefix}worktree:${wt.path}`,
-          disabled: true,
-          disabledReason: 'protected branch - cannot remove',
-        };
-      }
-
-      const [ageDays, hasUncommitted, hasUnpushed] = await Promise.all([
-        getWorktreeAgeDays(wt.path),
-        hasUncommittedChanges(wt.path),
-        hasUnpushedCommits(wt.path),
-      ]);
-
-      const hints: string[] = [];
-      if (ageDays > 0) hints.push(`${ageDays}d old`);
-      if (hasUncommitted) hints.push('uncommitted');
-      if (hasUnpushed) hints.push('unpushed');
-      const hint = hints.length > 0 ? `(${hints.join(', ')})` : '';
-
-      return {
-        label: wt.branch || wt.path,
-        value: `${valuePrefix}worktree:${wt.path}`,
-        hint,
-      };
-    }
-  );
-
-  // ── Build Local Branches section (no worktree) ────────
-  // Analyze branches in parallel for the same reason as worktrees above.
-  const branchItems: SelectItem[] = await mapWithConcurrency(
-    // Skip branches that have an active worktree
-    allBranches.filter((branch) => !worktreeBranches.has(branch)),
-    async (branch): Promise<SelectItem> => {
-      if (isEffectivelyProtected(branch, defaultBranch, userProtected)) {
-        return {
-          label: branch,
-          value: `${valuePrefix}branch:${branch}`,
-          disabled: true,
-          disabledReason: 'protected branch - cannot remove',
-        };
-      }
-
-      const date = await getBranchLastCommitDate(branch);
-      const hint = date ? `(${date})` : '';
-
-      return {
-        label: branch,
-        value: `${valuePrefix}branch:${branch}`,
-        hint,
-      };
-    }
-  );
-
-  // ── Build Orphan Branches section ─────────────────────
-  const orphans = await findOrphanBranches(worktrees, defaultBranch);
-  const orphanNames = new Set(orphans.map((o) => o.name));
-  const orphanItems: SelectItem[] = await mapWithConcurrency(orphans, async (o): Promise<SelectItem> => {
-    const date = await getBranchLastCommitDate(o.name);
-    const parts: string[] = [];
-    if (date) parts.push(date);
-    parts.push(o.hasUnpushed ? 'unpushed' : 'remote gone');
-
-    // Defense-in-depth: findOrphanBranches already filters protected
-    // branches, but the orphan section is the most destructive code path
-    // (force-deletes via -D), so re-assert protection here.
-    if (isEffectivelyProtected(o.name, defaultBranch, userProtected)) {
-      return {
-        label: o.name,
-        value: `${valuePrefix}orphan:${o.name}`,
-        disabled: true,
-        disabledReason: 'protected branch - cannot remove',
-      };
-    }
-
-    return {
-      label: o.name,
-      value: `${valuePrefix}orphan:${o.name}`,
-      hint: `(${parts.join(', ')})`,
-    };
+  const protectedItem = (label: string, value: string): SelectItem => ({
+    label,
+    value,
+    disabled: true,
+    disabledReason: 'protected branch - cannot remove',
   });
 
-  // Filter out branches that already appear in the orphans section
-  const filteredBranchItems = branchItems.filter((item) => !orphanNames.has(item.label));
+  const worktreeItems: SelectItem[] = stats.worktrees.map((wt) => {
+    const label = wt.branch || wt.path;
+    const value = `${valuePrefix}worktree:${wt.path}`;
+    if (wt.protected) return protectedItem(label, value);
+
+    const hints: string[] = [];
+    if (wt.ageDays > 0) hints.push(`${wt.ageDays}d old`);
+    if (wt.uncommitted) hints.push('uncommitted');
+    if (wt.unpushed) hints.push('unpushed');
+    if (wt.sizeBytes !== null) hints.push(formatBytes(wt.sizeBytes));
+    return { label, value, hint: hints.length > 0 ? `(${hints.join(', ')})` : '' };
+  });
+
+  const branchItems: SelectItem[] = stats.branches.map((b) => {
+    const value = `${valuePrefix}branch:${b.name}`;
+    if (b.protected) return protectedItem(b.name, value);
+    return { label: b.name, value, hint: b.lastCommit ? `(${b.lastCommit})` : '' };
+  });
+
+  const orphanItems: SelectItem[] = stats.orphans.map((o) => {
+    const value = `${valuePrefix}orphan:${o.name}`;
+    // Defense-in-depth: the orphan section is the most destructive code path
+    // (force-deletes via -D), so protection is re-asserted in collectRepoStats.
+    if (o.protected) return protectedItem(o.name, value);
+    const parts: string[] = [];
+    if (o.lastCommit) parts.push(o.lastCommit);
+    parts.push(o.unpushed ? 'unpushed' : 'remote gone');
+    return { label: o.name, value, hint: `(${parts.join(', ')})` };
+  });
 
   // ── Build sections (only include non-empty ones) ──────
   const sections: SelectSection[] = [];
@@ -373,10 +327,10 @@ async function buildCleanSections(
     });
   };
   addSection('Worktrees', 'worktrees', worktreeItems);
-  addSection('Local Branches (no worktree)', 'branches', filteredBranchItems);
+  addSection('Local Branches (no worktree)', 'branches', branchItems);
   addSection('Orphan Branches', 'orphans', orphanItems);
 
-  return { sections, worktrees };
+  return sections;
 }
 
 /**
@@ -393,7 +347,7 @@ type RemovalResult =
  * Selected items are independent (branches with an active worktree are
  * excluded from the branch/orphan sections), so removals run in parallel.
  */
-function removeSelectedItems(selected: string[], worktrees: WorktreeInfo[]): Promise<RemovalResult[]> {
+function removeSelectedItems(selected: string[], worktrees: WorktreeStat[]): Promise<RemovalResult[]> {
   return mapWithConcurrency(selected, async (value): Promise<RemovalResult> => {
     const [type, ...rest] = value.split(':');
     const target = rest.join(':');
@@ -473,8 +427,8 @@ function printInteractiveSummary(
  * Execute interactive clean mode
  * Shows a multi-select UI for worktrees, branches, and orphans
  */
-async function executeInteractiveClean(): Promise<void> {
-  const { config } = await loadConfig();
+async function executeInteractiveClean(withSize = false): Promise<void> {
+  const { config, gitRoot } = await loadConfig();
   const defaultBranch = config.defaultBranch || 'main';
   // protectedBranches comes from the canonical git-root config — see
   // protect.ts for the rationale.
@@ -482,10 +436,18 @@ async function executeInteractiveClean(): Promise<void> {
 
   output.info('Scanning worktrees, branches, and orphans...');
 
-  const { sections, worktrees } = await buildCleanSections(
-    { defaultBranch, userProtected, cleanThreshold: config.cleanThreshold ?? 7 },
-    { titlePrefix: '', valuePrefix: '', withCategories: false }
+  const stats = await collectRepoStats(
+    getRepoDisplayName(gitRoot),
+    gitRoot,
+    {
+      defaultBranch,
+      userProtected,
+      cleanThreshold: config.cleanThreshold ?? 7,
+    },
+    withSize
   );
+  const worktrees = stats.worktrees;
+  const sections = sectionsFromStats(stats, { titlePrefix: '', valuePrefix: '', withCategories: false });
 
   if (sections.length === 0) {
     output.success('Nothing to clean');
@@ -568,13 +530,27 @@ async function loadRepoCleanSettings(repoRoot: string): Promise<RepoCleanSetting
   };
 }
 
+/** Folder names that identify a checkout's branch rather than its project */
+const TRUNK_FOLDER_NAMES = new Set(['main', 'master', 'develop', 'trunk']);
+
 /**
- * Build display names for registered repos: the directory name, or the
- * full path when two repos share a directory name.
+ * Build display names for registered repos: the directory name, extended
+ * with parent directories only as far as needed to tell repos apart
+ * (e.g. "mthines/agent-skills.git" vs "agent-skills.git").
  */
-function buildRepoDisplayNames(repos: RegisteredRepo[]): string[] {
-  const names = repos.map((r) => getRepoDisplayName(r.path));
-  return names.map((name, i) => (names.filter((n) => n === name).length > 1 ? repos[i].path : name));
+export function buildRepoDisplayNames(repos: RegisteredRepo[]): string[] {
+  const parts = repos.map((r) => r.path.split('/').filter(Boolean));
+  return parts.map((segments, i) => {
+    // A repo checked out into a folder named after a trunk branch (e.g.
+    // "AeroSpace.git/main") is unrecognizable by its folder name alone.
+    const minDepth = TRUNK_FOLDER_NAMES.has(segments[segments.length - 1]) ? 2 : 1;
+    for (let depth = minDepth; depth <= segments.length; depth++) {
+      const name = segments.slice(-depth).join('/');
+      const clash = parts.some((other, j) => j !== i && other.slice(-depth).join('/') === name);
+      if (!clash) return name;
+    }
+    return repos[i].path;
+  });
 }
 
 /**
@@ -592,7 +568,7 @@ async function loadReposForCleanAll(json: boolean): Promise<RegisteredRepo[]> {
 
   if (existing.length === 0) {
     if (json) {
-      console.log(JSON.stringify({ repos: [] }));
+      printJson({ repos: [] });
       Deno.exit(0);
     }
     output.info('No gw repositories registered yet.');
@@ -622,38 +598,65 @@ async function withCwd<T>(dir: string, fallbackDir: string, fn: () => Promise<T>
 }
 
 /**
+ * Scan repositories one at a time (git commands run against the current
+ * directory; each scan is internally parallel). A repo that fails to scan
+ * is reported and yields null.
+ *
+ * @param warn Print a warning for repos that fail to scan
+ */
+async function scanRepos(
+  repos: RegisteredRepo[],
+  startDir: string,
+  withSize: boolean,
+  warn: boolean
+): Promise<(RepoStats | null)[]> {
+  const names = buildRepoDisplayNames(repos);
+  const results: (RepoStats | null)[] = [];
+  for (let i = 0; i < repos.length; i++) {
+    try {
+      results.push(
+        await withCwd(repos[i].path, startDir, async () => {
+          const settings = await loadRepoCleanSettings(repos[i].path);
+          return collectRepoStats(names[i], repos[i].path, settings, withSize);
+        })
+      );
+    } catch (error) {
+      if (warn) {
+        const msg = error instanceof Error ? error.message : String(error);
+        output.warning(`Skipping ${names[i]}: ${msg}`);
+      }
+      results.push(null);
+    }
+  }
+  return results;
+}
+
+/**
  * Execute interactive clean across all registered repositories
  *
  * @param io Optional terminal I/O for the picker (injected by tests)
+ * @param withSize Measure worktree disk usage (slow on large repos)
  */
-export async function executeInteractiveCleanAll(io?: TerminalIO): Promise<void> {
+export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = false): Promise<void> {
   const repos = await loadReposForCleanAll(false);
-  const names = buildRepoDisplayNames(repos);
   const startDir = Deno.cwd();
 
-  output.info(`Scanning ${repos.length} repositor${repos.length === 1 ? 'y' : 'ies'}...`);
+  output.info(
+    `Scanning ${repos.length} repositor${repos.length === 1 ? 'y' : 'ies'}${withSize ? ' (measuring disk usage)' : ''}...`
+  );
 
-  // git commands run against the current directory, so repos are scanned
-  // one at a time (each scan is internally parallel).
-  const scanned: { repo: RegisteredRepo; worktrees: WorktreeInfo[] }[] = [];
+  const scanned = await scanRepos(repos, startDir, withSize, true);
   const sections: SelectSection[] = [];
-  for (let i = 0; i < repos.length; i++) {
-    try {
-      const result = await withCwd(repos[i].path, startDir, async () => {
-        const settings = await loadRepoCleanSettings(repos[i].path);
-        return buildCleanSections(settings, {
-          titlePrefix: `${names[i]} › `,
-          valuePrefix: `${i}:`,
-          withCategories: true,
-        });
-      });
-      scanned[i] = { repo: repos[i], worktrees: result.worktrees };
-      sections.push(...result.sections);
-    } catch (error) {
-      const msg = error instanceof Error ? error.message : String(error);
-      output.warning(`Skipping ${names[i]}: ${msg}`);
-    }
-  }
+  scanned.forEach((stats, i) => {
+    if (!stats) return;
+    sections.push(
+      ...sectionsFromStats(stats, {
+        titlePrefix: `${stats.name} › `,
+        valuePrefix: `${i}:`,
+        withCategories: true,
+      })
+    );
+  });
 
   if (sections.length === 0) {
     output.success('Nothing to clean');
@@ -665,6 +668,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO): Promise<void>
       message: 'Select items to clean across all repositories:',
       sections,
       selectAllLabel: 'Select all (every repository)',
+      headerLines: renderOverviewChart(scanned.filter((s): s is RepoStats => s !== null)),
       warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
     },
     io
@@ -691,7 +695,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO): Promise<void>
   for (const [index, values] of byRepo) {
     const paths = values.filter((v) => v.startsWith('worktree:')).map((v) => v.slice('worktree:'.length));
     if (paths.some((p) => isPathInside(startDir, p))) {
-      homeDir = scanned[index].repo.path;
+      homeDir = scanned[index]!.path;
       try {
         Deno.chdir(homeDir);
         await signalNavigation(homeDir);
@@ -705,9 +709,9 @@ export async function executeInteractiveCleanAll(io?: TerminalIO): Promise<void>
   console.log(`Removing ${result.selected.length} item(s)...\n`);
   const totals = { removedWorktrees: 0, removedBranches: 0, failed: 0 };
   for (const [index, values] of [...byRepo].sort(([a], [b]) => a - b)) {
-    const { repo, worktrees } = scanned[index];
-    console.log(output.bold(names[index]));
-    const results = await withCwd(repo.path, homeDir, () => removeSelectedItems(values, worktrees));
+    const stats = scanned[index]!;
+    console.log(output.bold(stats.name));
+    const results = await withCwd(stats.path, homeDir, () => removeSelectedItems(values, stats.worktrees));
     const repoTotals = reportRemovalResults(results);
     totals.removedWorktrees += repoTotals.removedWorktrees;
     totals.removedBranches += repoTotals.removedBranches;
@@ -738,11 +742,10 @@ async function analyzeAutoClean(
 
   // Get all worktrees (NOW ONLY SHOWS REAL WORKTREES)
   const worktrees = await listWorktrees();
+  const repoRoot = await findGitRoot();
 
   // Filter out bare repository and protected branches
-  const nonBareWorktrees = worktrees.filter(
-    (wt) => !wt.bare && !isEffectivelyProtected(wt.branch, settings.defaultBranch, settings.userProtected)
-  );
+  const nonBareWorktrees = worktrees.filter((wt) => !wt.bare && !isProtectedWorktree(wt, repoRoot, settings));
 
   // Analyze each worktree in parallel — each needs several git calls, so
   // sequential analysis is slow when there are many worktrees. The pool
@@ -923,15 +926,13 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
 
   // JSON mode - output and exit without prompting
   if (parsed.json) {
-    console.log(
-      JSON.stringify({
-        repos: analyses.map((a) => ({
-          name: names[a.index],
-          path: repos[a.index].path,
-          ...toAutoCleanJson(a.toClean, a.toSkip),
-        })),
-      })
-    );
+    printJson({
+      repos: analyses.map((a) => ({
+        name: names[a.index],
+        path: repos[a.index].path,
+        ...toAutoCleanJson(a.toClean, a.toSkip),
+      })),
+    });
     Deno.exit(0);
   }
 
@@ -1037,6 +1038,261 @@ async function executeAutoCleanAll(parsed: CleanArgs): Promise<void> {
 }
 
 /**
+ * Resolve the repositories `--stats` reports on: every registered repo with
+ * --all, otherwise the repository of the current directory.
+ */
+async function resolveStatsRepos(parsed: CleanArgs): Promise<RegisteredRepo[]> {
+  if (parsed.all) {
+    return await loadReposForCleanAll(parsed.json);
+  }
+  return [{ path: await findGitRoot(), addedAt: '' }];
+}
+
+/**
+ * Execute `gw clean --stats`: report what could be cleaned, remove nothing.
+ * With --json, prints a machine-readable report whose item ids can be
+ * passed back to `gw clean --remove`.
+ */
+async function executeCleanStats(parsed: CleanArgs): Promise<void> {
+  const repos = await resolveStatsRepos(parsed);
+  const startDir = Deno.cwd();
+
+  if (!parsed.json) {
+    output.info(
+      `Scanning ${repos.length} repositor${repos.length === 1 ? 'y' : 'ies'}${parsed.size ? ' (measuring disk usage)' : ''}...`
+    );
+  }
+
+  const stats = (await scanRepos(repos, startDir, parsed.size, !parsed.json)).filter((s): s is RepoStats => s !== null);
+
+  if (parsed.json) {
+    const sum = (f: (s: RepoStats) => number) => stats.reduce((n, s) => n + f(s), 0);
+    printJson({
+      repos: stats,
+      totals: {
+        repos: stats.length,
+        worktrees: sum((s) => s.totals.worktrees),
+        branches: sum((s) => s.totals.branches),
+        orphans: sum((s) => s.totals.orphans),
+        removable: sum((s) => s.totals.removable),
+        sizeBytes: parsed.size ? sum((s) => s.totals.sizeBytes ?? 0) : null,
+      },
+    });
+    return;
+  }
+
+  console.log();
+  for (const line of renderOverviewChart(stats, 10)) console.log(line);
+
+  for (const repo of stats) {
+    if (repo.totals.removable === 0) continue;
+    console.log(`\n${output.bold(repo.name)} ${output.dim(repo.path)}`);
+    const row = (label: string, detail: string[], id: string) =>
+      console.log(
+        `  ${label}${detail.length > 0 ? ' ' + output.dim(`(${detail.join(', ')})`) : ''}  ${output.dim(id)}`
+      );
+    for (const wt of repo.worktrees.filter((w) => !w.protected)) {
+      const detail: string[] = [];
+      if (wt.ageDays > 0) detail.push(`${wt.ageDays}d old`);
+      if (wt.uncommitted) detail.push('uncommitted');
+      if (wt.unpushed) detail.push('unpushed');
+      if (wt.sizeBytes !== null) detail.push(formatBytes(wt.sizeBytes));
+      row(`worktree ${output.path(wt.branch || wt.path)}`, detail, wt.id);
+    }
+    for (const b of repo.branches.filter((x) => !x.protected)) {
+      row(`branch   ${output.path(b.name)}`, b.lastCommit ? [b.lastCommit] : [], b.id);
+    }
+    for (const o of repo.orphans.filter((x) => !x.protected)) {
+      const detail = o.lastCommit ? [o.lastCommit] : [];
+      detail.push(o.unpushed ? 'unpushed' : 'remote gone');
+      row(`orphan   ${output.path(o.name)}`, detail, o.id);
+    }
+  }
+
+  console.log(
+    output.dim(`\nRemove items with: gw clean --remove <id> [--remove <id> ...]  (machine-readable: --stats --json)\n`)
+  );
+}
+
+/** One item resolved from a --remove id */
+interface RemovalTarget {
+  id: string;
+  kind: 'worktree' | 'branch';
+  /** Worktree path or branch name */
+  target: string;
+  label: string;
+}
+
+/**
+ * Validate --remove ids within the repository of the current directory.
+ * Protected items are always refused; worktrees with uncommitted or unpushed
+ * work are refused unless --force.
+ */
+async function planRepoRemovals(
+  repoRoot: string,
+  items: { id: string; kind: 'worktree' | 'branch'; target: string }[],
+  force: boolean
+): Promise<{ allowed: RemovalTarget[]; refused: { id: string; reason: string }[] }> {
+  const settings = await loadRepoCleanSettings(repoRoot);
+  const worktrees = await listWorktrees();
+  const branches = new Set(await listLocalBranches());
+  const allowed: RemovalTarget[] = [];
+  const refused: { id: string; reason: string }[] = [];
+
+  for (const item of items) {
+    if (item.kind === 'worktree') {
+      const wt = worktrees.find((w) => !w.bare && resolve(w.path) === resolve(item.target));
+      if (!wt) {
+        refused.push({ id: item.id, reason: 'worktree not found' });
+      } else if (isProtectedWorktree(wt, repoRoot, settings)) {
+        refused.push({ id: item.id, reason: 'protected branch' });
+      } else if (!force && (await hasUncommittedChanges(wt.path))) {
+        refused.push({ id: item.id, reason: 'has uncommitted changes (use --force)' });
+      } else if (!force && (await hasUnpushedCommits(wt.path))) {
+        refused.push({ id: item.id, reason: 'has unpushed commits (use --force)' });
+      } else {
+        allowed.push({ id: item.id, kind: 'worktree', target: wt.path, label: wt.branch || wt.path });
+      }
+    } else {
+      const holder = worktrees.find((w) => w.branch === item.target);
+      if (!branches.has(item.target)) {
+        refused.push({ id: item.id, reason: 'branch not found' });
+      } else if (isEffectivelyProtected(item.target, settings.defaultBranch, settings.userProtected)) {
+        refused.push({ id: item.id, reason: 'protected branch' });
+      } else if (holder) {
+        refused.push({ id: item.id, reason: `checked out in worktree ${holder.path}` });
+      } else {
+        allowed.push({ id: item.id, kind: 'branch', target: item.target, label: item.target });
+      }
+    }
+  }
+
+  return { allowed, refused };
+}
+
+/**
+ * Execute `gw clean --remove <id> ...`: remove exactly the given items (ids
+ * from `gw clean --stats --json`), across any registered repositories.
+ * Exits 1 when any item was refused or failed.
+ */
+async function executeRemoveItems(parsed: CleanArgs): Promise<void> {
+  const startDir = Deno.cwd();
+  const refused: { id: string; reason: string }[] = [];
+  const byRepo = new Map<string, { id: string; kind: 'worktree' | 'branch'; target: string }[]>();
+
+  // Group ids by repository root
+  for (const id of new Set(parsed.remove)) {
+    const parsedId = parseItemId(id);
+    if (!parsedId) {
+      refused.push({ id, reason: 'invalid id (expected wt:<path> or br:<repo>:<branch>)' });
+      continue;
+    }
+    const probe = parsedId.kind === 'worktree' ? parsedId.path : parsedId.repoPath;
+    let root: string;
+    try {
+      if (!(await pathExists(probe))) throw new Error('missing');
+      root = await findGitRoot(probe);
+    } catch {
+      refused.push({ id, reason: `${parsedId.kind === 'worktree' ? 'worktree' : 'repository'} not found` });
+      continue;
+    }
+    const list = byRepo.get(root) ?? [];
+    list.push(
+      parsedId.kind === 'worktree'
+        ? { id, kind: 'worktree', target: parsedId.path }
+        : { id, kind: 'branch', target: parsedId.branch }
+    );
+    byRepo.set(root, list);
+  }
+
+  const plans: { root: string; allowed: RemovalTarget[] }[] = [];
+  for (const [root, items] of byRepo) {
+    const plan = await withCwd(root, startDir, () => planRepoRemovals(root, items, parsed.force));
+    plans.push({ root, allowed: plan.allowed });
+    refused.push(...plan.refused);
+  }
+  const total = plans.reduce((n, p) => n + p.allowed.length, 0);
+
+  const report = (removed: string[], failed: { id: string; error: string }[]) => {
+    if (parsed.json) {
+      printJson({ dryRun: parsed.dryRun, removed, refused, failed });
+    }
+    if (refused.length > 0 || failed.length > 0) Deno.exit(1);
+  };
+
+  if (!parsed.json) {
+    for (const p of plans) {
+      if (p.allowed.length === 0) continue;
+      console.log(output.bold(getRepoDisplayName(p.root)));
+      for (const t of p.allowed) console.log(`  ${output.errorSymbol()} ${t.kind} ${output.path(t.label)}`);
+    }
+    for (const r of refused) {
+      console.log(`  ${output.warningSymbol()} ${r.id} ${output.dim(`- refused: ${r.reason}`)}`);
+    }
+  }
+
+  if (parsed.dryRun || total === 0) {
+    if (!parsed.json) output.info(parsed.dryRun ? 'Dry run - nothing was removed' : 'Nothing to remove');
+    report(parsed.dryRun ? plans.flatMap((p) => p.allowed.map((t) => t.id)) : [], []);
+    return;
+  }
+
+  if (!parsed.yes) {
+    if (parsed.json) {
+      throw new Error('--remove with --json needs --yes to confirm (or --dry-run to preview)');
+    }
+    if (!(await confirm(`Remove ${total} item(s)?`))) {
+      console.log('\nCancelled.\n');
+      Deno.exit(0);
+    }
+  }
+
+  // Navigate to the owning repo's root if the current directory is about to be removed
+  let homeDir = startDir;
+  const owner = plans.find((p) => p.allowed.some((t) => t.kind === 'worktree' && isPathInside(startDir, t.target)));
+  if (owner) {
+    homeDir = owner.root;
+    try {
+      Deno.chdir(homeDir);
+      await signalNavigation(homeDir);
+    } catch {
+      // Continue anyway — removal runs from each repo's root
+    }
+  }
+
+  const removed: string[] = [];
+  const failed: { id: string; error: string }[] = [];
+  for (const p of plans) {
+    await withCwd(p.root, homeDir, async () => {
+      // Worktrees first, so their branches are free to delete afterwards
+      for (const t of [...p.allowed].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'worktree' ? -1 : 1))) {
+        try {
+          if (t.kind === 'worktree') {
+            await removeWorktree(t.target, parsed.force);
+          } else {
+            await deleteBranch(t.target, parsed.force);
+          }
+          removed.push(t.id);
+          if (!parsed.json) console.log(`  ${output.checkmark()} Removed ${t.kind} ${output.path(t.label)}`);
+        } catch (error) {
+          const msg = error instanceof Error ? error.message : String(error);
+          failed.push({ id: t.id, error: msg });
+          if (!parsed.json)
+            console.log(`  ${output.errorSymbol()} Failed ${t.kind} ${output.path(t.label)}: ${output.dim(msg)}`);
+        }
+      }
+    });
+  }
+
+  if (!parsed.json) {
+    console.log();
+    if (removed.length > 0) output.success(`Removed ${removed.length} item(s)`);
+    if (failed.length > 0) output.error(`Failed to remove ${failed.length} item(s)`);
+  }
+  report(removed, failed);
+}
+
+/**
  * Execute the clean command
  */
 export async function executeClean(args: string[]): Promise<void> {
@@ -1047,18 +1303,50 @@ export async function executeClean(args: string[]): Promise<void> {
     Deno.exit(0);
   }
 
+  // Multi-repo JSON modes: keep stdout pure JSON by sending every other
+  // console.log (config warnings, migration notices) to stderr.
+  if (parsed.json && (parsed.all || parsed.stats || parsed.remove.length > 0)) {
+    const stdoutLog = console.log;
+    printJson = (value) => stdoutLog(JSON.stringify(value));
+    console.log = console.error;
+    try {
+      await runClean(parsed);
+    } finally {
+      console.log = stdoutLog;
+      printJson = (value) => console.log(JSON.stringify(value));
+    }
+    return;
+  }
+
+  await runClean(parsed);
+}
+
+/**
+ * Dispatch a parsed clean invocation to its mode
+ */
+async function runClean(parsed: CleanArgs): Promise<void> {
+  if (parsed.remove.length > 0) {
+    await executeRemoveItems(parsed);
+    return;
+  }
+
+  if (parsed.stats) {
+    await executeCleanStats(parsed);
+    return;
+  }
+
   if (parsed.all) {
     if (parsed.auto) {
       await executeAutoCleanAll(parsed);
     } else {
-      await executeInteractiveCleanAll();
+      await executeInteractiveCleanAll(undefined, parsed.size);
     }
     return;
   }
 
   // Interactive mode is the default — auto mode is opt-in
   if (!parsed.auto) {
-    await executeInteractiveClean();
+    await executeInteractiveClean(parsed.size);
     return;
   }
 

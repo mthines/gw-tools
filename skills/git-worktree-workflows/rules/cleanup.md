@@ -145,6 +145,23 @@ gw clean --all --auto
 
 Missing repositories are skipped and dropped from the registry; each repo keeps its own protected branches.
 
+### Agent Cleanup with `--stats` and `--remove`
+
+Agents should not drive the interactive picker. Read a report, decide, then remove by id:
+
+```bash
+# 1. Report (never removes). --size adds disk usage (slow: runs du per worktree)
+gw clean --stats --all --json
+#    repos[].worktrees[] / branches[] / orphans[] each have: id, protected,
+#    uncommitted, unpushed, ageDays / lastCommit, sizeBytes
+
+# 2. Preview, then remove exactly the chosen ids
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json
+gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --yes --json
+```
+
+`--remove` refuses protected items, refuses worktrees with uncommitted/unpushed work unless `--force`, deletes branches with `-d` (`-D` with `--force`), and exits 1 if anything was refused or failed — check `refused` and `failed` in the JSON.
+
 ### Safety Checks
 
 Only removes worktrees with:

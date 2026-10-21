@@ -5,7 +5,7 @@
 
 import { assertEquals } from '@std/assert';
 import { join } from '@std/path';
-import { executeClean, executeInteractiveCleanAll, isPathInside } from './clean.ts';
+import { buildRepoDisplayNames, executeClean, executeInteractiveCleanAll, isPathInside } from './clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd, TempEnv } from '../test-utils/temp-env.ts';
 import { loadRegistry, registerRepo } from '../lib/repo-registry.ts';
@@ -1098,6 +1098,336 @@ Deno.test('clean --all interactive - select all, then unselect one item to keep 
     } finally {
       await repoA.cleanup();
       await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all interactive - overview chart is shown above the picker', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a', 'feat-a2']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        const { io, screen } = createPickerIO(['enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+        // deno-lint-ignore no-control-regex
+        const text = screen().replace(/\x1b\[[0-9;]*m/g, '');
+        assertEquals(text.includes('Overview — 2 repos'), true, 'overview chart rendered');
+        const nameA = repoA.path.split('/').pop()!;
+        const nameB = repoB.path.split('/').pop()!;
+        assertEquals(text.indexOf(nameA) < text.indexOf(nameB), true, 'repo with more items ranked first');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+/** Run clean with captured output and parse the last JSON line */
+async function runCleanJson(args: string[]): Promise<{ exitCode?: number; data: Record<string, unknown> }> {
+  const res = await withMockedExit(() => executeClean(args), { captureOutput: true });
+  const line = (res.stdout ?? '').trim().split('\n').pop()!;
+  return { exitCode: res.exitCode, data: JSON.parse(line) };
+}
+
+type StatsJson = {
+  repos: {
+    path: string;
+    worktrees: { id: string; branch: string; protected: boolean; sizeBytes: number | null }[];
+    orphans: { id: string; name: string }[];
+    branches: { id: string; name: string; protected: boolean }[];
+    totals: { removable: number; sizeBytes: number | null };
+  }[];
+  totals: { repos: number; removable: number };
+};
+
+Deno.test('clean --stats --json - reports the current repo with ids and flags, removes nothing', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-a']);
+    try {
+      await repo.createBranch('loose-branch');
+      const cwd = new TempCwd(repo.path);
+      let data: StatsJson;
+      try {
+        data = (await runCleanJson(['--stats', '--json'])).data as unknown as StatsJson;
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(data.repos.length, 1);
+      const r = data.repos[0];
+      assertEquals(r.path, repo.path);
+      const feat = r.worktrees.find((w) => w.branch === 'feat-a')!;
+      assertEquals(feat.id, `wt:${join(repo.path, 'feat-a')}`);
+      assertEquals(feat.protected, false);
+      assertEquals(feat.sizeBytes, null, 'size only with --size');
+      assertEquals(r.worktrees.find((w) => w.branch === 'main')!.protected, true);
+      const loose = [...r.branches, ...r.orphans].find((b) => b.name === 'loose-branch')!;
+      assertEquals(loose.id, `br:${repo.path}:loose-branch`);
+      assertEquals(r.totals.removable >= 2, true);
+
+      // Nothing was removed
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true
+      );
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --stats --json --all --size - reports every registered repo with disk usage', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      let data: StatsJson;
+      try {
+        data = (await runCleanJson(['--stats', '--json', '--all', '--size'])).data as unknown as StatsJson;
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        data.repos.map((r) => r.path),
+        [repoA.path, repoB.path]
+      );
+      assertEquals(data.totals.repos, 2);
+      for (const r of data.repos) {
+        assertEquals(typeof r.totals.sizeBytes, 'number');
+        assertEquals(
+          r.worktrees.every((w) => typeof w.sizeBytes === 'number'),
+          true
+        );
+      }
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --stats - human output lists removable items with their ids', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-a']);
+    try {
+      const cwd = new TempCwd(repo.path);
+      let stdout = '';
+      try {
+        const res = await withMockedExit(() => executeClean(['--stats']), { captureOutput: true });
+        stdout = res.stdout ?? '';
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(stdout.includes('Overview'), true);
+      assertEquals(stdout.includes(`wt:${join(repo.path, 'feat-a')}`), true);
+      assertEquals(stdout.includes('gw clean --remove'), true);
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - removes exactly the given items across repos', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a', 'keep-a']);
+    const repoB = await createRegisteredRepo([]);
+    try {
+      await repoB.createBranch('old-b');
+      await repoB.createBranch('keep-b');
+      const cwd = new TempCwd(repoA.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson([
+          '--remove',
+          `wt:${join(repoA.path, 'feat-a')}`,
+          `--remove=br:${repoB.path}:old-b`,
+          '--yes',
+          '--json',
+        ]);
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(result.exitCode ?? 0, 0);
+      assertEquals((result.data.removed as string[]).length, 2);
+      const worktreesA = await repoA.listWorktrees();
+      assertEquals(
+        worktreesA.some((wt) => wt.includes('feat-a')),
+        false
+      );
+      assertEquals(
+        worktreesA.some((wt) => wt.includes('keep-a')),
+        true
+      );
+      const branchesB = await repoB.listBranches();
+      assertEquals(branchesB.includes('old-b'), false);
+      assertEquals(branchesB.includes('keep-b'), true);
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - refuses protected items and exits 1', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['keep-me'], ['keep-me']);
+    try {
+      const cwd = new TempCwd(repo.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson([
+          '--remove',
+          `wt:${join(repo.path, 'keep-me')}`,
+          '--remove',
+          `br:${repo.path}:main`,
+          '--remove',
+          `wt:${repo.path}`,
+          '--yes',
+          '--force',
+          '--json',
+        ]);
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(result.exitCode, 1);
+      assertEquals(result.data.removed, []);
+      const refused = result.data.refused as { id: string; reason: string }[];
+      assertEquals(refused.length, 3);
+      assertEquals(
+        refused.every((r) => r.reason === 'protected branch'),
+        true
+      );
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('keep-me')),
+        true
+      );
+      assertEquals((await repo.listBranches()).includes('main'), true);
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - refuses a worktree with uncommitted changes unless --force', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['dirty']);
+    try {
+      await Deno.writeTextFile(join(repo.path, 'dirty', 'wip.txt'), 'work in progress');
+      const id = `wt:${join(repo.path, 'dirty')}`;
+      const cwd = new TempCwd(repo.path);
+      try {
+        const refusedRun = await runCleanJson(['--remove', id, '--yes', '--json']);
+        assertEquals(refusedRun.exitCode, 1);
+        assertEquals((refusedRun.data.refused as { reason: string }[])[0].reason.startsWith('has uncommitted'), true);
+        assertEquals(
+          (await repo.listWorktrees()).some((wt) => wt.includes('dirty')),
+          true
+        );
+
+        const forcedRun = await runCleanJson(['--remove', id, '--yes', '--force', '--json']);
+        assertEquals(forcedRun.exitCode ?? 0, 0);
+        assertEquals(
+          (await repo.listWorktrees()).some((wt) => wt.includes('dirty')),
+          false
+        );
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - --dry-run reports without removing', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-a']);
+    try {
+      const id = `wt:${join(repo.path, 'feat-a')}`;
+      const cwd = new TempCwd(repo.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson(['--remove', id, '--dry-run', '--json']);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.data.dryRun, true);
+      assertEquals(result.data.removed, [id]);
+      assertEquals(
+        (await repo.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true
+      );
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --remove - invalid and unknown ids are refused', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo([]);
+    try {
+      const cwd = new TempCwd(repo.path);
+      let result: { exitCode?: number; data: Record<string, unknown> };
+      try {
+        result = await runCleanJson([
+          '--remove',
+          'garbage',
+          '--remove',
+          `br:${repo.path}:does-not-exist`,
+          '--remove',
+          '/not/a/path',
+          '--yes',
+          '--json',
+        ]);
+      } finally {
+        cwd.restore();
+      }
+      assertEquals(result.exitCode, 1);
+      assertEquals((result.data.refused as unknown[]).length, 3);
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all - display names extend with parent dirs only to disambiguate', () => {
+  const names = buildRepoDisplayNames([
+    { path: '/w/agent-skills.git', addedAt: '' },
+    { path: '/w/mthines/agent-skills.git', addedAt: '' },
+    { path: '/w/lorekit.git', addedAt: '' },
+    { path: '/w/AeroSpace.git/main', addedAt: '' },
+  ]);
+  assertEquals(names, ['w/agent-skills.git', 'mthines/agent-skills.git', 'lorekit.git', 'AeroSpace.git/main']);
+});
+
+Deno.test('clean --stats --json - config warnings go to stderr, stdout stays valid JSON', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['feat-a']);
+    try {
+      // A config written by a newer gw triggers a warning while loading
+      await writeTestConfig(repo.path, { ...createMinimalConfig(), configVersion: 999 } as never);
+      const cwd = new TempCwd(repo.path);
+      let res: { stdout?: string; stderr?: string; exitCode?: number };
+      try {
+        res = await withMockedExit(() => executeClean(['--stats', '--all', '--json']), { captureOutput: true });
+      } finally {
+        cwd.restore();
+      }
+      const data = JSON.parse(res.stdout ?? '');
+      assertEquals(data.repos.length, 1);
+      assertEquals((res.stderr ?? '').includes('version 999'), true, 'warning went to stderr');
+    } finally {
+      await repo.cleanup();
     }
   });
 });

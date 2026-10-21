@@ -85,6 +85,8 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Preview batch cleanup                     | `gw clean --dry-run`                                                |
 | Clean across ALL gw repos (interactive)   | `gw clean --all` ("Select all" row, `w` = category in every repo)   |
 | Auto-clean safe worktrees in ALL gw repos | `gw clean --all --auto` (add `--dry-run` to preview)                |
+| See what's cluttering repos (agent JSON)  | `gw clean --stats --all --json` (`--size` for disk usage)           |
+| Remove specific items by id (from stats)  | `gw clean --remove <id> [--remove <id>...] --yes --json`            |
 | Full cleanup: worktrees + orphan branches | `gw prune`                                                          |
 | Get repo root path (worktree-aware)       | `gw root`                                                           |
 | Protect branch from cleanup               | `gw protect [branch]` (default: cwd branch)                         |
