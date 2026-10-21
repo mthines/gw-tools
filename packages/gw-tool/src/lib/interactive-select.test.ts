@@ -425,3 +425,52 @@ Deno.test("multiSelect - category toggle: 'w' without categories toggles only th
 
   assertEquals(result.selected, ['wt:feat/old', 'wt:feat/new']);
 });
+
+// ── Root select-all row ─────────────────────────────────────
+
+Deno.test('multiSelect - select-all row: space selects every selectable item in every section', async () => {
+  const keys = encodeKeys('space', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect(
+    { message: 'Test', sections: createMultiRepoSections(), selectAllLabel: 'Select all' },
+    io
+  );
+
+  assertEquals(result.selected, ['a:wt:feat/a', 'a:orphan:old/a', 'b:wt:feat/b']);
+});
+
+Deno.test('multiSelect - select-all row: select all then unselect one item', async () => {
+  // space selects all; down -> repo-a Worktrees header; down -> feat/a; space unselects it
+  const keys = encodeKeys('space', 'down', 'down', 'space', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect(
+    { message: 'Test', sections: createMultiRepoSections(), selectAllLabel: 'Select all' },
+    io
+  );
+
+  assertEquals(result.selected, ['a:orphan:old/a', 'b:wt:feat/b']);
+});
+
+Deno.test('multiSelect - select-all row: pressing it twice deselects everything', async () => {
+  const keys = encodeKeys('space', 'space', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect(
+    { message: 'Test', sections: createMultiRepoSections(), selectAllLabel: 'Select all' },
+    io
+  );
+
+  assertEquals(result.selected, []);
+});
+
+Deno.test('multiSelect - select-all row is not shown without selectAllLabel', async () => {
+  // Cursor starts on the first section header, so space toggles only that section
+  const keys = encodeKeys('space', 'enter');
+  const { io } = createMockIO(keys);
+
+  const result = await multiSelect({ message: 'Test', sections: createMultiRepoSections() }, io);
+
+  assertEquals(result.selected, ['a:wt:feat/a']);
+});

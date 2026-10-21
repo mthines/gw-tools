@@ -155,8 +155,9 @@ Repository Registry (--all):
 
   In the interactive --all picker, sections are grouped per repo
   ("<repo> › Worktrees", "<repo> › Local Branches", "<repo> › Orphan
-  Branches"). Press 'a' to toggle the current section, or 'w' to toggle
-  that category (e.g. all worktrees) in every repo.
+  Branches"). The root "Select all" row selects everything, so you can
+  then unselect what to keep. Press 'a' to toggle the current section, or
+  'w' to toggle that category (e.g. all worktrees) in every repo.
 
 Examples:
   # Interactive mode (default): pick exactly what to remove
@@ -663,6 +664,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO): Promise<void>
     {
       message: 'Select items to clean across all repositories:',
       sections,
+      selectAllLabel: 'Select all (every repository)',
       warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
     },
     io

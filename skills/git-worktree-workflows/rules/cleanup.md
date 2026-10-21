@@ -134,6 +134,7 @@ gw registers each repository it is used in (`gw init`, or any `gw` command run i
 
 ```bash
 # Interactive picker grouped per repo: "<repo> › Worktrees", "<repo> › Orphan Branches", ...
+#   top "Select all" row = everything (then unselect what to keep)
 #   a = toggle current section, w = toggle that category in every repo
 gw clean --all
 

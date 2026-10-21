@@ -800,7 +800,7 @@ Deno.test('clean --all interactive - lists every registered repo and removes wor
       const cwd = new TempCwd(repoA.path);
       try {
         // 'w' on the first "Worktrees" section selects worktrees in every repo
-        const { io, screen } = createPickerIO(['w', 'enter']);
+        const { io, screen } = createPickerIO(['down', 'w', 'enter']);
         await withMockedExit(() => executeInteractiveCleanAll(io));
 
         const nameA = repoA.path.split('/').pop();
@@ -836,7 +836,8 @@ Deno.test("clean --all interactive - honors each repo's protected branches", asy
     try {
       const cwd = new TempCwd(repoA.path);
       try {
-        const { io } = createPickerIO(['w', 'enter']);
+        // Space on the root "Select all" row selects everything selectable
+        const { io } = createPickerIO(['space', 'enter']);
         await withMockedExit(() => executeInteractiveCleanAll(io));
       } finally {
         cwd.restore();
@@ -867,8 +868,9 @@ Deno.test('clean --all interactive - selecting one section only cleans that repo
     try {
       const cwd = new TempCwd(repoA.path);
       try {
-        // 'a' toggles only the first repo's Worktrees section
-        const { io } = createPickerIO(['a', 'enter']);
+        // down moves from "Select all" to the first repo's Worktrees header;
+        // 'a' toggles only that section
+        const { io } = createPickerIO(['down', 'a', 'enter']);
         await withMockedExit(() => executeInteractiveCleanAll(io));
       } finally {
         cwd.restore();
@@ -1068,3 +1070,34 @@ Deno.test(
     });
   }
 );
+
+Deno.test('clean --all interactive - select all, then unselect one item to keep it', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        // space: select all · down: repo A header · down: feat-a · space: unselect it
+        const { io, screen } = createPickerIO(['space', 'down', 'down', 'space', 'enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+        assertEquals(screen().includes('Select all (every repository)'), true, 'root select-all row shown');
+      } finally {
+        cwd.restore();
+      }
+
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true,
+        'unselected item kept'
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        false
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
