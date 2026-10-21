@@ -764,8 +764,14 @@ async function createRegisteredRepo(worktreeNames: string[], protectedBranches?:
   return repo;
 }
 
+/** Strip ANSI escape sequences (colors, cursor moves) */
+function stripAnsi(text: string): string {
+  // deno-lint-ignore no-control-regex
+  return text.replace(/\x1b\[[0-9;?]*[A-Za-z]/g, '');
+}
+
 /** Mock picker terminal that presses the given keys */
-function createPickerIO(keys: string[]): { io: TerminalIO; screen: () => string } {
+function createPickerIO(keys: string[], waitForLoad = true): { io: TerminalIO; screen: () => string } {
   const encoded = keys.map((k) => {
     if (k === 'enter') return new Uint8Array([0x0d]);
     if (k === 'down') return new Uint8Array([0x1b, 0x5b, 0x42]);
@@ -778,6 +784,15 @@ function createPickerIO(keys: string[]): { io: TerminalIO; screen: () => string 
   const io: TerminalIO = {
     read: async (buf: Uint8Array) => {
       await new Promise((r) => setTimeout(r, 1));
+      // The --all picker streams repos in; press keys only once loading is
+      // done (the spinner line is gone and the overview chart is drawn).
+      if (index === 0 && waitForLoad) {
+        // deno-lint-ignore no-control-regex
+        const lastFrame = () => screen.slice(screen.lastIndexOf('\x1b[H')).replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+        for (let i = 0; i < 2000 && (!lastFrame().includes('Overview') || lastFrame().includes('…\n')); i++) {
+          await new Promise((r) => setTimeout(r, 5));
+        }
+      }
       if (index >= encoded.length) return null;
       const key = encoded[index++];
       buf.set(key);
@@ -1460,3 +1475,57 @@ Deno.test(
     });
   }
 );
+
+Deno.test('clean --all interactive - opens before scanning finishes and shows a loading line', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    const repoB = await createRegisteredRepo(['feat-b']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        // Press Enter immediately, without waiting for the scan
+        const { io, screen } = createPickerIO(['enter'], false);
+        await withMockedExit(() => executeInteractiveCleanAll(io));
+        const firstFrame = stripAnsi(screen().split('\x1b[H')[1]);
+        assertEquals(firstFrame.includes('Scanning repositories 0/2…'), true, 'loading line in the first frame');
+        assertEquals(firstFrame.includes('Overview'), false, 'chart not shown before the scan finishes');
+      } finally {
+        cwd.restore();
+      }
+      // Nothing was selected, so nothing was removed
+      assertEquals(
+        (await repoA.listWorktrees()).some((wt) => wt.includes('feat-a')),
+        true
+      );
+      assertEquals(
+        (await repoB.listWorktrees()).some((wt) => wt.includes('feat-b')),
+        true
+      );
+    } finally {
+      await repoA.cleanup();
+      await repoB.cleanup();
+    }
+  });
+});
+
+Deno.test('clean --all interactive - --size fills in sizes after the list is shown', async () => {
+  await withTempRegistry(async () => {
+    const repoA = await createRegisteredRepo(['feat-a']);
+    try {
+      const cwd = new TempCwd(repoA.path);
+      try {
+        const { io, screen } = createPickerIO(['enter']);
+        await withMockedExit(() => executeInteractiveCleanAll(io, true));
+        // deno-lint-ignore no-control-regex
+        const text = screen().replace(/\x1b\[[0-9;]*[A-Za-z]/g, '');
+        assertEquals(text.includes('Measuring disk usage'), true, 'size progress shown');
+        const finalFrame = text.slice(text.lastIndexOf('Overview'));
+        assertEquals(/\d+(\.\d)? (B|KB|MB)/.test(finalFrame), true, 'sizes rendered once measured');
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repoA.cleanup();
+    }
+  });
+});

@@ -8,6 +8,7 @@ import {
   collectRepoStats,
   formatBytes,
   isEffectivelyProtected,
+  measureRepoSizes,
   isProtectedWorktree,
   parseItemId,
   type RepoCleanSettings,
@@ -182,7 +183,8 @@ Repository Registry (--all):
 
   In the interactive --all picker, sections are grouped per repo
   ("<repo> › Worktrees", "<repo> › Local Branches", "<repo> › Orphan
-  Branches"), under an overview chart ranking repos by how much can be
+  Branches"). The picker opens immediately and repos stream in as they are
+  scanned; then an overview chart ranks repos by how much can be
   cleaned (by disk usage with --size). The root "Select all" row selects everything, so you can
   then unselect what to keep. Press 'a' to toggle the current section, or
   'w' to toggle that category (e.g. all worktrees) in every repo.
@@ -597,6 +599,9 @@ async function withCwd<T>(dir: string, fallbackDir: string, fn: () => Promise<T>
   }
 }
 
+/** Spinner animation shown while the --all picker is still loading */
+const SPINNER_FRAMES = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
 /**
  * How many repos the picker's overview chart lists: up to 10, or 5 on short
  * terminals (under 30 rows) so the item list keeps enough room.
@@ -654,42 +659,129 @@ async function scanRepos(
 export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = false): Promise<void> {
   const repos = await loadReposForCleanAll(false);
   const startDir = Deno.cwd();
+  const names = buildRepoDisplayNames(repos);
+  const chartRows = overviewChartRows(io);
 
-  output.info(
-    `Scanning ${repos.length} repositor${repos.length === 1 ? 'y' : 'ies'}${withSize ? ' (measuring disk usage)' : ''}...`
-  );
-
-  const scanned = await scanRepos(repos, startDir, withSize, true);
+  // The picker opens right away; repos stream into it as their scans finish.
+  // `sections` and `headerLines` are mutated in place and redrawn via refresh.
+  const scanned: (RepoStats | null)[] = repos.map(() => null);
+  const sectionsByRepo: SelectSection[][] = repos.map(() => []);
   const sections: SelectSection[] = [];
-  scanned.forEach((stats, i) => {
-    if (!stats) return;
-    sections.push(
-      ...sectionsFromStats(stats, {
-        titlePrefix: `${stats.name} › `,
-        valuePrefix: `${i}:`,
-        withCategories: true,
-      })
-    );
-  });
+  const headerLines: string[] = [];
+  const failures: string[] = [];
+  let refresh = () => {};
+  let stopped = false;
+  let progress = { label: 'Scanning repositories', done: 0, total: repos.length };
+  let loading = true;
+  let frame = 0;
 
-  if (sections.length === 0) {
+  const drawHeader = () => {
+    const ready = scanned.filter((s): s is RepoStats => s !== null);
+    const spinner = SPINNER_FRAMES[frame % SPINNER_FRAMES.length];
+    const status = `${output.path(spinner)} ${progress.label} ${progress.done}/${progress.total}…`;
+    // Before the first full scan only the loading line is shown; afterwards
+    // the chart (re-ranked once sizes arrive) with the size progress below.
+    const chartReady = progress.label !== 'Scanning repositories' || !loading;
+    headerLines.splice(0, headerLines.length, ...(chartReady ? renderOverviewChart(ready, chartRows) : []));
+    if (loading) headerLines.push(status);
+    if (!loading && failures.length > 0) {
+      headerLines.push(output.dim(`${failures.length} repo(s) could not be scanned — listed after you exit`));
+    }
+  };
+
+  // Replace one repo's sections, keeping the user's selections
+  const setRepoSections = (i: number, next: SelectSection[]) => {
+    const selected = new Set(
+      sectionsByRepo[i].flatMap((s) => s.items.filter((it) => it.selected).map((it) => it.value))
+    );
+    for (const item of next.flatMap((s) => s.items)) {
+      if (selected.has(item.value) && !item.disabled) item.selected = true;
+    }
+    sectionsByRepo[i] = next;
+    sections.splice(0, sections.length, ...sectionsByRepo.flat());
+  };
+  const repoSections = (i: number, stats: RepoStats) =>
+    sectionsFromStats(stats, { titlePrefix: `${stats.name} › `, valuePrefix: `${i}:`, withCategories: true });
+
+  const load = async () => {
+    // git commands run against the current directory, so repos are scanned
+    // one at a time (each scan is internally parallel).
+    for (let i = 0; i < repos.length && !stopped; i++) {
+      try {
+        const stats = await withCwd(repos[i].path, startDir, async () => {
+          const settings = await loadRepoCleanSettings(repos[i].path);
+          return collectRepoStats(names[i], repos[i].path, settings);
+        });
+        scanned[i] = stats;
+        setRepoSections(i, repoSections(i, stats));
+      } catch (error) {
+        failures.push(`${names[i]}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+      progress.done++;
+      drawHeader();
+      refresh();
+    }
+
+    if (withSize && !stopped) {
+      const ready = scanned.map((s, i) => [s, i] as const).filter((e): e is [RepoStats, number] => e[0] !== null);
+      progress = { label: 'Measuring disk usage', done: 0, total: ready.length };
+      drawHeader();
+      refresh();
+      for (const [stats, i] of ready) {
+        if (stopped) break;
+        await measureRepoSizes(stats);
+        setRepoSections(i, repoSections(i, stats));
+        progress.done++;
+        drawHeader();
+        refresh();
+      }
+    }
+
+    loading = false;
+    drawHeader();
+    refresh();
+  };
+
+  drawHeader();
+  let loader: Promise<void> = Promise.resolve();
+  const spinner = setInterval(() => {
+    frame++;
+    if (loading) {
+      drawHeader();
+      refresh();
+    }
+  }, 120);
+
+  let result;
+  try {
+    result = await multiSelect(
+      {
+        message: 'Select items to clean across all repositories:',
+        sections,
+        selectAllLabel: 'Select all (every repository)',
+        headerLines,
+        warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
+        onReady: (r) => {
+          refresh = r;
+          loader = load();
+        },
+      },
+      io
+    );
+  } finally {
+    // Stop the background scan before anything is removed: it changes the
+    // process cwd, which removal also relies on.
+    stopped = true;
+    clearInterval(spinner);
+    await loader;
+    Deno.chdir(startDir);
+  }
+
+  for (const failure of failures) output.warning(`Skipped ${failure}`);
+  if (!loading && sections.length === 0) {
     output.success('Nothing to clean');
     Deno.exit(0);
   }
-
-  const result = await multiSelect(
-    {
-      message: 'Select items to clean across all repositories:',
-      sections,
-      selectAllLabel: 'Select all (every repository)',
-      headerLines: renderOverviewChart(
-        scanned.filter((s): s is RepoStats => s !== null),
-        overviewChartRows(io)
-      ),
-      warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
-    },
-    io
-  );
 
   if (result.cancelled || result.selected.length === 0) {
     console.log('\nCancelled.\n');

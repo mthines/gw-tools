@@ -50,6 +50,14 @@ export interface MultiSelectOptions {
   /** Extra lines (e.g. an overview chart) shown above the message */
   headerLines?: string[];
   /**
+   * Live mode: called once the prompt is on screen with a `refresh`
+   * function. The caller may then keep mutating `sections` (add sections,
+   * update items) and `headerLines`, and call `refresh()` to redraw — e.g.
+   * to stream in results that are still loading. The cursor stays on the
+   * same row. `refresh()` is a no-op once the prompt has closed.
+   */
+  onReady?: (refresh: () => void) => void;
+  /**
    * When set, a root row with this label is shown above all sections.
    * Toggling it selects (or deselects) every selectable item at once, so the
    * user can select everything and then unselect what to keep.
@@ -162,7 +170,7 @@ function parseKey(buf: Uint8Array, n: number): string {
 
 function buildRows(sections: SelectSection[], withSelectAll = false): Row[] {
   const rows: Row[] = [];
-  if (withSelectAll && sections.length > 0) {
+  if (withSelectAll) {
     rows.push({ type: 'select-all', sectionIndex: -1, focusable: true });
     rows.push({ type: 'separator', sectionIndex: -1, focusable: false });
   }
@@ -190,6 +198,16 @@ function buildRows(sections: SelectSection[], withSelectAll = false): Row[] {
     }
   }
   return rows;
+}
+
+/** Stable identity of a row, used to keep the cursor in place across rebuilds */
+function rowKey(row: Row | undefined, sections: SelectSection[]): string {
+  if (!row) return '';
+  if (row.type === 'select-all') return 'select-all';
+  const section = sections[row.sectionIndex];
+  if (row.type === 'section-header') return `header\0${section.title}`;
+  if (row.type === 'item') return `item\0${section.title}\0${section.items[row.itemIndex!].value}`;
+  return '';
 }
 
 function findNextFocusable(rows: Row[], current: number, direction: 1 | -1): number {
@@ -444,9 +462,10 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
     throw new Error('Interactive mode requires a terminal (TTY). ' + 'Use non-interactive mode instead.');
   }
 
-  const rows = buildRows(options.sections, options.selectAllLabel !== undefined);
+  const withSelectAll = options.selectAllLabel !== undefined;
+  let rows = buildRows(options.sections, withSelectAll);
 
-  if (rows.length === 0) {
+  if (rows.length === 0 && !options.onReady) {
     return { selected: [], cancelled: false };
   }
 
@@ -462,6 +481,23 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
   try {
     // Initial render
     viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+
+    // Live mode: let the caller stream in sections/header updates
+    let closed = false;
+    if (options.onReady) {
+      options.onReady(() => {
+        if (closed) return;
+        const key = rowKey(rows[cursor], options.sections);
+        rows = buildRows(options.sections, withSelectAll);
+        const same = rows.findIndex((r) => r.focusable && rowKey(r, options.sections) === key);
+        cursor = same >= 0 ? same : findFirstFocusable(rows);
+        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+      });
+    }
+    const close = <T>(result: T): T => {
+      closed = true;
+      return result;
+    };
 
     // Input loop
     const buf = new Uint8Array(16);
@@ -482,6 +518,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
         case 'space': {
           const row = rows[cursor];
+          if (!row) break;
           if (row.type === 'select-all') {
             toggleEverything(options.sections);
           } else if (row.type === 'section-header') {
@@ -497,6 +534,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
         case 'a': {
           const row = rows[cursor];
+          if (!row) break;
           if (row.type === 'select-all') {
             toggleEverything(options.sections);
           } else {
@@ -507,6 +545,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
         case 'w': {
           const row = rows[cursor];
+          if (!row) break;
           if (row.type === 'select-all') {
             toggleEverything(options.sections);
           } else {
@@ -516,15 +555,16 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
         }
 
         case 'enter':
-          return { selected: getSelected(options.sections), cancelled: false };
+          return close({ selected: getSelected(options.sections), cancelled: false });
 
         case 'ctrl-c':
         case 'escape':
-          return { selected: [], cancelled: true };
+          return close({ selected: [], cancelled: true });
       }
 
       viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
     }
+    closed = true;
   } finally {
     // Always restore terminal state
     terminal.setRaw(false);

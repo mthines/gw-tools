@@ -1458,7 +1458,7 @@ gw keeps a registry of repository roots at `$XDG_CONFIG_HOME/gw/repos.json` (fal
 
 Each repository keeps its own protection rules: its `defaultBranch`, `protectedBranches`, `gw_root`, and `main`/`master` are never removed. The default worktree (the repo root, or `<root>/<defaultBranch>`) stays protected even on a detached HEAD.
 
-Above the picker, an **overview chart** ranks repositories by how much can be cleaned up (worktrees, branches, orphans). Add `--size` to measure disk usage and rank by space instead — it runs `du` on every worktree, so it can take a while on large repos.
+The picker opens immediately and repositories stream into the list as each scan finishes, with a progress line at the top. When scanning is done, an **overview chart** replaces it, ranking up to 10 repositories (5 on short terminals) by how much can be cleaned up (worktrees, branches, orphans). Add `--size` to measure disk usage: sizes fill in after the list is shown, and the chart re-ranks by space — it runs `du` on every worktree, so it can take a while on large repos. Pressing enter while loading stops the scan first; only items you could see are removed.
 
 #### Stats and agent cleanup
 

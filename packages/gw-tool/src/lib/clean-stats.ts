@@ -183,6 +183,31 @@ export function formatBytes(bytes: number): string {
 }
 
 /**
+ * Sum worktree disk usage, skipping worktrees nested inside another listed
+ * worktree (their bytes are already counted by the parent's du).
+ */
+function totalWorktreeSize(worktrees: WorktreeStat[]): number {
+  let total = 0;
+  for (const wt of worktrees) {
+    const nested = worktrees.some((other) => other !== wt && resolve(wt.path).startsWith(resolve(other.path) + '/'));
+    if (!nested && wt.sizeBytes !== null) total += wt.sizeBytes;
+  }
+  return total;
+}
+
+/**
+ * Measure disk usage for an already-collected repository in place (used to
+ * fill in sizes after the picker is already on screen). Does not depend on
+ * the current directory.
+ */
+export async function measureRepoSizes(stats: RepoStats): Promise<void> {
+  await mapWithConcurrency(stats.worktrees, async (wt) => {
+    wt.sizeBytes = await dirSizeBytes(wt.path);
+  });
+  stats.totals.sizeBytes = totalWorktreeSize(stats.worktrees);
+}
+
+/**
  * Scan the repository in the current directory.
  *
  * git commands run against the current directory, so callers must chdir
@@ -267,14 +292,7 @@ export async function collectRepoStats(
 
   // Sum disk usage, skipping worktrees nested inside another listed worktree
   // (their bytes are already counted by the parent's du).
-  let sizeBytes: number | null = null;
-  if (withSize) {
-    sizeBytes = 0;
-    for (const wt of worktrees) {
-      const nested = worktrees.some((other) => other !== wt && resolve(wt.path).startsWith(resolve(other.path) + '/'));
-      if (!nested && wt.sizeBytes !== null) sizeBytes += wt.sizeBytes;
-    }
-  }
+  const sizeBytes = withSize ? totalWorktreeSize(worktrees) : null;
 
   const removable = [...worktrees, ...branches, ...orphans].filter((i) => !i.protected).length;
 
