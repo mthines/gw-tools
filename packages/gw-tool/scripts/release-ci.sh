@@ -248,7 +248,21 @@ else
 
   # Ensure we use token auth for push (some CI environments have credential helpers that override)
   git remote set-url origin "https://x-access-token:${HOMEBREW_TAP_TOKEN}@github.com/mthines/homebrew-gw-tools.git"
-  git push origin main
+
+  # Retry with rebase: a concurrent beta (PR) and stable (main) release can race on the tap.
+  # They touch different formula files, so the rebase is conflict-free.
+  for attempt in 1 2 3 4 5; do
+    if git push origin main; then
+      break
+    fi
+    if [ "$attempt" -eq 5 ]; then
+      echo -e "${RED}❌ Failed to push Homebrew formula after $attempt attempts${NC}"
+      exit 1
+    fi
+    echo -e "${YELLOW}⚠️  Push rejected, rebasing on latest tap and retrying ($attempt/5)...${NC}"
+    sleep $((attempt * 2))
+    git pull --rebase origin main
+  done
 
   cd "$WORKSPACE_ROOT"
   rm -rf "$HOMEBREW_TAP_DIR"

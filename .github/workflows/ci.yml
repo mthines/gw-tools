@@ -371,7 +371,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
 
@@ -393,7 +393,8 @@ jobs:
         run: npx nx run gw-tool:release:ci
 
       - name: Update npm
-        run: npm install -g npm@latest
+        # Pin the major: npm 12+ dropped older Node lines; trusted publishing needs npm >= 11.5.1
+        run: npm install -g npm@11
 
       - name: Publish to npm
         working-directory: dist/packages/gw-tool/npm
