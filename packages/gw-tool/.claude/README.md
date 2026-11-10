@@ -72,6 +72,7 @@ packages/gw-tool/
 │   │   ├── init.ts          # Custom command (initialize config)
 │   │   ├── root.ts          # Custom command (get repo root)
 │   │   ├── install-shell.ts # Custom command (shell integration)
+│   │   ├── git-hook.ts      # Custom commands (install-hook, internal _post-worktree-add)
 │   │   ├── list.ts          # Proxy command (git worktree list)
 │   │   ├── remove.ts        # Proxy command (git worktree remove)
 │   │   └── ...              # Other proxy commands
@@ -81,6 +82,7 @@ packages/gw-tool/
 │       ├── cli.ts           # CLI argument parsing & help text
 │       ├── file-ops.ts      # File/directory operations
 │       ├── hooks.ts         # Hook execution utilities
+│       ├── git-hook.ts      # Native git post-checkout hook install/uninstall (git worktree add support)
 │       ├── path-resolver.ts # Path resolution utilities
 │       ├── output.ts        # Colored output formatting
 │       ├── git-proxy.ts     # Git command proxy utilities

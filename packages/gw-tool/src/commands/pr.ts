@@ -10,6 +10,7 @@ import { listWorktrees } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import { resolveWorktreePath } from '../lib/path-resolver.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
+import { CHECKOUT_ACTIVE_ENV } from '../lib/git-hook.ts';
 import * as output from '../lib/output.ts';
 import { parsePrIdentifier } from '../lib/pr-utils.ts';
 
@@ -428,6 +429,8 @@ export async function executePr(args: string[]): Promise<void> {
     args: gitCmd.slice(1),
     stdout: 'inherit',
     stderr: 'inherit',
+    // Tell the native post-checkout hook that gw handles hooks/copying itself
+    env: { [CHECKOUT_ACTIVE_ENV]: '1' },
   });
 
   const { code } = await gitProcess.output();

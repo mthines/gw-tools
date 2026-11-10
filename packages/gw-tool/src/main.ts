@@ -25,6 +25,7 @@ import { executeProtect } from './commands/protect.ts';
 import { executeUnprotect } from './commands/unprotect.ts';
 import { executeShowInit } from './commands/show-init.ts';
 import { executePr } from './commands/pr.ts';
+import { ensureGitHookInstalled, executeInstallHook, executePostWorktreeAdd } from './commands/git-hook.ts';
 import * as output from './lib/output.ts';
 import { autoRegisterCurrentRepo } from './lib/repo-registry.ts';
 
@@ -56,6 +57,8 @@ const COMMANDS = {
   unprotect: executeUnprotect,
   'show-init': executeShowInit,
   pr: executePr,
+  'install-hook': executeInstallHook,
+  '_post-worktree-add': executePostWorktreeAdd,
 };
 
 if (import.meta.main) {
@@ -96,6 +99,12 @@ if (import.meta.main) {
     // Best-effort and silent; also back-fills repos initialized before
     // the registry existed.
     await autoRegisterCurrentRepo();
+
+    // Back-fill/maintain the native git hook so plain `git worktree add`
+    // runs gw hooks too (opt out via hooks.gitWorktreeAdd: false).
+    if (command !== '_post-worktree-add' && command !== 'install-hook' && command !== 'init') {
+      await ensureGitHookInstalled();
+    }
 
     // Execute command
     await handler(args);

@@ -177,6 +177,8 @@ Config lives at `.gw/config.json` (committable) and `.gw/config.local.json` (git
 }
 ```
 
+Plain `git worktree add` is also covered: gw installs a native git `post-checkout` hook (on by default; disable with `"hooks": { "gitWorktreeAdd": false }`) so `autoCopyFiles` and `hooks.checkout.post` run there too. Pre-checkout hooks and auto-cd are `gw checkout` only. Manage with `gw install-hook [--status|--uninstall]`.
+
 Hook variables: `{worktree}`, `{worktreePath}`, `{gitRoot}`, `{branch}`.
 
 ## Related Skills

@@ -53,6 +53,7 @@ A command-line tool for managing git worktrees, built with Deno.
       - [Options](#options-2)
       - [Examples](#examples-3)
       - [How It Works](#how-it-works-2)
+    - [install-hook](#install-hook)
     - [install-shell](#install-shell)
       - [Options](#options-3)
       - [Examples](#examples-4)
@@ -963,6 +964,29 @@ The default branch and update strategy are read from `.gw/config.json`:
 ```
 
 If not configured, defaults to "main" branch and "merge" strategy.
+
+### install-hook
+
+Make plain `git worktree add` run gw's hooks too.
+
+```bash
+gw install-hook              # install (also done automatically for repos with .gw/config.json)
+gw install-hook --status     # show installed / enabled state
+gw install-hook --uninstall  # remove the gw block from the post-checkout hook
+```
+
+Git has no "worktree add" hook, but it fires `post-checkout` in the new worktree. gw installs a small marker-delimited block into the repository's `post-checkout` hook (existing hook content is preserved) that forwards new-worktree events to gw. In the new worktree it then:
+
+- copies `autoCopyFiles` from the default worktree
+- runs `hooks.checkout.post` commands (`{worktree}`, `{worktreePath}`, `{gitRoot}`, `{branch}` are substituted)
+
+**Limits:** `hooks.checkout.pre` cannot run (git has no pre-add hook), and there is no auto-`cd`. `gw checkout` and `gw pr` run everything themselves, so nothing runs twice. If `core.hooksPath` is set (e.g. Husky), gw does not touch it; add `gw _post-worktree-add "$@"` to your `post-checkout` hook manually.
+
+**Enabled by default.** To opt out, set `hooks.gitWorktreeAdd` to `false` in `.gw/config.json` (or `config.local.json`). It is read each time the hook fires, so no reinstall is needed.
+
+```json
+{ "hooks": { "gitWorktreeAdd": false } }
+```
 
 ### install-shell
 

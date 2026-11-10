@@ -18,6 +18,12 @@ export interface CommandHooks {
 export interface HooksConfig {
   /** Hooks for the checkout command */
   checkout?: CommandHooks;
+  /**
+   * Whether gw installs a native git post-checkout hook so plain
+   * `git worktree add` also runs autoCopyFiles and checkout.post hooks.
+   * Default: true. Set to false to disable.
+   */
+  gitWorktreeAdd?: boolean;
 }
 
 /**

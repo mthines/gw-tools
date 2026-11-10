@@ -66,6 +66,11 @@
             }
           },
           "additionalProperties": false
+        },
+        "gitWorktreeAdd": {
+          "type": "boolean",
+          "description": "When true (default), gw installs a native git post-checkout hook so plain 'git worktree add' also copies autoCopyFiles and runs hooks.checkout.post. Pre hooks cannot run for 'git worktree add'. Set to false to disable; read at runtime, no reinstall needed.",
+          "default": true
         }
       },
       "additionalProperties": false
