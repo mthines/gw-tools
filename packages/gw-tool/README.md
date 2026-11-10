@@ -980,6 +980,8 @@ Git has no "worktree add" hook, but it fires `post-checkout` in the new worktree
 - copies `autoCopyFiles` from the default worktree
 - runs `hooks.checkout.post` commands (`{worktree}`, `{worktreePath}`, `{gitRoot}`, `{branch}` are substituted)
 
+**Trusted config only.** The hook reads `.gw/config.json` from the repository root or the `main` / `master` worktree, never from the new worktree: a branch you check out can carry its own committed config, and running its hook commands would be arbitrary code execution. If no trusted config exists the hook does nothing.
+
 **Limits:** `hooks.checkout.pre` cannot run (git has no pre-add hook), and there is no auto-`cd`. `gw checkout` and `gw pr` run everything themselves, so nothing runs twice. If `core.hooksPath` is set (e.g. Husky), gw does not touch it; add `gw _post-worktree-add "$@"` to your `post-checkout` hook manually.
 
 **Enabled by default.** To opt out, set `hooks.gitWorktreeAdd` to `false` in `.gw/config.json`. It is read each time the hook fires, so no reinstall is needed. (Don't put it in `config.local.json`: local config is shallow-merged, so a local `hooks` object would replace your `hooks.checkout` commands too.)

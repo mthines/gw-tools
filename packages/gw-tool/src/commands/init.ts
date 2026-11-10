@@ -639,6 +639,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     // Save config temporarily at bare root (worktree doesn't exist yet)
     await saveConfigTemplate(fullPath, config as Config);
     await tryRegisterRepo(fullPath);
+    if (config.hooks?.gitWorktreeAdd !== false) {
+      await installGitHook(fullPath);
+    }
 
     // Step 4: Create default worktree
     const defaultBranch = config.defaultBranch || detectedBranch;

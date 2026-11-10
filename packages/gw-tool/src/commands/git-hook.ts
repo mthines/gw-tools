@@ -7,7 +7,7 @@
  */
 
 import { parse as parseJsonc } from '@std/jsonc';
-import { relative } from '@std/path';
+import { basename, relative } from '@std/path';
 import { loadConfig, resolveConfigPaths } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import {
@@ -23,6 +23,9 @@ import { getCurrentBranch, listWorktrees } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import * as output from '../lib/output.ts';
 import { findGitRoot, resolveWorktreePath } from '../lib/path-resolver.ts';
+
+/** Branches whose worktrees may supply the config for a new worktree (see executePostWorktreeAdd). */
+const DEFAULT_BRANCHES = ['main', 'master'];
 
 function showInstallHookHelp(): void {
   console.log(`gw install-hook - Make plain 'git worktree add' run gw hooks
@@ -173,28 +176,32 @@ export async function executePostWorktreeAdd(args: string[]): Promise<void> {
     if (!worktreePath) return;
     const gitRoot = await findGitRoot(worktreePath);
 
-    // Locate config without auto-creating one; fall back to the repo root for
-    // layouts where worktrees aren't nested inside it.
-    let { configPath } = await resolveConfigPaths();
-    if (!configPath) {
-      // Not nested under a config (e.g. bare layout where main's config is uncommitted): try the repo root,
-      // then every existing worktree.
-      for (const dir of [gitRoot, ...(await listWorktrees()).filter((w) => !w.bare).map((w) => w.path)]) {
-        try {
-          Deno.chdir(dir);
-        } catch {
-          continue; // stale worktree entry whose folder is gone (not yet pruned)
-        }
-        ({ configPath } = await resolveConfigPaths());
-        if (configPath) break;
+    // Config must come from a trusted place, never from the new worktree: it holds the branch being checked out,
+    // and its committed hooks.checkout.post would run arbitrary commands. Trusted = the repo root, then existing
+    // worktrees of the default branches (never an arbitrary worktree, which may hold an untrusted PR branch).
+    const newWorktreeReal = await Deno.realPath(worktreePath);
+    const defaultWorktrees = (await listWorktrees())
+      .filter((w) => !w.bare && DEFAULT_BRANCHES.includes(w.branch))
+      .map((w) => w.path);
+    let configPath: string | null = null;
+    for (const dir of [gitRoot, ...defaultWorktrees]) {
+      try {
+        if ((await Deno.realPath(dir)) === newWorktreeReal) continue;
+        Deno.chdir(dir);
+      } catch {
+        continue; // stale worktree entry whose folder is gone (not yet pruned)
       }
+      ({ configPath } = await resolveConfigPaths());
+      if (configPath) break;
     }
     if (!configPath) return;
 
     const { config } = await loadConfig();
     if (!isGitHookEnabled(config)) return;
 
-    const worktreeName = relative(gitRoot, worktreePath) || worktreePath;
+    // Match `gw checkout`'s name; worktrees outside the repo root (../sibling) fall back to their folder name
+    const relativeName = relative(gitRoot, worktreePath);
+    const worktreeName = relativeName && !relativeName.startsWith('..') ? relativeName : basename(worktreePath);
     const branch = (await getCurrentBranch(worktreePath)) || worktreeName;
     console.log(`\ngw: new worktree detected (${output.bold(worktreeName)})`);
 

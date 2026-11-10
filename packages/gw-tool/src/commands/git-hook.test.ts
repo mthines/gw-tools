@@ -6,7 +6,7 @@
  */
 
 import { assert, assertEquals, assertStringIncludes } from '@std/assert';
-import { join } from '@std/path';
+import { basename, join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { CHECKOUT_ACTIVE_ENV, installGitHook, uninstallGitHook } from '../lib/git-hook.ts';
 import { executePostWorktreeAdd } from './git-hook.ts';
@@ -325,3 +325,95 @@ Deno.test(
     }
   }
 );
+
+Deno.test("git hook - never runs the checked-out branch's own committed config (untrusted branch)", async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  await repo.createFile(
+    '.gw/config.json',
+    JSON.stringify({
+      configVersion: 3,
+      defaultBranch: 'main',
+      hooks: { checkout: { post: ['echo trusted > trusted.out'] } },
+    })
+  );
+  await repo.createCommit('trusted config');
+  const sh = async (...args: string[]) => {
+    const { code, stderr } = await new Deno.Command('git', { args, cwd: repo.path, stderr: 'piped' }).output();
+    if (code !== 0) throw new Error(new TextDecoder().decode(stderr));
+  };
+  await sh('checkout', '-q', '-b', 'untrusted');
+  await Deno.writeTextFile(
+    join(repo.path, '.gw', 'config.json'),
+    JSON.stringify({
+      configVersion: 3,
+      defaultBranch: 'main',
+      hooks: { checkout: { post: ['echo pwned > pwned.out'] } },
+    })
+  );
+  await sh('commit', '-qam', 'branch edits config');
+  await sh('checkout', '-q', 'main');
+  const shimDir = await makeGwShim();
+  const target = join(repo.path, '..', `${basename(repo.path)}-untrusted`);
+  const cwd = new TempCwd(repo.path);
+  try {
+    assertEquals((await installGitHook()).status, 'installed');
+  } finally {
+    cwd.restore();
+  }
+  try {
+    await git(repo.path, ['worktree', 'add', '-q', target, 'untrusted'], shimDir);
+    // Control: the trusted (main) config's hook ran in the new worktree...
+    assert(await exists(join(target, 'trusted.out')));
+    // ...and the branch's own committed config was never executed
+    assert(!(await exists(join(target, 'pwned.out'))));
+  } finally {
+    await Deno.remove(target, { recursive: true }).catch(() => {});
+    await repo.cleanup();
+  }
+});
+
+Deno.test("git hook - an arbitrary existing worktree's config is not trusted either", async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  const shimDir = await makeGwShim();
+  const earlier = join(repo.path, '..', `${basename(repo.path)}-earlier`);
+  const target = join(repo.path, '..', `${basename(repo.path)}-later`);
+  const cwd = new TempCwd(repo.path);
+  try {
+    assertEquals((await installGitHook()).status, 'installed');
+  } finally {
+    cwd.restore();
+  }
+  try {
+    // An earlier worktree (e.g. a PR branch) carries its own config; main and the repo root have none
+    await git(repo.path, ['worktree', 'add', '-q', '-b', 'pr-branch', earlier], shimDir);
+    await Deno.mkdir(join(earlier, '.gw'));
+    await Deno.writeTextFile(
+      join(earlier, '.gw', 'config.json'),
+      JSON.stringify({
+        configVersion: 3,
+        defaultBranch: 'main',
+        hooks: { checkout: { post: ['echo pwned > pwned.out'] } },
+      })
+    );
+    await git(repo.path, ['worktree', 'add', '-q', '-b', 'later', target], shimDir);
+    assert(!(await exists(join(target, 'pwned.out'))));
+  } finally {
+    await Deno.remove(target, { recursive: true }).catch(() => {});
+    await Deno.remove(earlier, { recursive: true }).catch(() => {});
+    await repo.cleanup();
+  }
+});
+
+Deno.test('git hook - {worktree} for a sibling worktree is its folder name, not a ../ path', async () => {
+  const { repo, shimDir, wt } = await setup({ checkout: { post: ['echo {worktree} > name.out'] } });
+  const target = wt('sib');
+  try {
+    await git(repo.path, ['worktree', 'add', '-q', '-b', 'sib', target], shimDir);
+    assertEquals((await Deno.readTextFile(join(target, 'name.out'))).trim(), basename(target));
+  } finally {
+    await Deno.remove(target, { recursive: true }).catch(() => {});
+    await repo.cleanup();
+  }
+});
