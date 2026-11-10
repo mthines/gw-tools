@@ -413,3 +413,49 @@ Deno.test('git hook - {worktree} for a sibling worktree is its folder name, not 
     await repo.cleanup();
   }
 });
+
+Deno.test('git hook - non-main default branch is trusted and config above the repo is never picked up', async () => {
+  const root = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-dev-' }));
+  const shimDir = await makeGwShim();
+  const run = (cwd: string, args: string[]) => git(cwd, args, shimDir);
+  try {
+    // A config in the directory above the repo must never be used (it would also fail to load as a repo config)
+    await Deno.mkdir(join(root, '.gw'));
+    await Deno.writeTextFile(
+      join(root, '.gw', 'config.json'),
+      JSON.stringify({
+        configVersion: 3,
+        defaultBranch: 'main',
+        hooks: { checkout: { post: ['echo above > above.out'] } },
+      })
+    );
+    const bare = join(root, 'repo.git');
+    await run(root, ['init', '--bare', '-b', 'develop', bare]);
+    const develop = join(bare, 'develop');
+    await run(bare, ['worktree', 'add', '--orphan', '-b', 'develop', develop]);
+    await run(develop, ['config', 'user.email', 't@e.x']);
+    await run(develop, ['config', 'user.name', 't']);
+    await run(develop, ['config', 'commit.gpgsign', 'false']);
+    await Deno.writeTextFile(join(develop, '.env'), 'SECRET=1\n');
+    await run(develop, ['commit', '--allow-empty', '-m', 'init']);
+    // The remote's default branch is `develop` (not main/master)
+    await run(bare, ['symbolic-ref', 'refs/remotes/origin/HEAD', 'refs/remotes/origin/develop']);
+    // Config exists only in the develop worktree (uncommitted), as after `gw init <url>`
+    await Deno.mkdir(join(develop, '.gw'));
+    await Deno.writeTextFile(
+      join(develop, '.gw', 'config.json'),
+      JSON.stringify({ configVersion: 3, defaultBranch: 'develop', autoCopyFiles: ['.env'] })
+    );
+    const cwd = new TempCwd(develop);
+    try {
+      assertEquals((await installGitHook()).status, 'installed');
+    } finally {
+      cwd.restore();
+    }
+    await run(develop, ['worktree', 'add', '-b', 'feat', join(bare, 'feat')]);
+    assertEquals(await Deno.readTextFile(join(bare, 'feat', '.env')), 'SECRET=1\n');
+    assert(!(await exists(join(bare, 'feat', 'above.out'))));
+  } finally {
+    await Deno.remove(root, { recursive: true }).catch(() => {});
+  }
+});

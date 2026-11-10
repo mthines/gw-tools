@@ -7,7 +7,7 @@
  */
 
 import { parse as parseJsonc } from '@std/jsonc';
-import { basename, relative } from '@std/path';
+import { basename, join, relative } from '@std/path';
 import { loadConfig, resolveConfigPaths } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import {
@@ -22,10 +22,19 @@ import {
 import { getCurrentBranch, listWorktrees } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import * as output from '../lib/output.ts';
-import { findGitRoot, resolveWorktreePath } from '../lib/path-resolver.ts';
+import { findGitRoot, pathExists, resolveWorktreePath } from '../lib/path-resolver.ts';
 
-/** Branches whose worktrees may supply the config for a new worktree (see executePostWorktreeAdd). */
+/** Fallback default-branch names whose worktrees may supply the config for a new worktree. */
 const DEFAULT_BRANCHES = ['main', 'master'];
+
+/**
+ * Branches whose worktrees are trusted to hold the config: the remote's default branch plus main/master.
+ * origin/HEAD is only a hint (a local ref set at clone time), never a reason to trust arbitrary branches.
+ */
+async function trustedBranchNames(): Promise<string[]> {
+  const originHead = (await gitOut(['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'])).replace(/^origin\//, '');
+  return [...new Set([originHead, ...DEFAULT_BRANCHES])].filter(Boolean);
+}
 
 function showInstallHookHelp(): void {
   console.log(`gw install-hook - Make plain 'git worktree add' run gw hooks
@@ -137,6 +146,7 @@ async function readHookEnabled(configPath: string): Promise<boolean> {
  */
 export async function ensureGitHookInstalled(): Promise<void> {
   try {
+    // Walks up from the user's own cwd (a tree they already trust); only the hook entry point restricts the lookup.
     const { configPath } = await resolveConfigPaths();
     if (!configPath) return;
     if (!(await readHookEnabled(configPath))) return;
@@ -180,21 +190,24 @@ export async function executePostWorktreeAdd(args: string[]): Promise<void> {
     // and its committed hooks.checkout.post would run arbitrary commands. Trusted = the repo root, then existing
     // worktrees of the default branches (never an arbitrary worktree, which may hold an untrusted PR branch).
     const newWorktreeReal = await Deno.realPath(worktreePath);
-    const defaultWorktrees = (await listWorktrees())
-      .filter((w) => !w.bare && DEFAULT_BRANCHES.includes(w.branch))
+    const trustedBranches = await trustedBranchNames();
+    const trustedWorktrees = (await listWorktrees())
+      .filter((w) => !w.bare && trustedBranches.includes(w.branch))
       .map((w) => w.path);
-    let configPath: string | null = null;
-    for (const dir of [gitRoot, ...defaultWorktrees]) {
+    // Check each candidate's own .gw/config.json directly: a search that walks up could pick up a config above it.
+    let trustedDir: string | null = null;
+    for (const dir of [gitRoot, ...trustedWorktrees]) {
       try {
         if ((await Deno.realPath(dir)) === newWorktreeReal) continue;
-        Deno.chdir(dir);
+        if (!(await pathExists(join(dir, '.gw', 'config.json')))) continue;
       } catch {
         continue; // stale worktree entry whose folder is gone (not yet pruned)
       }
-      ({ configPath } = await resolveConfigPaths());
-      if (configPath) break;
+      trustedDir = dir;
+      break;
     }
-    if (!configPath) return;
+    if (!trustedDir) return;
+    Deno.chdir(trustedDir); // loadConfig reads from the cwd, and finds exactly that file first
 
     const { config } = await loadConfig();
     if (!isGitHookEnabled(config)) return;
