@@ -236,6 +236,9 @@ Deno.test('git hook - finds an uncommitted config in the main worktree of a bare
     await run(main, ['config', 'commit.gpgsign', 'false']);
     await Deno.writeTextFile(join(main, '.env'), 'SECRET=1\n');
     await run(main, ['commit', '--allow-empty', '-m', 'init']);
+    // A stale worktree (folder deleted, not pruned) listed before main must not stop the config search
+    await run(main, ['worktree', 'add', '-b', 'aaa', join(bare, 'aaa')]);
+    await Deno.remove(join(bare, 'aaa'), { recursive: true });
     // Config exists only in the main worktree (uncommitted), not in the new branch
     await Deno.mkdir(join(main, '.gw'));
     await Deno.writeTextFile(
@@ -252,5 +255,22 @@ Deno.test('git hook - finds an uncommitted config in the main worktree of a bare
     assertEquals(await Deno.readTextFile(join(bare, 'feat', '.env')), 'SECRET=1\n');
   } finally {
     await Deno.remove(root, { recursive: true }).catch(() => {});
+  }
+});
+
+Deno.test('git hook - an empty non-executable placeholder hook is made executable on install', async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  const hookPath = join(repo.path, '.git', 'hooks', 'post-checkout');
+  await Deno.mkdir(join(repo.path, '.git', 'hooks'), { recursive: true });
+  await Deno.writeTextFile(hookPath, '');
+  await Deno.chmod(hookPath, 0o644);
+  const cwd = new TempCwd(repo.path);
+  try {
+    assertEquals((await installGitHook()).status, 'installed');
+    assertEquals((await Deno.stat(hookPath)).mode! & 0o111, 0o111);
+  } finally {
+    cwd.restore();
+    await repo.cleanup();
   }
 });

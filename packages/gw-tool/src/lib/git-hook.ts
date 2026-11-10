@@ -176,8 +176,8 @@ export async function installGitHook(cwd?: string): Promise<InstallResult> {
 
   await Deno.mkdir(dirname(hookPath), { recursive: true });
   await Deno.writeTextFile(hookPath, updated);
-  // Only a freshly created hook needs its mode set; an existing one keeps its own.
-  if (existingMode === null) await Deno.chmod(hookPath, 0o755);
+  // Only a hook we create (or an empty placeholder) needs its mode set; a real existing hook keeps its own.
+  if (existingMode === null || existing === null || existing.trim() === '') await Deno.chmod(hookPath, 0o755);
   return { status: 'installed', hookPath };
 }
 

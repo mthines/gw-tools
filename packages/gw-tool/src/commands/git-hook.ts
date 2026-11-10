@@ -176,7 +176,11 @@ export async function executePostWorktreeAdd(args: string[]): Promise<void> {
       // Not nested under a config (e.g. bare layout where main's config is uncommitted): try the repo root,
       // then every existing worktree.
       for (const dir of [gitRoot, ...(await listWorktrees()).filter((w) => !w.bare).map((w) => w.path)]) {
-        Deno.chdir(dir);
+        try {
+          Deno.chdir(dir);
+        } catch {
+          continue; // stale worktree entry whose folder is gone (not yet pruned)
+        }
         ({ configPath } = await resolveConfigPaths());
         if (configPath) break;
       }
