@@ -139,10 +139,26 @@ export async function installGitHook(cwd?: string): Promise<InstallResult> {
 
   const hookPath = join(dir, 'post-checkout');
   let existing: string | null = null;
+  let existingMode: number | null = null;
   try {
+    // A symlinked hook usually points at a tracked repo script; writing through it would modify that script.
+    const info = await Deno.lstat(hookPath);
+    if (info.isSymlink) {
+      return {
+        status: 'skipped',
+        hookPath,
+        reason: 'post-checkout is a symlink; add \'gw _post-worktree-add "$@"\' to the linked script manually',
+      };
+    }
+    existingMode = info.mode;
     existing = await Deno.readTextFile(hookPath);
   } catch (error) {
     if (!(error instanceof Deno.errors.NotFound)) throw error;
+  }
+
+  // A hook left non-executable is deliberately disabled; do not re-enable it.
+  if (existingMode !== null && (existingMode & 0o111) === 0 && existing !== null && existing.trim() !== '') {
+    return { status: 'skipped', hookPath, reason: 'existing post-checkout hook is not executable (disabled)' };
   }
 
   const updated = addHookBlock(existing);
@@ -157,7 +173,8 @@ export async function installGitHook(cwd?: string): Promise<InstallResult> {
 
   await Deno.mkdir(dirname(hookPath), { recursive: true });
   await Deno.writeTextFile(hookPath, updated);
-  await Deno.chmod(hookPath, 0o755);
+  // Only a freshly created hook needs its mode set; an existing one keeps its own.
+  if (existingMode === null) await Deno.chmod(hookPath, 0o755);
   return { status: 'installed', hookPath };
 }
 
@@ -168,6 +185,7 @@ export async function uninstallGitHook(cwd?: string): Promise<boolean> {
   const hookPath = join(dir, 'post-checkout');
   let existing: string;
   try {
+    if ((await Deno.lstat(hookPath)).isSymlink) return false;
     existing = await Deno.readTextFile(hookPath);
   } catch {
     return false;

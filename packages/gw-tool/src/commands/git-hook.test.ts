@@ -125,6 +125,7 @@ Deno.test('git hook - install preserves an existing hook, is idempotent, and uni
   const original = '#!/bin/sh\necho existing\n';
   await Deno.mkdir(join(repo.path, '.git', 'hooks'), { recursive: true });
   await Deno.writeTextFile(hookPath, original);
+  await Deno.chmod(hookPath, 0o755);
   const cwd = new TempCwd(repo.path);
   try {
     assertEquals((await installGitHook()).status, 'installed');
@@ -150,6 +151,62 @@ Deno.test('git hook - install is skipped when core.hooksPath is set', async () =
     const result = await installGitHook();
     assertEquals(result.status, 'skipped');
     assertStringIncludes(result.reason ?? '', 'core.hooksPath');
+  } finally {
+    cwd.restore();
+    await repo.cleanup();
+  }
+});
+
+Deno.test('git hook - install never writes through a symlinked hook', async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  const script = join(repo.path, 'post-checkout-script');
+  await Deno.writeTextFile(script, '#!/bin/sh\necho tracked\n');
+  await Deno.chmod(script, 0o755);
+  await Deno.mkdir(join(repo.path, '.git', 'hooks'), { recursive: true });
+  await Deno.symlink(script, join(repo.path, '.git', 'hooks', 'post-checkout'));
+  const cwd = new TempCwd(repo.path);
+  try {
+    const result = await installGitHook();
+    assertEquals(result.status, 'skipped');
+    assertStringIncludes(result.reason ?? '', 'symlink');
+    assertEquals(await Deno.readTextFile(script), '#!/bin/sh\necho tracked\n');
+  } finally {
+    cwd.restore();
+    await repo.cleanup();
+  }
+});
+
+Deno.test('git hook - install does not re-enable a non-executable (disabled) hook', async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  const hookPath = join(repo.path, '.git', 'hooks', 'post-checkout');
+  await Deno.mkdir(join(repo.path, '.git', 'hooks'), { recursive: true });
+  await Deno.writeTextFile(hookPath, '#!/bin/sh\necho existing\n');
+  await Deno.chmod(hookPath, 0o644);
+  const cwd = new TempCwd(repo.path);
+  try {
+    const result = await installGitHook();
+    assertEquals(result.status, 'skipped');
+    assertEquals((await Deno.stat(hookPath)).mode! & 0o777, 0o644);
+    assertEquals(await Deno.readTextFile(hookPath), '#!/bin/sh\necho existing\n');
+  } finally {
+    cwd.restore();
+    await repo.cleanup();
+  }
+});
+
+Deno.test('git hook - install preserves the mode of an existing executable hook', async () => {
+  const repo = new GitTestRepo();
+  await repo.init();
+  const hookPath = join(repo.path, '.git', 'hooks', 'post-checkout');
+  await Deno.mkdir(join(repo.path, '.git', 'hooks'), { recursive: true });
+  await Deno.writeTextFile(hookPath, '#!/bin/sh\necho existing\n');
+  await Deno.chmod(hookPath, 0o750);
+  const cwd = new TempCwd(repo.path);
+  try {
+    assertEquals((await installGitHook()).status, 'installed');
+    assertEquals((await Deno.stat(hookPath)).mode! & 0o777, 0o750);
   } finally {
     cwd.restore();
     await repo.cleanup();
