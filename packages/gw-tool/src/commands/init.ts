@@ -11,6 +11,7 @@ import * as output from '../lib/output.ts';
 import { showLogo } from '../lib/cli.ts';
 import { signalNavigation } from '../lib/shell-navigation.ts';
 import { isShellIntegrationInstalled } from '../lib/shell-integration.ts';
+import { installGitHook } from '../lib/git-hook.ts';
 import { tryRegisterRepo } from '../lib/repo-registry.ts';
 
 /**
@@ -638,6 +639,9 @@ async function initializeFromClone(parsed: ParsedInitArgs): Promise<void> {
     // Save config temporarily at bare root (worktree doesn't exist yet)
     await saveConfigTemplate(fullPath, config as Config);
     await tryRegisterRepo(fullPath);
+    if (config.hooks?.gitWorktreeAdd !== false) {
+      await installGitHook(fullPath);
+    }
 
     // Step 4: Create default worktree
     const defaultBranch = config.defaultBranch || detectedBranch;
@@ -959,6 +963,9 @@ async function initializeExistingRepo(parsed: ParsedInitArgs): Promise<void> {
   try {
     await saveConfigTemplate(rootPath, config);
     await tryRegisterRepo(rootPath);
+    if (config.hooks?.gitWorktreeAdd !== false) {
+      await installGitHook(rootPath);
+    }
     output.success('Configuration created successfully');
     console.log(`  Config file: ${output.path(`${rootPath}/.gw/config.json`)}`);
     console.log(`  Repository root: ${output.path(rootPath)}`);

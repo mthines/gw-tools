@@ -75,6 +75,9 @@ The canonical migration guide is in the project root `CLAUDE.md` under
       // Post-hooks: run after successful creation. Failure warns but does NOT roll back.
       "post": ["cd {worktreePath} && pnpm install"],
     },
+    // Plain `git worktree add` also runs autoCopyFiles + checkout.post (via a native git
+    // post-checkout hook gw installs). Pre hooks can't run there. Default: true.
+    "gitWorktreeAdd": true,
   },
 
   // Days before worktrees are considered stale for gw clean / auto-clean (default: 7)

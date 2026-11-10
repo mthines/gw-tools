@@ -107,6 +107,7 @@ Commands:
   init             Initialize gw configuration for a repository
   show-init        Generate a 'gw init' command from current configuration
   install-shell    Output shell integration code (use with eval)
+  install-hook     Make plain 'git worktree add' run gw hooks (on by default)
   root             Get the root directory of the current git repository
   clean            Interactive cleanup of worktrees and branches (--auto for batch,
                    --all for every gw repository)
