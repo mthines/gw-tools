@@ -212,3 +212,45 @@ Deno.test('git hook - install preserves the mode of an existing executable hook'
     await repo.cleanup();
   }
 });
+
+Deno.test('git hook - finds an uncommitted config in the main worktree of a bare layout', async () => {
+  const root = Deno.realPathSync(Deno.makeTempDirSync({ prefix: 'gw-bare-' }));
+  const shimDir = await makeGwShim();
+  const run = async (cwd: string, args: string[]) => {
+    const { code, stderr } = await new Deno.Command('git', {
+      args,
+      cwd,
+      stdout: 'null',
+      stderr: 'piped',
+      env: { PATH: `${shimDir}:${Deno.env.get('PATH')}` },
+    }).output();
+    if (code !== 0) throw new Error(`git ${args.join(' ')}: ${new TextDecoder().decode(stderr)}`);
+  };
+  try {
+    const bare = join(root, 'repo.git');
+    await run(root, ['init', '--bare', '-b', 'main', bare]);
+    const main = join(bare, 'main');
+    await run(bare, ['worktree', 'add', '--orphan', '-b', 'main', main]);
+    await run(main, ['config', 'user.email', 't@e.x']);
+    await run(main, ['config', 'user.name', 't']);
+    await run(main, ['config', 'commit.gpgsign', 'false']);
+    await Deno.writeTextFile(join(main, '.env'), 'SECRET=1\n');
+    await run(main, ['commit', '--allow-empty', '-m', 'init']);
+    // Config exists only in the main worktree (uncommitted), not in the new branch
+    await Deno.mkdir(join(main, '.gw'));
+    await Deno.writeTextFile(
+      join(main, '.gw', 'config.json'),
+      JSON.stringify({ configVersion: 3, defaultBranch: 'main', autoCopyFiles: ['.env'] })
+    );
+    const cwd = new TempCwd(main);
+    try {
+      assertEquals((await installGitHook()).status, 'installed');
+    } finally {
+      cwd.restore();
+    }
+    await run(main, ['worktree', 'add', '-b', 'feat', join(bare, 'feat')]);
+    assertEquals(await Deno.readTextFile(join(bare, 'feat', '.env')), 'SECRET=1\n');
+  } finally {
+    await Deno.remove(root, { recursive: true }).catch(() => {});
+  }
+});

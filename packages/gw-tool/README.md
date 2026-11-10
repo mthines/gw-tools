@@ -982,7 +982,7 @@ Git has no "worktree add" hook, but it fires `post-checkout` in the new worktree
 
 **Limits:** `hooks.checkout.pre` cannot run (git has no pre-add hook), and there is no auto-`cd`. `gw checkout` and `gw pr` run everything themselves, so nothing runs twice. If `core.hooksPath` is set (e.g. Husky), gw does not touch it; add `gw _post-worktree-add "$@"` to your `post-checkout` hook manually.
 
-**Enabled by default.** To opt out, set `hooks.gitWorktreeAdd` to `false` in `.gw/config.json` (or `config.local.json`). It is read each time the hook fires, so no reinstall is needed.
+**Enabled by default.** To opt out, set `hooks.gitWorktreeAdd` to `false` in `.gw/config.json`. It is read each time the hook fires, so no reinstall is needed. (Don't put it in `config.local.json`: local config is shallow-merged, so a local `hooks` object would replace your `hooks.checkout` commands too.)
 
 ```json
 { "hooks": { "gitWorktreeAdd": false } }

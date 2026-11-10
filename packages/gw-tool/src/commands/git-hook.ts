@@ -18,7 +18,7 @@ import {
   resolveFrom,
   uninstallGitHook,
 } from '../lib/git-hook.ts';
-import { getCurrentBranch } from '../lib/git-utils.ts';
+import { getCurrentBranch, listWorktrees } from '../lib/git-utils.ts';
 import { executeHooks, type HookVariables } from '../lib/hooks.ts';
 import * as output from '../lib/output.ts';
 import { findGitRoot, resolveWorktreePath } from '../lib/path-resolver.ts';
@@ -173,8 +173,13 @@ export async function executePostWorktreeAdd(args: string[]): Promise<void> {
     // layouts where worktrees aren't nested inside it.
     let { configPath } = await resolveConfigPaths();
     if (!configPath) {
-      Deno.chdir(gitRoot);
-      ({ configPath } = await resolveConfigPaths());
+      // Not nested under a config (e.g. bare layout where main's config is uncommitted): try the repo root,
+      // then every existing worktree.
+      for (const dir of [gitRoot, ...(await listWorktrees()).filter((w) => !w.bare).map((w) => w.path)]) {
+        Deno.chdir(dir);
+        ({ configPath } = await resolveConfigPaths());
+        if (configPath) break;
+      }
     }
     if (!configPath) return;
 
