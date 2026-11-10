@@ -8,7 +8,8 @@
 import { assert, assertEquals, assertStringIncludes } from '@std/assert';
 import { join } from '@std/path';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
-import { installGitHook, uninstallGitHook } from '../lib/git-hook.ts';
+import { CHECKOUT_ACTIVE_ENV, installGitHook, uninstallGitHook } from '../lib/git-hook.ts';
+import { executePostWorktreeAdd } from './git-hook.ts';
 import { TempCwd } from '../test-utils/temp-env.ts';
 
 const MAIN_TS = new URL('../main.ts', import.meta.url).pathname;
@@ -274,3 +275,53 @@ Deno.test('git hook - an empty non-executable placeholder hook is made executabl
     await repo.cleanup();
   }
 });
+
+Deno.test(
+  'git hook - the entry point itself skips when GW_CHECKOUT_ACTIVE is set (manually wired hook line)',
+  async () => {
+    const repo = new GitTestRepo();
+    await repo.init();
+    await repo.createFile('.env', 'SECRET=1\n');
+    await repo.createFile('.gitignore', '.env\n');
+    await repo.createCommit('add gitignore');
+    await repo.createFile(
+      '.gw/config.json',
+      JSON.stringify({
+        configVersion: 3,
+        defaultBranch: 'main',
+        autoCopyFiles: ['.env'],
+        hooks: { checkout: { post: ['echo ran > hook.out'] } },
+      })
+    );
+    // No git hook installed: the worktree is created without triggering anything, and we call the entry point directly.
+    const target = join(repo.path, '..', `${repo.path.split('/').pop()}-manual`);
+    await new Deno.Command('git', { args: ['worktree', 'add', '-q', '-b', 'manual', target], cwd: repo.path }).output();
+    const zero = '0'.repeat(40);
+    const previous = Deno.env.get(CHECKOUT_ACTIVE_ENV);
+    const cwd = new TempCwd(target);
+    try {
+      // Control: without the variable the entry point acts, so the scenario below is a real trigger
+      Deno.env.delete(CHECKOUT_ACTIVE_ENV);
+      await executePostWorktreeAdd([zero, zero, '1']);
+      assertEquals(await Deno.readTextFile(join(target, '.env')), 'SECRET=1\n');
+      assert(await exists(join(target, 'hook.out')));
+
+      await Deno.remove(join(target, '.env'));
+      await Deno.remove(join(target, 'hook.out'));
+
+      // The first call may have chdir'd while searching for config; go back so this call is a real trigger too
+      Deno.chdir(target);
+      // With the variable set (as gw checkout / gw pr do) it must do nothing
+      Deno.env.set(CHECKOUT_ACTIVE_ENV, '1');
+      await executePostWorktreeAdd([zero, zero, '1']);
+      assert(!(await exists(join(target, '.env'))));
+      assert(!(await exists(join(target, 'hook.out'))));
+    } finally {
+      if (previous === undefined) Deno.env.delete(CHECKOUT_ACTIVE_ENV);
+      else Deno.env.set(CHECKOUT_ACTIVE_ENV, previous);
+      cwd.restore();
+      await Deno.remove(target, { recursive: true }).catch(() => {});
+      await repo.cleanup();
+    }
+  }
+);

@@ -11,6 +11,7 @@ import { relative } from '@std/path';
 import { loadConfig, resolveConfigPaths } from '../lib/config.ts';
 import { copyFiles } from '../lib/file-ops.ts';
 import {
+  CHECKOUT_ACTIVE_ENV,
   installGitHook,
   isGitHookEnabled,
   isGitHookInstalled,
@@ -155,6 +156,9 @@ async function gitOut(args: string[]): Promise<string> {
  */
 export async function executePostWorktreeAdd(args: string[]): Promise<void> {
   try {
+    // gw checkout / gw pr run hooks themselves (also covers a manually added hook line)
+    if (Deno.env.get(CHECKOUT_ACTIVE_ENV)) return;
+
     // Only a new worktree has an all-zeros previous HEAD
     if (!isZeroOid(args[0])) return;
 
