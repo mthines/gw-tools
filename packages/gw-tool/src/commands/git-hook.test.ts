@@ -338,11 +338,8 @@ Deno.test("git hook - never runs the checked-out branch's own committed config (
     })
   );
   await repo.createCommit('trusted config');
-  const sh = async (...args: string[]) => {
-    const { code, stderr } = await new Deno.Command('git', { args, cwd: repo.path, stderr: 'piped' }).output();
-    if (code !== 0) throw new Error(new TextDecoder().decode(stderr));
-  };
-  await sh('checkout', '-q', '-b', 'untrusted');
+  const shimDir = await makeGwShim();
+  await git(repo.path, ['checkout', '-q', '-b', 'untrusted'], shimDir);
   await Deno.writeTextFile(
     join(repo.path, '.gw', 'config.json'),
     JSON.stringify({
@@ -351,9 +348,8 @@ Deno.test("git hook - never runs the checked-out branch's own committed config (
       hooks: { checkout: { post: ['echo pwned > pwned.out'] } },
     })
   );
-  await sh('commit', '-qam', 'branch edits config');
-  await sh('checkout', '-q', 'main');
-  const shimDir = await makeGwShim();
+  await git(repo.path, ['commit', '-qam', 'branch edits config'], shimDir);
+  await git(repo.path, ['checkout', '-q', 'main'], shimDir);
   const target = join(repo.path, '..', `${basename(repo.path)}-untrusted`);
   const cwd = new TempCwd(repo.path);
   try {
