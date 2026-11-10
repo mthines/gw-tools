@@ -202,8 +202,8 @@ export async function executePostWorktreeAdd(args: string[]): Promise<void> {
         console.log('\nCopying files...');
         try {
           const results = await copyFiles(sourcePath, worktreePath, config.autoCopyFiles, false);
-          for (const r of results) {
-            console.log(`  ${r.success ? output.checkmark() : output.warningSymbol()} ${r.message}`);
+          for (const result of results) {
+            console.log(`  ${result.success ? output.checkmark() : output.warningSymbol()} ${result.message}`);
           }
         } catch (error) {
           output.warning(`Failed to copy files - ${error instanceof Error ? error.message : String(error)}`);

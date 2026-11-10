@@ -11,6 +11,9 @@
 import { dirname, isAbsolute, join, resolve } from '@std/path';
 import type { Config } from './types.ts';
 
+/** Name of the git hook file gw's block lives in. */
+const HOOK_FILE_NAME = 'post-checkout';
+
 export const GIT_HOOK_BEGIN = '# >>> gw-tools worktree hook (managed by gw) >>>';
 export const GIT_HOOK_END = '# <<< gw-tools worktree hook <<<';
 
@@ -137,7 +140,7 @@ export async function installGitHook(cwd?: string): Promise<InstallResult> {
   const { dir, reason } = await resolveHooksDir(cwd);
   if (!dir) return { status: 'skipped', reason };
 
-  const hookPath = join(dir, 'post-checkout');
+  const hookPath = join(dir, HOOK_FILE_NAME);
   let existing: string | null = null;
   let existingMode: number | null = null;
   try {
@@ -182,7 +185,7 @@ export async function installGitHook(cwd?: string): Promise<InstallResult> {
 export async function uninstallGitHook(cwd?: string): Promise<boolean> {
   const { dir } = await resolveHooksDir(cwd);
   if (!dir) return false;
-  const hookPath = join(dir, 'post-checkout');
+  const hookPath = join(dir, HOOK_FILE_NAME);
   let existing: string;
   try {
     if ((await Deno.lstat(hookPath)).isSymlink) return false;
@@ -206,13 +209,13 @@ export async function isGitHookInstalled(cwd?: string): Promise<boolean> {
   const { dir } = await resolveHooksDir(cwd);
   if (!dir) return false;
   try {
-    return hasHookBlock(await Deno.readTextFile(join(dir, 'post-checkout')));
+    return hasHookBlock(await Deno.readTextFile(join(dir, HOOK_FILE_NAME)));
   } catch {
     return false;
   }
 }
 
 /** Resolve a path reported by git relative to a cwd. */
-export function resolveFrom(cwd: string, p: string): string {
-  return isAbsolute(p) ? p : resolve(cwd, p);
+export function resolveFrom(cwd: string, path: string): string {
+  return isAbsolute(path) ? path : resolve(cwd, path);
 }
