@@ -47,6 +47,8 @@ export interface WorktreeStat {
   remote: 'tracking' | 'gone' | 'none' | '';
   /** Branch is fully merged into the default branch */
   merged: boolean;
+  /** Commits the default branch lacks when the upstream is gone (0 otherwise): tells a merged branch from one never pushed */
+  ahead: number;
   /** Lock reason when the worktree is locked ('' = locked without reason), undefined otherwise */
   locked?: string;
   protected: boolean;
@@ -272,6 +274,7 @@ export async function collectRepoStats(
         unpushed,
         remote: remoteStatuses.get(wt.branch)?.remote ?? '',
         merged: remoteStatuses.get(wt.branch)?.merged ?? false,
+        ahead: remoteStatuses.get(wt.branch)?.ahead ?? 0,
         ...(wt.locked !== undefined ? { locked: wt.locked } : {}),
         protected: isProtected,
         sizeBytes,

@@ -22,6 +22,7 @@ function repo(name: string, removable: number, sizeBytes: number | null = null):
     lastActivityMs: 0,
     remote: 'tracking' as const,
     merged: false,
+    ahead: 0,
     uncommitted: false,
     unpushed: false,
     protected: false,

@@ -155,6 +155,7 @@ gw clean --stats --all --json
 #    repos[].worktrees[] / branches[] / orphans[] each have: id, protected,
 #    uncommitted, unpushed, ageDays / lastCommit, sizeBytes
 #    worktrees[] also: lastActivityMs, remote (tracking|gone|none), merged,
+#    ahead (commits the default branch lacks when remote is gone),
 #    locked (lock reason; only present when locked)
 #    errors[] lists repos that failed to scan: { name, path, error }
 

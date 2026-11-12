@@ -334,7 +334,8 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     if (wt.locked !== undefined) hints.push(wt.locked ? `locked: ${wt.locked}` : 'locked');
     if (wt.unpushed) hints.push('unpushed');
     if (wt.merged) hints.push('merged');
-    else if (wt.remote === 'gone') hints.push('remote gone');
+    else if (wt.remote === 'gone')
+      hints.push(wt.ahead > 0 ? `remote gone, ${wt.ahead} commit(s) not in default` : 'remote gone');
     else if (wt.remote === 'none') hints.push('not pushed');
     else if (wt.remote === 'tracking') hints.push('on remote');
     if (wt.sizeBytes !== null) hints.push(formatBytes(wt.sizeBytes));

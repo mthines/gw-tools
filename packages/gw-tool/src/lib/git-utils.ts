@@ -1147,6 +1147,8 @@ export function formatRelativeTime(ms: number, now = Date.now()): string {
 export interface BranchRemoteStatus {
   /** 'tracking' = upstream exists, 'gone' = upstream deleted (typically merged + branch deleted), 'none' = never pushed */
   remote: 'tracking' | 'gone' | 'none';
+  /** Commits on the branch that the default branch lacks; only measured when the upstream is gone (else 0) */
+  ahead: number;
   /** Pushed branch merged into the default branch through a merge commit (squash/rebase merges show as 'gone') */
   merged: boolean;
 }
@@ -1176,7 +1178,7 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
     if (!line) continue;
     const [name, upstream, track, sha] = line.split('\t');
     const remote = !upstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
-    result.set(name, { remote, merged: false });
+    result.set(name, { remote, merged: false, ahead: 0 });
     tips.set(name, sha);
   }
 
@@ -1201,6 +1203,17 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
       const name = line.trim();
       const status = result.get(name);
       if (status && status.remote === 'tracking' && !mainline.has(tips.get(name) ?? '')) status.merged = true;
+    }
+  }
+
+  // A gone upstream is ambiguous: deleted after a merge, or never pushed (`gw checkout` sets the upstream
+  // up front). Commits the default branch lacks tell the two apart for a human.
+  const base = bases[bases.length - 1];
+  if (base) {
+    for (const [name, status] of result) {
+      if (status.remote !== 'gone') continue;
+      const count = parseInt((await run(['rev-list', '--count', `${base}..${name}`])).trim(), 10);
+      status.ahead = Number.isNaN(count) ? 0 : count;
     }
   }
 

@@ -63,6 +63,11 @@ Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local br
     await git(dir, 'branch', 'gwfresh');
     await git(dir, 'config', 'branch.gwfresh.remote', 'origin');
     await git(dir, 'config', 'branch.gwfresh.merge', 'refs/heads/gwfresh');
+    await git(dir, 'switch', '-q', '-c', 'gwwork');
+    await git(dir, 'commit', '-q', '--allow-empty', '-m', 'unpushed work');
+    await git(dir, 'config', 'branch.gwwork.remote', 'origin');
+    await git(dir, 'config', 'branch.gwwork.merge', 'refs/heads/gwwork');
+    await git(dir, 'switch', '-q', 'main');
     // pushed (tracking) branch with no work of its own, then main moves on
     await git(dir, 'branch', 'pushedfresh');
     await git(dir, 'branch', '--set-upstream-to=main', 'pushedfresh');
@@ -78,6 +83,9 @@ Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local br
     assertEquals(statuses.get('pushedfresh')?.merged, false);
     assertEquals(statuses.get('gwfresh')?.remote, 'gone');
     assertEquals(statuses.get('gwfresh')?.merged, false);
+    assertEquals(statuses.get('gwfresh')?.ahead, 0);
+    assertEquals(statuses.get('gwwork')?.remote, 'gone');
+    assertEquals(statuses.get('gwwork')?.ahead, 1);
     assertEquals(statuses.get('open')?.merged, false);
     assertEquals(statuses.get('open')?.remote, 'none');
   } finally {
