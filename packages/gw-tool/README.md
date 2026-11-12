@@ -1495,7 +1495,7 @@ gw clean --stats --all --size          # human-readable: where is the clutter?
 gw clean --stats --all --json          # {"repos":[{name,path,defaultBranch,worktrees,branches,orphans,totals}],"totals":{...},"errors":[...]}
 ```
 
-Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). A repository that fails to scan is listed in the top-level `errors` array (`{ name, path, error }`, `[]` when none) instead of being silently omitted. Pass ids back to remove exactly those items:
+Each worktree, branch, and orphan in the JSON carries an `id` (`wt:<path>` or `br:<repo>:<branch>`) plus `protected`, `uncommitted`, `unpushed`, `ageDays`, `lastCommit`, and `sizeBytes` (with `--size`). Worktrees also report `lastActivityMs` (epoch ms of the last commit or newest changed file, `0` if unknown), `remote` (`tracking`, `gone`, `none`, or `''` when detached), `merged`, and `locked` (the lock reason, present only when locked). A repository that fails to scan is listed in the top-level `errors` array (`{ name, path, error }`, `[]` when none) instead of being silently omitted. Pass ids back to remove exactly those items:
 
 ```bash
 gw clean --remove wt:/repos/app.git/feat-x --remove br:/repos/app.git:old-fix --dry-run --json

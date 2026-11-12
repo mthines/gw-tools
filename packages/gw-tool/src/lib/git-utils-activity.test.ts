@@ -2,8 +2,14 @@
  * Tests for the recency and remote-status helpers behind `gw clean`
  */
 
-import { assertEquals } from '@std/assert';
-import { formatRelativeTime, getBranchRemoteStatuses, parsePorcelainPaths } from './git-utils.ts';
+import { assertEquals, assertStringIncludes } from '@std/assert';
+import {
+  formatRelativeTime,
+  getBranchRemoteStatuses,
+  listWorktrees,
+  parsePorcelainPaths,
+  removeWorktree,
+} from './git-utils.ts';
 
 Deno.test('formatRelativeTime - buckets into minutes, hours and days', () => {
   const now = 1_000_000_000_000;
@@ -74,6 +80,40 @@ Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local br
     assertEquals(statuses.get('gwfresh')?.merged, false);
     assertEquals(statuses.get('open')?.merged, false);
     assertEquals(statuses.get('open')?.remote, 'none');
+  } finally {
+    Deno.chdir(prev);
+    await Deno.remove(dir, { recursive: true });
+  }
+});
+
+Deno.test('removeWorktree - a locked worktree needs overrideLock and reports the lock reason', async () => {
+  const dir = await Deno.makeTempDir();
+  const prev = Deno.cwd();
+  try {
+    await git(dir, 'init', '-q', '-b', 'main');
+    await git(dir, 'commit', '-q', '--allow-empty', '-m', 'init');
+    const wtPath = `${dir}-wt`;
+    await git(dir, 'worktree', 'add', '-q', wtPath, '-b', 'feat-locked');
+    await git(dir, 'worktree', 'lock', '--reason', 'fan-out experiment', wtPath);
+    await Deno.writeTextFile(`${wtPath}/dirty.txt`, 'x');
+
+    Deno.chdir(dir);
+    const wt = (await listWorktrees()).find((w) => w.branch === 'feat-locked');
+    assertEquals(wt?.locked, 'fan-out experiment');
+
+    let message = '';
+    try {
+      await removeWorktree(wtPath, true);
+    } catch (error) {
+      message = (error as Error).message;
+    }
+    assertStringIncludes(message, 'fan-out experiment');
+
+    await removeWorktree(wtPath, true, true);
+    assertEquals(
+      (await listWorktrees()).some((w) => w.branch === 'feat-locked'),
+      false
+    );
   } finally {
     Deno.chdir(prev);
     await Deno.remove(dir, { recursive: true });
