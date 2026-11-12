@@ -1182,22 +1182,26 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
   }
 
   // Check against the local and the remote default branch: either one can be the stale one.
-  // Ancestry alone cannot tell a merged branch from a fresh one cut from an older base tip, so a
-  // branch that was never pushed (no upstream) is never labelled merged, and neither is one at a base tip.
+  // Ancestry alone cannot tell a merged branch from a fresh one cut from an older base tip, so:
+  // - only a branch whose remote-tracking ref still exists (it was pushed) can be labelled merged
+  //   (`gw checkout` sets an upstream before the first push, which reads as 'gone');
+  // - a tip on the default branch's first-parent chain is the default branch's own history, not a
+  //   merged branch. A branch merged through a merge commit sits off that chain.
   const bases: string[] = [];
-  const baseTips = new Set<string>();
+  const mainline = new Set<string>();
   for (const ref of [defaultBranch, `origin/${defaultBranch}`]) {
     const sha = (await run(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`])).trim();
-    if (sha) {
-      bases.push(ref);
-      baseTips.add(sha);
+    if (!sha) continue;
+    bases.push(ref);
+    for (const commit of (await run(['rev-list', '--first-parent', ref])).split('\n')) {
+      if (commit) mainline.add(commit);
     }
   }
   for (const base of bases) {
     for (const line of (await run(['branch', '--merged', base, '--format=%(refname:short)'])).split('\n')) {
       const name = line.trim();
       const status = result.get(name);
-      if (status && status.remote === 'tracking' && !baseTips.has(tips.get(name) ?? '')) status.merged = true;
+      if (status && status.remote === 'tracking' && !mainline.has(tips.get(name) ?? '')) status.merged = true;
     }
   }
 
