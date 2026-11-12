@@ -15,6 +15,8 @@ import {
   findOrphanBranches,
   getBranchLastCommitDate,
   getWorktreeAgeDays,
+  getBranchRemoteStatuses,
+  getWorktreeLastActivityMs,
   hasUncommittedChanges,
   hasUnpushedCommits,
   listLocalBranches,
@@ -37,8 +39,18 @@ export interface WorktreeStat {
   branch: string;
   path: string;
   ageDays: number;
+  /** Last activity (newer of last commit and newest changed file), epoch ms; 0 if unknown */
+  lastActivityMs: number;
   uncommitted: boolean;
   unpushed: boolean;
+  /** Remote state of the branch: tracking, gone (upstream deleted), none (never pushed); '' when detached */
+  remote: 'tracking' | 'gone' | 'none' | '';
+  /** Pushed branch merged into the default branch through a merge commit */
+  merged: boolean;
+  /** Commits the default branch lacks when the upstream is gone (0 otherwise). A hint, not proof: a squash-merged branch reports its own commits too */
+  ahead: number;
+  /** Lock reason when the worktree is locked ('' = locked without reason), undefined otherwise */
+  locked?: string;
   protected: boolean;
   /** Disk usage in bytes, or null when not measured (see --size) */
   sizeBytes: number | null;
@@ -235,6 +247,7 @@ export async function collectRepoStats(
 
   const allWorktrees = await listWorktrees();
   const allBranches = await listLocalBranches();
+  const remoteStatuses = await getBranchRemoteStatuses(defaultBranch);
   const worktreeBranches = new Set(allWorktrees.map((wt) => wt.branch).filter(Boolean));
 
   // Analyze worktrees in parallel — each requires several git calls, so
@@ -244,8 +257,9 @@ export async function collectRepoStats(
     allWorktrees.filter((wt) => !wt.bare),
     async (wt): Promise<WorktreeStat> => {
       const isProtected = isProtectedWorktree(wt, repoPath, settings);
-      const [ageDays, uncommitted, unpushed, sizeBytes] = await Promise.all([
+      const [ageDays, lastActivityMs, uncommitted, unpushed, sizeBytes] = await Promise.all([
         getWorktreeAgeDays(wt.path),
+        getWorktreeLastActivityMs(wt.path),
         hasUncommittedChanges(wt.path),
         hasUnpushedCommits(wt.path),
         withSize ? dirSizeBytes(wt.path) : Promise.resolve(null),
@@ -255,8 +269,13 @@ export async function collectRepoStats(
         branch: wt.branch,
         path: wt.path,
         ageDays,
+        lastActivityMs,
         uncommitted,
         unpushed,
+        remote: remoteStatuses.get(wt.branch)?.remote ?? '',
+        merged: remoteStatuses.get(wt.branch)?.merged ?? false,
+        ahead: remoteStatuses.get(wt.branch)?.ahead ?? 0,
+        ...(wt.locked !== undefined ? { locked: wt.locked } : {}),
         protected: isProtected,
         sizeBytes,
       };

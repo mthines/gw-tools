@@ -20,6 +20,7 @@ import { loadConfig, loadProtectedBranches, loadRootConfig } from '../lib/config
 import { mapWithConcurrency } from '../lib/concurrency.ts';
 import {
   deleteBranch,
+  formatRelativeTime,
   getWorktreeAgeDays,
   hasUncommittedChanges,
   hasUnpushedCommits,
@@ -188,7 +189,10 @@ Options:
   -h, --help                 Show this help message
 
 Safety Features:
-  - Interactive mode uses force-deletion for selected items — choose carefully
+  - Interactive mode uses force-deletion for selected items (including dirty and
+    locked worktrees) — choose carefully. Items are sorted by recent activity,
+    newest first, and worktrees show remote status (merged, remote gone,
+    not pushed, on remote) and lock reasons
   - Auto mode only removes worktrees with NO uncommitted changes or unpushed
     commits (unless --force is used)
   - Always prompts for confirmation before deletion
@@ -312,26 +316,39 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     disabledReason: 'protected branch - cannot remove',
   });
 
-  const worktreeItems: SelectItem[] = stats.worktrees.map((wt) => {
+  // Most recently active first; protected worktrees sink to the bottom.
+  const sortedWorktrees = [...stats.worktrees].sort(
+    (a, b) => Number(a.protected) - Number(b.protected) || b.lastActivityMs - a.lastActivityMs
+  );
+  const byLastCommitDesc = <T extends { protected: boolean; lastCommit: string }>(a: T, b: T) =>
+    Number(a.protected) - Number(b.protected) || b.lastCommit.localeCompare(a.lastCommit);
+
+  const worktreeItems: SelectItem[] = sortedWorktrees.map((wt) => {
     const label = wt.branch || wt.path;
     const value = `${valuePrefix}worktree:${wt.path}`;
     if (wt.protected) return protectedItem(label, value);
 
     const hints: string[] = [];
-    if (wt.ageDays > 0) hints.push(`${wt.ageDays}d old`);
+    if (wt.lastActivityMs > 0) hints.push(`active ${formatRelativeTime(wt.lastActivityMs)}`);
     if (wt.uncommitted) hints.push('uncommitted');
+    if (wt.locked !== undefined) hints.push(wt.locked ? `locked: ${wt.locked}` : 'locked');
     if (wt.unpushed) hints.push('unpushed');
+    if (wt.merged) hints.push('merged');
+    else if (wt.remote === 'gone')
+      hints.push(wt.ahead > 0 ? `remote gone, ${wt.ahead} commit(s) not in default` : 'remote gone');
+    else if (wt.remote === 'none') hints.push('not pushed');
+    else if (wt.remote === 'tracking') hints.push('on remote');
     if (wt.sizeBytes !== null) hints.push(formatBytes(wt.sizeBytes));
     return { label, value, hint: hints.length > 0 ? `(${hints.join(', ')})` : '' };
   });
 
-  const branchItems: SelectItem[] = stats.branches.map((b) => {
+  const branchItems: SelectItem[] = [...stats.branches].sort(byLastCommitDesc).map((b) => {
     const value = `${valuePrefix}branch:${b.name}`;
     if (b.protected) return protectedItem(b.name, value);
     return { label: b.name, value, hint: b.lastCommit ? `(${b.lastCommit})` : '' };
   });
 
-  const orphanItems: SelectItem[] = stats.orphans.map((o) => {
+  const orphanItems: SelectItem[] = [...stats.orphans].sort(byLastCommitDesc).map((o) => {
     const value = `${valuePrefix}orphan:${o.name}`;
     // Defense-in-depth: the orphan section is the most destructive code path
     // (force-deletes via -D), so protection is re-asserted in collectRepoStats.
@@ -382,7 +399,7 @@ function removeSelectedItems(selected: string[], worktrees: WorktreeStat[]): Pro
       const wt = worktrees.find((w) => w.path === target);
       const label = wt?.branch || target;
       try {
-        await removeWorktree(target, true); // force
+        await removeWorktree(target, true, true); // force, incl. locked worktrees
         return { kind: 'worktree', label, success: true };
       } catch (error) {
         const msg = error instanceof Error ? error.message : String(error);
@@ -1312,6 +1329,11 @@ async function planRepoRemovals(
         refused.push({ id: item.id, reason: 'worktree not found' });
       } else if (isProtectedWorktree(wt, repoRoot, settings)) {
         refused.push({ id: item.id, reason: 'protected branch' });
+      } else if (wt.locked !== undefined) {
+        refused.push({
+          id: item.id,
+          reason: `locked${wt.locked ? `: ${wt.locked}` : ''} (git worktree unlock it first)`,
+        });
       } else if (!force && (await hasUncommittedChanges(wt.path))) {
         refused.push({ id: item.id, reason: 'has uncommitted changes (use --force)' });
       } else if (!force && (await hasUnpushedCommits(wt.path))) {
