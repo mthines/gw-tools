@@ -1147,7 +1147,7 @@ export function formatRelativeTime(ms: number, now = Date.now()): string {
 export interface BranchRemoteStatus {
   /** 'tracking' = upstream exists, 'gone' = upstream deleted (typically merged + branch deleted), 'none' = never pushed */
   remote: 'tracking' | 'gone' | 'none';
-  /** Commits on the branch that the default branch lacks; only measured when the upstream is gone (else 0) */
+  /** Commits the default branch lacks, measured only when the upstream is gone (else 0). A hint, not proof: a squash-merged branch reports its own commits too */
   ahead: number;
   /** Pushed branch merged into the default branch through a merge commit (squash/rebase merges show as 'gone') */
   merged: boolean;
@@ -1177,7 +1177,10 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
   for (const line of refs.split('\n')) {
     if (!line) continue;
     const [name, upstream, track, sha] = line.split('\t');
-    const remote = !upstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
+    // Only the same-named remote branch counts: `git worktree add -b x path origin/main` tracks origin/main
+    // before anything was pushed.
+    const ownUpstream = upstream?.endsWith(`/${name}`);
+    const remote = !ownUpstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
     result.set(name, { remote, merged: false, ahead: 0 });
     tips.set(name, sha);
   }
@@ -1207,14 +1210,16 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
   }
 
   // A gone upstream is ambiguous: deleted after a merge, or never pushed (`gw checkout` sets the upstream
-  // up front). Commits the default branch lacks tell the two apart for a human.
-  const base = bases[bases.length - 1];
-  if (base) {
-    for (const [name, status] of result) {
-      if (status.remote !== 'gone') continue;
+  // up front). The count of commits the default branch lacks is a hint only: a squash-merged branch still has its own.
+  // Either default-branch ref can be the stale one, so take the smaller count.
+  for (const [name, status] of result) {
+    if (status.remote !== 'gone') continue;
+    const counts: number[] = [];
+    for (const base of bases) {
       const count = parseInt((await run(['rev-list', '--count', `${base}..${name}`])).trim(), 10);
-      status.ahead = Number.isNaN(count) ? 0 : count;
+      if (!Number.isNaN(count)) counts.push(count);
     }
+    status.ahead = counts.length > 0 ? Math.min(...counts) : 0;
   }
 
   return result;

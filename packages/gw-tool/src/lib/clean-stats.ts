@@ -45,9 +45,9 @@ export interface WorktreeStat {
   unpushed: boolean;
   /** Remote state of the branch: tracking, gone (upstream deleted), none (never pushed); '' when detached */
   remote: 'tracking' | 'gone' | 'none' | '';
-  /** Branch is fully merged into the default branch */
+  /** Pushed branch merged into the default branch through a merge commit */
   merged: boolean;
-  /** Commits the default branch lacks when the upstream is gone (0 otherwise): tells a merged branch from one never pushed */
+  /** Commits the default branch lacks when the upstream is gone (0 otherwise). A hint, not proof: a squash-merged branch reports its own commits too */
   ahead: number;
   /** Lock reason when the worktree is locked ('' = locked without reason), undefined otherwise */
   locked?: string;

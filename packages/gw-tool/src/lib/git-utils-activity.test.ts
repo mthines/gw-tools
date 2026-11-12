@@ -46,51 +46,56 @@ async function git(cwd: string, ...args: string[]): Promise<void> {
   if (code !== 0) throw new Error(new TextDecoder().decode(stderr));
 }
 
-Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local branches are never merged', async () => {
+Deno.test('getBranchRemoteStatuses - merged and tracking need a real pushed remote branch', async () => {
   const dir = await Deno.makeTempDir();
+  const remote = await Deno.makeTempDir();
   const prev = Deno.cwd();
   try {
+    await git(remote, 'init', '-q', '--bare', '-b', 'main');
     await git(dir, 'init', '-q', '-b', 'main');
+    await git(dir, 'remote', 'add', 'origin', remote);
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'init');
-    await git(dir, 'branch', 'fresh'); // no commits of its own
+    await git(dir, 'push', '-q', 'origin', 'main');
+    await git(dir, 'branch', 'fresh'); // local only, no commits of its own
+    await git(dir, 'branch', '--track', 'tracksmain', 'origin/main'); // cut from origin/main, never pushed
     await git(dir, 'switch', '-q', '-c', 'done');
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'work');
+    await git(dir, 'push', '-q', '-u', 'origin', 'done');
     await git(dir, 'switch', '-q', 'main');
     await git(dir, 'merge', '-q', '--no-ff', 'done', '-m', 'merge');
-    await git(dir, 'branch', '--set-upstream-to=main', 'done'); // stands in for a pushed branch
     // gw checkout style: upstream configured before any push, remote ref never created
-    await git(dir, 'remote', 'add', 'origin', dir);
-    await git(dir, 'branch', 'gwfresh');
-    await git(dir, 'config', 'branch.gwfresh.remote', 'origin');
-    await git(dir, 'config', 'branch.gwfresh.merge', 'refs/heads/gwfresh');
-    await git(dir, 'switch', '-q', '-c', 'gwwork');
-    await git(dir, 'commit', '-q', '--allow-empty', '-m', 'unpushed work');
-    await git(dir, 'config', 'branch.gwwork.remote', 'origin');
-    await git(dir, 'config', 'branch.gwwork.merge', 'refs/heads/gwwork');
-    await git(dir, 'switch', '-q', 'main');
-    // pushed (tracking) branch with no work of its own, then main moves on
+    for (const [name, commit] of [
+      ['gwfresh', false],
+      ['gwwork', true],
+    ] as const) {
+      await git(dir, 'switch', '-q', '-c', name);
+      if (commit) await git(dir, 'commit', '-q', '--allow-empty', '-m', 'unpushed work');
+      await git(dir, 'config', `branch.${name}.remote`, 'origin');
+      await git(dir, 'config', `branch.${name}.merge`, `refs/heads/${name}`);
+      await git(dir, 'switch', '-q', 'main');
+    }
+    // pushed branch with no work of its own, then main moves on
     await git(dir, 'branch', 'pushedfresh');
-    await git(dir, 'branch', '--set-upstream-to=main', 'pushedfresh');
+    await git(dir, 'push', '-q', '-u', 'origin', 'pushedfresh');
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'main moves on');
     await git(dir, 'switch', '-q', '-c', 'open');
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'wip');
 
     Deno.chdir(dir);
     const statuses = await getBranchRemoteStatuses('main');
-    assertEquals(statuses.get('done')?.merged, true);
+    assertEquals(statuses.get('done'), { remote: 'tracking', merged: true, ahead: 0 });
     assertEquals(statuses.get('fresh')?.merged, false);
+    assertEquals(statuses.get('tracksmain')?.remote, 'none');
     assertEquals(statuses.get('pushedfresh')?.remote, 'tracking');
     assertEquals(statuses.get('pushedfresh')?.merged, false);
-    assertEquals(statuses.get('gwfresh')?.remote, 'gone');
-    assertEquals(statuses.get('gwfresh')?.merged, false);
-    assertEquals(statuses.get('gwfresh')?.ahead, 0);
-    assertEquals(statuses.get('gwwork')?.remote, 'gone');
-    assertEquals(statuses.get('gwwork')?.ahead, 1);
+    assertEquals(statuses.get('gwfresh'), { remote: 'gone', merged: false, ahead: 0 });
+    assertEquals(statuses.get('gwwork'), { remote: 'gone', merged: false, ahead: 1 });
     assertEquals(statuses.get('open')?.merged, false);
     assertEquals(statuses.get('open')?.remote, 'none');
   } finally {
     Deno.chdir(prev);
     await Deno.remove(dir, { recursive: true });
+    await Deno.remove(remote, { recursive: true });
   }
 });
 
