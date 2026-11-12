@@ -1118,7 +1118,7 @@ export async function getWorktreeLastActivityMs(worktreePath: string): Promise<n
           const stat = await Deno.stat(join(worktreePath, file));
           if (stat.mtime) latest = Math.max(latest, stat.mtime.getTime());
         } catch {
-          // deleted file or directory entry — ignore
+          // deleted since git listed it — ignore
         }
       }
     }
@@ -1147,13 +1147,12 @@ export function formatRelativeTime(ms: number, now = Date.now()): string {
 export interface BranchRemoteStatus {
   /** 'tracking' = upstream exists, 'gone' = upstream deleted (typically merged + branch deleted), 'none' = never pushed */
   remote: 'tracking' | 'gone' | 'none';
-  /** Fully merged into the default branch (misses squash/rebase merges — 'gone' covers those) */
+  /** Pushed branch merged into the default branch through a merge commit (squash/rebase merges show as 'gone') */
   merged: boolean;
 }
 
 /**
- * Remote and merge status of every local branch, from two git calls.
- * Runs against the current directory.
+ * Remote and merge status of every local branch. Runs against the current directory.
  */
 export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Map<string, BranchRemoteStatus>> {
   const decoder = new TextDecoder();
