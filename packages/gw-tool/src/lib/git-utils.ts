@@ -14,6 +14,8 @@ export interface WorktreeInfo {
   branch: string;
   head: string;
   bare: boolean;
+  /** Set when the worktree is locked; holds the lock reason ('' if none given) */
+  locked?: string;
 }
 
 /**
@@ -50,6 +52,8 @@ export async function listWorktrees(): Promise<WorktreeInfo[]> {
       current.branch = fullRef.replace(/^refs\/heads\//, '');
     } else if (line === 'bare') {
       current.bare = true;
+    } else if (line === 'locked' || line.startsWith('locked ')) {
+      current.locked = line.substring('locked'.length).trim();
     } else if (line === '') {
       if (current.path) {
         worktrees.push({
@@ -57,6 +61,7 @@ export async function listWorktrees(): Promise<WorktreeInfo[]> {
           branch: current.branch || '',
           head: current.head || '',
           bare: current.bare || false,
+          ...(current.locked !== undefined ? { locked: current.locked } : {}),
         });
       }
       current = {};
@@ -70,6 +75,7 @@ export async function listWorktrees(): Promise<WorktreeInfo[]> {
       branch: current.branch || '',
       head: current.head || '',
       bare: current.bare || false,
+      ...(current.locked !== undefined ? { locked: current.locked } : {}),
     });
   }
 
@@ -198,21 +204,28 @@ export async function getWorktreeAgeDays(worktreePath: string): Promise<number> 
 
 /**
  * Remove a worktree
+ *
+ * @param force Remove even with uncommitted changes
+ * @param overrideLock Also remove a locked worktree (git needs --force twice)
  */
-export async function removeWorktree(worktreePath: string, force = false): Promise<void> {
+export async function removeWorktree(worktreePath: string, force = false, overrideLock = false): Promise<void> {
   const args = ['worktree', 'remove'];
   if (force) args.push('--force');
+  if (force && overrideLock) args.push('--force');
   args.push(worktreePath);
 
-  const cmd = new Deno.Command('git', {
+  const { code, stderr } = await new Deno.Command('git', {
     args,
-    stdout: 'inherit',
-    stderr: 'inherit',
-  });
+    stdout: 'null',
+    stderr: 'piped',
+  }).output();
 
-  const { code } = await cmd.output();
   if (code !== 0) {
-    throw new Error(`Failed to remove worktree: ${worktreePath}`);
+    const detail = new TextDecoder()
+      .decode(stderr)
+      .split('\n')[0]
+      .replace(/^fatal:\s*/, '');
+    throw new Error(detail || `Failed to remove worktree: ${worktreePath}`);
   }
 }
 
@@ -1053,4 +1066,118 @@ export async function copyStagedFiles(
   }
 
   return results;
+}
+
+/**
+ * Last time work happened in a worktree, as epoch milliseconds: the newer of
+ * its last commit and the newest modified/untracked file in its working tree.
+ * Returns 0 when it cannot be determined.
+ */
+export async function getWorktreeLastActivityMs(worktreePath: string): Promise<number> {
+  const decoder = new TextDecoder();
+  let latest = 0;
+
+  try {
+    const { code, stdout } = await new Deno.Command('git', {
+      args: ['-C', worktreePath, 'log', '-1', '--format=%ct'],
+      stdout: 'piped',
+      stderr: 'null',
+    }).output();
+    const ts = parseInt(decoder.decode(stdout).trim(), 10);
+    if (code === 0 && !isNaN(ts)) latest = ts * 1000;
+  } catch {
+    // best-effort
+  }
+
+  try {
+    const { code, stdout } = await new Deno.Command('git', {
+      args: ['-C', worktreePath, 'status', '--porcelain', '-z', '--untracked-files=normal'],
+      stdout: 'piped',
+      stderr: 'null',
+    }).output();
+    if (code === 0) {
+      // Entries are "XY path" separated by NUL; renames carry a second path entry we skip.
+      const files = decoder
+        .decode(stdout)
+        .split('\0')
+        .filter((e) => e.length > 3)
+        .map((e) => e.slice(3))
+        .slice(0, 200);
+      for (const file of files) {
+        try {
+          const stat = await Deno.stat(join(worktreePath, file));
+          if (stat.mtime) latest = Math.max(latest, stat.mtime.getTime());
+        } catch {
+          // deleted file or directory entry — ignore
+        }
+      }
+    }
+  } catch {
+    // best-effort
+  }
+
+  return latest;
+}
+
+/**
+ * Format an epoch-ms timestamp as a short relative time ("5m ago", "3h ago", "12d ago").
+ */
+export function formatRelativeTime(ms: number, now = Date.now()): string {
+  if (!ms) return 'unknown';
+  const diff = Math.max(0, now - ms);
+  const minutes = Math.floor(diff / 60000);
+  if (minutes < 1) return 'just now';
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  return `${Math.floor(hours / 24)}d ago`;
+}
+
+/** Where a local branch stands relative to its remote */
+export interface BranchRemoteStatus {
+  /** 'tracking' = upstream exists, 'gone' = upstream deleted (typically merged + branch deleted), 'none' = never pushed */
+  remote: 'tracking' | 'gone' | 'none';
+  /** Fully merged into the default branch (misses squash/rebase merges — 'gone' covers those) */
+  merged: boolean;
+}
+
+/**
+ * Remote and merge status of every local branch, from two git calls.
+ * Runs against the current directory.
+ */
+export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Map<string, BranchRemoteStatus>> {
+  const decoder = new TextDecoder();
+  const result = new Map<string, BranchRemoteStatus>();
+  const run = async (args: string[]): Promise<string> => {
+    try {
+      const { code, stdout } = await new Deno.Command('git', { args, stdout: 'piped', stderr: 'null' }).output();
+      return code === 0 ? decoder.decode(stdout) : '';
+    } catch {
+      return '';
+    }
+  };
+
+  const refs = await run([
+    'for-each-ref',
+    '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)',
+    'refs/heads',
+  ]);
+  for (const line of refs.split('\n')) {
+    if (!line) continue;
+    const [name, upstream, track] = line.split('\t');
+    const remote = !upstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
+    result.set(name, { remote, merged: false });
+  }
+
+  // Prefer the remote default branch so a stale local one doesn't hide merges
+  const remoteDefault = (
+    await run(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${defaultBranch}`])
+  ).trim();
+  const base = remoteDefault ? `origin/${defaultBranch}` : defaultBranch;
+  for (const line of (await run(['branch', '--merged', base, '--format=%(refname:short)'])).split('\n')) {
+    const status = result.get(line.trim());
+    if (status) status.merged = true;
+  }
+
+  return result;
 }
