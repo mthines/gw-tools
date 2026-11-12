@@ -1069,6 +1069,22 @@ export async function copyStagedFiles(
 }
 
 /**
+ * Paths from `git status --porcelain -z` output. Entries are "XY path" separated by NUL;
+ * a rename or copy is followed by one extra entry holding the old path, which is skipped.
+ */
+export function parsePorcelainPaths(raw: string): string[] {
+  const entries = raw.split('\0');
+  const paths: string[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i];
+    if (entry.length <= 3) continue;
+    paths.push(entry.slice(3));
+    if (entry[0] === 'R' || entry[0] === 'C' || entry[1] === 'R' || entry[1] === 'C') i++;
+  }
+  return paths;
+}
+
+/**
  * Last time work happened in a worktree, as epoch milliseconds: the newer of
  * its last commit and the newest modified/untracked file in its working tree.
  * Returns 0 when it cannot be determined.
@@ -1096,13 +1112,7 @@ export async function getWorktreeLastActivityMs(worktreePath: string): Promise<n
       stderr: 'null',
     }).output();
     if (code === 0) {
-      // Entries are "XY path" separated by NUL; renames carry a second path entry we skip.
-      const files = decoder
-        .decode(stdout)
-        .split('\0')
-        .filter((e) => e.length > 3)
-        .map((e) => e.slice(3))
-        .slice(0, 200);
+      const files = parsePorcelainPaths(decoder.decode(stdout)).slice(0, 200);
       for (const file of files) {
         try {
           const stat = await Deno.stat(join(worktreePath, file));
@@ -1159,24 +1169,36 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
 
   const refs = await run([
     'for-each-ref',
-    '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)',
+    '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)\t%(objectname)',
     'refs/heads',
   ]);
+  const tips = new Map<string, string>();
   for (const line of refs.split('\n')) {
     if (!line) continue;
-    const [name, upstream, track] = line.split('\t');
+    const [name, upstream, track, sha] = line.split('\t');
     const remote = !upstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
     result.set(name, { remote, merged: false });
+    tips.set(name, sha);
   }
 
-  // Prefer the remote default branch so a stale local one doesn't hide merges
-  const remoteDefault = (
-    await run(['rev-parse', '--verify', '--quiet', `refs/remotes/origin/${defaultBranch}`])
-  ).trim();
-  const base = remoteDefault ? `origin/${defaultBranch}` : defaultBranch;
-  for (const line of (await run(['branch', '--merged', base, '--format=%(refname:short)'])).split('\n')) {
-    const status = result.get(line.trim());
-    if (status) status.merged = true;
+  // Check against the local and the remote default branch: either one can be the stale one.
+  // Ancestry alone cannot tell a merged branch from a fresh one cut from an older base tip, so a
+  // branch that was never pushed (no upstream) is never labelled merged, and neither is one at a base tip.
+  const bases: string[] = [];
+  const baseTips = new Set<string>();
+  for (const ref of [defaultBranch, `origin/${defaultBranch}`]) {
+    const sha = (await run(['rev-parse', '--verify', '--quiet', `${ref}^{commit}`])).trim();
+    if (sha) {
+      bases.push(ref);
+      baseTips.add(sha);
+    }
+  }
+  for (const base of bases) {
+    for (const line of (await run(['branch', '--merged', base, '--format=%(refname:short)'])).split('\n')) {
+      const name = line.trim();
+      const status = result.get(name);
+      if (status && status.remote !== 'none' && !baseTips.has(tips.get(name) ?? '')) status.merged = true;
+    }
   }
 
   return result;
