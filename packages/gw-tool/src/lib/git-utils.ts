@@ -1197,7 +1197,7 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
     for (const line of (await run(['branch', '--merged', base, '--format=%(refname:short)'])).split('\n')) {
       const name = line.trim();
       const status = result.get(name);
-      if (status && status.remote !== 'none' && !baseTips.has(tips.get(name) ?? '')) status.merged = true;
+      if (status && status.remote === 'tracking' && !baseTips.has(tips.get(name) ?? '')) status.merged = true;
     }
   }
 

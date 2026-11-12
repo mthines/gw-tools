@@ -52,6 +52,11 @@ Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local br
     await git(dir, 'switch', '-q', 'main');
     await git(dir, 'merge', '-q', '--no-ff', 'done', '-m', 'merge');
     await git(dir, 'branch', '--set-upstream-to=main', 'done'); // stands in for a pushed branch
+    // gw checkout style: upstream configured before any push, remote ref never created
+    await git(dir, 'remote', 'add', 'origin', dir);
+    await git(dir, 'branch', 'gwfresh');
+    await git(dir, 'config', 'branch.gwfresh.remote', 'origin');
+    await git(dir, 'config', 'branch.gwfresh.merge', 'refs/heads/gwfresh');
     await git(dir, 'switch', '-q', '-c', 'open');
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'wip');
 
@@ -59,6 +64,8 @@ Deno.test('getBranchRemoteStatuses - merged needs an upstream, so fresh local br
     const statuses = await getBranchRemoteStatuses('main');
     assertEquals(statuses.get('done')?.merged, true);
     assertEquals(statuses.get('fresh')?.merged, false);
+    assertEquals(statuses.get('gwfresh')?.remote, 'gone');
+    assertEquals(statuses.get('gwfresh')?.merged, false);
     assertEquals(statuses.get('open')?.merged, false);
     assertEquals(statuses.get('open')?.remote, 'none');
   } finally {
