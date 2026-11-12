@@ -1170,16 +1170,16 @@ export async function getBranchRemoteStatuses(defaultBranch: string): Promise<Ma
 
   const refs = await run([
     'for-each-ref',
-    '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)\t%(objectname)',
+    '--format=%(refname:short)\t%(upstream:short)\t%(upstream:track)\t%(objectname)\t%(upstream:remoteref)',
     'refs/heads',
   ]);
   const tips = new Map<string, string>();
   for (const line of refs.split('\n')) {
     if (!line) continue;
-    const [name, upstream, track, sha] = line.split('\t');
+    const [name, upstream, track, sha, remoteRef] = line.split('\t');
     // Only the same-named remote branch counts: `git worktree add -b x path origin/main` tracks origin/main
-    // before anything was pushed.
-    const ownUpstream = upstream?.endsWith(`/${name}`);
+    // (or origin/hot/x) before anything was pushed.
+    const ownUpstream = !!upstream && remoteRef === `refs/heads/${name}`;
     const remote = !ownUpstream ? 'none' : track?.includes('gone') ? 'gone' : 'tracking';
     result.set(name, { remote, merged: false, ahead: 0 });
     tips.set(name, sha);

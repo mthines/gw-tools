@@ -58,6 +58,10 @@ Deno.test('getBranchRemoteStatuses - merged and tracking need a real pushed remo
     await git(dir, 'push', '-q', 'origin', 'main');
     await git(dir, 'branch', 'fresh'); // local only, no commits of its own
     await git(dir, 'branch', '--track', 'tracksmain', 'origin/main'); // cut from origin/main, never pushed
+    await git(dir, 'branch', '--track', 'hotfix', 'origin/main'); // upstream's name only ends like the branch
+    await git(dir, 'push', '-q', 'origin', 'main:refs/heads/hot/hotfix');
+    await git(dir, 'fetch', '-q', 'origin');
+    await git(dir, 'branch', '--set-upstream-to=origin/hot/hotfix', 'hotfix');
     await git(dir, 'switch', '-q', '-c', 'done');
     await git(dir, 'commit', '-q', '--allow-empty', '-m', 'work');
     await git(dir, 'push', '-q', '-u', 'origin', 'done');
@@ -86,6 +90,7 @@ Deno.test('getBranchRemoteStatuses - merged and tracking need a real pushed remo
     assertEquals(statuses.get('done'), { remote: 'tracking', merged: true, ahead: 0 });
     assertEquals(statuses.get('fresh')?.merged, false);
     assertEquals(statuses.get('tracksmain')?.remote, 'none');
+    assertEquals(statuses.get('hotfix')?.remote, 'none');
     assertEquals(statuses.get('pushedfresh')?.remote, 'tracking');
     assertEquals(statuses.get('pushedfresh')?.merged, false);
     assertEquals(statuses.get('gwfresh'), { remote: 'gone', merged: false, ahead: 0 });

@@ -1406,6 +1406,36 @@ Deno.test('clean --remove - refuses protected items and exits 1', async () => {
   });
 });
 
+Deno.test('clean --remove - refuses a locked worktree, even with --force', async () => {
+  await withTempRegistry(async () => {
+    const repo = await createRegisteredRepo(['locked-wt']);
+    try {
+      const wtPath = join(repo.path, 'locked-wt');
+      const lock = await new Deno.Command('git', {
+        args: ['-C', repo.path, 'worktree', 'lock', '--reason', 'in use', wtPath],
+        stdout: 'null',
+        stderr: 'null',
+      }).output();
+      assertEquals(lock.code, 0);
+      const cwd = new TempCwd(repo.path);
+      try {
+        const run = await runCleanJson(['--remove', `wt:${wtPath}`, '--yes', '--force', '--json']);
+        assertEquals(run.exitCode, 1);
+        assertEquals(run.data.removed, []);
+        assertEquals((run.data.refused as { reason: string }[])[0].reason.startsWith('locked: in use'), true);
+        assertEquals(
+          (await repo.listWorktrees()).some((wt) => wt.includes('locked-wt')),
+          true
+        );
+      } finally {
+        cwd.restore();
+      }
+    } finally {
+      await repo.cleanup();
+    }
+  });
+});
+
 Deno.test('clean --remove - refuses a worktree with uncommitted changes unless --force', async () => {
   await withTempRegistry(async () => {
     const repo = await createRegisteredRepo(['dirty']);

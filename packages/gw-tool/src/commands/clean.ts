@@ -1329,6 +1329,11 @@ async function planRepoRemovals(
         refused.push({ id: item.id, reason: 'worktree not found' });
       } else if (isProtectedWorktree(wt, repoRoot, settings)) {
         refused.push({ id: item.id, reason: 'protected branch' });
+      } else if (wt.locked !== undefined) {
+        refused.push({
+          id: item.id,
+          reason: `locked${wt.locked ? `: ${wt.locked}` : ''} (git worktree unlock it first)`,
+        });
       } else if (!force && (await hasUncommittedChanges(wt.path))) {
         refused.push({ id: item.id, reason: 'has uncommitted changes (use --force)' });
       } else if (!force && (await hasUnpushedCommits(wt.path))) {
