@@ -1107,7 +1107,7 @@ export async function getWorktreeLastActivityMs(worktreePath: string): Promise<n
 
   try {
     const { code, stdout } = await new Deno.Command('git', {
-      args: ['-C', worktreePath, 'status', '--porcelain', '-z', '--untracked-files=normal'],
+      args: ['-C', worktreePath, 'status', '--porcelain', '-z', '--untracked-files=all'],
       stdout: 'piped',
       stderr: 'null',
     }).output();
