@@ -23,6 +23,27 @@ export interface SelectItem {
   protected?: boolean;
   /** Extra hint text shown after the label */
   hint?: string;
+  /** Free-form tags that quick-select rules match against (e.g. "merged") */
+  tags?: string[];
+  /** Days since last activity (fractional); used by the age filter */
+  inactiveDays?: number;
+}
+
+/**
+ * A rule bound to a single key that selects every item it matches.
+ * Pressing the key again deselects those items. Rules only ever touch
+ * selectable (non-disabled) items.
+ */
+export interface QuickSelect {
+  /** Single key that triggers the rule. Must not be a, w, n, or d (reserved) */
+  key: string;
+  /** Short footer label, e.g. "merged / remote gone" */
+  label: string;
+  /**
+   * Whether the rule selects this item. `minAgeDays` is the age filter the
+   * user set with 'd' (undefined while unset).
+   */
+  match: (item: SelectItem, minAgeDays?: number) => boolean;
 }
 
 /** A group of items with a section header */
@@ -63,6 +84,12 @@ export interface MultiSelectOptions {
    * user can select everything and then unselect what to keep.
    */
   selectAllLabel?: string;
+  /**
+   * Rule hotkeys (e.g. "select everything merged"). When set, 'n' also
+   * clears the whole selection and 'd' opens a prompt for a minimum age in
+   * days, passed to every rule's `match`.
+   */
+  quickSelects?: QuickSelect[];
 }
 
 /** Result returned by the multi-select prompt */
@@ -271,6 +298,25 @@ function toggleEverything(sections: SelectSection[]): void {
   }
 }
 
+/**
+ * Apply a quick-select rule across every section: selects all matching items,
+ * or deselects them when they are all already selected.
+ */
+function applyQuickSelect(sections: SelectSection[], rule: QuickSelect, minAgeDays?: number): void {
+  const matching = sections.flatMap((s) => s.items.filter((i) => !i.disabled && rule.match(i, minAgeDays)));
+  if (matching.length === 0) return;
+  const newValue = matching.some((i) => !i.selected);
+  for (const item of matching) {
+    item.selected = newValue;
+  }
+}
+
+function clearSelection(sections: SelectSection[]): void {
+  for (const item of sections.flatMap((s) => s.items)) {
+    item.selected = false;
+  }
+}
+
 function countSelected(sections: SelectSection[]): number {
   let count = 0;
   for (const section of sections) {
@@ -358,13 +404,22 @@ function renderRowLine(row: Row, isCursor: boolean, sections: SelectSection[], s
     : `    ${checkbox} ${item.label}${protectedBadge}${hint}`;
 }
 
+/** Quick-select state shown in the footer */
+interface QuickState {
+  /** Minimum age in days set with 'd' (undefined = no age filter) */
+  minAgeDays?: number;
+  /** Digits typed so far while the age prompt is open, null when closed */
+  draft: string | null;
+}
+
 function render(
   io: TerminalIO,
   options: MultiSelectOptions,
   rows: Row[],
   cursor: number,
   viewportOffset: number,
-  termRows: number
+  termRows: number,
+  quick: QuickState = { draft: null }
 ): number {
   const encoder = new TextEncoder();
   const sel = countSelected(options.sections);
@@ -374,7 +429,8 @@ function render(
   const hasWarning = options.warningBanner ? 1 : 0;
   const headerLines = options.headerLines ?? [];
   const extraHeader = headerLines.length > 0 ? headerLines.length + 1 : 0; // + blank line
-  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES + extraHeader;
+  const quickLine = options.quickSelects?.length ? 1 : 0;
+  const fixedLines = HEADER_LINES - (hasWarning ? 0 : 1) + FOOTER_LINES + extraHeader + quickLine;
   const viewportHeight = Math.max(5, termRows - fixedLines);
 
   // Adjust viewport offset to keep cursor visible
@@ -424,6 +480,17 @@ function render(
   lines.push(
     output.dim(`  \u2191\u2193 navigate  \u2423 toggle  a select section${categoryHint}  \u23CE confirm  ^C cancel`)
   );
+  if (options.quickSelects?.length) {
+    if (quick.draft !== null) {
+      lines.push(
+        `  ${output.bold('Minimum age in days')} ${quick.draft}\u2588 ${output.dim('\u23CE apply (empty = off)  esc cancel')}`
+      );
+    } else {
+      const rules = options.quickSelects.map((q) => `${q.key} ${q.label}`).join('  ');
+      const age = quick.minAgeDays !== undefined ? `d age \u2265 ${quick.minAgeDays}d` : 'd min age';
+      lines.push(output.dim(`  quick select: ${rules}  n none  ${age}`));
+    }
+  }
 
   // Render: move cursor home and overwrite
   io.write(encoder.encode(CURSOR_HOME));
@@ -470,6 +537,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
   }
 
   const encoder = new TextEncoder();
+  const quick: QuickState = { draft: null };
   let cursor = findFirstFocusable(rows);
   let viewportOffset = 0;
   const termRows = terminal.getRows?.() ?? 24;
@@ -480,7 +548,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
 
   try {
     // Initial render
-    viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+    viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows, quick);
 
     // Live mode: let the caller stream in sections/header updates
     let closed = false;
@@ -491,7 +559,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
         rows = buildRows(options.sections, withSelectAll);
         const same = rows.findIndex((r) => r.focusable && rowKey(r, options.sections) === key);
         cursor = same >= 0 ? same : findFirstFocusable(rows);
-        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows, quick);
       });
     }
     const close = <T>(result: T): T => {
@@ -506,6 +574,33 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
       if (n === null) break;
 
       const key = parseKey(buf, n);
+
+      // Age prompt: swallow every key until it is applied or cancelled
+      if (quick.draft !== null) {
+        if (key === 'enter') {
+          quick.minAgeDays = quick.draft === '' ? undefined : Number(quick.draft);
+          quick.draft = null;
+        } else if (key === 'ctrl-c') {
+          return close({ selected: [], cancelled: true });
+        } else if (key === 'escape') {
+          quick.draft = null;
+        } else if (key === '\x7f' || key === '\b') {
+          quick.draft = quick.draft.slice(0, -1);
+        } else if (/^[0-9]$/.test(key) && quick.draft.length < 4) {
+          quick.draft += key;
+        }
+        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows, quick);
+        continue;
+      }
+
+      if (key === 'd' && options.quickSelects?.length) {
+        quick.draft = quick.minAgeDays !== undefined ? String(quick.minAgeDays) : '';
+        viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows, quick);
+        continue;
+      }
+
+      const rule = options.quickSelects?.find((q) => q.key === key);
+      if (rule) applyQuickSelect(options.sections, rule, quick.minAgeDays);
 
       switch (key) {
         case 'up':
@@ -554,6 +649,10 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
           break;
         }
 
+        case 'n':
+          if (options.quickSelects?.length) clearSelection(options.sections);
+          break;
+
         case 'enter':
           return close({ selected: getSelected(options.sections), cancelled: false });
 
@@ -562,7 +661,7 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
           return close({ selected: [], cancelled: true });
       }
 
-      viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows);
+      viewportOffset = render(terminal, options, rows, cursor, viewportOffset, termRows, quick);
     }
     closed = true;
   } finally {

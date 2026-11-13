@@ -76,6 +76,8 @@ export interface RepoStats {
   name: string;
   path: string;
   defaultBranch: string;
+  /** Days of inactivity after which a worktree counts as stale */
+  cleanThreshold: number;
   worktrees: WorktreeStat[];
   branches: BranchStat[];
   orphans: OrphanStat[];
@@ -319,6 +321,7 @@ export async function collectRepoStats(
     name,
     path: repoPath,
     defaultBranch,
+    cleanThreshold: settings.cleanThreshold,
     worktrees,
     branches,
     orphans,

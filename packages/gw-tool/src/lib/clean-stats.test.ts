@@ -32,6 +32,7 @@ function repo(name: string, removable: number, sizeBytes: number | null = null):
     name,
     path: `/r/${name}`,
     defaultBranch: 'main',
+    cleanThreshold: 7,
     worktrees,
     branches: [],
     orphans: [],

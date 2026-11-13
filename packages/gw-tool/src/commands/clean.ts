@@ -31,7 +31,13 @@ import {
   removeWorktree,
   type WorktreeInfo,
 } from '../lib/git-utils.ts';
-import { multiSelect, type SelectItem, type SelectSection, type TerminalIO } from '../lib/interactive-select.ts';
+import {
+  multiSelect,
+  type QuickSelect,
+  type SelectItem,
+  type SelectSection,
+  type TerminalIO,
+} from '../lib/interactive-select.ts';
 import * as output from '../lib/output.ts';
 import { findGitRoot, pathExists } from '../lib/path-resolver.ts';
 import { getRepoDisplayName, isRegisteredRepo, pruneMissingRepos, type RegisteredRepo } from '../lib/repo-registry.ts';
@@ -202,6 +208,23 @@ Safety Features:
   - After removing worktrees, automatically prunes orphan branches
     (branches with no worktree and no unpushed commits)
 
+Quick-select rules (interactive pickers):
+  Press a key to select every item matching a rule; press it again to
+  deselect them. Rules stack, and you can still toggle single items after.
+  Rules only select items whose work survives removal: a named branch that is
+  on a remote (or merged, or whose remote is gone), with no uncommitted
+  changes or unpushed commits. Detached, never-pushed, and locked worktrees
+  are never selected by a rule; pick those by hand. A branch whose remote is
+  gone may still hold commits not in the default branch (typical after a
+  squash-merge); the branch itself is kept when its worktree is removed.
+    m   merged, or remote branch gone
+    o   stale: no activity for longer than cleanThreshold (default 7 days)
+    s   everything safe to remove
+    n   clear the selection
+    d   set a minimum age in days: m, o and s then only select items inactive
+        for at least that long (e.g. d, 2, Enter, then s = all safe and 2+
+        days old). Empty value turns the filter off
+
 Repository Registry (--all):
   gw records every repository it is used in (on gw init and whenever any gw
   command runs inside a repo) in $XDG_CONFIG_HOME/gw/repos.json, falling
@@ -303,11 +326,47 @@ interface SectionOptions {
   withCategories: boolean;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+const TAG_SAFE = 'safe';
+const TAG_MERGED = 'merged';
+const TAG_REMOTE_GONE = 'remote-gone';
+const TAG_STALE = 'stale';
+
+/** Age filter: passes when unset, otherwise needs a known inactivity of at least `minAge` days */
+function oldEnough(item: SelectItem, minAge: number | undefined): boolean {
+  return minAge === undefined || (item.inactiveDays !== undefined && item.inactiveDays >= minAge);
+}
+
+/**
+ * Rule hotkeys for the interactive pickers. Every rule is limited to items
+ * tagged "safe" (no uncommitted changes, no unpushed commits), so a hotkey
+ * never selects work that exists nowhere else. Individual items can still be
+ * toggled by hand afterwards.
+ */
+export const CLEAN_QUICK_SELECTS: QuickSelect[] = [
+  {
+    key: 'm',
+    label: 'merged / remote gone',
+    match: (i, minAge) =>
+      !!i.tags?.includes(TAG_SAFE) &&
+      (i.tags.includes(TAG_MERGED) || i.tags.includes(TAG_REMOTE_GONE)) &&
+      oldEnough(i, minAge),
+  },
+  {
+    key: 'o',
+    label: 'stale',
+    // Without an age filter: older than the repo's cleanThreshold
+    match: (i, minAge) =>
+      !!i.tags?.includes(TAG_SAFE) && (minAge === undefined ? i.tags.includes(TAG_STALE) : oldEnough(i, minAge)),
+  },
+  { key: 's', label: 'all safe', match: (i, minAge) => !!i.tags?.includes(TAG_SAFE) && oldEnough(i, minAge) },
+];
+
 /**
  * Build the interactive clean sections (worktrees, local branches without a
  * worktree, orphans) from a repository's statistics.
  */
-function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSection[] {
+export function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSection[] {
   const { titlePrefix, valuePrefix, withCategories } = options;
   const protectedItem = (label: string, value: string): SelectItem => ({
     label,
@@ -339,7 +398,27 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     else if (wt.remote === 'none') hints.push('not pushed');
     else if (wt.remote === 'tracking') hints.push('on remote');
     if (wt.sizeBytes !== null) hints.push(formatBytes(wt.sizeBytes));
-    return { label, value, hint: hints.length > 0 ? `(${hints.join(', ')})` : '' };
+
+    // "safe" means the work survives removal. hasUnpushedCommits reports false
+    // when there is no upstream, so that alone proves nothing: a detached HEAD
+    // has no branch ref keeping its commits, a never-pushed branch has no
+    // remote copy, and a locked worktree was locked on purpose.
+    const tags: string[] = [];
+    const published = wt.remote === 'tracking' || wt.remote === 'gone' || wt.merged;
+    if (wt.branch !== '' && published && !wt.uncommitted && !wt.unpushed && wt.locked === undefined) {
+      tags.push(TAG_SAFE);
+    }
+    if (wt.merged) tags.push(TAG_MERGED);
+    if (wt.remote === 'gone') tags.push(TAG_REMOTE_GONE);
+    const inactiveMs = wt.lastActivityMs > 0 ? Date.now() - wt.lastActivityMs : wt.ageDays * DAY_MS;
+    if (inactiveMs >= stats.cleanThreshold * DAY_MS) tags.push(TAG_STALE);
+    return {
+      label,
+      value,
+      hint: hints.length > 0 ? `(${hints.join(', ')})` : '',
+      tags,
+      inactiveDays: inactiveMs / DAY_MS,
+    };
   });
 
   const branchItems: SelectItem[] = [...stats.branches].sort(byLastCommitDesc).map((b) => {
@@ -356,7 +435,12 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     const parts: string[] = [];
     if (o.lastCommit) parts.push(o.lastCommit);
     parts.push(o.unpushed ? 'unpushed' : 'remote gone');
-    return { label: o.name, value, hint: `(${parts.join(', ')})` };
+    // An orphan without unpushed commits has a live, fully pushed upstream
+    // (a gone upstream counts as unpushed), so it is safe but not "remote gone".
+    const tags = o.unpushed ? [] : [TAG_SAFE];
+    const committedMs = Date.parse(o.lastCommit);
+    const inactiveDays = Number.isNaN(committedMs) ? undefined : (Date.now() - committedMs) / DAY_MS;
+    return { label: o.name, value, hint: `(${parts.join(', ')})`, tags, inactiveDays };
   });
 
   // ── Build sections (only include non-empty ones) ──────
@@ -501,6 +585,7 @@ async function executeInteractiveClean(withSize = false): Promise<void> {
   const result = await multiSelect({
     message: 'Select items to clean:',
     sections,
+    quickSelects: CLEAN_QUICK_SELECTS,
     warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
   });
 
@@ -807,6 +892,7 @@ export async function executeInteractiveCleanAll(io?: TerminalIO, withSize = fal
         message: 'Select items to clean across all repositories:',
         sections,
         selectAllLabel: 'Select all (every repository)',
+        quickSelects: CLEAN_QUICK_SELECTS,
         headerLines,
         warningBanner: 'Selected items will be force-deleted. ' + 'This may result in data loss.',
         onReady: (r) => {
