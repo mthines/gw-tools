@@ -211,7 +211,12 @@ Safety Features:
 Quick-select rules (interactive pickers):
   Press a key to select every item matching a rule; press it again to
   deselect them. Rules stack, and you can still toggle single items after.
-  Rules never select worktrees with uncommitted changes or unpushed commits.
+  Rules only select items whose work survives removal: a named branch that is
+  on a remote (or merged, or whose remote is gone), with no uncommitted
+  changes or unpushed commits. Detached, never-pushed, and locked worktrees
+  are never selected by a rule; pick those by hand. A branch whose remote is
+  gone may still hold commits not in the default branch (typical after a
+  squash-merge); the branch itself is kept when its worktree is removed.
     m   merged, or remote branch gone
     o   stale: no activity for longer than cleanThreshold (default 7 days)
     s   everything safe to remove
@@ -361,7 +366,7 @@ export const CLEAN_QUICK_SELECTS: QuickSelect[] = [
  * Build the interactive clean sections (worktrees, local branches without a
  * worktree, orphans) from a repository's statistics.
  */
-function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSection[] {
+export function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSection[] {
   const { titlePrefix, valuePrefix, withCategories } = options;
   const protectedItem = (label: string, value: string): SelectItem => ({
     label,
@@ -394,8 +399,15 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     else if (wt.remote === 'tracking') hints.push('on remote');
     if (wt.sizeBytes !== null) hints.push(formatBytes(wt.sizeBytes));
 
+    // "safe" means the work survives removal. hasUnpushedCommits reports false
+    // when there is no upstream, so that alone proves nothing: a detached HEAD
+    // has no branch ref keeping its commits, a never-pushed branch has no
+    // remote copy, and a locked worktree was locked on purpose.
     const tags: string[] = [];
-    if (!wt.uncommitted && !wt.unpushed) tags.push(TAG_SAFE);
+    const published = wt.remote === 'tracking' || wt.remote === 'gone' || wt.merged;
+    if (wt.branch !== '' && published && !wt.uncommitted && !wt.unpushed && wt.locked === undefined) {
+      tags.push(TAG_SAFE);
+    }
     if (wt.merged) tags.push(TAG_MERGED);
     if (wt.remote === 'gone') tags.push(TAG_REMOTE_GONE);
     const inactiveMs = wt.lastActivityMs > 0 ? Date.now() - wt.lastActivityMs : wt.ageDays * DAY_MS;
@@ -423,7 +435,9 @@ function sectionsFromStats(stats: RepoStats, options: SectionOptions): SelectSec
     const parts: string[] = [];
     if (o.lastCommit) parts.push(o.lastCommit);
     parts.push(o.unpushed ? 'unpushed' : 'remote gone');
-    const tags = o.unpushed ? [] : [TAG_SAFE, TAG_REMOTE_GONE];
+    // An orphan without unpushed commits has a live, fully pushed upstream
+    // (a gone upstream counts as unpushed), so it is safe but not "remote gone".
+    const tags = o.unpushed ? [] : [TAG_SAFE];
     const committedMs = Date.parse(o.lastCommit);
     const inactiveDays = Number.isNaN(committedMs) ? undefined : (Date.now() - committedMs) / DAY_MS;
     return { label: o.name, value, hint: `(${parts.join(', ')})`, tags, inactiveDays };

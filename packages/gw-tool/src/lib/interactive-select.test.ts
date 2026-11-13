@@ -575,3 +575,10 @@ Deno.test(
     assertEquals(r2.selected, ['old', 'recent', 'unknown']);
   }
 );
+
+Deno.test('multiSelect - ctrl-c inside the age prompt cancels the picker', async () => {
+  const { io } = createMockIO(encodeKeys('d', '3', 'ctrl-c'));
+  const result = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, io);
+  assertEquals(result.cancelled, true);
+  assertEquals(result.selected, []);
+});

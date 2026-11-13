@@ -7,15 +7,18 @@ import { assertEquals, assertThrows } from '@std/assert';
 import { join } from '@std/path';
 import {
   buildRepoDisplayNames,
+  CLEAN_QUICK_SELECTS,
   executeClean,
   executeInteractiveCleanAll,
   isPathInside,
   parseCleanArgs,
+  sectionsFromStats,
 } from './clean.ts';
 import { GitTestRepo } from '../test-utils/git-test-repo.ts';
 import { TempCwd, TempEnv } from '../test-utils/temp-env.ts';
 import { loadRegistry, registerRepo } from '../lib/repo-registry.ts';
-import type { TerminalIO } from '../lib/interactive-select.ts';
+import type { SelectItem, TerminalIO } from '../lib/interactive-select.ts';
+import type { RepoStats, WorktreeStat } from '../lib/clean-stats.ts';
 import { createMinimalConfig, writeTestConfig } from '../test-utils/fixtures.ts';
 import { withMockedExit } from '../test-utils/mock-exit.ts';
 
@@ -1925,4 +1928,82 @@ Deno.test('clean --auto - keeps protected orphan branches when pruning', async (
     await repo.cleanup();
     await remote?.cleanup();
   }
+});
+
+// ── Quick-select safety invariant ───────────────────────────
+
+function wtStat(over: Partial<WorktreeStat> & { branch: string }): WorktreeStat {
+  return {
+    id: `wt:/r/${over.branch || 'detached'}`,
+    path: `/r/${over.branch || 'detached'}`,
+    ageDays: 30,
+    lastActivityMs: Date.now() - 30 * 86_400_000,
+    uncommitted: false,
+    unpushed: false,
+    remote: 'tracking',
+    merged: false,
+    ahead: 0,
+    protected: false,
+    sizeBytes: null,
+    ...over,
+  };
+}
+
+function quickSelected(stats: Partial<RepoStats>, key: string, minAge?: number): string[] {
+  const full: RepoStats = {
+    name: 'r',
+    path: '/r',
+    defaultBranch: 'main',
+    cleanThreshold: 7,
+    worktrees: [],
+    branches: [],
+    orphans: [],
+    totals: { worktrees: 0, branches: 0, orphans: 0, removable: 0, sizeBytes: null },
+    ...stats,
+  };
+  const items: SelectItem[] = sectionsFromStats(full, { titlePrefix: '', valuePrefix: '', withCategories: false })
+    .flatMap((sec) => sec.items)
+    .filter((i) => !i.disabled);
+  const rule = CLEAN_QUICK_SELECTS.find((q) => q.key === key)!;
+  return items.filter((i) => rule.match(i, minAge)).map((i) => i.label);
+}
+
+Deno.test('quick-select - never selects dirty, unpushed, detached, never-pushed or locked worktrees', () => {
+  const worktrees = [
+    wtStat({ branch: 'ok-tracking' }),
+    wtStat({ branch: 'ok-merged', merged: true }),
+    wtStat({ branch: 'ok-gone', remote: 'gone', ahead: 2 }),
+    wtStat({ branch: 'dirty', uncommitted: true }),
+    wtStat({ branch: 'unpushed', unpushed: true }),
+    wtStat({ branch: '', remote: '' }),
+    wtStat({ branch: 'never-pushed', remote: 'none' }),
+    wtStat({ branch: 'locked', locked: 'keep' }),
+  ];
+  for (const key of ['s', 'm', 'o']) {
+    const selected = quickSelected({ worktrees }, key);
+    for (const bad of ['dirty', 'unpushed', 'never-pushed', 'locked', '']) {
+      assertEquals(selected.includes(bad), false, `${key} must not select "${bad}"`);
+    }
+  }
+  assertEquals(quickSelected({ worktrees }, 's'), ['ok-tracking', 'ok-merged', 'ok-gone']);
+  assertEquals(quickSelected({ worktrees }, 'm'), ['ok-merged', 'ok-gone']);
+});
+
+Deno.test('quick-select - orphans with a live upstream are safe but not "remote gone"', () => {
+  const orphans = [
+    { id: 'br:/r:live', name: 'live', lastCommit: '2020-01-01', protected: false, unpushed: false },
+    { id: 'br:/r:local', name: 'local', lastCommit: '2020-01-01', protected: false, unpushed: true },
+  ];
+  assertEquals(quickSelected({ orphans }, 's'), ['live']);
+  assertEquals(quickSelected({ orphans }, 'm'), []);
+});
+
+Deno.test('quick-select - min age filters every rule and skips unknown ages', () => {
+  const worktrees = [
+    wtStat({ branch: 'old', lastActivityMs: Date.now() - 10 * 86_400_000 }),
+    wtStat({ branch: 'fresh', lastActivityMs: Date.now() - 1 * 86_400_000 }),
+  ];
+  assertEquals(quickSelected({ worktrees }, 's', 2), ['old']);
+  assertEquals(quickSelected({ worktrees }, 's'), ['fresh', 'old']); // picker order: newest first
+  assertEquals(quickSelected({ worktrees }, 'o'), ['old']);
 });

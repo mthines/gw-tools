@@ -580,7 +580,9 @@ export async function multiSelect(options: MultiSelectOptions, io?: TerminalIO):
         if (key === 'enter') {
           quick.minAgeDays = quick.draft === '' ? undefined : Number(quick.draft);
           quick.draft = null;
-        } else if (key === 'escape' || key === 'ctrl-c') {
+        } else if (key === 'ctrl-c') {
+          return close({ selected: [], cancelled: true });
+        } else if (key === 'escape') {
           quick.draft = null;
         } else if (key === '\x7f' || key === '\b') {
           quick.draft = quick.draft.slice(0, -1);
