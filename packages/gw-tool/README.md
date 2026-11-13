@@ -1439,6 +1439,22 @@ gw clean [options]
 - `-y, --yes`: Skip confirmation prompt
 - `-h, --help`: Show help message
 
+#### Quick-select rules
+
+In the interactive pickers (`gw clean` and `gw clean --all`), press a key to select every item matching a rule. Press it again to deselect those items. Rules stack, and you can still toggle single items afterwards.
+
+| Key | Selects                                                              |
+| --- | -------------------------------------------------------------------- |
+| `m` | Merged, or remote branch gone (also orphan branches)                 |
+| `o` | Stale: no activity for longer than `cleanThreshold` (default 7 days) |
+| `s` | Everything safe to remove                                            |
+| `n` | Clears the selection                                                 |
+| `d` | Sets a minimum age in days (see below)                               |
+
+Press `d`, type a number, and press Enter to require that much inactivity. The `m`, `o`, and `s` rules then only select items inactive for at least that many days. For example, `d` `2` Enter, then `s` selects everything safe that has been idle for 2+ days. An empty value turns the filter off; without it, `o` uses `cleanThreshold`.
+
+Rules never select worktrees with uncommitted changes or unpushed commits. In `--all`, each repo uses its own `cleanThreshold`.
+
 #### Examples
 
 ```bash

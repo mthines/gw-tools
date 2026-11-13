@@ -474,3 +474,104 @@ Deno.test('multiSelect - select-all row is not shown without selectAllLabel', as
 
   assertEquals(result.selected, ['a:wt:feat/a']);
 });
+
+// ── Quick-select rules ──────────────────────────────────────
+
+function quickSections(): SelectSection[] {
+  return [
+    {
+      title: 'Worktrees',
+      items: [
+        { label: 'merged-safe', value: 'a', tags: ['safe', 'merged'] },
+        { label: 'merged-dirty', value: 'b', tags: ['merged'] },
+        { label: 'stale-safe', value: 'c', tags: ['safe', 'stale'] },
+        { label: 'locked-in', value: 'd', disabled: true, tags: ['safe', 'merged'] },
+      ],
+    },
+  ];
+}
+
+const mergedRule = {
+  key: 'm',
+  label: 'merged',
+  match: (i: { tags?: string[] }) => !!i.tags?.includes('safe') && !!i.tags.includes('merged'),
+};
+
+Deno.test('multiSelect - quick select rule selects only matching selectable items', async () => {
+  const { io } = createMockIO(encodeKeys('m', 'enter'));
+  const result = await multiSelect({ message: 'Test', sections: quickSections(), quickSelects: [mergedRule] }, io);
+  assertEquals(result.selected, ['a']);
+});
+
+Deno.test('multiSelect - quick select rule pressed twice deselects', async () => {
+  const { io } = createMockIO(encodeKeys('m', 'm', 'enter'));
+  const result = await multiSelect({ message: 'Test', sections: quickSections(), quickSelects: [mergedRule] }, io);
+  assertEquals(result.selected, []);
+});
+
+Deno.test("multiSelect - quick select rules are additive and 'n' clears everything", async () => {
+  const stale = { key: 'o', label: 'stale', match: (i: { tags?: string[] }) => !!i.tags?.includes('stale') };
+  const added = createMockIO(encodeKeys('m', 'o', 'enter'));
+  const r1 = await multiSelect(
+    { message: 'Test', sections: quickSections(), quickSelects: [mergedRule, stale] },
+    added.io
+  );
+  assertEquals(r1.selected, ['a', 'c']);
+
+  const cleared = createMockIO(encodeKeys('m', 'o', 'n', 'enter'));
+  const r2 = await multiSelect(
+    { message: 'Test', sections: quickSections(), quickSelects: [mergedRule, stale] },
+    cleared.io
+  );
+  assertEquals(r2.selected, []);
+});
+
+// ── Minimum age prompt ──────────────────────────────────────
+
+function ageSections(): SelectSection[] {
+  return [
+    {
+      title: 'Worktrees',
+      items: [
+        { label: 'old', value: 'old', tags: ['safe'], inactiveDays: 10 },
+        { label: 'recent', value: 'recent', tags: ['safe'], inactiveDays: 1 },
+        { label: 'unknown', value: 'unknown', tags: ['safe'] },
+      ],
+    },
+  ];
+}
+
+const safeRule = {
+  key: 's',
+  label: 'safe',
+  match: (i: { tags?: string[]; inactiveDays?: number }, minAge?: number) =>
+    !!i.tags?.includes('safe') && (minAge === undefined || (i.inactiveDays !== undefined && i.inactiveDays >= minAge)),
+};
+
+Deno.test("multiSelect - 'd' sets a minimum age that the rules respect", async () => {
+  const { io } = createMockIO(encodeKeys('d', '2', 'enter', 's', 'enter'));
+  const result = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, io);
+  assertEquals(result.selected, ['old']);
+});
+
+Deno.test('multiSelect - without an age filter the rule selects every safe item', async () => {
+  const { io } = createMockIO(encodeKeys('s', 'enter'));
+  const result = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, io);
+  assertEquals(result.selected, ['old', 'recent', 'unknown']);
+});
+
+Deno.test(
+  'multiSelect - age prompt: backspace edits, empty enter clears, escape cancels without confirming',
+  async () => {
+    // d 1 5 <backspace> 2 enter -> 12 days (nothing is that old... 'old' is 10) ; then d <backspace><backspace> enter clears
+    const { io } = createMockIO(encodeKeys('d', '1', '5', '\x7f', '2', 'enter', 's', 'd', 'escape', 'enter'));
+    const result = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, io);
+    // min age 12: no item is old enough; escape closed the prompt, final enter confirmed the picker
+    assertEquals(result.cancelled, false);
+    assertEquals(result.selected, []);
+
+    const cleared = createMockIO(encodeKeys('d', '5', 'enter', 'd', '\x7f', 'enter', 's', 'enter'));
+    const r2 = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, cleared.io);
+    assertEquals(r2.selected, ['old', 'recent', 'unknown']);
+  }
+);

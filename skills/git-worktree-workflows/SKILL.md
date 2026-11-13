@@ -84,6 +84,7 @@ Master Git worktrees using the `gw` CLI tool for optimized parallel development 
 | Batch remove safe (committed, pushed) wts | `gw clean`                                                          |
 | Preview batch cleanup                     | `gw clean --dry-run`                                                |
 | Clean across ALL gw repos (interactive)   | `gw clean --all` ("Select all" row, `w` = category in every repo)   |
+| Pick by rule in the picker                | `m` merged/gone, `o` stale, `s` safe, `n` clear, `d` min age days   |
 | Auto-clean safe worktrees in ALL gw repos | `gw clean --all --auto` (add `--dry-run` to preview)                |
 | See what's cluttering repos (agent JSON)  | `gw clean --stats --all --json` (`--size` for disk usage)           |
 | Remove specific items by id (from stats)  | `gw clean --remove <id> [--remove <id>...] --yes --json`            |
