@@ -2006,4 +2006,16 @@ Deno.test('quick-select - min age filters every rule and skips unknown ages', ()
   assertEquals(quickSelected({ worktrees }, 's', 2), ['old']);
   assertEquals(quickSelected({ worktrees }, 's'), ['fresh', 'old']); // picker order: newest first
   assertEquals(quickSelected({ worktrees }, 'o'), ['old']);
+  // o needs both the repo threshold (7d) and the minimum age
+  assertEquals(quickSelected({ worktrees }, 'o', 2), ['old']);
+  assertEquals(quickSelected({ worktrees }, 'o', 12), []);
+});
+
+Deno.test('quick-select - o selects old safe orphans, not recent ones', () => {
+  const day = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10);
+  const orphans = [
+    { id: 'br:/r:old', name: 'old', lastCommit: day(30), protected: false, unpushed: false },
+    { id: 'br:/r:new', name: 'new', lastCommit: day(1), protected: false, unpushed: false },
+  ];
+  assertEquals(quickSelected({ orphans }, 'o'), ['old']);
 });

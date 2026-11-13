@@ -355,9 +355,8 @@ export const CLEAN_QUICK_SELECTS: QuickSelect[] = [
   {
     key: 'o',
     label: 'stale',
-    // Without an age filter: older than the repo's cleanThreshold
-    match: (i, minAge) =>
-      !!i.tags?.includes(TAG_SAFE) && (minAge === undefined ? i.tags.includes(TAG_STALE) : oldEnough(i, minAge)),
+    // Older than the repo's cleanThreshold, and (when set) the minimum age too
+    match: (i, minAge) => !!i.tags?.includes(TAG_SAFE) && i.tags.includes(TAG_STALE) && oldEnough(i, minAge),
   },
   { key: 's', label: 'all safe', match: (i, minAge) => !!i.tags?.includes(TAG_SAFE) && oldEnough(i, minAge) },
 ];
@@ -434,12 +433,13 @@ export function sectionsFromStats(stats: RepoStats, options: SectionOptions): Se
     if (o.protected) return protectedItem(o.name, value);
     const parts: string[] = [];
     if (o.lastCommit) parts.push(o.lastCommit);
-    parts.push(o.unpushed ? 'unpushed' : 'remote gone');
+    parts.push(o.unpushed ? 'unpushed or remote gone' : 'on remote');
     // An orphan without unpushed commits has a live, fully pushed upstream
     // (a gone upstream counts as unpushed), so it is safe but not "remote gone".
-    const tags = o.unpushed ? [] : [TAG_SAFE];
     const committedMs = Date.parse(o.lastCommit);
     const inactiveDays = Number.isNaN(committedMs) ? undefined : (Date.now() - committedMs) / DAY_MS;
+    const tags = o.unpushed ? [] : [TAG_SAFE];
+    if (!o.unpushed && inactiveDays !== undefined && inactiveDays >= stats.cleanThreshold) tags.push(TAG_STALE);
     return { label: o.name, value, hint: `(${parts.join(', ')})`, tags, inactiveDays };
   });
 

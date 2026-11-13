@@ -1451,7 +1451,7 @@ In the interactive pickers (`gw clean` and `gw clean --all`), press a key to sel
 | `n` | Clears the selection                                                 |
 | `d` | Sets a minimum age in days (see below)                               |
 
-Press `d`, type a number, and press Enter to require that much inactivity. The `m`, `o`, and `s` rules then only select items inactive for at least that many days. For example, `d` `2` Enter, then `s` selects everything safe that has been idle for 2+ days. An empty value turns the filter off; without it, `o` uses `cleanThreshold`.
+Press `d`, type a number, and press Enter to require that much inactivity. The `m`, `o`, and `s` rules then only select items inactive for at least that many days. For example, `d` `2` Enter, then `s` selects everything safe that has been idle for 2+ days. An empty value turns the filter off. `o` always also requires `cleanThreshold`, so with both set it selects items past the longer of the two.
 
 Rules only select worktrees on a named branch that is on a remote (or merged, or whose remote is gone), with no uncommitted changes, no unpushed commits, and no lock. Detached and never-pushed worktrees are never selected by a rule; pick those by hand. A remote-gone branch can still hold commits that are not in the default branch (typical after a squash-merge), but removing its worktree keeps the branch. In `--all`, each repo uses its own `cleanThreshold`.
 

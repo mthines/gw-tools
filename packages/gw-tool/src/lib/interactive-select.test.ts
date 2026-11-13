@@ -563,7 +563,8 @@ Deno.test('multiSelect - without an age filter the rule selects every safe item'
 Deno.test(
   'multiSelect - age prompt: backspace edits, empty enter clears, escape cancels without confirming',
   async () => {
-    // d 1 5 <backspace> 2 enter -> 12 days (nothing is that old... 'old' is 10) ; then d <backspace><backspace> enter clears
+    // First run: d 1 5 <backspace> 2 enter sets 12 days (nothing is that old: 'old' is 10), s selects nothing,
+    // d escape closes the prompt, enter confirms. Second run: set 5 days, then clear it with d <backspace> enter.
     const { io } = createMockIO(encodeKeys('d', '1', '5', '\x7f', '2', 'enter', 's', 'd', 'escape', 'enter'));
     const result = await multiSelect({ message: 'Test', sections: ageSections(), quickSelects: [safeRule] }, io);
     // min age 12: no item is old enough; escape closed the prompt, final enter confirmed the picker
