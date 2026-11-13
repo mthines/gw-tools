@@ -1975,13 +1975,13 @@ Deno.test('quick-select - never selects dirty, unpushed, detached, never-pushed 
     wtStat({ branch: 'ok-gone', remote: 'gone', ahead: 2 }),
     wtStat({ branch: 'dirty', uncommitted: true }),
     wtStat({ branch: 'unpushed', unpushed: true }),
-    wtStat({ branch: '', remote: '' }),
+    wtStat({ branch: '', remote: '' }), // detached: labelled by its path, /r/detached
     wtStat({ branch: 'never-pushed', remote: 'none' }),
     wtStat({ branch: 'locked', locked: 'keep' }),
   ];
   for (const key of ['s', 'm', 'o']) {
     const selected = quickSelected({ worktrees }, key);
-    for (const bad of ['dirty', 'unpushed', 'never-pushed', 'locked', '']) {
+    for (const bad of ['dirty', 'unpushed', 'never-pushed', 'locked', '/r/detached']) {
       assertEquals(selected.includes(bad), false, `${key} must not select "${bad}"`);
     }
   }

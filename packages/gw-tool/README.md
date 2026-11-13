@@ -1445,7 +1445,7 @@ In the interactive pickers (`gw clean` and `gw clean --all`), press a key to sel
 
 | Key | Selects                                                              |
 | --- | -------------------------------------------------------------------- |
-| `m` | Merged, or remote branch gone (also orphan branches)                 |
+| `m` | Merged, or remote branch gone                                        |
 | `o` | Stale: no activity for longer than `cleanThreshold` (default 7 days) |
 | `s` | Everything safe to remove                                            |
 | `n` | Clears the selection                                                 |

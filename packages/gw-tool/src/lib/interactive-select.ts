@@ -35,7 +35,7 @@ export interface SelectItem {
  * selectable (non-disabled) items.
  */
 export interface QuickSelect {
-  /** Single key that triggers the rule. Must not be a, w, or n (reserved) */
+  /** Single key that triggers the rule. Must not be a, w, n, or d (reserved) */
   key: string;
   /** Short footer label, e.g. "merged / remote gone" */
   label: string;
